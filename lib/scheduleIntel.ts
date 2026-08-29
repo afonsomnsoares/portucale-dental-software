@@ -1,13 +1,13 @@
-import { businessDays } from './recoveryCalc';
 import { query, queryOne } from './db';
 import {
   aggregateByWeekdayHour,
+  type HistoricalRow,
   hourBucketFor,
   ratesByHourBucket,
   ratesByWeekday,
   riskScore,
-  type HistoricalRow,
 } from './noShowRisk';
+import { businessDays } from './recoveryCalc';
 
 const RISK_HISTORY_MONTHS = 6;
 const UPCOMING_RISK_DAYS = 14;

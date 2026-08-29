@@ -1,6 +1,6 @@
 import { query, queryOne } from './db';
 import { toE164 } from './validate';
-import { rankCandidates, type FreedSlot, type WaitlistCandidate } from './waitlistMatch';
+import { type FreedSlot, rankCandidates, type WaitlistCandidate } from './waitlistMatch';
 
 const MAX_OFFERS_PER_SLOT = 3;
 export const OFFER_EXPIRY_HOURS = 24;
@@ -314,9 +314,7 @@ export async function expireStaleOffers(tenantId: string) {
       chair: Number(o.offered_chair) || 1,
     };
     if (slot.date >= new Date().toISOString().slice(0, 10)) {
-      const result = await notifyWaitlistOfFreedSlot(tenantId, slot, o.cancelled_appointment_id, [
-        o.waitlist_entry_id,
-      ]);
+      const result = await notifyWaitlistOfFreedSlot(tenantId, slot, o.cancelled_appointment_id, [o.waitlist_entry_id]);
       reoffered += result.offered;
     }
   }

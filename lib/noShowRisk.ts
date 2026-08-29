@@ -3,11 +3,11 @@
 // ML training infra), mirroring the style of lib/recoveryCalc.ts.
 
 export const RISK_WEIGHTS = {
-  patientNoShowRate: 0.40, // patient's own historical no-show rate (0-1)
+  patientNoShowRate: 0.4, // patient's own historical no-show rate (0-1)
   patientCancelRate: 0.15, // patient's own historical cancellation rate (0-1)
   weekdayBaseRate: 0.15, // tenant-wide no-show/cancel rate for this weekday (0-1)
   hourBaseRate: 0.15, // tenant-wide no-show/cancel rate for this hour bucket (0-1)
-  leadTime: 0.10, // longer lead time -> more risk of no-show
+  leadTime: 0.1, // longer lead time -> more risk of no-show
   newPatient: 0.05, // first-ever visit carries a flat risk bump
 };
 

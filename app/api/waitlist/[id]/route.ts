@@ -50,7 +50,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (status === 'cancelled') {
     await appendTimeline(updated.patient_id, user, 'admin', `Removido da lista de espera: ${updated.treatment_type}`);
   }
-  await appendAudit(user, 'UPDATE', `Waitlist: ${updated.treatment_type}`, null, `status:${updated.status}`, user.clinic);
+  await appendAudit(
+    user,
+    'UPDATE',
+    `Waitlist: ${updated.treatment_type}`,
+    null,
+    `status:${updated.status}`,
+    user.clinic,
+  );
 
   return Response.json(updated);
 }

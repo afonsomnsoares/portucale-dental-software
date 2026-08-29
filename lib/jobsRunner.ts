@@ -41,7 +41,6 @@ export const JOB_NAMES = [
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number] | 'all';
 
-
 function computeNextRetry(attempts: number) {
   const base = 5 * 60 * 1000;
   const delay = base * Math.min(64, 2 ** Math.max(0, attempts - 1));
@@ -56,7 +55,10 @@ async function sendSms({ to, body }: { to: string; body: string }) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_FROM_NUMBER;
   if (!accountSid || !authToken || !from) {
-    return { ok: false, error: 'SMS provider not configured (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER).' };
+    return {
+      ok: false,
+      error: 'SMS provider not configured (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER).',
+    };
   }
   const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`;
   const res = await fetch(url, {
