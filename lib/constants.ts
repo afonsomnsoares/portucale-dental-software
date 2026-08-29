@@ -68,7 +68,6 @@ export const NAV = {
     { label: 'Doentes', href: '/dashboard/dentist/patients' },
     { label: 'Tratamentos', href: '/dashboard/dentist/treatments' },
     { label: 'Odontograma', href: '/dashboard/dentist/odontogram' },
-    { label: 'Imagiologia', href: '/dashboard/dentist/imaging' },
     { label: 'Histórico Clínico', href: '/dashboard/dentist/medical-history' },
     { label: 'Prescrições', href: '/dashboard/dentist/prescriptions' },
     { label: 'Encomendas Lab', href: '/dashboard/dentist/lab-orders' },
