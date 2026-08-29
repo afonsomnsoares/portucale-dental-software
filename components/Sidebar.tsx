@@ -1,0 +1,399 @@
+'use client';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
+import { useAuth } from '@/app/providers';
+import { NAV, ROLE_META } from '@/lib/constants';
+import { AppLogo, Avatar } from './ui';
+
+function ToothIcon({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M8.4 3.2c-1.8.7-3 2.8-3 5.2 0 1.8.4 3.5.8 5 .6 2.2 1.2 4.2 1.4 6.2.1 1.6 1.1 2.4 2 2.4 1.1 0 1.7-1.1 2-2.4l.6-2.8c.2-.9.6-1.3 1.2-1.3s1 .4 1.2 1.3l.6 2.8c.3 1.3.9 2.4 2 2.4.9 0 1.9-.8 2-2.4.2-2 .8-4 1.4-6.2.4-1.5.8-3.2.8-5 0-2.4-1.2-4.5-3-5.2-1.7-.7-3.2-.3-4.1.2-.6.3-1.2.3-1.8 0-.9-.5-2.4-.9-4.1-.2Z"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Icon({ name, active }: { name: string; active: boolean }) {
+  const c = active ? '#0052CC' : '#97A0AF';
+  const s = 18;
+  const common = { size: s, color: c };
+  if (name === 'Visão Geral' || name === 'Painel') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 4h7v7H4V4Zm9 0h7v4h-7V4ZM4 13h7v7H4v-7Zm9 7v-10h7v10h-7Z" fill={c} />
+      </svg>
+    );
+  }
+  if (name === 'Clínicas') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 21V9l8-5 8 5v12" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 21v-6h6v6" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Utilizadores') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M16 11a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z" stroke={c} strokeWidth="1.8" />
+        <path d="M4 20c1.6-3 4.3-4.5 8-4.5S18.4 17 20 20" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Faturas') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M14 4h4l2 2v14H4V4h10Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M14 2v4h4" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M8 12h8M8 16h6" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Finanças') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 12a8 8 0 1 0 16 0 8 8 0 0 0-16 0Z" stroke={c} strokeWidth="1.8" />
+        <path d="M12 8v8M8 12h8" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Inventário') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 7l8-3 8 3v13H4V7Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M4 7l8 3 8-3" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Doentes') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke={c} strokeWidth="1.8" />
+        <path d="M5 20c1.6-3 4.1-4.5 7-4.5S17.4 17 19 20" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Tratamentos') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 4h10v16H7V4Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 8h6M9 12h6M9 16h4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Sala de Espera') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 11h10v4a4 4 0 0 1-4 4H11a4 4 0 0 1-4-4v-4Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 11V8a3 3 0 0 1 6 0v3" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Odontograma') return <ToothIcon {...common} />;
+  if (name === 'Histórico Clínico') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 12h6M9 16h4M9 8h2" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M7 4h10v16H7V4Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Prescrições') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 8h16M6 8v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 8V4h6v4" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M12 12v6M9 15h6" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Encomendas Lab') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 3h10v4H7V3Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M7 7l-2 14h14L17 7" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M10 12h4M12 10v4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Planos Tratamento') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 6h16v14H4V6Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M8 6V4h8v2" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M8 12l2 2 5-5" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Recalls') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="13" r="4" stroke={c} strokeWidth="1.8" />
+        <path d="M12 11v2l1 1" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M5 3l4 4M19 3l-4 4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M4 13a8 8 0 1 0 16 0 8 8 0 0 0-16 0Z" stroke={c} strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  if (name === 'Consentimentos') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M14 4h4l2 2v14H4V6l2-2h4" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M10 2h4v4h-4V2Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M8 13l2 2 5-5" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Imagiologia') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 7h4l1-2h4l1 2h3v12H7V7Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M14 13a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z" stroke={c} strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  if (name === 'Progress Notes') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 4h7l3 3v13H7V4Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M14 4v4h4" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 12h6M9 16h4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Marcações') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 4v3M17 4v3M5 9h14M6 7h12v14H6V7Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Campos Schema') return <ToothIcon {...common} />;
+  if (name === 'Permissões') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M12 3l8 4v6c0 5-3.4 8.5-8 9-4.6-.5-8-4-8-9V7l8-4Z"
+          stroke={c}
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path d="M9.5 12l1.7 1.7L14.8 10" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'Relatórios') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 20V4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M7 17v-5M12 17V7M17 17v-8" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Agenda Inteligente') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 4v3M17 4v3M5 9h14M6 7h12v14H6V7Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M12 12v3l2 1.5" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="14.5" r="4" stroke={c} strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  if (name === 'Ciclo de Vida') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 4a8 8 0 1 1-6.93 4" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M3 4v4h4" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="2" fill={c} />
+      </svg>
+    );
+  }
+  if (name === 'Auditoria') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 4h10v16H7V4Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 8h6M9 12h6M9 16h4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 6v12M6 12h12" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const ROLE_ICONS = {
+  admin: { icon: <ToothIcon size={18} color="#5243AA" />, color: '#5243AA' },
+  receptionist: {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 21V7l8-4 8 4v14" stroke="#00875A" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 21v-7h6v7" stroke="#00875A" strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    ),
+    color: '#00875A',
+  },
+  dentist: { icon: <ToothIcon size={18} color="#0052CC" />, color: '#0052CC' },
+};
+
+export default function Sidebar() {
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const role = user?.role as keyof typeof NAV | undefined;
+  const nav = (role && NAV[role]) || [];
+  const meta: { label?: string; sub?: string } = (role && ROLE_META[role]) || {};
+  const roleIcon: { icon?: ReactNode; color?: string } = (role && ROLE_ICONS[role]) || {};
+  const tenantLabel = user?.tenantName ? `${user.tenantName}${user.tenantCity ? ` · ${user.tenantCity}` : ''}` : '';
+  const sidebarClinic = tenantLabel || user?.clinic || '';
+
+  return (
+    <aside
+      style={{
+        width: 240,
+        background: 'white',
+        borderRight: '1px solid #EBECF0',
+        display: 'flex',
+        flexDirection: 'column',
+        flexShrink: 0,
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+      }}
+    >
+      {/* ── Brand ── */}
+      <div className="px-5 py-4" style={{ borderBottom: '1px solid #EBECF0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+            <AppLogo size={32} />
+          </div>
+          <div>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 800,
+                color: '#0052CC',
+                letterSpacing: '-0.5px',
+                fontFamily: '"Plus Jakarta Sans",sans-serif',
+              }}
+            >
+              Portucale Dental
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Role badge ── */}
+      <div className="px-4 pt-4 pb-2">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 10px',
+            background: '#F4F7FA',
+            borderRadius: 8,
+          }}
+        >
+          <span
+            style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {roleIcon.icon}
+          </span>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold truncate" style={{ color: '#172B4D' }}>
+              {meta.label}
+            </div>
+            <div className="text-xs truncate" style={{ color: '#97A0AF' }}>
+              {tenantLabel || meta.sub}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Navigation ── */}
+      <nav className="flex-1 overflow-y-auto px-3 pb-2 pt-1">
+        <div className="section-label px-2 mb-2 mt-2">NAVEGAÇÃO</div>
+        {nav.map((item) => {
+          const active = pathname === item.href || (item.href.length > 20 && pathname.startsWith(item.href));
+          return (
+            <Link key={item.href} href={item.href} className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}>
+              <span
+                style={{
+                  width: 18,
+                  height: 18,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Icon name={item.label} active={active} />
+              </span>
+              <span>{item.label}</span>
+              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* ── Divider ── */}
+      <div style={{ borderTop: '1px solid #EBECF0' }} />
+
+      {/* ── User ── */}
+      <div className="p-4">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <Avatar name={user?.name || ''} size={34} color="#0052CC" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold truncate" style={{ color: '#172B4D' }}>
+              {user?.name}
+            </div>
+            <div className="text-xs truncate" style={{ color: '#97A0AF' }}>
+              {sidebarClinic}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            router.push('/');
+          }}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: '1.5px solid #DFE1E6',
+            borderRadius: 6,
+            padding: '6px 12px',
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#DE350B',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            const t = e.target as HTMLElement;
+            t.style.background = '#FFEBE6';
+            t.style.borderColor = '#FFBDAD';
+          }}
+          onMouseLeave={(e) => {
+            const t = e.target as HTMLElement;
+            t.style.background = 'transparent';
+            t.style.borderColor = '#DFE1E6';
+          }}
+        >
+          Terminar sessão
+        </button>
+      </div>
+    </aside>
+  );
+}

@@ -1,0 +1,54 @@
+{
+  "name": "portucale_dental",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --import tsx --test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "db:seed": "node --import tsx --env-file=.env scripts/seed.ts",
+    "db:reset": "node --import tsx --env-file=.env scripts/seed.ts --reset",
+    "db:migrate": "node --import tsx --env-file=.env scripts/migrate.ts",
+    "jobs:run": "node --import tsx --env-file=.env scripts/run-jobs.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "biome check --write --no-errors-on-unmatched",
+      "git add"
+    ]
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "bcryptjs": "^2.4.3",
+    "lucide-react": "^1.22.0",
+    "next": "^16.2.3",
+    "pg": "^8.11.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.185.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^25.9.3",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.19",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4",
+    "tsx": "^4.22.4",
+    "typescript": "^5.8.3"
+  }
+}

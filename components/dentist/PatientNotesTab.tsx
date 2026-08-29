@@ -1,0 +1,357 @@
+'use client';
+import { Mic, MicOff } from 'lucide-react';
+import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import type { ApiOptions, AuthUser } from '@/app/providers';
+import { Badge, Empty, FormField, GhostBtn, Inp, PrimaryBtn, Textarea } from '@/components/ui';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import type { NoteAttachment, TimelineEvent } from '@/lib/types';
+
+interface PatientNotesTabProps {
+  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint
+  api: (path: string, opts?: ApiOptions) => Promise<any>;
+  user: AuthUser | null;
+  patientId: string;
+  notes: TimelineEvent[];
+  setNotes: Dispatch<SetStateAction<TimelineEvent[]>>;
+  refreshTimeline: () => Promise<void> | void;
+}
+
+export default function PatientNotesTab({
+  api,
+  user,
+  patientId,
+  notes,
+  setNotes,
+  refreshTimeline,
+}: PatientNotesTabProps) {
+  const [noteText, setNoteText] = useState('');
+  const [noteTags, setNoteTags] = useState('');
+  const [noteLinks, setNoteLinks] = useState('');
+  const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const {
+    isSupported,
+    isRecording,
+    transcript,
+    interimText,
+    toggle: toggleRecording,
+    reset: resetTranscript,
+    error: speechError,
+  } = useSpeechRecognition('pt-PT');
+
+  useEffect(() => {
+    if (isRecording) {
+      const sep = transcript && interimText ? ' ' : '';
+      setNoteText(transcript + sep + interimText);
+    }
+  }, [transcript, interimText, isRecording]);
+
+  useEffect(() => {
+    if (!isRecording && transcript) {
+      setNoteText(transcript);
+    }
+  }, [isRecording, transcript]);
+
+  useEffect(() => {
+    setNoteText('');
+    setNoteTags('');
+    setNoteLinks('');
+    setAttachments([]);
+    setUploadErr('');
+    setSaved(false);
+  }, []);
+
+  async function saveNote() {
+    if (!patientId || !noteText.trim()) return;
+    setSaving(true);
+    try {
+      const attachmentLines = (attachments || []).map((a) => `- ${a.url}`).join('\n');
+      const header = [
+        noteTags.trim() ? `Tags: ${noteTags.trim()}` : '',
+        noteLinks.trim() ? `Links: ${noteLinks.trim()}` : '',
+        attachmentLines ? `Attachments:\n${attachmentLines}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      const finalText = header ? `${header}\n\n${noteText}` : noteText;
+      const row = await api('/notes', { method: 'POST', body: { patientId, noteText: finalText } });
+      setNotes((prev) => [row, ...(prev || [])]);
+      setSaved(true);
+      setNoteText('');
+      setNoteTags('');
+      setNoteLinks('');
+      setAttachments([]);
+      setUploadErr('');
+      await refreshTimeline?.();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function uploadAttachment(file: File | null | undefined) {
+    if (!file || !patientId) return;
+    setUploadErr('');
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      fd.set('patientId', patientId);
+      const res = await fetch('/api/uploads', { method: 'POST', body: fd, credentials: 'same-origin' });
+      if (!res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        let msg = res.statusText;
+        if (contentType.includes('application/json')) {
+          const data = await res.json().catch(() => null);
+          msg = data?.message || data?.error || msg;
+        } else {
+          const text = await res.text().catch(() => '');
+          if (text) msg = text;
+        }
+        throw new Error(msg || 'Upload failed');
+      }
+      const out = await res.json();
+      if (out?.url) {
+        setAttachments((prev) => [
+          { url: out.url, name: out.name || file.name, type: out.type || file.type },
+          ...(prev || []),
+        ]);
+        setNoteLinks((prev) => {
+          const url = String(out.url || '').trim();
+          if (!url) return prev;
+          if (!prev) return url;
+          if (prev.includes(url)) return prev;
+          return `${prev.trim()} ${url}`.trim();
+        });
+      }
+    } catch (e) {
+      setUploadErr(e instanceof Error ? e.message : 'Failed to upload attachment.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="card p-5">
+        <div className="section-label mb-3">NEW NOTE</div>
+        <div style={{ fontSize: 12, color: '#97A0AF', marginBottom: 10 }}>
+          {user?.name || 'Dentist'} · {new Date().toLocaleString()}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <FormField label="Tags (optional)">
+            <Inp
+              value={noteTags}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNoteTags(e.target.value)}
+              placeholder="e.g. post-op, follow-up"
+            />
+          </FormField>
+          <FormField label="Links (optional)">
+            <Inp
+              value={noteLinks}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setNoteLinks(e.target.value)}
+              placeholder="e.g. https://..."
+            />
+          </FormField>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <div className="section-label mb-1.5">Attachments (optional)</div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="file"
+              onChange={(e) => uploadAttachment(e.target.files?.[0] || null)}
+              disabled={uploading}
+              className="input"
+              style={{ width: 280, padding: '7px 12px', fontSize: 13 }}
+              accept="image/png,image/jpeg,image/webp,application/pdf"
+            />
+            {uploading && <span style={{ fontSize: 12, color: '#97A0AF', fontWeight: 700 }}>Uploading…</span>}
+          </div>
+          {uploadErr && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#DE350B', fontWeight: 700 }}>{uploadErr}</div>
+          )}
+          {attachments.length > 0 && (
+            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {attachments.map((a, i) => (
+                <div
+                  key={a.url}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    alignItems: 'center',
+                    background: '#F4F7FA',
+                    border: '1px solid #EBECF0',
+                    borderRadius: 8,
+                    padding: '8px 10px',
+                  }}
+                >
+                  <a
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      fontSize: 12,
+                      color: '#0052CC',
+                      fontWeight: 700,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {a.name || a.url}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setAttachments((prev) => (prev || []).filter((_, idx) => idx !== i))}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#97A0AF',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                      lineHeight: 1,
+                      padding: '0 6px',
+                    }}
+                    aria-label="Remove attachment"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (isRecording) {
+                toggleRecording();
+              } else {
+                resetTranscript();
+                toggleRecording();
+              }
+            }}
+            disabled={!isSupported}
+            title={
+              !isSupported
+                ? 'Speech recognition not supported in this browser. Use Chrome or Edge.'
+                : isRecording
+                  ? 'Stop dictation'
+                  : 'Start voice dictation'
+            }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 14px',
+              borderRadius: 6,
+              border: 'none',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: !isSupported ? 'not-allowed' : 'pointer',
+              background: isRecording ? '#FF5630' : speechError ? '#FFEBE6' : '#F4F7FA',
+              color: isRecording ? '#FFF' : speechError ? '#DE350B' : '#172B4D',
+              opacity: !isSupported ? 0.5 : 1,
+            }}
+          >
+            {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
+            {isRecording ? 'Stop' : 'Dictate'}
+          </button>
+          {isRecording && (
+            <span
+              style={{ fontSize: 11, color: '#FF5630', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: '#FF5630',
+                  display: 'inline-block',
+                  animation: 'pulse 1.2s ease-in-out infinite',
+                }}
+              />
+              Recording…
+            </span>
+          )}
+          {speechError && !isRecording && (
+            <span style={{ fontSize: 11, color: '#DE350B', fontWeight: 600 }}>{speechError}</span>
+          )}
+          {!isSupported && <span style={{ fontSize: 11, color: '#97A0AF' }}>Use Chrome or Edge to dictate</span>}
+        </div>
+        <Textarea
+          value={noteText}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+            if (!isRecording) {
+              setNoteText(e.target.value);
+              setSaved(false);
+            }
+          }}
+          placeholder={isRecording ? 'Listening…' : 'Write your clinical note…'}
+          style={{ minHeight: 220, fontFamily: '"JetBrains Mono",monospace', fontSize: 12.5, lineHeight: 1.65 }}
+        />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 12 }}>
+          <PrimaryBtn onClick={saveNote} disabled={saving || !noteText.trim()} style={{ justifyContent: 'center' }}>
+            {saving ? 'Saving…' : 'Save note'}
+          </PrimaryBtn>
+          <GhostBtn
+            onClick={() => {
+              setNoteText('');
+              setSaved(false);
+            }}
+            disabled={!noteText.trim()}
+          >
+            Clear
+          </GhostBtn>
+        </div>
+        {saved && (
+          <div style={{ marginTop: 10, fontSize: 12, color: '#00875A', fontWeight: 600 }}>Note saved to history.</div>
+        )}
+      </div>
+
+      <div className="card p-5">
+        <div className="section-label mb-4">HISTORY</div>
+        {!notes.length ? (
+          <Empty message="No notes for this patient." />
+        ) : (
+          notes.map((n, i) => (
+            <div key={n.id} style={{ marginBottom: 22 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Badge bg="#EAE6FF" color="#5243AA" label="NOTE" />
+                  <span style={{ fontSize: 12, color: '#97A0AF' }}>{new Date(n.created_at).toLocaleString()}</span>
+                  <span style={{ fontSize: 12, color: '#0052CC', fontWeight: 600 }}>{n.user_name}</span>
+                </div>
+                <div style={{ fontSize: 10, color: '#C1C7D0', fontFamily: '"JetBrains Mono",monospace' }}>
+                  #{n.hash}
+                </div>
+              </div>
+              <pre
+                style={{
+                  fontSize: 11,
+                  color: '#5E6C84',
+                  fontFamily: '"JetBrains Mono",monospace',
+                  background: '#F4F7FA',
+                  padding: '12px 14px',
+                  borderRadius: 6,
+                  border: '1px solid #DFE1E6',
+                  whiteSpace: 'pre-wrap',
+                  maxHeight: 260,
+                  overflowY: 'auto',
+                  lineHeight: 1.7,
+                }}
+              >
+                {n.event}
+              </pre>
+              {i < notes.length - 1 && <div style={{ borderBottom: '1px solid #F4F7FA', marginTop: 18 }} />}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

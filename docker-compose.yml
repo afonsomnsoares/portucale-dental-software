@@ -1,0 +1,91 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: portucale-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: portucale_dental
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:9
+    container_name: portucale-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@portucale.dental
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Set PGADMIN_PASSWORD}
+    ports:
+      - '127.0.0.1:5050:80'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portucale-app
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      NODE_ENV: production
+      # Optional — leaving these unset just makes the SMS send step and the AI
+      # report insight degrade gracefully (see lib/jobsRunner.ts and
+      # app/api/reports/insight/route.ts), not error.
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Unattended counterpart to the admin "Run Jobs" action: periodically runs
+  # scripts/run-jobs.ts (see that file / lib/jobsRunner.ts) for every active tenant —
+  # appointment reminders, no-show risk scoring + proactive outreach, patient lifecycle
+  # reactivation outreach, sending queued SMS notifications, waitlist offer expiry,
+  # upload retention, nightly summary, revenue recovery snapshot. Talks to Postgres
+  # directly (via lib/db.ts) rather than calling the app's HTTP API, so it needs no
+  # session/CSRF credentials of its own — same trust boundary as scripts/migrate.ts.
+  jobs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: portucale-jobs
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      UPLOAD_RETENTION_DAYS: ${UPLOAD_RETENTION_DAYS:-90}
+      JOB_INTERVAL_SECONDS: ${JOB_INTERVAL_SECONDS:-900}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          node --import tsx scripts/run-jobs.ts || true
+          sleep "$$JOB_INTERVAL_SECONDS"
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
