@@ -1,5 +1,5 @@
 'use client';
-import { AlertTriangle, Box } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import Odontogram from '@/components/Odontogram';
@@ -14,7 +14,6 @@ export default function DentistOdontogramPage() {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState(false);
   const [ptsLoad, setPtsLoad] = useState(true);
-  const [use3D, setUse3D] = useState(true);
 
   useEffect(() => {
     api('/patients')
@@ -68,29 +67,7 @@ export default function DentistOdontogramPage() {
 
   return (
     <div>
-      <PageHeader title="Odontogram" sub="Interactive dental chart — tag conditions and add treatments per tooth">
-        <button
-          type="button"
-          onClick={() => setUse3D((v) => !v)}
-          style={{
-            padding: '7px 14px',
-            fontSize: 12,
-            fontWeight: 600,
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            background: use3D ? '#DEEBFF' : 'white',
-            border: `1.5px solid ${use3D ? '#0052CC' : '#DFE1E6'}`,
-            color: use3D ? '#0052CC' : '#5E6C84',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            transition: 'all 0.12s',
-          }}
-        >
-          <Box size={14} /> {use3D ? '3D' : '2D'} Mode
-        </button>
-      </PageHeader>
+      <PageHeader title="Odontogram" sub="Interactive dental chart — tag conditions and add treatments per tooth" />
       {/* Patient selector */}
       <div className="card p-4 mb-5">
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -153,7 +130,6 @@ export default function DentistOdontogramPage() {
           treatments={treatments}
           onTeethChange={handleTeethChange}
           onAddTreatment={handleAddTreatment}
-          use3D={use3D}
         />
       ) : (
         <div style={{ textAlign: 'center', padding: '60px 0', color: '#C1C7D0', fontSize: 14 }}>

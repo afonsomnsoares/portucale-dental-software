@@ -3,7 +3,6 @@ import { Check, Circle } from 'lucide-react';
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import type { ToothState, Treatment } from '@/lib/types';
-import Odontogram3D from './Odontogram3D';
 import { Badge, FormField, GhostBtn, Inp, Modal, PrimaryBtn, Sel, Textarea } from './ui';
 
 const UPPER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -16,17 +15,15 @@ interface OdontogramProps {
   onTeethChange?: (num: number, patch: Partial<ToothState>) => Promise<void> | void;
   onAddTreatment?: (data: Record<string, unknown>) => Promise<void> | void;
   readOnly?: boolean;
-  use3D?: boolean;
 }
 
 export default function Odontogram({
-  patientId,
+  patientId: _patientId,
   teeth = {},
   treatments = [],
   onTeethChange,
   onAddTreatment,
   readOnly = false,
-  use3D = false,
 }: OdontogramProps) {
   const { settings } = useAuth();
   const TANOMD_CODES = settings?.TANOMD_CODES || [];
@@ -225,68 +222,55 @@ export default function Odontogram({
   return (
     <>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 16 }}>
-        {use3D ? (
-          <div className="card" style={{ padding: 0, position: 'relative' }}>
-            <Odontogram3D
-              patientId={patientId}
-              teeth={teeth}
-              treatments={treatments}
-              onTeethChange={onTeethChange}
-              onAddTreatment={onAddTreatment}
-              readOnly={readOnly}
-            />
+        <div className="card p-6">
+          <div className="text-center section-label mb-3">MAXILAR — Dentes 1–16</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap', marginBottom: 10 }}>
+            {UPPER.map((n) => (
+              <ToothBtn key={n} num={n} />
+            ))}
           </div>
-        ) : (
-          <div className="card p-6">
-            <div className="text-center section-label mb-3">MAXILAR — Dentes 1–16</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap', marginBottom: 10 }}>
-              {UPPER.map((n) => (
-                <ToothBtn key={n} num={n} />
-              ))}
+          <div style={{ height: 1, background: '#EBECF0', margin: '10px 32px', position: 'relative' }}>
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: -8,
+                transform: 'translateX(-50%)',
+                fontSize: 10,
+                color: '#97A0AF',
+                background: 'white',
+                padding: '0 8px',
+              }}
+            >
+              LINHA MÉDIA
             </div>
-            <div style={{ height: 1, background: '#EBECF0', margin: '10px 32px', position: 'relative' }}>
-              <div
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: -8,
-                  transform: 'translateX(-50%)',
-                  fontSize: 10,
-                  color: '#97A0AF',
-                  background: 'white',
-                  padding: '0 8px',
-                }}
-              >
-                LINHA MÉDIA
+          </div>
+          <div className="text-center section-label mb-3 mt-2">MANDIBULAR — Dentes 17–32</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
+            {LOWER.map((n) => (
+              <ToothBtn key={n} num={n} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 16, marginTop: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {TOOTH_CONDITIONS.map((c) => (
+              <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    background: c.color,
+                    opacity: c.key === 'healthy' ? 0.22 : 1,
+                  }}
+                />
+                <span style={{ fontSize: 10, color: '#5E6C84' }}>{c.label}</span>
               </div>
-            </div>
-            <div className="text-center section-label mb-3 mt-2">MANDIBULAR — Dentes 17–32</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
-              {LOWER.map((n) => (
-                <ToothBtn key={n} num={n} />
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {TOOTH_CONDITIONS.map((c) => (
-                <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <div
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 2,
-                      background: c.color,
-                      opacity: c.key === 'healthy' ? 0.22 : 1,
-                    }}
-                  />
-                  <span style={{ fontSize: 10, color: '#5E6C84' }}>{c.label}</span>
-                </div>
-              ))}
-            </div>
-            <div className="text-center mt-2" style={{ fontSize: 10, color: '#97A0AF' }}>
-              <Circle size={8} fill="#FF8B00" color="#FF8B00" /> Ponto laranja = tratamento ativo nesse dente
-            </div>
+            ))}
           </div>
-        )}
+          <div className="text-center mt-2" style={{ fontSize: 10, color: '#97A0AF' }}>
+            <Circle size={8} fill="#FF8B00" color="#FF8B00" /> Ponto laranja = tratamento ativo nesse dente
+          </div>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="card p-4">
