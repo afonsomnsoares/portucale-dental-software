@@ -47,6 +47,14 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
 
+  // There's no separate status column: `signed_by` empty means "not signed yet" — staff
+  // can now create the row before the signature exists too (signedBy omitted), so the
+  // patient can complete it remotely through their portal link (see
+  // app/api/public/patient-portal/[token]/route.ts's POST for the consent_form purpose),
+  // instead of only the presencial flow where staff already have the signature in hand.
+  const signedByClean = sanitizeString(signedBy, 200);
+  const isPending = !signedByClean;
+
   const [row] = await query(
     `INSERT INTO consent_forms
        (tenant_id, patient_id, procedure_name, description, signed_by, signature_url, storage_key, file_size, created_by)
@@ -57,7 +65,7 @@ export async function POST(request: NextRequest) {
       patientId,
       sanitizeString(procedureName, 200),
       sanitizeString(description, 2000),
-      sanitizeString(signedBy, 200),
+      signedByClean,
       sanitizeString(signatureUrl, 2000),
       sanitizeString(storageKey, 500),
       Number.isFinite(Number(fileSize)) ? Math.max(0, Math.trunc(Number(fileSize))) : 0,
@@ -65,7 +73,14 @@ export async function POST(request: NextRequest) {
     ],
   );
 
-  await appendTimeline(patientId, user, 'admin', `Formulário de consentimento assinado: ${procedureName}`);
+  await appendTimeline(
+    patientId,
+    user,
+    'admin',
+    isPending
+      ? `Formulário de consentimento pedido: ${procedureName}`
+      : `Formulário de consentimento assinado: ${procedureName}`,
+  );
   await appendAudit(user, 'CREATE', `Consent form: ${procedureName}`, null, `patient:${patientId}`, user.clinic);
 
   return Response.json(row, { status: 201 });

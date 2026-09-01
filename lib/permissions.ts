@@ -28,9 +28,25 @@ export const PERMISSION_ACTIONS = [
   'schedule:read',
   'waitlist:manage',
   'lifecycle:read',
+  'notifications:read',
+  'patient-tasks:read',
+  'patient-tasks:create',
+  'patient-tasks:update',
+  'patient-interactions:read',
+  'patient-interactions:create',
+  'uploads:read',
+  'lead-sources:manage',
+  'staff-schedules:manage',
+  'staff-time-off:manage',
+  'checklists:manage',
+  'incidents:manage',
+  'inventory:manage',
+  'equipment:manage',
+  'patient-portal:manage',
 ];
 
 const DEFAULT: Record<string, Set<string>> = {
+  super_admin: new Set(PERMISSION_ACTIONS),
   admin: new Set(PERMISSION_ACTIONS),
   receptionist: new Set([
     'patients:create',
@@ -49,6 +65,15 @@ const DEFAULT: Record<string, Set<string>> = {
     'schedule:read',
     'waitlist:manage',
     'lifecycle:read',
+    'notifications:read',
+    'patient-tasks:read',
+    'patient-tasks:create',
+    'patient-tasks:update',
+    'patient-interactions:read',
+    'patient-interactions:create',
+    'uploads:create',
+    'uploads:read',
+    'patient-portal:manage',
   ]),
   dentist: new Set([
     'appointments:status',
@@ -56,7 +81,14 @@ const DEFAULT: Record<string, Set<string>> = {
     'treatments:update',
     'treatments:delete',
     'uploads:create',
+    'uploads:read',
     'reports:read',
+    'patient-tasks:read',
+    'patient-tasks:create',
+    'patient-tasks:update',
+    'patient-interactions:read',
+    'patient-interactions:create',
+    'patient-portal:manage',
   ]),
 };
 
@@ -107,7 +139,7 @@ export async function permissionOverride(
 export async function hasPermission(user: Pick<SessionUser, 'role' | 'tenantId'> | null | undefined, action: string) {
   if (!user) return false;
   const role = String(user.role || '');
-  if (role === 'admin' && !user.tenantId) return true;
+  if (role === 'super_admin') return true;
   const tenantId = user.tenantId || null;
   const override = await permissionOverride(tenantId, role, action);
   if (override !== null) return override;

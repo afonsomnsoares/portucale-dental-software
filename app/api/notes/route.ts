@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'dentist', 'admin')) return forbidden();
+  if (!requireRoles(user, 'dentist', 'admin', 'super_admin')) return forbidden();
 
   const { patientId, noteText } = await request.json();
   if (!patientId || !noteText) {

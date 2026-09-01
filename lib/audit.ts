@@ -1,10 +1,5 @@
-import crypto from 'node:crypto';
 import type { SessionUser } from './auth';
 import { query } from './db';
-
-export function hashEntry(data: unknown) {
-  return crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex').slice(0, 12);
-}
 
 export async function appendAudit(
   user: Pick<SessionUser, 'name' | 'role' | 'clinic'>,
@@ -14,7 +9,7 @@ export async function appendAudit(
   after: unknown = null,
   clinic: string | null = null,
 ) {
-  const entry: Record<string, unknown> = {
+  const entry = {
     user_name: user.name,
     user_role: user.role,
     clinic: clinic || user.clinic || 'Tower',
@@ -23,20 +18,15 @@ export async function appendAudit(
     before_val: before ? String(before) : null,
     after_val: after ? String(after) : null,
   };
-  entry.hash = hashEntry(entry);
+  // `hash` is deliberately not set here — a BEFORE INSERT trigger
+  // (chain_audit_log_hash, see scripts/migrations/015_audit_hash_chain.sql)
+  // computes it server-side, chained to the previous row. A client-supplied
+  // hash would be worthless for tamper-evidence: whoever tampers with a row
+  // could just compute a fake chain that verifies against itself.
   await query(
-    `INSERT INTO audit_log (user_name, user_role, clinic, action, resource, before_val, after_val, hash)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [
-      entry.user_name,
-      entry.user_role,
-      entry.clinic,
-      entry.action,
-      entry.resource,
-      entry.before_val,
-      entry.after_val,
-      entry.hash,
-    ],
+    `INSERT INTO audit_log (user_name, user_role, clinic, action, resource, before_val, after_val)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [entry.user_name, entry.user_role, entry.clinic, entry.action, entry.resource, entry.before_val, entry.after_val],
   );
 }
 
@@ -64,10 +54,11 @@ export async function appendTimeline(
   eventType: string,
   event: string,
 ) {
-  const h = hashEntry({ patientId, event, user: user.name, ts: Date.now() });
+  // See appendAudit above — hash is computed by chain_patient_timeline_hash
+  // (scripts/migrations/015_audit_hash_chain.sql), not here.
   await query(
-    `INSERT INTO patient_timeline (patient_id, user_name, user_role, event_type, event, hash)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [patientId, user.name, user.role, eventType, event, h],
+    `INSERT INTO patient_timeline (patient_id, user_name, user_role, event_type, event)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [patientId, user.name, user.role, eventType, event],
   );
 }

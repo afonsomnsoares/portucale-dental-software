@@ -85,3 +85,48 @@ export function computeLifecycleStage(
 
   return 'stable';
 }
+
+// ─── Reativação: segmentação (item 7 — "este paciente costumava vir
+// regularmente e não aparece há 18 meses") ─────────────────────────────────
+// Turns a flat "everyone who's inactive" list into something a receptionist can
+// prioritize: how long they've actually been gone, and whether they were a
+// high-value patient historically — so a high-value patient dormant 18 months
+// (the user's own example) doesn't sit in the same bucket as someone who
+// visited once for a cheap cleaning 6 months ago.
+
+export type DormancyBand = '6-12m' | '12-24m' | '24m+';
+export type ValueTier = 'high' | 'standard';
+
+// Same 6-months floor as LIFECYCLE_INACTIVE_MONTHS — a candidate is only ever
+// segmented once they're already 'inactive', so the bands start where that ends.
+export function dormancyBand(monthsInactive: number): DormancyBand {
+  if (monthsInactive >= 24) return '24m+';
+  if (monthsInactive >= 12) return '12-24m';
+  return '6-12m';
+}
+
+// Arbitrary-but-explainable threshold, same style as RECOVERY_DEFAULTS in
+// lib/recoveryCalc.ts (round numbers, documented, easy for an admin to reason about
+// rather than a statistically-derived cutoff nobody can eyeball).
+export const HIGH_VALUE_LIFETIME_THRESHOLD = 500;
+
+export function valueTier(lifetimeValue: number): ValueTier {
+  return Number(lifetimeValue) >= HIGH_VALUE_LIFETIME_THRESHOLD ? 'high' : 'standard';
+}
+
+export interface ReactivationSegmentSignals {
+  monthsInactive: number;
+  lifetimeValue: number;
+}
+
+export interface ReactivationSegment {
+  dormancyBand: DormancyBand;
+  valueTier: ValueTier;
+}
+
+export function segmentReactivationCandidate(signals: ReactivationSegmentSignals): ReactivationSegment {
+  return {
+    dormancyBand: dormancyBand(signals.monthsInactive),
+    valueTier: valueTier(signals.lifetimeValue),
+  };
+}

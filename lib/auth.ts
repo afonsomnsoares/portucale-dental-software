@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { enterTenantContext } from './db';
 
 export interface SessionUser {
   id: string;
@@ -101,13 +102,21 @@ export function getAuth(request: AuthRequest) {
   const token =
     request?.cookies?.get?.('dent_token')?.value ||
     parseCookieHeader(request?.headers?.get?.('cookie') || '')?.dent_token;
+  let user: SessionUser | null;
   if (token) {
-    return verifyToken(token);
+    user = verifyToken(token);
+  } else {
+    // Fallback to Authorization header (useful for API scripts if needed)
+    const auth = request.headers.get('authorization') || '';
+    user = verifyToken(auth.replace('Bearer ', ''));
   }
-
-  // Fallback to Authorization header (useful for API scripts if needed)
-  const auth = request.headers.get('authorization') || '';
-  return verifyToken(auth.replace('Bearer ', ''));
+  // Primes lib/db.ts's per-request tenant context for every query this route
+  // handler makes from here on (see enterTenantContext) — the one place this
+  // needs to happen, since every route already calls getAuth() first. Skipped
+  // when there's no valid session; the two routes that query the DB before
+  // authenticating (login, bootstrap) use withSystemContext explicitly instead.
+  if (user) enterTenantContext(user);
+  return user;
 }
 
 export function unauthorized() {

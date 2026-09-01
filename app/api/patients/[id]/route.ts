@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const user = getAuth(request);
   if (!user) return unauthorized();
   const { id } = await params;
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const p = await queryOne(
     `SELECT p.*,
             ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100)::int AS no_show_score,
@@ -49,9 +49,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const body = await request.json();
   const patientErrors = validatePatientBody(body);
   if (patientErrors) return badRequest(patientErrors.join('; '));
+  if (body.status) {
+    const allowed = ['registered', 'waiting', 'in-operatory', 'ready-dismissal', 'departed'];
+    if (!allowed.includes(body.status)) return badRequest('Invalid status');
+  }
 
   let schemaTenantId = user.tenantId || null;
-  if (user.role === 'admin' && !user.tenantId) {
+  if (user.role === 'super_admin') {
     const p = await queryOne(`SELECT tenant_id FROM patients WHERE id=$1`, [id]);
     schemaTenantId = p?.tenant_id || null;
   }
@@ -80,13 +84,26 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (normalized.error) return badRequest(normalized.error);
     customJson = JSON.stringify(normalized.value || {});
   }
+  const commPrefsJson = body.commPrefs && typeof body.commPrefs === 'object' ? JSON.stringify(body.commPrefs) : null;
 
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const [updated] = await query(
     `UPDATE patients SET name=$1, dob=$2, phone=$3, email=$4, insurance=$5, status=COALESCE($6,status),
-        custom_fields = COALESCE($8::jsonb, custom_fields)
+        custom_fields = COALESCE($8::jsonb, custom_fields),
+        comm_prefs = COALESCE($10::jsonb, comm_prefs)
      WHERE id=$7 AND ($9::uuid IS NULL OR tenant_id=$9::uuid) RETURNING *`,
-    [body.name, body.dob, body.phone, body.email, body.insurance, body.status || null, id, customJson, tenantId],
+    [
+      body.name,
+      body.dob,
+      body.phone,
+      body.email,
+      body.insurance,
+      body.status || null,
+      id,
+      customJson,
+      tenantId,
+      commPrefsJson,
+    ],
   );
   if (!updated) return notFound('Patient not found');
   await appendAudit(user, 'UPDATE', `Patient — ${updated.name}`, null, 'updated', user.clinic);

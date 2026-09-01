@@ -92,11 +92,11 @@ portucale_dental/
 │   ├── globals.css                   ← Estilos globais (Tailwind + CSS variables)
 │   ├── login.module.css              ← CSS module pagina de login
 │   ├── layout.tsx                    ← Layout raiz (AuthProvider, fonts)
-│   ├── page.tsx                      ← Pagina de login / Bootstrap primeiro admin
+│   ├── page.tsx                      ← Pagina de login
 │   ├── providers.tsx                 ← AuthContext + api() helper + CSRF
 │   │
 │   ├── api/                          ← BACKEND (~60 rotas de API)
-│   │   ├── auth/                     ← bootstrap, csrf, login, logout, me
+│   │   ├── auth/                     ← csrf, login, logout, me
 │   │   ├── patients/                 ← CRUD, import em massa, timeline, dentes, historial medico
 │   │   ├── appointments/             ← CRUD + transicoes de estado
 │   │   ├── treatments/               ← Tratamentos
@@ -194,7 +194,8 @@ Schema completo com **30+ tabelas** PostgreSQL, definido em `scripts/schema.sql`
 - **JWT custom** (HMAC-SHA256) com suporte a rotacao de multiplos secrets
 - **bcrypt** para hashing de passwords
 - **Protecao CSRF** via padrao double-submit cookie
-- **Rate limiting**: limite generico sobre toda a API (240 pedidos/min por utilizador autenticado, 60/min por IP anonimo), mais limites dedicados no login (10 tentativas/10 min por IP+email) e no bootstrap (5/hora por IP) -- implementado em memoria, por instancia. Nao escala horizontalmente: com multiplas instancias/replicas cada uma tem o seu contador. Para producao multi-instancia substituir por Redis ou equivalente. Ver `lib/rateLimit.ts`
+- **Rate limiting**: limite generico sobre toda a API (240 pedidos/min por utilizador autenticado, 60/min por IP anonimo), mais um limite dedicado no login (10 tentativas/10 min por IP+email) -- implementado em memoria, por instancia. Nao escala horizontalmente: com multiplas instancias/replicas cada uma tem o seu contador. Para producao multi-instancia substituir por Redis ou equivalente. Ver `lib/rateLimit.ts`
+- **Criacao do primeiro super admin**: nao existe ecra de auto-registo -- a conta e criada uma unica vez pelo operador via `npm run create-admin` (ver `scripts/create-admin.ts`). Cada utilizador seguinte (admin de clinica, rececionista, dentista) e criado por esse super admin dentro do dashboard.
 - **Isolamento por clinica**: reforcado na generalidade das rotas de leitura/escrita via `tenant_id`. A rota `/api/audit` foi corrigida para nunca deixar um admin de clinica ler o log de auditoria de outra clinica -- antes, qualquer conta com role `admin` via o log completo, independentemente do tenant
 - **Verificacao de origem** em todas as mutacoes
 - **Guards de rota** por role no middleware e no layout do dashboard
@@ -345,6 +346,7 @@ Criadas com `npm run db:seed -- --with-demo-users`. **So para desenvolvimento/de
 | `npm run db:seed` | Semear base de dados com dados demo |
 | `npm run db:reset` | Resetar e semear novamente |
 | `npm run db:migrate` | Executar migracoes |
+| `npm run create-admin` | Criar o super admin da plataforma (unico) -- `ADMIN_EMAIL=... ADMIN_NAME="..." ADMIN_PASSWORD=... npm run create-admin`. So funciona se ainda nao existir nenhum |
 | `npm run jobs:run` | Corre o pipeline de jobs em segundo plano uma vez, para todos os tenants ativos (ver `lib/jobsRunner.ts`) |
 
 ---

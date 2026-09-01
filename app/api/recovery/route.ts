@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!(await hasPermission(user, 'recovery:read'))) return forbidden();
 
   const requestedTenantId = new URL(request.url).searchParams.get('tenantId');
-  const tenantId = user.role === 'admin' && !user.tenantId ? requestedTenantId : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
   if (!tenantId) return forbidden();
 
   const tenant = await queryOne(`SELECT id, name, operatories FROM tenants WHERE id=$1`, [tenantId]);

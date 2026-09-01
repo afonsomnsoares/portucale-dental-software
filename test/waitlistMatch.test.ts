@@ -8,6 +8,7 @@ function candidate(overrides: Partial<WaitlistCandidate> = {}): WaitlistCandidat
   return {
     id: 'c1',
     patient_id: 'p1',
+    treatment_type: 'Hygiene Cleaning',
     preferred_dentist_id: null,
     preferred_days: null,
     preferred_time_start: null,
@@ -20,7 +21,22 @@ function candidate(overrides: Partial<WaitlistCandidate> = {}): WaitlistCandidat
   };
 }
 
-const MONDAY_SLOT: FreedSlot = { date: '2026-08-31', startTime: '10:00', duration: 30, dentistId: 'd1', chair: 1 };
+const MONDAY_SLOT: FreedSlot = {
+  date: '2026-08-31',
+  startTime: '10:00',
+  type: 'Hygiene Cleaning',
+  duration: 30,
+  dentistId: 'd1',
+  chair: 1,
+};
+
+test('matchesSlot rejects a treatment type mismatch', () => {
+  assert.equal(matchesSlot(candidate({ treatment_type: 'Root Canal' }), MONDAY_SLOT, NOW), false);
+});
+
+test('matchesSlot accepts a treatment type match regardless of case/whitespace', () => {
+  assert.equal(matchesSlot(candidate({ treatment_type: '  hygiene cleaning ' }), MONDAY_SLOT, NOW), true);
+});
 
 test('matchesSlot rejects non-active entries', () => {
   assert.equal(matchesSlot(candidate({ status: 'fulfilled' }), MONDAY_SLOT, NOW), false);

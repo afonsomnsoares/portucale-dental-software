@@ -8,12 +8,12 @@ function clampDate(s: unknown) {
   return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
 }
 
-// Cross-clinic comparison only makes sense for a global admin (no tenantId) managing
-// several clinics — a single-clinic admin has nothing to compare against.
+// Cross-clinic comparison only makes sense for the super_admin, managing several
+// clinics — a single-clinic admin has nothing to compare against.
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin') || user.tenantId) return forbidden();
+  if (!requireRoles(user, 'super_admin')) return forbidden();
   if (!(await hasPermission(user, 'reports:read'))) return forbidden();
 
   const { searchParams } = new URL(request.url);

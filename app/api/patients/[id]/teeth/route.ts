@@ -6,7 +6,7 @@ import { getOwnedPatient } from '@/lib/tenantGuard';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin', 'dentist')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin', 'dentist')) return forbidden();
   const { id } = await params;
 
   if (!(await getOwnedPatient(id, user))) return Response.json({ error: 'Patient not found' }, { status: 404 });

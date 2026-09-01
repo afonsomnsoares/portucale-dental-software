@@ -6,7 +6,7 @@ import { hasPermission } from '@/lib/permissions';
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   if (!(await hasPermission(user, 'audit:read'))) return forbidden();
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');

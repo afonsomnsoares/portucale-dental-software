@@ -3,15 +3,23 @@ import { ROLE_HOME } from '@/lib/constants';
 import { verifyTokenEdge } from '@/lib/jwt-edge';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
 
-const ROLE_PREFIXES: Array<[prefix: string, role: string]> = Object.entries(ROLE_HOME).map(([role, home]) => [
-  home,
-  role,
-]);
+// Explicit prefix -> allowed role(s), one entry per role. 'admin' and 'super_admin' used
+// to share '/dashboard/admin' (derived from lib/constants.ts's ROLE_HOME, back when both
+// mapped to the same home path) — they now have fully separate trees
+// (/dashboard/admin vs /dashboard/platform), so this no longer needs to be derived by
+// grouping ROLE_HOME entries; a flat list is both simpler and can't silently merge two
+// roles onto the same prefix again.
+const DASHBOARD_ACCESS: Array<[prefix: string, roles: string[]]> = [
+  ['/dashboard/admin', ['admin']],
+  ['/dashboard/platform', ['super_admin']],
+  ['/dashboard/receptionist', ['receptionist']],
+  ['/dashboard/dentist', ['dentist']],
+];
 
 // Blanket API rate limiting (item 1) — a floor under every /api/* route so no
 // endpoint can be hammered even if its handler forgot its own limiter.
-// Specific endpoints (login, bootstrap) keep their own stricter limits on top
-// of this; this is just the generic ceiling for everything else.
+// Specific endpoints (login) keep their own stricter limits on top of this;
+// this is just the generic ceiling for everything else.
 // Runs in the Edge runtime, so it can't write to Postgres (audit_log) — blocks
 // are logged with console.warn, which the hosting platform captures.
 const AUTHENTICATED_LIMIT = { limit: 240, windowMs: 60 * 1000 }; // ~4 req/s per signed-in user
@@ -54,8 +62,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    for (const [prefix, role] of ROLE_PREFIXES) {
-      if (pathname.startsWith(prefix) && user.role !== role) {
+    for (const [prefix, roles] of DASHBOARD_ACCESS) {
+      if (pathname.startsWith(prefix) && !roles.includes(user.role)) {
         const url = request.nextUrl.clone();
         url.pathname = (ROLE_HOME as Record<string, string>)[user.role] || '/';
         url.search = '';

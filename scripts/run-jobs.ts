@@ -6,6 +6,18 @@
 // via the same lib/jobsRunner.ts used by the HTTP route — see that file for what each
 // job actually does. Meant to be invoked on a schedule (see the `jobs` service in
 // docker-compose.yml); a single run here does one pass over every tenant and exits.
+// This process reads across every tenant with no per-request session to scope
+// it (see the loop below), so — like scripts/migrate.ts — it's meant to run
+// against the DATABASE_URL admin/owner connection, never the RLS-restricted
+// APP_DATABASE_URL. Both share lib/db.ts's getPool(), which prefers
+// APP_DATABASE_URL when set; locally that var lives in the same .env file
+// `next dev` reads for the app itself (see .env's comment), so it'd otherwise
+// leak into this process too. Clearing it here — before lib/db.ts's pool is
+// ever created — keeps the two processes on the right connection regardless
+// of what's in the shared file. docker-compose.yml's `jobs` service sidesteps
+// this entirely by simply never setting the var in its own environment.
+delete process.env.APP_DATABASE_URL;
+
 import { listActiveTenantIds, runJob, SYSTEM_ACTOR } from '../lib/jobsRunner.ts';
 
 async function main() {

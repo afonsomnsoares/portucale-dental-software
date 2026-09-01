@@ -1,0 +1,14 @@
+-- ─── RECALL / REATIVAÇÃO: fechar o ciclo de automação ────────────────────────
+-- Hoje `recalls` é só uma lista manual — next_due é calculado, aparece como
+-- "atrasado" em várias vistas (Recuperação, Jornada do Paciente), mas nunca
+-- dispara nenhuma mensagem sozinho. A única automação de reativação real que
+-- existe é lib/lifecycle.ts's queueLifecycleOutreach, que só olha para
+-- inatividade genérica (sem visita há N meses), não para os recalls
+-- explicitamente agendados pelo dentista (tipo + intervalo + próxima data).
+--
+-- `last_notified_at` segue exatamente o mesmo padrão de
+-- patient_lifecycle_state.last_outreach_at (007_lifecycle_reactivation.sql):
+-- um cooldown para não reenviar o lembrete a cada corrida do job, guardado na
+-- própria linha do recall em vez de tentar deduzir "já mandei isto?" a partir
+-- da tabela notifications (que não tem uma coluna recall_id para o fazer bem).
+ALTER TABLE recalls ADD COLUMN IF NOT EXISTS last_notified_at TIMESTAMPTZ;

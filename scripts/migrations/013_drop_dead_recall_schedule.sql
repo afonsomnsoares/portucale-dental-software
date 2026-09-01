@@ -1,0 +1,18 @@
+-- ─── CLEANUP: drop the dead `recall_schedule` table ──────────────────────────
+-- Created by scripts/migrations/001_clinical_features.sql, but scripts/schema.sql
+-- later added a *different* table, `recalls`, for the same purpose — and
+-- `recalls` is what the app actually uses (app/api/recalls/*, lib/recovery.ts).
+-- Nothing in app/ or lib/ ever reads or writes recall_schedule; it has just
+-- been carried along, picking up a NOT NULL tenant_id (scripts/migrations/008),
+-- portucale_app's blanket grants (scripts/schema.sql) and an RLS policy
+-- (scripts/migrations/011) for a table nothing touches.
+--
+-- No foreign key anywhere references recall_schedule(id), so this is a plain
+-- drop — no data migration needed. Deliberately no CASCADE: if some
+-- unexpected dependent object exists (e.g. a view added outside this repo),
+-- this fails loudly instead of silently dropping it too — investigate rather
+-- than re-running with CASCADE.
+--
+-- Idempotent: IF EXISTS makes a second run (or a fresh install where the
+-- table was never created) a no-op.
+DROP TABLE IF EXISTS recall_schedule;

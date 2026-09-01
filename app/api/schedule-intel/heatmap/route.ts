@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = user.role === 'admin' && !user.tenantId ? requestedTenantId : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
   if (!tenantId) return forbidden();
 
   const data = await computeRiskHeatmap(tenantId);

@@ -4,6 +4,7 @@
 export interface WaitlistCandidate {
   id: string;
   patient_id: string;
+  treatment_type: string;
   preferred_dentist_id: string | null;
   preferred_days: number[] | null; // 0=Sunday .. 6=Saturday, null/[] = any day
   preferred_time_start: string | null; // 'HH:MM' or null = any time
@@ -17,9 +18,16 @@ export interface WaitlistCandidate {
 export interface FreedSlot {
   date: string; // 'YYYY-MM-DD'
   startTime: string; // 'HH:MM'
+  type: string; // the appointment type that freed up — matched against candidate.treatment_type
   duration: number;
   dentistId: string | null;
   chair: number;
+}
+
+function normalizedType(v: string) {
+  return String(v || '')
+    .trim()
+    .toLowerCase();
 }
 
 function toMinutes(hhmm: string) {
@@ -29,6 +37,11 @@ function toMinutes(hhmm: string) {
 
 export function matchesSlot(candidate: WaitlistCandidate, slot: FreedSlot, now = new Date()) {
   if (candidate.status !== 'active') return false;
+  // "filtrar por tratamento" — a candidate waitlisted for a Hygiene Cleaning shouldn't be
+  // offered a freed Root Canal slot just because it's the next free chair time. Both sides
+  // are free text (waitlist_entries.treatment_type / appointments.type), so this is an
+  // exact case/whitespace-insensitive match, not a fuzzy one.
+  if (normalizedType(candidate.treatment_type) !== normalizedType(slot.type)) return false;
   if (candidate.min_duration > slot.duration) return false;
   if (candidate.preferred_dentist_id && candidate.preferred_dentist_id !== slot.dentistId) return false;
 

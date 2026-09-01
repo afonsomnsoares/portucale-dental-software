@@ -1,3 +1,4 @@
+import { canAutoContact } from './commPrefs';
 import { query, queryOne } from './db';
 import { toE164 } from './validate';
 import { type FreedSlot, rankCandidates, type WaitlistCandidate } from './waitlistMatch';
@@ -102,6 +103,7 @@ function toCandidate(row: Record<string, unknown>): WaitlistCandidate {
   return {
     id: String(row.id),
     patient_id: String(row.patient_id),
+    treatment_type: String(row.treatment_type || ''),
     preferred_dentist_id: (row.preferred_dentist_id as string) || null,
     preferred_days: (row.preferred_days as number[]) || null,
     preferred_time_start: (row.preferred_time_start as string) || null,
@@ -144,8 +146,11 @@ export async function notifyWaitlistOfFreedSlot(
 
   let offered = 0;
   for (const c of ranked) {
-    const patient = await queryOne(`SELECT name, phone FROM patients WHERE id=$1`, [c.patient_id]);
-    const phone = toE164(patient?.phone);
+    const patient = await queryOne(`SELECT name, phone, comm_prefs FROM patients WHERE id=$1`, [c.patient_id]);
+    // Respect an explicit "don't SMS me" the same way every automated queue*() job in
+    // lib/jobsRunner.ts does (see lib/commPrefs.ts) — a waitlist offer is still an
+    // automated outreach, not a human typing a message.
+    const phone = canAutoContact(patient?.comm_prefs, 'sms') ? toE164(patient?.phone) : '';
 
     const body = `Olá ${patient?.name || ''}, ficou uma vaga disponível no dia ${slot.date} às ${slot.startTime}. Contacte-nos se quiser ficar com ela.`;
     const [notification] = phone
@@ -221,6 +226,7 @@ export async function declineOffer(tenantId: string, offerId: string) {
   const slot: FreedSlot = {
     date: String(offer.offered_date).slice(0, 10),
     startTime: String(offer.offered_start_time).slice(0, 5),
+    type: String(offer.treatment_type || ''),
     duration: Number(offer.offered_duration),
     dentistId: (offer.offered_dentist_id as string) || null,
     chair: Number(offer.offered_chair) || 1,
@@ -292,8 +298,9 @@ export async function acceptOfferAndBook(tenantId: string, offerId: string): Pro
 // 'active' so it can be matched again, and tries the next candidate for that same slot.
 export async function expireStaleOffers(tenantId: string) {
   const stale = await query(
-    `SELECT * FROM slot_offers
-     WHERE tenant_id=$1 AND status='sent' AND created_at < NOW() - ($2::int * INTERVAL '1 hour')`,
+    `SELECT o.*, w.treatment_type
+     FROM slot_offers o JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
+     WHERE o.tenant_id=$1 AND o.status='sent' AND o.created_at < NOW() - ($2::int * INTERVAL '1 hour')`,
     [tenantId, OFFER_EXPIRY_HOURS],
   );
 
@@ -309,6 +316,7 @@ export async function expireStaleOffers(tenantId: string) {
     const slot: FreedSlot = {
       date: String(o.offered_date).slice(0, 10),
       startTime: String(o.offered_start_time).slice(0, 5),
+      type: String(o.treatment_type || ''),
       duration: Number(o.offered_duration),
       dentistId: (o.offered_dentist_id as string) || null,
       chair: Number(o.offered_chair) || 1,

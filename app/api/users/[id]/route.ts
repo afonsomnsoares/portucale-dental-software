@@ -11,12 +11,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (originCheck) return originCheck;
   const authUser = getAuth(request);
   if (!authUser) return unauthorized();
-  if (authUser.role !== 'admin') return forbidden();
+  if (authUser.role !== 'admin' && authUser.role !== 'super_admin') return forbidden();
   if (!(await hasPermission(authUser, 'users:manage'))) return forbidden();
 
   const { id } = await params;
   const targetId = id;
-  const { email, password, name, role, clinic, tenantId: bodyTenantId, active } = await request.json();
+  const { email, password, name, role, clinic, tenantId: bodyTenantId, active, specialties } = await request.json();
 
   if (!email || !name || !role) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
@@ -38,22 +38,53 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return forbidden();
     }
     const existingRole = existing.role;
-    if (existingRole !== 'admin' && role === 'admin') {
-      return Response.json({ error: 'Cannot promote user to Super Admin' }, { status: 400 });
+    // super_admin is never settable through this endpoint — the platform has exactly
+    // one, created only via scripts/create-admin.ts.
+    if (role === 'super_admin') {
+      return Response.json({ error: 'Invalid role' }, { status: 400 });
     }
-    const roleToSave = existingRole === 'admin' ? 'admin' : role;
+    // Existing super_admin's role can't be changed here at all (self-edit of other
+    // fields — name/email/password/active — is still allowed; see the cross-tenant
+    // guard above, which already confines everyone else to their own tenant and so
+    // can never reach the super_admin's row in the first place).
+    // Granting or revoking clinic-admin status is a super_admin-only action, symmetric
+    // with POST /api/users — a clinic admin can't promote a colleague to admin, and
+    // can't demote one away from admin either.
+    if (existingRole === 'super_admin') {
+      // roleToSave forced below regardless of what was requested.
+    } else if (
+      role !== existingRole &&
+      (role === 'admin' || existingRole === 'admin') &&
+      authUser.role !== 'super_admin'
+    ) {
+      return Response.json({ error: 'Only a super_admin can grant or revoke admin status' }, { status: 400 });
+    }
+    const roleToSave = existingRole === 'super_admin' ? 'super_admin' : role;
 
     let rows: Awaited<ReturnType<typeof query>>;
-    // Tenant-scoped admins can't move a user to a different tenant; only a super-admin
-    // (no tenantId) may set an arbitrary tenantId.
+    // Tenant-scoped admins can't move a user to a different tenant; only the
+    // super_admin (no tenantId) may set an arbitrary tenantId.
     const tId = authUser.tenantId ? existing.tenant_id : bodyTenantId || null;
+    // Every role reachable here other than super_admin is tenant-scoped by construction
+    // (users_role_tenant_consistency) — surface a clean 400 instead of a raw constraint
+    // violation when the super_admin forgets to pass a tenantId.
+    if (roleToSave !== 'super_admin' && !tId) {
+      return Response.json({ error: 'tenantId is required' }, { status: 400 });
+    }
     const cName = clinic || 'Main Clinic';
     const isActive = active !== false;
+    // Only meaningful for role='dentist' (see lib/scheduling.ts's requiredSpecialty
+    // matching) but harmless to store for anyone — the scheduling engine only ever reads
+    // it for dentists in the first place.
+    const specialtyList = Array.isArray(specialties)
+      ? specialties.map((s: unknown) => String(s).trim()).filter((s: string) => !!s && s.length <= 100)
+      : undefined;
 
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       rows = await query(
-        `UPDATE users SET email=$1, name=$2, role=$3, clinic=$4, tenant_id=$5, active=$6, password=$7
+        `UPDATE users SET email=$1, name=$2, role=$3, clinic=$4, tenant_id=$5, active=$6, password=$7,
+                specialties=COALESCE($9::text[], specialties)
          WHERE id=$8 RETURNING id, email, name, role, clinic, active`,
         [
           normalizedEmail,
@@ -64,13 +95,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           isActive,
           hashedPassword,
           targetId,
+          specialtyList,
         ],
       );
     } else {
       rows = await query(
-        `UPDATE users SET email=$1, name=$2, role=$3, clinic=$4, tenant_id=$5, active=$6
+        `UPDATE users SET email=$1, name=$2, role=$3, clinic=$4, tenant_id=$5, active=$6,
+                specialties=COALESCE($8::text[], specialties)
          WHERE id=$7 RETURNING id, email, name, role, clinic, active`,
-        [normalizedEmail, String(name).trim().slice(0, 200), roleToSave, cName, tId, isActive, targetId],
+        [normalizedEmail, String(name).trim().slice(0, 200), roleToSave, cName, tId, isActive, targetId, specialtyList],
       );
     }
 
@@ -81,7 +114,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const updatedUser = rows[0];
 
     const [withTenant] = await query(
-      `SELECT u.id, u.email, u.name, u.role, u.clinic, u.active, u.created_at, u.tenant_id, t.name as tenant_name 
+      `SELECT u.id, u.email, u.name, u.role, u.clinic, u.active, u.created_at, u.tenant_id, u.specialties, t.name as tenant_name
        FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = $1`,
       [updatedUser.id],
     );

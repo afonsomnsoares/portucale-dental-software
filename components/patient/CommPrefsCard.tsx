@@ -1,0 +1,134 @@
+'use client';
+import { useEffect, useState } from 'react';
+import type { ApiOptions } from '@/app/providers';
+import { GhostBtn, PrimaryBtn, Sel } from '@/components/ui';
+import type { CommPrefs, Patient } from '@/lib/types';
+
+interface CommPrefsCardProps {
+  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint
+  api: (path: string, opts?: ApiOptions) => Promise<any>;
+  patient: Patient;
+  onUpdated: (p: Patient) => void;
+}
+
+const CHANNELS = [
+  { value: '', label: '— Sem preferência —' },
+  { value: 'sms', label: 'SMS' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Telefone' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+];
+const DO_NOT_CONTACT_OPTIONS: Array<{ value: 'sms' | 'email' | 'phone'; label: string }> = [
+  { value: 'sms', label: 'SMS' },
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Telefone' },
+];
+
+export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCardProps) {
+  const [prefs, setPrefs] = useState<CommPrefs>(patient.comm_prefs || {});
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    setPrefs(patient.comm_prefs || {});
+    setEditing(false);
+  }, [patient.comm_prefs]);
+
+  function toggleDoNotContact(channel: 'sms' | 'email' | 'phone') {
+    setPrefs((prev) => {
+      const current = prev.doNotContact || [];
+      const next = current.includes(channel) ? current.filter((c) => c !== channel) : [...current, channel];
+      return { ...prev, doNotContact: next };
+    });
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const updated = await api(`/patients/${patient.id}`, { method: 'PUT', body: { ...patient, commPrefs: prefs } });
+      onUpdated(updated);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="card"
+      style={{ padding: '14px 18px', boxShadow: 'none', border: '1px solid #DFE1E6', gridColumn: '1 / -1' }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div className="section-label">Preferências de Comunicação</div>
+        {!editing && (
+          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '6px 10px', fontSize: 12 }}>
+            Editar
+          </GhostBtn>
+        )}
+      </div>
+
+      {!editing ? (
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: '#172B4D' }}>
+          <div>
+            Canal preferido:{' '}
+            <strong>{CHANNELS.find((c) => c.value === (prefs.preferredChannel || ''))?.label || '—'}</strong>
+          </div>
+          <div>
+            Não contactar por:{' '}
+            <strong>
+              {prefs.doNotContact?.length
+                ? prefs.doNotContact.map((c) => DO_NOT_CONTACT_OPTIONS.find((o) => o.value === c)?.label).join(', ')
+                : '—'}
+            </strong>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#97A0AF', marginBottom: 4 }}>Canal preferido</div>
+              <Sel
+                value={prefs.preferredChannel || ''}
+                onChange={(e) =>
+                  setPrefs((prev) => ({
+                    ...prev,
+                    preferredChannel: (e.target.value || undefined) as CommPrefs['preferredChannel'],
+                  }))
+                }
+              >
+                {CHANNELS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Sel>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#97A0AF', marginBottom: 4 }}>Não contactar por</div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {DO_NOT_CONTACT_OPTIONS.map((o) => (
+                  <label key={o.value} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!prefs.doNotContact?.includes(o.value)}
+                      onChange={() => toggleDoNotContact(o.value)}
+                    />
+                    {o.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <PrimaryBtn onClick={save} disabled={saving} style={{ padding: '6px 14px', fontSize: 12 }}>
+              {saving ? 'A guardar…' : 'Guardar'}
+            </PrimaryBtn>
+            <GhostBtn onClick={() => setEditing(false)} style={{ padding: '6px 14px', fontSize: 12 }}>
+              Cancelar
+            </GhostBtn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

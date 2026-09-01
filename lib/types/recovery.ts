@@ -6,6 +6,9 @@ export interface RecoveryItem {
   email?: string | null;
   value: number;
   detail: string;
+  // Only set on plan-based categories (plans_pending_decision, plans_not_started) —
+  // days since the plan was presented/approved. Used to badge stale items in the UI.
+  daysSince?: number | null;
 }
 
 export interface RecoveryCategory {

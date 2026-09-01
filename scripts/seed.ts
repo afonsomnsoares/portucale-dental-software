@@ -23,6 +23,18 @@ async function seed() {
   try {
     if (RESET) {
       console.log('🗑  A eliminar todas as tabelas...');
+      // Was missing every table added after the original baseline (consent_forms,
+      // medical_history, prescriptions, lab_orders, treatment_plans, recalls, leads,
+      // notifications, job_runs, uploads, role_permissions, and everything that only
+      // ever existed via scripts/migrations/* — recovery_snapshots,
+      // appointment_cancellations, waitlist_entries, slot_offers, patient_lifecycle_state)
+      // — those tables (and their RLS policies) silently survived a "reset", so
+      // re-running scripts/schema.sql against them failed on
+      // `CREATE POLICY tenant_isolation` already existing. schema_migrations is
+      // included too, so the migrate.ts run right after this script (see
+      // test/helpers/testDb.ts) re-applies every migration from scratch instead of
+      // skipping ones it thinks already ran against a database that, from this point,
+      // no longer has their tables.
       await client.query(`
         DROP TABLE IF EXISTS
           patient_data_consents, data_subject_requests, processing_activities,
@@ -30,7 +42,12 @@ async function seed() {
           audit_log, patient_timeline, inventory_stock, inventory_items, schema_fields,
           invoices, treatments, teeth, appointments,
           patient_alerts, patients, users, tenants,
-          treatment_codes, tooth_conditions, statuses
+          treatment_codes, tooth_conditions, statuses,
+          leads, notifications, job_runs, uploads, role_permissions,
+          medical_history, prescriptions, lab_orders, treatment_plans, recalls, consent_forms,
+          recall_schedule, recovery_snapshots, appointment_cancellations,
+          waitlist_entries, slot_offers, patient_lifecycle_state,
+          schema_migrations
         CASCADE
       `);
       console.log('   Concluído.');
@@ -208,7 +225,7 @@ async function seed() {
         {
           email: 'admin@portucale.dental',
           name: 'Super Admin',
-          role: 'admin',
+          role: 'super_admin',
           clinic: 'System',
           tenantId: null,
           password: 'admin123',

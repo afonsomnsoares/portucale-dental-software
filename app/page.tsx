@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode, SVGProps } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ROLE_HOME } from '@/lib/constants';
 import type { AuthUser } from './providers';
 import { useAuth } from './providers';
@@ -11,10 +11,7 @@ import { useAuth } from './providers';
 /* Ligar quando o SSO empresarial estiver mesmo implementado. */
 const SSO_ATIVO = false;
 const CHAVE_EMAIL = 'portucale:ultimo-email';
-const MIN_PALAVRA_PASSE = 8;
 
-type Modo = 'a-verificar' | 'entrar' | 'criar' | 'indisponivel';
-type RespostaBootstrap = { needsBootstrap?: boolean };
 type RespostaAuth = { user: AuthUser };
 
 const serif: CSSProperties = {
@@ -35,9 +32,6 @@ function mensagemDeErro(erro: unknown): string {
   if (bruto.includes('429') || bruto.includes('too many')) {
     return 'Demasiadas tentativas. Aguarde um minuto antes de tentar de novo.';
   }
-  if (bruto.includes('409') || bruto.includes('exists')) {
-    return 'Já existe uma conta com este e-mail.';
-  }
   if (bruto.includes('failed to fetch') || bruto.includes('network')) {
     return 'Não foi possível contactar o servidor. Tente outra vez.';
   }
@@ -49,41 +43,19 @@ export default function LoginPage() {
   const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
 
-  const [modo, setModo] = useState<Modo>('a-verificar');
   const [montado, setMontado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState('');
-  const [erroConfirmar, setErroConfirmar] = useState('');
   const [capsLock, setCapsLock] = useState(false);
 
-  const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [palavraPasse, setPalavraPasse] = useState('');
-  const [confirmar, setConfirmar] = useState('');
   const [visivel, setVisivel] = useState(false);
   const [guardarEmail, setGuardarEmail] = useState(false);
 
-  const aCriar = modo === 'criar';
-
-  const verificarBootstrap = useCallback(async () => {
-    setModo('a-verificar');
-    try {
-      const r = (await api('/auth/bootstrap', { cache: 'no-store' })) as RespostaBootstrap;
-      setModo(r?.needsBootstrap ? 'criar' : 'entrar');
-    } catch {
-      setModo('indisponivel');
-    }
-  }, [api]);
-
   useEffect(() => {
-    let cancelado = false;
-    void verificarBootstrap().then(() => {
-      if (!cancelado) setMontado(true);
-    });
-    return () => {
-      cancelado = true;
-    };
-  }, [verificarBootstrap]);
+    setMontado(true);
+  }, []);
 
   /* Pré-preenche o e-mail de quem já entrou neste dispositivo. */
   useEffect(() => {
@@ -99,8 +71,8 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (modo === 'entrar' || modo === 'criar') emailRef.current?.focus();
-  }, [modo]);
+    emailRef.current?.focus();
+  }, []);
 
   function detetarCapsLock(e: KeyboardEvent<HTMLInputElement>) {
     setCapsLock(e.getModifierState('CapsLock'));
@@ -110,28 +82,12 @@ export default function LoginPage() {
     e.preventDefault();
     if (ocupado) return;
     setErro('');
-    setErroConfirmar('');
-
-    if (aCriar) {
-      if (palavraPasse.length < MIN_PALAVRA_PASSE) {
-        setErroConfirmar(`A palavra-passe precisa de pelo menos ${MIN_PALAVRA_PASSE} caracteres.`);
-        return;
-      }
-      if (palavraPasse !== confirmar) {
-        setErroConfirmar('As palavras-passe não coincidem.');
-        return;
-      }
-    }
 
     setOcupado(true);
     try {
-      const corpo = aCriar
-        ? { name: nome.trim(), email: email.trim(), password: palavraPasse }
-        : { email: email.trim(), password: palavraPasse };
-
-      const d = (await api(aCriar ? '/auth/bootstrap' : '/auth/login', {
+      const d = (await api('/auth/login', {
         method: 'POST',
-        body: corpo,
+        body: { email: email.trim(), password: palavraPasse },
       })) as RespostaAuth;
 
       try {
@@ -146,7 +102,7 @@ export default function LoginPage() {
       const destinos = ROLE_HOME as Record<string, string>;
       const destino = (d.user.role && destinos[d.user.role]) || '/dashboard/admin';
       /* replace: evita voltar ao login com o botão "anterior" já autenticado. */
-      router.replace(aCriar ? '/dashboard/admin' : destino);
+      router.replace(destino);
     } catch (e) {
       setErro(mensagemDeErro(e));
       setOcupado(false);
@@ -164,208 +120,132 @@ export default function LoginPage() {
             montado ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0',
           ].join(' ')}
         >
-          {modo === 'a-verificar' && <Esqueleto />}
+          <header>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1D4E8F]">Área da equipa</p>
+            <h1 style={serif} className="mt-3 text-[2rem] leading-[1.15] text-[#132133]">
+              Bem-vindo de volta
+            </h1>
+            <p className="mt-2 text-[15px] leading-relaxed text-[#5B6B7C]">
+              Entre para aceder à agenda e às fichas dos pacientes.
+            </p>
+          </header>
 
-          {modo === 'indisponivel' && (
-            <div className="text-center">
-              <h1 style={serif} className="text-[1.75rem] leading-tight text-[#132133]">
-                O servidor não respondeu
-              </h1>
-              <p className="mt-3 text-[15px] leading-relaxed text-[#5B6B7C]">
-                Não foi possível saber se a clínica já tem administrador. Verifique a ligação e tente outra vez.
-              </p>
-              <button type="button" onClick={() => void verificarBootstrap()} className={`${BOTAO_PRIMARIO} mt-8`}>
-                Tentar novamente
-              </button>
-            </div>
-          )}
-
-          {(modo === 'entrar' || aCriar) && (
-            <>
-              <header>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1D4E8F]">
-                  {aCriar ? 'Primeira utilização' : 'Área da equipa'}
+          <form onSubmit={aoSubmeter} aria-busy={ocupado} className="mt-8 space-y-5">
+            <div aria-live="polite">
+              {erro && (
+                <p
+                  role="alert"
+                  className="flex items-start gap-2.5 rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3.5 py-3 text-[14px] leading-snug text-[#8E2A22]"
+                >
+                  <IconeAviso />
+                  <span>{erro}</span>
                 </p>
-                <h1 style={serif} className="mt-3 text-[2rem] leading-[1.15] text-[#132133]">
-                  {aCriar ? 'Criar o administrador principal' : 'Bem-vindo de volta'}
-                </h1>
-                <p className="mt-2 text-[15px] leading-relaxed text-[#5B6B7C]">
-                  {aCriar
-                    ? 'Esta conta gere utilizadores, permissões e definições da clínica.'
-                    : 'Entre para aceder à agenda e às fichas dos pacientes.'}
-                </p>
-              </header>
-
-              <form onSubmit={aoSubmeter} aria-busy={ocupado} className="mt-8 space-y-5">
-                <div aria-live="polite">
-                  {erro && (
-                    <p
-                      role="alert"
-                      className="flex items-start gap-2.5 rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3.5 py-3 text-[14px] leading-snug text-[#8E2A22]"
-                    >
-                      <IconeAviso />
-                      <span>{erro}</span>
-                    </p>
-                  )}
-                </div>
-
-                {aCriar && (
-                  <Campo id="nome" etiqueta="Nome completo" icone={<IconeUtilizador />}>
-                    <input
-                      id="nome"
-                      className={INPUT}
-                      type="text"
-                      placeholder="Maria Silva"
-                      autoComplete="name"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      required
-                    />
-                  </Campo>
-                )}
-
-                <Campo id="email" etiqueta="E-mail" icone={<IconeEnvelope />}>
-                  <input
-                    ref={emailRef}
-                    id="email"
-                    className={INPUT}
-                    type="email"
-                    inputMode="email"
-                    placeholder="nome@clinica.pt"
-                    autoComplete="username"
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </Campo>
-
-                <Campo id="palavra-passe" etiqueta="Palavra-passe" icone={<IconeCadeado />}>
-                  <input
-                    id="palavra-passe"
-                    className={`${INPUT} pr-12`}
-                    type={visivel ? 'text' : 'password'}
-                    placeholder="••••••••••"
-                    autoComplete={aCriar ? 'new-password' : 'current-password'}
-                    minLength={aCriar ? MIN_PALAVRA_PASSE : undefined}
-                    value={palavraPasse}
-                    onChange={(e) => setPalavraPasse(e.target.value)}
-                    onKeyUp={detetarCapsLock}
-                    onKeyDown={detetarCapsLock}
-                    onBlur={() => setCapsLock(false)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setVisivel((v) => !v)}
-                    aria-pressed={visivel}
-                    aria-label={visivel ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-2 text-[#8A96A2] transition-colors hover:text-[#1D4E8F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F]"
-                  >
-                    {visivel ? <IconeOlhoFechado /> : <IconeOlho />}
-                  </button>
-                </Campo>
-
-                {capsLock && <p className="-mt-2 text-[13px] text-[#8E2A22]">Caps Lock está ligado.</p>}
-
-                {aCriar && (
-                  <Campo id="confirmar" etiqueta="Confirmar palavra-passe" icone={<IconeCadeado />}>
-                    <input
-                      id="confirmar"
-                      className={INPUT}
-                      type={visivel ? 'text' : 'password'}
-                      placeholder="••••••••••"
-                      autoComplete="new-password"
-                      aria-invalid={!!erroConfirmar}
-                      aria-describedby={erroConfirmar ? 'erro-confirmar' : 'ajuda-confirmar'}
-                      value={confirmar}
-                      onChange={(e) => {
-                        setConfirmar(e.target.value);
-                        setErroConfirmar('');
-                      }}
-                      required
-                    />
-                  </Campo>
-                )}
-
-                {aCriar &&
-                  (erroConfirmar ? (
-                    <p id="erro-confirmar" role="alert" className="-mt-3 text-[13px] text-[#8E2A22]">
-                      {erroConfirmar}
-                    </p>
-                  ) : (
-                    <p id="ajuda-confirmar" className="-mt-3 text-[13px] text-[#7A8794]">
-                      Mínimo de {MIN_PALAVRA_PASSE} caracteres.
-                    </p>
-                  ))}
-
-                {!aCriar && (
-                  <div className="flex items-center justify-between gap-4 pt-1">
-                    <label className="group inline-flex cursor-pointer select-none items-center gap-2.5 text-[14px] text-[#3E4C5A]">
-                      <span className="relative inline-flex h-[18px] w-[18px] items-center justify-center">
-                        <input
-                          type="checkbox"
-                          checked={guardarEmail}
-                          onChange={(e) => setGuardarEmail(e.target.checked)}
-                          className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-[5px] border border-[#C6CCC5] bg-white transition-colors checked:border-[#0B2545] checked:bg-[#0B2545] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0]"
-                        />
-                        <IconeVisto />
-                      </span>
-                      Guardar o meu e-mail
-                    </label>
-                    <a
-                      href="/recuperar-palavra-passe"
-                      className="rounded text-[14px] text-[#1D4E8F] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F]"
-                    >
-                      Recuperar acesso
-                    </a>
-                  </div>
-                )}
-
-                <button type="submit" disabled={ocupado} className={`${BOTAO_PRIMARIO} !mt-7`}>
-                  {ocupado ? (
-                    <>
-                      <Roda />
-                      {aCriar ? 'A criar conta…' : 'A entrar…'}
-                    </>
-                  ) : aCriar ? (
-                    'Criar conta'
-                  ) : (
-                    'Entrar'
-                  )}
-                </button>
-              </form>
-
-              {!aCriar && SSO_ATIVO && (
-                <>
-                  <div className="my-7 flex items-center gap-4 text-[12px] uppercase tracking-[0.16em] text-[#9AA5AF]">
-                    <span className="h-px flex-1 bg-[#DDE1DB]" />
-                    ou
-                    <span className="h-px flex-1 bg-[#DDE1DB]" />
-                  </div>
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-[#D8DCD6] bg-white px-4 py-3 text-[15px] font-medium text-[#132133] transition-colors hover:border-[#0B2545] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0]"
-                  >
-                    <IconeCadeado />
-                    Entrar com SSO empresarial
-                  </button>
-                </>
               )}
+            </div>
 
-              <p className="mt-10 text-[13px] leading-relaxed text-[#7A8794]">
-                © 2026 Portucale Dental ·{' '}
-                <a href="/privacidade" className="underline-offset-4 hover:underline">
-                  Privacidade
-                </a>{' '}
-                ·{' '}
-                <a href="/termos" className="underline-offset-4 hover:underline">
-                  Termos
-                </a>
-              </p>
+            <Campo id="email" etiqueta="E-mail" icone={<IconeEnvelope />}>
+              <input
+                ref={emailRef}
+                id="email"
+                className={INPUT}
+                type="email"
+                inputMode="email"
+                placeholder="nome@clinica.pt"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </Campo>
+
+            <Campo id="palavra-passe" etiqueta="Palavra-passe" icone={<IconeCadeado />}>
+              <input
+                id="palavra-passe"
+                className={`${INPUT} pr-12`}
+                type={visivel ? 'text' : 'password'}
+                placeholder="••••••••••"
+                autoComplete="current-password"
+                value={palavraPasse}
+                onChange={(e) => setPalavraPasse(e.target.value)}
+                onKeyUp={detetarCapsLock}
+                onKeyDown={detetarCapsLock}
+                onBlur={() => setCapsLock(false)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setVisivel((v) => !v)}
+                aria-pressed={visivel}
+                aria-label={visivel ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-2 text-[#8A96A2] transition-colors hover:text-[#1D4E8F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F]"
+              >
+                {visivel ? <IconeOlhoFechado /> : <IconeOlho />}
+              </button>
+            </Campo>
+
+            {capsLock && <p className="-mt-2 text-[13px] text-[#8E2A22]">Caps Lock está ligado.</p>}
+
+            <div className="flex items-center justify-between gap-4 pt-1">
+              <label className="group inline-flex cursor-pointer select-none items-center gap-2.5 text-[14px] text-[#3E4C5A]">
+                <span className="relative inline-flex h-[18px] w-[18px] items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={guardarEmail}
+                    onChange={(e) => setGuardarEmail(e.target.checked)}
+                    className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-[5px] border border-[#C6CCC5] bg-white transition-colors checked:border-[#0B2545] checked:bg-[#0B2545] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0]"
+                  />
+                  <IconeVisto />
+                </span>
+                Guardar o meu e-mail
+              </label>
+              <a
+                href="/recuperar-palavra-passe"
+                className="rounded text-[14px] text-[#1D4E8F] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F]"
+              >
+                Recuperar acesso
+              </a>
+            </div>
+
+            <button type="submit" disabled={ocupado} className={`${BOTAO_PRIMARIO} !mt-7`}>
+              {ocupado ? (
+                <>
+                  <Roda />A entrar…
+                </>
+              ) : (
+                'Entrar'
+              )}
+            </button>
+          </form>
+
+          {SSO_ATIVO && (
+            <>
+              <div className="my-7 flex items-center gap-4 text-[12px] uppercase tracking-[0.16em] text-[#9AA5AF]">
+                <span className="h-px flex-1 bg-[#DDE1DB]" />
+                ou
+                <span className="h-px flex-1 bg-[#DDE1DB]" />
+              </div>
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-[#D8DCD6] bg-white px-4 py-3 text-[15px] font-medium text-[#132133] transition-colors hover:border-[#0B2545] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0]"
+              >
+                <IconeCadeado />
+                Entrar com SSO empresarial
+              </button>
             </>
           )}
+
+          <p className="mt-10 text-[13px] leading-relaxed text-[#7A8794]">
+            © 2026 Portucale Dental ·{' '}
+            <a href="/privacidade" className="underline-offset-4 hover:underline">
+              Privacidade
+            </a>{' '}
+            ·{' '}
+            <a href="/termos" className="underline-offset-4 hover:underline">
+              Termos
+            </a>
+          </p>
         </div>
       </main>
     </div>
@@ -475,19 +355,6 @@ function Campo({
   );
 }
 
-function Esqueleto() {
-  return (
-    <div className="animate-pulse space-y-4" aria-label="A carregar" role="status">
-      <div className="h-3 w-24 rounded bg-[#E2E5E0]" />
-      <div className="h-8 w-3/4 rounded bg-[#E2E5E0]" />
-      <div className="h-4 w-2/3 rounded bg-[#E9ECE7]" />
-      <div className="!mt-8 h-12 rounded-lg bg-[#E9ECE7]" />
-      <div className="h-12 rounded-lg bg-[#E9ECE7]" />
-      <div className="h-12 rounded-lg bg-[#E2E5E0]" />
-    </div>
-  );
-}
-
 function Roda() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 animate-spin" aria-hidden="true">
@@ -507,14 +374,6 @@ const traco: SVGProps<SVGSVGElement> = {
   className: 'h-[18px] w-[18px]',
   'aria-hidden': 'true',
 };
-
-const IconeUtilizador = () => (
-  // biome-ignore lint/a11y/noSvgWithoutTitle: aria-hidden="true" comes from the spread `traco` prop bag
-  <svg {...traco}>
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
 
 const IconeEnvelope = () => (
   // biome-ignore lint/a11y/noSvgWithoutTitle: aria-hidden="true" comes from the spread `traco` prop bag

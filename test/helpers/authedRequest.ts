@@ -45,9 +45,16 @@ export function authedRequest(
   return new Request(`http://localhost${opts.url}`, init) as unknown as RouteRequest;
 }
 
-// For the handful of "no session at all" / "unauthenticated" assertions — no cookies, no CSRF.
-export function anonRequest(opts: { method?: string; url: string; body?: unknown }): RouteRequest {
-  const headers = new Headers();
+// For the handful of "no session at all" / "unauthenticated" assertions — no cookies, no
+// CSRF. `headers` lets a caller add e.g. `Authorization: Bearer <token>` for testing a
+// token-authenticated public route (app/api/public/leads) without a session.
+export function anonRequest(opts: {
+  method?: string;
+  url: string;
+  body?: unknown;
+  headers?: Record<string, string>;
+}): RouteRequest {
+  const headers = new Headers(opts.headers);
   const init: RequestInit = { method: opts.method || 'GET', headers };
   if (opts.body !== undefined) {
     headers.set('content-type', 'application/json');

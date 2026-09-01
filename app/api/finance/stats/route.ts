@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
   if (!(await hasPermission(user, 'finance:read'))) return forbidden();
 
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get('tenantId') || user.tenantId;
+  // Only a super-admin (role=admin with no tenantId of their own) may pick a
+  // tenant via the query string; everyone else is confined to their own,
+  // matching the pattern used everywhere else (e.g. app/api/patients/route.ts).
+  const tenantId = user.role === 'super_admin' ? searchParams.get('tenantId') : user.tenantId;
   if (!tenantId) return forbidden();
 
   const from = asDate(searchParams.get('from'));

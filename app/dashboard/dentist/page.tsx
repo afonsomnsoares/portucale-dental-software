@@ -3,24 +3,28 @@ import { Check } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import DayCalendar from '@/components/DayCalendar';
+import DailyBriefingPanel from '@/components/patient/DailyBriefingPanel';
 import { MetricCard, PageHeader, Spinner } from '@/components/ui';
-import type { Appointment, Treatment } from '@/lib/types';
+import type { Appointment, DailyBriefingRow, Treatment } from '@/lib/types';
 
 export default function DentistDashboard() {
   const { api, user } = useAuth();
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
+  const [briefing, setBriefing] = useState<DailyBriefingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [a, t] = await Promise.all([
+    const [a, t, b] = await Promise.all([
       api(`/appointments?date=${date}`).catch(() => []),
       api('/treatments').catch(() => []),
+      api(`/daily-briefing?date=${date}`).catch(() => null),
     ]);
     setAppts(a || []);
     setTreatments(t || []);
+    setBriefing(b?.rows || []);
     setLoading(false);
   }, [api, date]);
   useEffect(() => {
@@ -93,7 +97,16 @@ export default function DentistDashboard() {
           ))}
         </div>
       )}
-      {loading ? <Spinner /> : <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />}
+      {loading ? (
+        <Spinner />
+      ) : (
+        <>
+          <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />
+          <div className="mt-5">
+            <DailyBriefingPanel api={api} rows={briefing} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

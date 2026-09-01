@@ -1,0 +1,117 @@
+'use client';
+import { type ChangeEvent, type Dispatch, type SetStateAction, useState } from 'react';
+import type { ApiOptions } from '@/app/providers';
+import { Badge, Empty, FormField, PrimaryBtn, Sel, Textarea } from '@/components/ui';
+import type { InteractionChannel, InteractionDirection, PatientInteraction } from '@/lib/types';
+
+interface PatientInteractionsTabProps {
+  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint
+  api: (path: string, opts?: ApiOptions) => Promise<any>;
+  patientId: string;
+  interactions: PatientInteraction[];
+  setInteractions: Dispatch<SetStateAction<PatientInteraction[]>>;
+}
+
+const CHANNEL_LABELS: Record<InteractionChannel, string> = {
+  phone: 'Chamada',
+  email: 'Email',
+  whatsapp: 'WhatsApp',
+  sms: 'SMS',
+  in_person: 'Presencial',
+  other: 'Outro',
+};
+
+export default function PatientInteractionsTab({
+  api,
+  patientId,
+  interactions,
+  setInteractions,
+}: PatientInteractionsTabProps) {
+  const [channel, setChannel] = useState<InteractionChannel>('phone');
+  const [direction, setDirection] = useState<InteractionDirection>('outbound');
+  const [summary, setSummary] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function log() {
+    if (!summary.trim()) return;
+    setSaving(true);
+    setError('');
+    try {
+      const row = await api('/patient-interactions', {
+        method: 'POST',
+        body: { patientId, channel, direction, summary: summary.trim() },
+      });
+      setInteractions((prev) => [row, ...(prev || [])]);
+      setSummary('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falha ao registar interação.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="card p-5">
+        <div className="section-label mb-3">REGISTAR INTERAÇÃO</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormField label="Canal">
+            <Sel value={channel} onChange={(e) => setChannel(e.target.value as InteractionChannel)}>
+              {Object.entries(CHANNEL_LABELS).map(([k, label]) => (
+                <option key={k} value={k}>
+                  {label}
+                </option>
+              ))}
+            </Sel>
+          </FormField>
+          <FormField label="Direção">
+            <Sel value={direction} onChange={(e) => setDirection(e.target.value as InteractionDirection)}>
+              <option value="outbound">Efetuada (nós → paciente)</option>
+              <option value="inbound">Recebida (paciente → nós)</option>
+            </Sel>
+          </FormField>
+        </div>
+        <FormField label="Resumo">
+          <Textarea
+            value={summary}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setSummary(e.target.value)}
+            placeholder="ex: Ligou a confirmar consulta de amanhã"
+            style={{ minHeight: 80 }}
+          />
+        </FormField>
+        {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+        <PrimaryBtn onClick={log} disabled={saving || !summary.trim()} style={{ justifyContent: 'center' }}>
+          {saving ? 'A registar…' : 'Registar'}
+        </PrimaryBtn>
+      </div>
+
+      <div className="card p-5">
+        <div className="section-label mb-4">HISTÓRICO</div>
+        {!interactions.length ? (
+          <Empty message="Sem interações registadas." />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {interactions.map((i) => (
+              <div key={i.id} style={{ borderBottom: '1px solid #F4F7FA', paddingBottom: 12 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
+                  <Badge bg="#E0F2FE" color="#0284C7" label={CHANNEL_LABELS[i.channel]} />
+                  <span style={{ fontSize: 11, color: '#97A0AF' }}>
+                    {i.direction === 'inbound' ? 'Recebida' : 'Efetuada'}
+                  </span>
+                  <span style={{ fontSize: 11, color: '#97A0AF' }}>
+                    {new Date(i.occurred_at).toLocaleString('pt-PT')}
+                  </span>
+                  {i.created_by_name && (
+                    <span style={{ fontSize: 11, color: '#0052CC', fontWeight: 600 }}>{i.created_by_name}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: '#172B4D' }}>{i.summary}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

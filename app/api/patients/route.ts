@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorized();
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('q') || '';
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const rows = await query(
     `SELECT p.*,
             ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100)::int AS no_show_score,

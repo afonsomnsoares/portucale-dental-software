@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   )
     return forbidden();
   const { id } = await params;
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const t = await queryOne(
     `SELECT t.*, p.name as patient_name FROM treatments t
      JOIN patients p ON p.id=t.patient_id
@@ -35,12 +35,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!(await hasPermission(user, 'treatments:update'))) return forbidden();
   const { id } = await params;
   const body = await request.json();
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
     id,
     tenantId,
   ]);
   if (!prev) return Response.json({ error: 'Not found' }, { status: 404 });
+
+  if (body.status !== undefined) {
+    const allowed = ['proposed', 'accepted', 'completed'];
+    if (!allowed.includes(body.status)) return Response.json({ error: 'Invalid status' }, { status: 400 });
+  }
 
   const [updated] = await query(
     `UPDATE treatments
@@ -87,7 +92,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'treatments:delete'))) return forbidden();
   const { id } = await params;
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
     id,
     tenantId,

@@ -6,11 +6,15 @@ import { getPermissionMatrix, hasPermission, setPermissionOverrides } from '@/li
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   if (!(await hasPermission(user, 'permissions:manage'))) return forbidden();
 
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get('tenantId') || user.tenantId;
+  // Only a super-admin (role=admin with no tenantId of their own) may pick a
+  // tenant via the query string; a tenant-scoped admin is confined to their
+  // own — matching the pattern used everywhere else (e.g. app/api/patients/route.ts)
+  // and the check the PUT handler below already applies.
+  const tenantId = user.role === 'super_admin' ? searchParams.get('tenantId') : user.tenantId;
   if (!tenantId) return forbidden();
 
   const data = await getPermissionMatrix(tenantId);
@@ -22,7 +26,7 @@ export async function PUT(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   if (!(await hasPermission(user, 'permissions:manage'))) return forbidden();
 
   const { tenantId, updates } = await request.json();

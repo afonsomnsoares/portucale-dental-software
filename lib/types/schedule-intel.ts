@@ -41,6 +41,33 @@ export interface RiskHeatmapData {
   historyMonths: number;
 }
 
+export interface UnitUtilization {
+  bookedMinutes: number;
+  capacityMinutes: number;
+  utilizationPct: number;
+}
+
+export interface DentistUtilization extends UnitUtilization {
+  dentistId: string;
+  dentistName: string;
+}
+
+export interface ChairUtilization extends UnitUtilization {
+  chair: number;
+}
+
+export interface WaitlistDemandByWeekday {
+  weekday: number;
+  demand: number;
+}
+
+// See lib/scheduleIntelCalc.ts's suggestCapacityMoves.
+export interface CapacitySuggestion {
+  kind: 'chair' | 'dentist' | 'waitlist_demand';
+  subject: string;
+  detail: string;
+}
+
 export interface AgendaEfficiency {
   generatedAt: string;
   operatories: number;
@@ -50,6 +77,10 @@ export interface AgendaEfficiency {
   capacityMinutes: number;
   fragmentation: { gapCount: number; gapMinutes: number };
   lastMinuteCancellations: { total: number; withinTwoDays: number };
+  byDentist: DentistUtilization[];
+  byChair: ChairUtilization[];
+  waitlistDemandByWeekday: WaitlistDemandByWeekday[];
+  suggestions: CapacitySuggestion[];
 }
 
 export interface WaitlistEntry {

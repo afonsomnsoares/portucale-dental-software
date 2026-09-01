@@ -1,6 +1,11 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
+import CommPrefsCard from '@/components/patient/CommPrefsCard';
+import NextActionBanner from '@/components/patient/NextActionBanner';
+import PatientDocumentsTab from '@/components/patient/PatientDocumentsTab';
+import PatientInteractionsTab from '@/components/patient/PatientInteractionsTab';
+import PatientTasksTab from '@/components/patient/PatientTasksTab';
 import PatientCreateModal, { type NewPatientForm } from '@/components/receptionist/PatientCreateModal';
 import PatientEditExtraFieldsModal from '@/components/receptionist/PatientEditExtraFieldsModal';
 import PatientImportCsvModal from '@/components/receptionist/PatientImportCsvModal';
@@ -9,15 +14,32 @@ import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import type { SchemaField } from '@/components/shared/SchemaFieldInput';
 import { Empty, GhostBtn, PageHeader, Spinner, Tabs, Timeline } from '@/components/ui';
-import type { Patient, TimelineEvent } from '@/lib/types';
+import type { MissingField } from '@/lib/missingData';
+import type { NextAction } from '@/lib/nextAction';
+import type { Patient, PatientInteraction, PatientTask, TimelineEvent } from '@/lib/types';
+
+interface UploadRow {
+  id: string;
+  url: string;
+  category: string;
+  content_type: string | null;
+  size: number;
+  created_at: string;
+  task_id: string | null;
+}
 
 const EMPTY_NEW_PATIENT: NewPatientForm = { name: '', dob: '', phone: '', email: '', insurance: '', alerts: '' };
 
 export default function ReceptionPatientsPage() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [tasks, setTasks] = useState<PatientTask[]>([]);
+  const [interactions, setInteractions] = useState<PatientInteraction[]>([]);
+  const [uploads, setUploads] = useState<UploadRow[]>([]);
+  const [nextAction, setNextAction] = useState<NextAction | null>(null);
+  const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const [tab, setTab] = useState('profile');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -38,8 +60,19 @@ export default function ReceptionPatientsPage() {
       setSelected(p);
       setTab('profile');
       setTlLoad(true);
-      const tl = await api(`/patients/${p.id}/timeline`).catch(() => []);
+      const [tl, tk, ia, up, na] = await Promise.all([
+        api(`/patients/${p.id}/timeline`).catch(() => []),
+        api(`/patient-tasks?patientId=${p.id}`).catch(() => []),
+        api(`/patient-interactions?patientId=${p.id}`).catch(() => []),
+        api(`/uploads?patientId=${p.id}`).catch(() => []),
+        api(`/patients/${p.id}/next-action`).catch(() => null),
+      ]);
       setTimeline(tl || []);
+      setTasks(tk || []);
+      setInteractions(ia || []);
+      setUploads(up || []);
+      setNextAction(na?.nextAction || null);
+      setMissingFields(na?.missingFields || []);
       setTlLoad(false);
     },
     [api],
@@ -134,8 +167,12 @@ export default function ReceptionPatientsPage() {
     setExtraSaving(false);
   }
 
+  const openTaskCount = tasks.filter((t) => t.status === 'pending').length;
   const TABS = [
     { key: 'profile', label: 'Profile' },
+    { key: 'tasks', label: `Tarefas (${openTaskCount})` },
+    { key: 'interactions', label: `Interações (${interactions.length})` },
+    { key: 'documents', label: `Documentos (${uploads.length})` },
     { key: 'timeline', label: 'Timeline' },
   ];
 
@@ -165,27 +202,58 @@ export default function ReceptionPatientsPage() {
           <div>
             <PatientDetailHeader patient={selected} />
 
+            <NextActionBanner nextAction={nextAction} missingFields={missingFields} />
+
             <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
-            {tab === 'profile' ? (
-              <PatientOverviewTab
-                fields={[
-                  ['Phone', selected.phone || '—'],
-                  ['Email', selected.email || '—'],
-                  ['Last Visit', selected.last_visit?.slice(0, 10) || '—'],
-                  ['Insurance', selected.insurance || '—'],
-                  ['DOB', selected.dob?.slice(0, 10) || '—'],
-                  ['Total Visits', selected.visit_count || 0],
-                ]}
-                customFields={selected.custom_fields}
-                schemaFields={schemaFields}
-                onEditExtra={openEditExtra}
-              />
-            ) : (
+            {tab === 'profile' && (
+              <div style={{ display: 'grid', gap: 12 }}>
+                <PatientOverviewTab
+                  fields={[
+                    ['Phone', selected.phone || '—'],
+                    ['Email', selected.email || '—'],
+                    ['Last Visit', selected.last_visit?.slice(0, 10) || '—'],
+                    ['Insurance', selected.insurance || '—'],
+                    ['DOB', selected.dob?.slice(0, 10) || '—'],
+                    ['Total Visits', selected.visit_count || 0],
+                  ]}
+                  customFields={selected.custom_fields}
+                  schemaFields={schemaFields}
+                  onEditExtra={openEditExtra}
+                />
+                <CommPrefsCard api={api} patient={selected} onUpdated={setSelected} />
+              </div>
+            )}
+
+            {tab === 'timeline' && (
               <div className="card p-5">
                 <div className="section-label mb-4">MASTER PATIENT TIMELINE — IMMUTABLE · SHA-256 HASHED</div>
                 {tlLoad ? <Spinner /> : <Timeline events={timeline} />}
               </div>
+            )}
+
+            {tab === 'tasks' && (
+              <PatientTasksTab api={api} user={user} patientId={selected.id} tasks={tasks} setTasks={setTasks} />
+            )}
+
+            {tab === 'interactions' && (
+              <PatientInteractionsTab
+                api={api}
+                patientId={selected.id}
+                interactions={interactions}
+                setInteractions={setInteractions}
+              />
+            )}
+
+            {tab === 'documents' && (
+              <PatientDocumentsTab
+                api={api}
+                patientId={selected.id}
+                tasks={tasks}
+                setTasks={setTasks}
+                uploads={uploads}
+                setUploads={setUploads}
+              />
             )}
           </div>
         ) : (

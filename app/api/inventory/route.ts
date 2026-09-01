@@ -6,7 +6,7 @@ import { query } from '@/lib/db';
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   const items = await query(`SELECT * FROM inventory_items ORDER BY item`);
   const stock = await query(`SELECT item_id, tenant_id, quantity FROM inventory_stock`);
   return Response.json({ items, stock });
@@ -17,7 +17,7 @@ export async function PUT(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   const { itemId, tenantId, quantity } = await request.json();
   if (!itemId || !tenantId) return Response.json({ error: 'Missing required fields' }, { status: 400 });
 

@@ -71,6 +71,10 @@ export default function ReceptionistRecallsPage() {
     return p ? p.name : id?.slice(0, 8) || '—';
   }
 
+  function patientPhone(id: string) {
+    return patients.find((x) => x.id === id)?.phone || null;
+  }
+
   function statusMeta(r: Recall) {
     if (!r.active) return { label: 'Inactive', bg: '#FFEBE6', color: '#DE350B' };
     if (r.next_due && r.next_due < new Date().toISOString().slice(0, 10))
@@ -143,6 +147,7 @@ export default function ReceptionistRecallsPage() {
                 <th className="data-th">Last Done</th>
                 <th className="data-th">Next Due</th>
                 <th className="data-th">Status</th>
+                <th className="data-th">Reminder Sent</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
                   Actions
                 </th>
@@ -179,8 +184,14 @@ export default function ReceptionistRecallsPage() {
                         {sm.label}
                       </span>
                     </td>
+                    <td className="data-td" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+                      {r.last_notified_at ? new Date(r.last_notified_at).toLocaleDateString('pt-PT') : '—'}
+                    </td>
                     <td className="data-td" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        {patientPhone(r.patient_id) && (
+                          <GhostBtn onClick={() => window.open(`tel:${patientPhone(r.patient_id)}`)}>Call</GhostBtn>
+                        )}
                         {r.active && <GhostBtn onClick={() => handleComplete(r.id)}>Complete</GhostBtn>}
                         {r.active && <DangerBtn onClick={() => handleDeactivate(r.id)}>Stop</DangerBtn>}
                       </div>

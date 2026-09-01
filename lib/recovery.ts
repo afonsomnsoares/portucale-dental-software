@@ -38,6 +38,10 @@ export async function computeRecovery(tenantId: string) {
     proposedItems,
     acceptedTotals,
     acceptedItems,
+    plansPendingTotals,
+    plansPendingItems,
+    plansNotStartedTotals,
+    plansNotStartedItems,
     recallsTotal,
     recallItems,
     inactiveTotal,
@@ -77,12 +81,22 @@ export async function computeRecovery(tenantId: string) {
        LIMIT ${ITEMS_LIMIT}`,
       [tenantId],
     ),
+    // "Abandoned" = accepted (started-or-scheduled) work with nobody chasing it: no
+    // future appointment already booked. A patient whose next session IS on the
+    // calendar isn't a recovery opportunity — they're already on track — so this is
+    // narrower than "every accepted-but-unbilled treatment" (that used to be the whole
+    // definition here, which meant a patient who'd already rebooked still showed up on
+    // this list with nothing left to do about it).
     totals(
       `SELECT COUNT(*)::int AS count, COALESCE(SUM(fee),0)::numeric AS value
        FROM treatments t WHERE t.tenant_id=$1 AND t.status='accepted'
          AND NOT EXISTS (
            SELECT 1 FROM invoices i
            WHERE i.patient_id=t.patient_id AND i.status IN ('pending','partial') AND i.amount > i.paid
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM appointments a
+           WHERE a.patient_id=t.patient_id AND a.appt_date >= CURRENT_DATE AND a.status <> 'no-show'
          )`,
       [tenantId],
     ),
@@ -95,8 +109,58 @@ export async function computeRecovery(tenantId: string) {
            SELECT 1 FROM invoices i
            WHERE i.patient_id=t.patient_id AND i.status IN ('pending','partial') AND i.amount > i.paid
          )
+         AND NOT EXISTS (
+           SELECT 1 FROM appointments a
+           WHERE a.patient_id=t.patient_id AND a.appt_date >= CURRENT_DATE AND a.status <> 'no-show'
+         )
        GROUP BY p.id, p.name, p.phone
        ORDER BY value DESC
+       LIMIT ${ITEMS_LIMIT}`,
+      [tenantId],
+    ),
+    // Plans presented but not yet approved — the patient-level counterpart to
+    // "proposed_treatments" above, but keyed off treatment_plans (which carries a
+    // total_fee and a created_at to measure "how long ago" from, matching what a
+    // multi-phase plan actually is) rather than individual treatment line items. The
+    // two can overlap for the same patient — treatments and treatment_plans aren't
+    // linked by a foreign key in this schema, so a clinic that only ever uses one of
+    // the two entities won't see the same work counted twice, but one that uses both
+    // for the same case will. Documented, not silently hidden.
+    totals(
+      `SELECT COUNT(*)::int AS count, COALESCE(SUM(total_fee),0)::numeric AS value
+       FROM treatment_plans WHERE tenant_id=$1 AND approved=FALSE`,
+      [tenantId],
+    ),
+    query(
+      `SELECT tp.id, tp.patient_id, p.name AS patient_name, p.phone, tp.title, tp.total_fee AS value,
+              EXTRACT(day FROM NOW() - tp.created_at)::int AS days_since
+       FROM treatment_plans tp JOIN patients p ON p.id=tp.patient_id
+       WHERE tp.tenant_id=$1 AND tp.approved=FALSE
+       ORDER BY tp.created_at ASC
+       LIMIT ${ITEMS_LIMIT}`,
+      [tenantId],
+    ),
+    // Plans the patient already said yes to, but where no treatment under them has
+    // actually started (no treatments row for the patient past 'proposed') — the "€Z
+    // ainda não iniciados" bucket. Same patient-level join caveat as above.
+    totals(
+      `SELECT COUNT(*)::int AS count, COALESCE(SUM(total_fee),0)::numeric AS value
+       FROM treatment_plans tp
+       WHERE tp.tenant_id=$1 AND tp.approved=TRUE
+         AND NOT EXISTS (
+           SELECT 1 FROM treatments t WHERE t.patient_id=tp.patient_id AND t.status IN ('accepted','completed')
+         )`,
+      [tenantId],
+    ),
+    query(
+      `SELECT tp.id, tp.patient_id, p.name AS patient_name, p.phone, tp.title, tp.total_fee AS value,
+              EXTRACT(day FROM NOW() - tp.approved_at)::int AS days_since
+       FROM treatment_plans tp JOIN patients p ON p.id=tp.patient_id
+       WHERE tp.tenant_id=$1 AND tp.approved=TRUE
+         AND NOT EXISTS (
+           SELECT 1 FROM treatments t WHERE t.patient_id=tp.patient_id AND t.status IN ('accepted','completed')
+         )
+       ORDER BY tp.approved_at ASC NULLS LAST
        LIMIT ${ITEMS_LIMIT}`,
       [tenantId],
     ),
@@ -236,15 +300,43 @@ export async function computeRecovery(tenantId: string) {
     },
     {
       key: 'accepted_open',
-      label: 'Aceites por concluir',
-      description: 'Tratamentos já aceites mas ainda não concluídos.',
+      label: 'Tratamentos Abandonados',
+      description: 'Tratamentos já aceites, sem próxima consulta marcada — ninguém está a dar seguimento.',
       action: 'Agendar a continuação do tratamento',
       count: acceptedTotals.count,
       estimatedValue: acceptedTotals.value,
       items: acceptedItems.map((i) => ({
         ...i,
         value: roundEUR(i.value),
-        detail: `${Number(i.items)} tratamento(s) em aberto`,
+        detail: `${Number(i.items)} tratamento(s) em aberto, sem próxima sessão`,
+      })),
+    },
+    {
+      key: 'plans_pending_decision',
+      label: 'Planos Apresentados',
+      description: 'Planos de tratamento apresentados que o doente ainda não aceitou nem recusou.',
+      action: 'Fazer follow-up ao plano apresentado',
+      count: plansPendingTotals.count,
+      estimatedValue: plansPendingTotals.value,
+      items: plansPendingItems.map((i) => ({
+        ...i,
+        value: roundEUR(i.value),
+        daysSince: Number(i.days_since),
+        detail: `${i.title} · apresentado há ${Number(i.days_since)} dia(s)`,
+      })),
+    },
+    {
+      key: 'plans_not_started',
+      label: 'Planos por Iniciar',
+      description: 'Planos já aceites pelo doente, mas cujo tratamento ainda não começou.',
+      action: 'Agendar a primeira sessão do plano',
+      count: plansNotStartedTotals.count,
+      estimatedValue: plansNotStartedTotals.value,
+      items: plansNotStartedItems.map((i) => ({
+        ...i,
+        value: roundEUR(i.value),
+        daysSince: i.days_since != null ? Number(i.days_since) : null,
+        detail: `${i.title} · aceite ${i.days_since != null ? `há ${Number(i.days_since)} dia(s)` : ''}`,
       })),
     },
     {

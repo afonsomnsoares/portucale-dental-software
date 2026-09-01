@@ -7,11 +7,16 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: portucale_dental
+      # Read by scripts/docker-init-app-role-password.sh below — only used on
+      # first container start (empty data volume), same as every other
+      # /docker-entrypoint-initdb.d/ script.
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD}
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./scripts/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./scripts/docker-init-app-role-password.sh:/docker-entrypoint-initdb.d/02-app-role-password.sh
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
@@ -40,7 +45,15 @@ services:
     ports:
       - '3000:3000'
     environment:
+      # Admin connection — unused by the app itself once APP_DATABASE_URL
+      # below is set (lib/db.ts prefers it), kept here only so this service
+      # still works unmodified if that var is ever removed.
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+      # Restricted, RLS-bound connection — see scripts/migrations/011_row_level_security.sql
+      # and .env's APP_DATABASE_URL comment for why this is what actually makes
+      # RLS enforce anything. Deliberately not set on the `jobs` service below,
+      # which needs the unrestricted admin connection instead.
+      APP_DATABASE_URL: postgresql://portucale_app:${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD}@postgres:5432/portucale_dental
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       NODE_ENV: production
       # Optional — leaving these unset just makes the SMS send step and the AI
@@ -69,6 +82,10 @@ services:
     container_name: portucale-jobs
     restart: unless-stopped
     environment:
+      # Intentionally the admin connection, not APP_DATABASE_URL — this
+      # process reads across every tenant with no per-request session to
+      # scope it, so it's exempt from Row-Level Security the same way
+      # scripts/migrate.ts is (see that migration's header comment).
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}

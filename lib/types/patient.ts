@@ -1,3 +1,9 @@
+export interface CommPrefs {
+  preferredChannel?: 'sms' | 'email' | 'phone' | 'whatsapp';
+  doNotContact?: ('sms' | 'email' | 'phone')[];
+  language?: string;
+}
+
 export interface Patient {
   id: string;
   tenant_id: string | null;
@@ -23,4 +29,5 @@ export interface Patient {
   country?: string;
   data_consent_given?: boolean;
   data_consent_date?: string | null;
+  comm_prefs?: CommPrefs;
 }

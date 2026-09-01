@@ -1,13 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireRoles, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string; num: string }> }) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'dentist', 'admin')) return forbidden();
+  if (!requireRoles(user, 'dentist', 'admin', 'super_admin')) return forbidden();
+  const originCheck = requireSameOrigin(request);
+  if (originCheck) return originCheck;
   const { id, num } = await params;
   const body = await request.json();
   const { condition, surfaces, notes } = body;

@@ -4,12 +4,12 @@ import { forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } fro
 import { query } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
-// Managing tenants is a platform-level action, not a per-clinic one — restricted to the
-// super-admin (role=admin with no tenantId; see lib/permissions.ts). A tenant-scoped
-// admin passing role='admin' + hasPermission('tenants:manage') must not be able to list
-// or create other clinics, so this checks !user.tenantId on top of the role/permission gate.
+// Managing tenants is a platform-level action, not a per-clinic one — restricted to
+// role='super_admin' (see scripts/migrations/017_super_admin_role.sql). A clinic admin
+// passing role='admin' + hasPermission('tenants:manage') must not be able to list or
+// create other clinics, so 'admin' is deliberately not accepted here.
 async function requireSuperAdmin(user: Parameters<typeof requireRoles>[0]) {
-  if (!requireRoles(user, 'admin') || user?.tenantId) {
+  if (!requireRoles(user, 'super_admin')) {
     await logBlockedAccess(user, 'Tenant management blocked: caller is not a super-admin');
     return false;
   }

@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server';
-import { hashEntry } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { normalizeCustomFields } from '@/lib/customFields';
 import { withTransaction } from '@/lib/db';
@@ -293,12 +292,11 @@ export async function POST(request: NextRequest) {
       resource: `Patients CSV import · created ${created} · skipped ${skipped}`,
       before_val: null,
       after_val: String(user.tenantId),
-      hash: '',
     };
-    auditEntry.hash = hashEntry(auditEntry);
+    // hash is computed server-side by chain_audit_log_hash — see lib/audit.ts's appendAudit.
     await client.query(
-      `INSERT INTO audit_log (user_name, user_role, clinic, action, resource, before_val, after_val, hash)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      `INSERT INTO audit_log (user_name, user_role, clinic, action, resource, before_val, after_val)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
       [
         auditEntry.user_name,
         auditEntry.user_role,
@@ -307,7 +305,6 @@ export async function POST(request: NextRequest) {
         auditEntry.resource,
         auditEntry.before_val,
         auditEntry.after_val,
-        auditEntry.hash,
       ],
     );
 

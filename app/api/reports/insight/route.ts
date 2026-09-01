@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const from = clampDate(body.from) || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
   const to = clampDate(body.to) || new Date().toISOString().slice(0, 10);
   const requestedTenantId = body.tenantId ? String(body.tenantId) : null;
-  const tenantId = user.role === 'admin' && !user.tenantId ? requestedTenantId : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
 
   // No key configured: degrade gracefully (same pattern as the SMS integration in
   // app/api/jobs/run/route.ts) instead of erroring the whole reports page.
@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       saldoEmDivida: summary.metrics.outstandingBalance,
     };
   } else {
-    // Comparing across clinics only makes sense for a global admin — same gate as
+    // Comparing across clinics only makes sense for the super_admin — same gate as
     // GET /api/reports/compare.
-    if (user.role !== 'admin' || user.tenantId) return forbidden();
+    if (user.role !== 'super_admin') return forbidden();
     system = SYSTEM_COMPARE;
     payload = await computeClinicComparison(from, to);
   }

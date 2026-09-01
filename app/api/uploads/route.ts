@@ -1,15 +1,33 @@
-import crypto from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import type { NextRequest } from 'next/server';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { badRequest } from '@/lib/http';
+import { getTask } from '@/lib/patientTasks';
 import { hasPermission } from '@/lib/permissions';
-import { getR2Config, putObjectR2 } from '@/lib/r2';
 import { getOwnedPatient } from '@/lib/tenantGuard';
+import { saveUploadFile } from '@/lib/uploads';
 
-const MAX_BYTES = 6 * 1024 * 1024;
-const ALLOWED = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf']);
+// GET /api/uploads?patientId= — documents panel (Fase C): lists what's already on
+// file for a patient, grouped by category in the UI.
+export async function GET(request: NextRequest) {
+  const user = getAuth(request);
+  if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'uploads:read'))) return forbidden();
+  if (!user.tenantId) return forbidden();
+
+  const { searchParams } = new URL(request.url);
+  const patientId = searchParams.get('patientId');
+  if (!patientId) return badRequest('patientId is required');
+  if (!(await getOwnedPatient(patientId, user))) {
+    return Response.json({ error: 'Patient not found' }, { status: 404 });
+  }
+
+  const rows = await query(`SELECT * FROM uploads WHERE tenant_id=$1 AND patient_id=$2 ORDER BY created_at DESC`, [
+    user.tenantId,
+    patientId,
+  ]);
+  return Response.json(rows);
+}
 
 export async function POST(request: NextRequest) {
   const originCheck = requireSameOrigin(request);
@@ -23,59 +41,34 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const file = form.get('file') as File;
   const patientId = form.get('patientId') ? String(form.get('patientId')) : null;
+  const taskId = form.get('taskId') ? String(form.get('taskId')) : null;
+  const categoryRaw = form.get('category') ? String(form.get('category')) : null;
   if (!file || typeof file.arrayBuffer !== 'function') {
     return Response.json({ error: 'Missing file' }, { status: 400 });
   }
   if (patientId && !(await getOwnedPatient(patientId, user))) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
-
-  const type = String(file.type || '');
-  if (type && !ALLOWED.has(type)) {
-    return Response.json({ error: 'Unsupported file type' }, { status: 400 });
+  // A taskId must be a pending document_request task on the SAME patient this upload is
+  // for — otherwise a caller could close an arbitrary tenant task by guessing/reusing an id.
+  if (taskId) {
+    const task = await getTask(user.tenantId, taskId);
+    if (task?.type !== 'document_request' || task.patient_id !== patientId) {
+      return Response.json({ error: 'Invalid taskId' }, { status: 400 });
+    }
   }
 
-  const buf = Buffer.from(await file.arrayBuffer());
-  if (buf.length > MAX_BYTES) {
-    return Response.json({ error: 'File too large' }, { status: 413 });
-  }
-
-  const original = String(file.name || 'upload');
-  const extRaw = path.extname(original).slice(1).toLowerCase();
-  const safeExt = extRaw && extRaw.length <= 8 ? extRaw : type === 'application/pdf' ? 'pdf' : 'bin';
-  const filename = `${crypto.randomUUID()}.${safeExt}`;
-
-  let out = null;
-  const r2 = getR2Config();
-  if (r2) {
-    const key = `${user.tenantId}/${filename}`;
-    const uploaded = await putObjectR2({ key, body: buf, contentType: type || 'application/octet-stream' });
-    if (uploaded.ok) out = uploaded;
-  }
-
-  if (!out) {
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, filename), buf);
-    out = { ok: true, url: `/uploads/${filename}`, storage: 'local', storageKey: filename };
-  }
-
-  const days = Number(process.env.UPLOAD_RETENTION_DAYS || 90);
-  const expiresAt = Number.isFinite(days) && days > 0 ? new Date(Date.now() + days * 86400000).toISOString() : null;
-  const [row] = await query(
-    `INSERT INTO uploads (tenant_id, patient_id, storage, storage_key, url, content_type, size, expires_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::timestamptz)
-     RETURNING *`,
-    [user.tenantId, patientId, out.storage, out.storageKey, out.url, type || null, buf.length, expiresAt],
-  );
+  const saved = await saveUploadFile({ tenantId: user.tenantId, patientId, taskId, categoryRaw, file });
+  if (!saved.ok) return Response.json({ error: saved.error }, { status: saved.status });
 
   return Response.json(
     {
-      url: out.url,
-      name: original,
-      size: buf.length,
-      type,
-      uploadId: row?.id,
+      url: saved.row.url,
+      name: String(file.name || 'upload'),
+      size: saved.row.size,
+      type: saved.row.content_type,
+      uploadId: saved.row.id,
+      category: saved.row.category,
     },
     { status: 201 },
   );

@@ -8,13 +8,13 @@ export async function POST(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (!requireRoles(user, 'admin')) return forbidden();
+  if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   if (!(await hasPermission(user, 'jobs:run'))) return forbidden();
 
   const { searchParams } = new URL(request.url);
   const job = (searchParams.get('job') || 'all') as JobName;
   const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = user.role === 'admin' && !user.tenantId ? requestedTenantId : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
   if (!tenantId) return forbidden();
 
   const result = await runJob(tenantId, job, { id: user.id, name: user.name, role: user.role, clinic: user.clinic });

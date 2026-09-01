@@ -2,9 +2,9 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, GhostBtn, PageHeader, Sel, Spinner } from '@/components/ui';
+import { Empty, GhostBtn, MetricCard, PageHeader, Sel, Spinner } from '@/components/ui';
 import { formatEUR, formatPhonePT } from '@/lib/constants';
-import type { RecoveryData, RecoveryItem } from '@/lib/types';
+import type { RecoveryCategory, RecoveryData, RecoveryItem } from '@/lib/types';
 
 interface RecoveryRow extends RecoveryItem {
   categoryKey: string;
@@ -15,6 +15,8 @@ interface RecoveryRow extends RecoveryItem {
 const CATEGORY_ROUTES: Record<string, string> = {
   proposed_treatments: '/dashboard/receptionist/treatments',
   accepted_open: '/dashboard/receptionist/treatments',
+  plans_pending_decision: '/dashboard/receptionist/treatments',
+  plans_not_started: '/dashboard/receptionist/treatments',
   never_booked: '/dashboard/receptionist/appointments',
   inactive_patients: '/dashboard/receptionist/appointments',
   no_shows_90d: '/dashboard/receptionist/appointments',
@@ -24,6 +26,14 @@ const CATEGORY_ROUTES: Record<string, string> = {
   outstanding_balance: '/dashboard/receptionist/invoices',
 };
 
+// The three headline numbers requested for this view: pending decision, abandoned
+// (accepted but nobody's chasing it), and accepted-but-not-started. Pulled out of
+// whichever categories currently represent each — kept as a lookup instead of hardcoding
+// key names inline at each call site.
+function sumCategories(categories: RecoveryCategory[], keys: string[]) {
+  return categories.filter((c) => keys.includes(c.key)).reduce((acc, c) => acc + c.estimatedValue, 0);
+}
+
 export default function RecoveryReceptionistPage() {
   const { api } = useAuth();
   const router = useRouter();
@@ -32,6 +42,7 @@ export default function RecoveryReceptionistPage() {
   const [err, setErr] = useState('');
   const [catFilter, setCatFilter] = useState('all');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [tasksCreated, setTasksCreated] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setErr('');
@@ -73,6 +84,27 @@ export default function RecoveryReceptionistPage() {
     load();
   }
 
+  function rowKey(r: RecoveryRow) {
+    return `${r.categoryKey}-${r.patient_id || r.id}`;
+  }
+
+  async function createFollowUp(row: RecoveryRow) {
+    if (!row.patient_id) return;
+    const key = rowKey(row);
+    setBusyId(key);
+    const created = await api('/patient-tasks', {
+      method: 'POST',
+      body: {
+        patientId: row.patient_id,
+        type: 'follow_up',
+        title: `Follow-up: ${row.categoryLabel} — ${row.patient_name}`,
+        notes: row.detail,
+      },
+    }).catch(() => null);
+    if (created) setTasksCreated((prev) => new Set(prev).add(key));
+    setBusyId(null);
+  }
+
   return (
     <div>
       <PageHeader title="Lista de Recuperação" sub="Oportunidades de receita — ligue ao doente certo hoje">
@@ -96,8 +128,29 @@ export default function RecoveryReceptionistPage() {
         <Empty message="Sem dados disponíveis." />
       ) : (
         <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }} className="mb-4">
+            <MetricCard
+              label="Pendentes de decisão"
+              value={formatEUR(sumCategories(data.categories, ['proposed_treatments', 'plans_pending_decision']))}
+              sub="Orçamentos e planos apresentados, sem resposta do doente"
+              color="var(--amber)"
+            />
+            <MetricCard
+              label="Abandonados"
+              value={formatEUR(sumCategories(data.categories, ['accepted_open']))}
+              sub="Aceites, sem próxima consulta marcada"
+              color="var(--red)"
+            />
+            <MetricCard
+              label="Por iniciar"
+              value={formatEUR(sumCategories(data.categories, ['plans_not_started']))}
+              sub="Planos aceites, tratamento ainda não começou"
+              color="var(--brand)"
+            />
+          </div>
+
           <div className="card p-4 mb-4 flex items-center gap-4 flex-wrap">
-            <span className="section-label">Receita potencial</span>
+            <span className="section-label">Receita potencial total</span>
             <strong style={{ fontSize: 20, color: 'var(--green)' }}>{formatEUR(data.total)}</strong>
             <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
               {rows.length} contactos na lista
@@ -135,7 +188,7 @@ export default function RecoveryReceptionistPage() {
                 </thead>
                 <tbody>
                   {filtered.map((r) => (
-                    <tr key={`${r.categoryKey}-${r.patient_id || r.id}`} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                    <tr key={rowKey(r)} style={{ borderBottom: '1px solid #F4F7FA' }}>
                       <td className="data-td" style={{ fontWeight: 600 }}>
                         {r.patient_name}
                       </td>
@@ -149,6 +202,14 @@ export default function RecoveryReceptionistPage() {
                       </td>
                       <td className="data-td" style={{ color: 'var(--ink-2)' }}>
                         {r.detail}
+                        {r.daysSince != null && r.daysSince >= 14 && (
+                          <span
+                            className="badge ml-2"
+                            style={{ background: 'var(--red-bg)', color: 'var(--red)', fontSize: 10 }}
+                          >
+                            atrasado
+                          </span>
+                        )}
                       </td>
                       <td className="data-td">
                         <span className="badge" style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}>
@@ -169,6 +230,20 @@ export default function RecoveryReceptionistPage() {
                           </GhostBtn>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
+                            {r.patient_id &&
+                              (tasksCreated.has(rowKey(r)) ? (
+                                <span className="text-xs" style={{ color: 'var(--green)', fontWeight: 700 }}>
+                                  Tarefa criada
+                                </span>
+                              ) : (
+                                <GhostBtn
+                                  disabled={busyId === rowKey(r)}
+                                  onClick={() => createFollowUp(r)}
+                                  style={{ padding: '5px 10px' }}
+                                >
+                                  {busyId === rowKey(r) ? '…' : 'Criar tarefa'}
+                                </GhostBtn>
+                              ))}
                             {(r.phone || r.email) && (
                               <GhostBtn
                                 onClick={() => {

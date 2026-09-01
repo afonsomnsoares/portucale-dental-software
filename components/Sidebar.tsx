@@ -205,7 +205,7 @@ function Icon({ name, active }: { name: string; active: boolean }) {
       </svg>
     );
   }
-  if (name === 'Ciclo de Vida') {
+  if (name === 'Jornada do Paciente') {
     return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 4a8 8 0 1 1-6.93 4" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -222,6 +222,49 @@ function Icon({ name, active }: { name: string; active: boolean }) {
       </svg>
     );
   }
+  if (name === 'Tarefas') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 11l2 2 4-4" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 6h16M4 12h3M4 18h3M14 18h6" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Fontes de Leads') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="8" cy="15" r="3.5" stroke={c} strokeWidth="1.8" />
+        <path
+          d="M10.5 12.5 18 5M18 5h-4M18 5v4"
+          stroke={c}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (name === 'Equipa') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="9" cy="8" r="3" stroke={c} strokeWidth="1.8" />
+        <path d="M3 20c1.3-3 3.6-4.5 6-4.5s4.7 1.5 6 4.5" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="17" cy="7" r="2.4" stroke={c} strokeWidth="1.8" />
+        <path d="M15.5 12.2c2 .2 3.6 1.6 4.5 3.8" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'Operações') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="4" y="4" width="7" height="7" rx="1.5" stroke={c} strokeWidth="1.8" />
+        <path d="M5.5 7.5 6.8 8.8 9 6.2" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="4" y="13" width="7" height="7" rx="1.5" stroke={c} strokeWidth="1.8" />
+        <path d="M5.5 16.5 6.8 17.8 9 15.2" stroke={c} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M15 6h5M15 10h5M15 15h5M15 19h5" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 6v12M6 12h12" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
@@ -230,6 +273,7 @@ function Icon({ name, active }: { name: string; active: boolean }) {
 }
 
 const ROLE_ICONS = {
+  super_admin: { icon: <ToothIcon size={18} color="#5243AA" />, color: '#5243AA' },
   admin: { icon: <ToothIcon size={18} color="#5243AA" />, color: '#5243AA' },
   receptionist: {
     icon: (

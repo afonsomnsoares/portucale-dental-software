@@ -93,7 +93,7 @@ export default function RecallsPage() {
     return { label: 'Active', bg: '#DEEBFF', color: '#0052CC' };
   }
 
-  const cols = ['Type', 'Interval', 'Last Done', 'Next Due', 'Status', 'Actions'];
+  const cols = ['Type', 'Interval', 'Last Done', 'Next Due', 'Status', 'Reminder Sent', 'Actions'];
 
   return (
     <div>
@@ -171,6 +171,9 @@ export default function RecallsPage() {
                         <td className="data-td">{r.next_due ? r.next_due.slice(0, 10) : '—'}</td>
                         <td className="data-td">
                           <Badge label={s.label} bg={s.bg} color={s.color} />
+                        </td>
+                        <td className="data-td" style={{ color: '#97A0AF', fontSize: 12 }}>
+                          {r.last_notified_at ? r.last_notified_at.slice(0, 10) : '—'}
                         </td>
                         <td className="data-td">
                           {r.active && (

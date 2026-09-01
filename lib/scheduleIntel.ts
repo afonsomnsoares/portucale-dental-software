@@ -8,6 +8,7 @@ import {
   riskScore,
 } from './noShowRisk';
 import { businessDays } from './recoveryCalc';
+import { suggestCapacityMoves } from './scheduleIntelCalc';
 
 const RISK_HISTORY_MONTHS = 6;
 const UPCOMING_RISK_DAYS = 14;
@@ -100,6 +101,11 @@ export async function computeRiskHeatmap(tenantId: string) {
   return { cells: aggregateByWeekdayHour(rows), sampleSize: rows.length, historyMonths: RISK_HISTORY_MONTHS };
 }
 
+// Same per-unit capacity model as the tenant-wide figure below (workMinutesPerDay ×
+// business days) — one dentist, like one chair, can only ever host one patient at a
+// time, so neither is multiplied by `operatories` the way the tenant total is.
+const WORK_MINUTES_PER_DAY = 480;
+
 // Agenda inefficiency signals beyond the static "empty slots" KPI already in Revenue
 // Recovery: chair/dentist utilization, schedule fragmentation (gaps between appointments
 // on the same chair-day), and last-minute cancellation rate.
@@ -107,7 +113,7 @@ export async function computeAgendaEfficiency(tenantId: string, days = UPCOMING_
   const tenant = await queryOne(`SELECT operatories FROM tenants WHERE id=$1`, [tenantId]);
   const operatories = Math.max(1, Number(tenant?.operatories || 1));
 
-  const [bookedRow, byChairDay, lastMinuteRow] = await Promise.all([
+  const [bookedRow, byChairDay, lastMinuteRow, byDentistRow, byChairRow, waitlistDemandRow] = await Promise.all([
     queryOne(
       `SELECT COALESCE(SUM(duration),0)::int AS minutes
        FROM appointments
@@ -131,6 +137,41 @@ export async function computeAgendaEfficiency(tenantId: string, days = UPCOMING_
        FROM appointment_cancellations c
        WHERE c.tenant_id=$1 AND c.created_at >= NOW() - ($2::int * INTERVAL '1 day')`,
       [tenantId, RISK_HISTORY_MONTHS * 30],
+    ),
+    // "disponibilidade dos dentistas" — unassigned appointments (dentist_id IS NULL)
+    // are excluded, there's no dentist to report utilization for.
+    query(
+      `SELECT a.dentist_id, u.name AS dentist_name, COALESCE(SUM(a.duration),0)::int AS booked_minutes
+       FROM appointments a JOIN users u ON u.id = a.dentist_id
+       WHERE a.tenant_id=$1 AND a.appt_date >= CURRENT_DATE AND a.appt_date < CURRENT_DATE + ($2::int * INTERVAL '1 day')
+         AND a.status NOT IN ('no-show','cancelled') AND a.dentist_id IS NOT NULL
+       GROUP BY a.dentist_id, u.name
+       ORDER BY booked_minutes DESC`,
+      [tenantId, days],
+    ),
+    // "disponibilidade das cadeiras"
+    query(
+      `SELECT a.chair, COALESCE(SUM(a.duration),0)::int AS booked_minutes
+       FROM appointments a
+       WHERE a.tenant_id=$1 AND a.appt_date >= CURRENT_DATE AND a.appt_date < CURRENT_DATE + ($2::int * INTERVAL '1 day')
+         AND a.status NOT IN ('no-show','cancelled')
+       GROUP BY a.chair
+       ORDER BY a.chair`,
+      [tenantId, days],
+    ),
+    // "preferências dos pacientes" — demand by weekday from the active waitlist, so the
+    // heatmap's "avoid this slot" signal can be paired with "move capacity toward this
+    // one instead". An entry with no day preference (preferred_days IS NULL) is flexible
+    // and counts toward every weekday, not zero of them.
+    query(
+      `SELECT wd.weekday, COUNT(w.id)::int AS demand
+       FROM generate_series(0,6) AS wd(weekday)
+       LEFT JOIN waitlist_entries w
+         ON w.tenant_id=$1 AND w.status='active'
+            AND (w.preferred_days IS NULL OR wd.weekday = ANY(w.preferred_days))
+       GROUP BY wd.weekday
+       ORDER BY wd.weekday`,
+      [tenantId],
     ),
   ]);
 
@@ -157,6 +198,36 @@ export async function computeAgendaEfficiency(tenantId: string, days = UPCOMING_
     }
   }
 
+  const unitCapacityMinutes = WORK_MINUTES_PER_DAY * days2;
+  const byDentist = byDentistRow.map((r) => {
+    const minutes = Number(r.booked_minutes);
+    return {
+      dentistId: r.dentist_id as string,
+      dentistName: r.dentist_name as string,
+      bookedMinutes: minutes,
+      capacityMinutes: unitCapacityMinutes,
+      utilizationPct: unitCapacityMinutes > 0 ? Math.round((minutes / unitCapacityMinutes) * 100) : 0,
+    };
+  });
+  const byChair = byChairRow.map((r) => {
+    const minutes = Number(r.booked_minutes);
+    return {
+      chair: Number(r.chair),
+      bookedMinutes: minutes,
+      capacityMinutes: unitCapacityMinutes,
+      utilizationPct: unitCapacityMinutes > 0 ? Math.round((minutes / unitCapacityMinutes) * 100) : 0,
+    };
+  });
+  const waitlistDemandByWeekday = waitlistDemandRow.map((r) => ({
+    weekday: Number(r.weekday),
+    demand: Number(r.demand),
+  }));
+
+  // "otimizar: dentista + cadeira + paciente + horário... maximizar a utilização da
+  // capacidade disponível" — everything above this point is descriptive; this turns it
+  // into concrete, actionable suggestions (see lib/scheduleIntelCalc.ts).
+  const suggestions = suggestCapacityMoves(byChair, byDentist, waitlistDemandByWeekday);
+
   return {
     operatories,
     windowDays: days,
@@ -168,5 +239,9 @@ export async function computeAgendaEfficiency(tenantId: string, days = UPCOMING_
       total: Number(lastMinuteRow?.total || 0),
       withinTwoDays: Number(lastMinuteRow?.last_minute || 0),
     },
+    byDentist,
+    byChair,
+    waitlistDemandByWeekday,
+    suggestions,
   };
 }

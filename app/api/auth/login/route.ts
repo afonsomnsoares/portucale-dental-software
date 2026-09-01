@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
 import { requireSameOrigin, signToken } from '@/lib/auth';
-import { queryOne } from '@/lib/db';
+import { queryOne, withSystemContext } from '@/lib/db';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
 
 export async function POST(request: NextRequest) {
@@ -31,14 +31,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const user = await queryOne(
-    `SELECT u.id, u.email, u.password as hashed_password, u.name, u.role, u.clinic, u.tenant_id,
-            t.name as tenant_name, t.city as tenant_city,
-            COALESCE(t.operatories, 3) as operatories
-     FROM users u
-     LEFT JOIN tenants t ON t.id = u.tenant_id
-     WHERE u.email=$1 AND u.active=TRUE`,
-    [email],
+  // No session exists yet at this point, so there's nothing for lib/auth.ts's
+  // getAuth() to have primed lib/db.ts's RLS tenant context with — this has to
+  // search by email across every tenant by design, so it explicitly runs as
+  // the system/super-admin context instead (see withSystemContext in lib/db.ts).
+  const user = await withSystemContext(() =>
+    queryOne(
+      `SELECT u.id, u.email, u.password as hashed_password, u.name, u.role, u.clinic, u.tenant_id,
+              t.name as tenant_name, t.city as tenant_city,
+              COALESCE(t.operatories, 3) as operatories
+       FROM users u
+       LEFT JOIN tenants t ON t.id = u.tenant_id
+       WHERE u.email=$1 AND u.active=TRUE`,
+      [email],
+    ),
   );
 
   if (!user) {

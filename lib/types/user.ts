@@ -8,4 +8,7 @@ export interface DbUser {
   clinic: string;
   active: boolean;
   created_at: string;
+  // Only meaningful for role='dentist' — see lib/scheduling.ts's requiredSpecialty
+  // matching in suggestAppointmentSlots.
+  specialties?: string[] | null;
 }

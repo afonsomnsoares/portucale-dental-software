@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { LIFECYCLE_STAGES, computeLifecycleStage, isOutreachDue } from '../lib/lifecycleCalc.ts';
+import {
+  computeLifecycleStage,
+  dormancyBand,
+  isOutreachDue,
+  LIFECYCLE_STAGES,
+  segmentReactivationCandidate,
+  valueTier,
+} from '../lib/lifecycleCalc.ts';
 
 const NOW = new Date('2026-08-24T12:00:00Z');
 
@@ -85,4 +92,23 @@ test('isOutreachDue: respects a custom cooldown', () => {
   const tenDaysAgo = new Date(NOW.getTime() - 10 * 86400000).toISOString();
   assert.equal(isOutreachDue(tenDaysAgo, NOW, 7), true);
   assert.equal(isOutreachDue(tenDaysAgo, NOW, 14), false);
+});
+
+test('dormancyBand buckets by months inactive', () => {
+  assert.equal(dormancyBand(7), '6-12m');
+  assert.equal(dormancyBand(12), '12-24m');
+  assert.equal(dormancyBand(18), '12-24m');
+  assert.equal(dormancyBand(24), '24m+');
+  assert.equal(dormancyBand(36), '24m+');
+});
+
+test('valueTier crosses over at the high-value threshold', () => {
+  assert.equal(valueTier(0), 'standard');
+  assert.equal(valueTier(499), 'standard');
+  assert.equal(valueTier(500), 'high');
+});
+
+test('segmentReactivationCandidate: 18-months-dormant high-value patient (the spec example)', () => {
+  const segment = segmentReactivationCandidate({ monthsInactive: 18, lifetimeValue: 1200 });
+  assert.deepEqual(segment, { dormancyBand: '12-24m', valueTier: 'high' });
 });

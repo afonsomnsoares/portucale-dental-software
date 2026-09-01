@@ -461,7 +461,13 @@ export function AppLogo({ size = 32, className = '', style = {} }) {
 
 export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
   if (!events.length) return <Empty message="Sem eventos na cronologia." />;
-  const COL = { clinical: 'var(--brand)', admin: 'var(--ink-2)', financial: 'var(--green)', note: 'var(--purple)' };
+  const COL = {
+    clinical: 'var(--brand)',
+    admin: 'var(--ink-2)',
+    financial: 'var(--green)',
+    note: 'var(--purple)',
+    interaction: 'var(--teal)',
+  };
   return (
     <div className="relative" style={{ paddingLeft: 28 }}>
       <div className="absolute" style={{ left: 7, top: 6, bottom: 0, width: 2, background: 'var(--border)' }} />

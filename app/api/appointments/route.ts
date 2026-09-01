@@ -1,10 +1,16 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
-import { query, queryOne } from '@/lib/db';
+import { query, queryOne, withTransaction } from '@/lib/db';
+import { conflict } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asDate, requireFields, validateAppointmentBody } from '@/lib/validate';
+
+// Internal-only signal from the transaction below to the catch block — never
+// serialized or exposed, just a way to distinguish "slot taken" from any
+// other failure without stringly-typed error matching.
+class SlotTakenError extends Error {}
 
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
@@ -77,23 +83,58 @@ export async function POST(request: NextRequest) {
   const chair = Math.max(1, Math.min(99, Number(body.chair) || 1));
   const duration = Math.max(5, Math.min(480, Number(body.duration) || 30));
 
-  const [apt] = await query(
-    `INSERT INTO appointments (tenant_id, patient_id, patient_name, dentist_id, chair, appt_date, start_time, duration, type, status, notes)
-     VALUES ($1,$2,$3,$4,$5,$6::date,$7::time,$8,$9,'confirmed',$10)
-     RETURNING *`,
-    [
-      user.tenantId,
-      body.patientId,
-      String(body.patientName || '').slice(0, 200),
-      dentist.id,
-      chair,
-      body.date,
-      body.startTime,
-      duration,
-      String(body.type).slice(0, 100),
-      String(body.notes || '').slice(0, 2000) || null,
-    ],
-  );
+  // Neither this route nor a schema constraint used to stop two overlapping
+  // appointments from being created for the same dentist or the same chair —
+  // the client-side auto-chair-pick (and now the /suggest endpoint) only ever
+  // avoided *offering* a clash, they never prevented one at the moment of
+  // insert. An advisory lock keyed by tenant+dentist+day serializes concurrent
+  // bookings for that dentist (mirrors the pg_advisory_xact_lock pattern used
+  // by the audit_log hash-chain trigger, migrations/015), and the conflict
+  // check re-runs inside the same transaction so two requests racing each
+  // other can't both pass it.
+  let apt: Record<string, unknown>;
+  try {
+    apt = await withTransaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`${user.tenantId}|${dentist.id}|${body.date}`]);
+
+      const { rows: clashes } = await client.query(
+        `SELECT id FROM appointments
+         WHERE tenant_id=$1 AND appt_date=$2::date
+           AND (dentist_id=$3 OR chair=$4)
+           AND start_time < ($5::time + make_interval(mins => $6::int))
+           AND (start_time + make_interval(mins => duration)) > $5::time
+         LIMIT 1`,
+        [user.tenantId, body.date, dentist.id, chair, body.startTime, duration],
+      );
+      if (clashes.length) {
+        throw new SlotTakenError();
+      }
+
+      const { rows } = await client.query(
+        `INSERT INTO appointments (tenant_id, patient_id, patient_name, dentist_id, chair, appt_date, start_time, duration, type, status, notes)
+         VALUES ($1,$2,$3,$4,$5,$6::date,$7::time,$8,$9,'confirmed',$10)
+         RETURNING *`,
+        [
+          user.tenantId,
+          body.patientId,
+          String(body.patientName || '').slice(0, 200),
+          dentist.id,
+          chair,
+          body.date,
+          body.startTime,
+          duration,
+          String(body.type).slice(0, 100),
+          String(body.notes || '').slice(0, 2000) || null,
+        ],
+      );
+      return rows[0];
+    });
+  } catch (e) {
+    if (e instanceof SlotTakenError) {
+      return conflict('Este horário deixou de estar disponível — escolha outro.');
+    }
+    throw e;
+  }
   await appendAudit(
     user,
     'CREATE',

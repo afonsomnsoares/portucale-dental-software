@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!(await hasPermission(user, 'appointments:update'))) return forbidden();
 
   const { id } = await params;
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   if (!tenantId) return forbidden();
 
   const body = await request.json();
@@ -83,7 +83,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (!(await hasPermission(user, 'appointments:cancel'))) return forbidden();
 
   const { id } = await params;
-  const tenantId = user.role === 'admin' && !user.tenantId ? null : user.tenantId;
+  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
   const prev = await queryOne(`SELECT * FROM appointments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
     id,
     tenantId,
@@ -138,6 +138,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       {
         date: String(prev.appt_date).slice(0, 10),
         startTime: String(prev.start_time).slice(0, 5),
+        type: String(prev.type || ''),
         duration: Number(prev.duration),
         dentistId: prev.dentist_id || null,
         chair: Number(prev.chair) || 1,

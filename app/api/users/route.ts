@@ -6,18 +6,21 @@ import { query } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { asEmail } from '@/lib/validate';
 
-const ALLOWED_ROLES = new Set(['receptionist', 'dentist']);
+// 'admin' here means a clinic admin (always tenant-scoped from here on — see
+// scripts/migrations/017_super_admin_role.sql). 'super_admin' is deliberately never in
+// this set: the platform has exactly one, created only via scripts/create-admin.ts.
+const ALLOWED_ROLES = new Set(['receptionist', 'dentist', 'admin']);
 
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (user.role !== 'admin') return forbidden();
+  if (user.role !== 'admin' && user.role !== 'super_admin') return forbidden();
   if (!(await hasPermission(user, 'users:manage'))) return forbidden();
 
   // Tenant-scoped admins must only see their own clinic's staff — a null tenantId means
   // super-admin, which bypasses the filter and sees every tenant (same pattern as patients).
   const rows = await query(
-    `SELECT u.id, u.email, u.name, u.role, u.clinic, u.active, u.created_at, u.tenant_id, t.name as tenant_name
+    `SELECT u.id, u.email, u.name, u.role, u.clinic, u.active, u.created_at, u.tenant_id, u.specialties, t.name as tenant_name
      FROM users u
      LEFT JOIN tenants t ON t.id = u.tenant_id
      WHERE ($1::uuid IS NULL OR u.tenant_id = $1::uuid)
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (user.role !== 'admin') return forbidden();
+  if (user.role !== 'admin' && user.role !== 'super_admin') return forbidden();
   if (!(await hasPermission(user, 'users:manage'))) return forbidden();
 
   const { email, password, name, role, clinic, tenantId: bodyTenantId } = await request.json();
@@ -46,12 +49,19 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Password must be at least 10 characters' }, { status: 400 });
   }
   if (!ALLOWED_ROLES.has(String(role))) {
-    // Also covers role==='admin': super-admin accounts aren't created through this endpoint.
+    // Also covers role==='super_admin': never created through this endpoint.
     return Response.json({ error: 'Invalid role' }, { status: 400 });
+  }
+  // Granting admin (clinic-admin) status is a super_admin-only action — a clinic admin
+  // creating a peer admin in their own tenant is out of scope for now (see the decision
+  // in scripts/migrations/017_super_admin_role.sql's header).
+  if (role === 'admin' && user.role !== 'super_admin') {
+    await logBlockedAccess(user, 'User creation blocked: only super_admin may create an admin');
+    return forbidden();
   }
 
   // A tenant-scoped admin may only create users inside their own tenant — the request
-  // body's tenantId is ignored for them. Only a super-admin (no tenantId) may target an
+  // body's tenantId is ignored for them. Only the super_admin (no tenantId) may target an
   // arbitrary tenant; without that guard a clinic admin could pass any tenantId to plant
   // a user in another clinic (privilege escalation / cross-tenant IDOR).
   let tenantId = user.tenantId;
@@ -60,6 +70,12 @@ export async function POST(request: NextRequest) {
   } else if (bodyTenantId && bodyTenantId !== tenantId) {
     await logBlockedAccess(user, `User creation blocked: attempted to target tenant ${bodyTenantId}`);
     return forbidden();
+  }
+  // Every role this endpoint can create is tenant-scoped by construction
+  // (users_role_tenant_consistency) — surface a clean 400 instead of a raw constraint
+  // violation when the super_admin forgets to pass a tenantId.
+  if (!tenantId) {
+    return Response.json({ error: 'tenantId is required' }, { status: 400 });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
