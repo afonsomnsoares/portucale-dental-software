@@ -3,17 +3,9 @@ import type { JobName } from '@/lib/jobsRunner';
 // 'revenue' existiu como agente à parte e foi absorvido em 'patient'/'finance' — ver
 // o cabeçalho de lib/agents/registry.ts. 'compliance' não estava no roadmap de fases
 // mas continua a existir: o RGPD não desaparece por não constar de uma lista.
-export type AgentId =
-  | 'lead'
-  | 'patient'
-  | 'scheduling'
-  | 'finance'
-  | 'operations'
-  | 'management'
-  | 'group'
-  | 'compliance';
+export type AgentId = 'lead' | 'patient' | 'scheduling' | 'finance' | 'operations' | 'compliance';
 
-// Estado da ligação à IA, por agente. Todos os sete do roadmap têm agora um modelo a
+// Estado da ligação à IA, por agente. Todos os do roadmap têm agora um modelo a
 // decidir alguma coisa (lib/agents/*Agent.ts, um ficheiro por agente); 'compliance'
 // continua determinístico de propósito — apagar dados por decisão de um modelo é
 // exatamente o que a fronteira desse agente proíbe. A página mostra isto tal como

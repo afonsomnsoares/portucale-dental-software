@@ -12,5 +12,5 @@ test('default permission mapping allows expected actions', () => {
   assert.equal(defaultAllows('receptionist', 'patients:create'), true);
   assert.equal(defaultAllows('receptionist', 'treatments:create'), false);
   assert.equal(defaultAllows('dentist', 'treatments:create'), true);
-  assert.equal(defaultAllows('dentist', 'reports:read'), true);
+  assert.equal(defaultAllows('dentist', 'prescriptions:manage'), true);
 });

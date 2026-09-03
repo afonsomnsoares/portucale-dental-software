@@ -13,14 +13,14 @@ import Anthropic from '@anthropic-ai/sdk';
 //                    fazer nada). Ver reorderAgent.ts vs leadAgent.ts, que decidem
 //                    diferente precisamente por isto.
 //   'failed'       — havia chave e a chamada correu mal. O detalhe fica no log do
-//                    servidor, nunca é devolvido a quem chamou (mesmo princípio de
-//                    app/api/reports/insight/route.ts).
+//                    servidor, nunca é devolvido a quem chamou: a mensagem crua de um
+//                    SDK diz coisas sobre a infraestrutura que ninguém de fora precisa.
 export type AgentToolResult<T> = { status: 'unconfigured' } | { status: 'failed' } | { status: 'ok'; input: T };
 
 // Sonnet e não Opus: estas chamadas correm em background, uma por clínica por passagem
 // do cron (ver scripts/run-jobs.ts), e são decisões estruturadas e limitadas — não
-// análise aberta. O custo por corrida importa mais aqui do que na análise a pedido de
-// app/api/reports/insight/route.ts, que corre quando alguém carrega num botão.
+// análise aberta. Numa pipeline que corre sozinha em ciclo, o custo por corrida pesa
+// mais do que a última fatia de qualidade.
 export const AGENT_MODEL = 'claude-sonnet-5';
 
 export interface AgentToolSpec {

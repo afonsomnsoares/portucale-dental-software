@@ -161,8 +161,8 @@ export async function generateReorderSuggestionsAI(tenantId: string) {
     items = clampAiReorderDecision(candidates, (input.items || []) as never);
     summary = typeof input.summary === 'string' ? input.summary : '';
   } catch (e) {
-    // Mesmo padrão de app/api/reports/insight/route.ts: nunca reenviar a mensagem
-    // crua do SDK para fora deste processo — só para o log do servidor.
+    // Nunca reenviar a mensagem crua do SDK para fora deste processo — só para o log
+    // do servidor. Mesmo princípio de lib/agents/aiClient.ts.
     console.error(
       'reorderAgent: Anthropic call failed, a cair para a regra determinística:',
       e instanceof Error ? e.message : e,

@@ -187,14 +187,6 @@ function Icon({ name, active }: { name: string; active: boolean }) {
       </svg>
     );
   }
-  if (name === 'Relatórios') {
-    return (
-      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M4 20V4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M7 17v-5M12 17V7M17 17v-8" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
   if (name === 'Agenda Inteligente') {
     return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
