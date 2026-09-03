@@ -1,13 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const originCheck = requireSameOrigin(request);
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'prescriptions:manage'))) return forbidden();
   const { id } = await params;
   const body = await request.json();
 
@@ -55,6 +57,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'prescriptions:manage'))) return forbidden();
   const { id } = await params;
   const tenantId = user.tenantId;
 

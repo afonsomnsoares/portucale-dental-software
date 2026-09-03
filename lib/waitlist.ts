@@ -218,7 +218,7 @@ async function declineSiblingOffers(tenantId: string, cancelledAppointmentId: st
 // entry back up and try the next-in-line candidate for that same slot.
 export async function declineOffer(tenantId: string, offerId: string) {
   const offer = await getOffer(tenantId, offerId);
-  if (!offer || offer.status !== 'sent') return null;
+  if (offer?.status !== 'sent') return null;
 
   await query(`UPDATE slot_offers SET status='declined', responded_at=NOW() WHERE id=$1`, [offerId]);
   await query(`UPDATE waitlist_entries SET status='active', updated_at=NOW() WHERE id=$1`, [offer.waitlist_entry_id]);
@@ -251,7 +251,7 @@ export interface BookOfferResult {
 // who were offered the same slot.
 export async function acceptOfferAndBook(tenantId: string, offerId: string): Promise<BookOfferResult | null> {
   const offer = await getOffer(tenantId, offerId);
-  if (!offer || offer.status !== 'sent') return null;
+  if (offer?.status !== 'sent') return null;
 
   const patient = await queryOne(`SELECT id, name FROM patients WHERE id=$1 AND tenant_id=$2`, [
     offer.patient_id,

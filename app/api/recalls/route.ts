@@ -1,13 +1,15 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asInt, sanitizeString } from '@/lib/validate';
 
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'recalls:read'))) return forbidden();
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const dueBefore = searchParams.get('dueBefore');
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'recalls:manage'))) return forbidden();
   if (!user.tenantId) return unauthorized();
   const body = await request.json();
   const { patientId, recallType, intervalMonths, lastDone, nextDue, notes } = body;

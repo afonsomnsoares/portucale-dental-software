@@ -1,4 +1,4 @@
-import Overview from '@/components/admin/pages/Overview';
+import Overview from '@/components/clinic/pages/Overview';
 
 export default function Page() {
   return <Overview />;

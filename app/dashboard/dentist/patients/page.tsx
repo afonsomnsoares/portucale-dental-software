@@ -8,6 +8,7 @@ import NextActionBanner from '@/components/patient/NextActionBanner';
 import PatientDocumentsTab from '@/components/patient/PatientDocumentsTab';
 import PatientInteractionsTab from '@/components/patient/PatientInteractionsTab';
 import PatientTasksTab from '@/components/patient/PatientTasksTab';
+import SchedulingPrefsCard from '@/components/patient/SchedulingPrefsCard';
 import PatientDetailHeader from '@/components/shared/PatientDetailHeader';
 import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
@@ -141,6 +142,7 @@ export default function DentistPatientsPage() {
                   schemaFields={schemaFields}
                 />
                 <CommPrefsCard api={api} patient={selected} onUpdated={setSelected} />
+                <SchedulingPrefsCard api={api} patient={selected} />
               </div>
             )}
 

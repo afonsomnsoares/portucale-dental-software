@@ -1,4 +1,4 @@
-import Inventory from '@/components/admin/pages/Inventory';
+import Inventory from '@/components/clinic/pages/Inventory';
 
 export default function Page() {
   return <Inventory />;

@@ -4,6 +4,7 @@ import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth'
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
+import { getOwnedUser } from '@/lib/tenantGuard';
 import { asEnum, sanitizeString } from '@/lib/validate';
 
 const CATEGORIES = ['equipment', 'patient_safety', 'complaint', 'security', 'other'] as const;
@@ -41,7 +42,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.status !== undefined && !status) {
     return Response.json({ error: `status must be one of: ${STATUSES.join(', ')}` }, { status: 400 });
   }
-  const assignedTo = body.assignedTo !== undefined ? body.assignedTo || null : prev.assigned_to;
+  // Id de utilizador vindo do cliente — confirmar que é desta clínica (ver getOwnedUser).
+  let assignedTo = prev.assigned_to;
+  if (body.assignedTo !== undefined) {
+    if (!body.assignedTo) {
+      assignedTo = null;
+    } else {
+      const assignee = await getOwnedUser(body.assignedTo, user);
+      if (!assignee) return Response.json({ error: 'assignedTo is not a user in this clinic' }, { status: 400 });
+      assignedTo = assignee.id;
+    }
+  }
   const resolutionNotes =
     body.resolutionNotes !== undefined ? sanitizeString(body.resolutionNotes, 2000) : prev.resolution_notes;
 

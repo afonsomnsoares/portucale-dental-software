@@ -15,6 +15,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { formatEUR } from '@/lib/constants';
 import type { Patient, TreatmentPlan } from '@/lib/types';
 
 interface PhaseForm {
@@ -114,17 +115,17 @@ export default function TreatmentPlansPage() {
     if (u) setPlans((prev) => prev.map((p) => (p.id === id ? u : p)));
   }
 
-  const cols = ['Title', 'Total Fee', 'Status', 'Created', 'Actions'];
+  const cols = ['Título', 'Valor Total', 'Estado', 'Criado', 'Ações'];
 
   return (
     <div>
-      <PageHeader title="Treatment Plans" sub="Custom treatment plans with phased pricing" />
+      <PageHeader title="Planos de Tratamento" sub="Planos por fases, com valor apresentado ao doente" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
             <input
               className="input"
-              placeholder="Search name or ID…"
+              placeholder="Procurar por nome ou nº…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -133,7 +134,7 @@ export default function TreatmentPlansPage() {
             {loading ? (
               <Spinner />
             ) : !patients.length ? (
-              <Empty message="No patients" />
+              <Empty message="Sem doentes" />
             ) : (
               patients.map((p) => (
                 <button
@@ -172,10 +173,10 @@ export default function TreatmentPlansPage() {
         {selected ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <PrimaryBtn onClick={() => setModal(true)}>+ New Plan</PrimaryBtn>
+              <PrimaryBtn onClick={() => setModal(true)}>+ Novo Plano</PrimaryBtn>
             </div>
             {!plans.length ? (
-              <Empty message="No treatment plans" />
+              <Empty message="Sem planos de tratamento" />
             ) : (
               <div className="card" style={{ padding: 0 }}>
                 <DataTable
@@ -186,7 +187,7 @@ export default function TreatmentPlansPage() {
                         {p.title}
                       </td>
                       <td className="data-td" style={{ fontWeight: 700 }}>
-                        ${Number(p.total_fee || 0).toLocaleString()}
+                        {formatEUR(Number(p.total_fee || 0))}
                       </td>
                       <td className="data-td">
                         <Badge s={p.status || 'draft'} />
@@ -197,11 +198,11 @@ export default function TreatmentPlansPage() {
                           style={{ padding: '4px 12px', fontSize: 11, marginRight: 6 }}
                           onClick={() => setDetailModal(p)}
                         >
-                          View
+                          Ver
                         </GhostBtn>
                         {p.status === 'draft' && (
                           <PrimaryBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => approve(p.id)}>
-                            Approve
+                            Aprovar
                           </PrimaryBtn>
                         )}
                       </td>
@@ -212,44 +213,44 @@ export default function TreatmentPlansPage() {
             )}
           </div>
         ) : (
-          <Empty message="Select a patient to view treatment plans" />
+          <Empty message="Selecione um doente para ver os planos" />
         )}
       </div>
 
       {modal && (
-        <Modal title="New Treatment Plan" onClose={() => setModal(false)} width={560}>
-          <FormField label="Title *">
+        <Modal title="Novo Plano de Tratamento" onClose={() => setModal(false)} width={560}>
+          <FormField label="Título *">
             <Inp
               value={form.title}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="Plan title"
+              placeholder="Ex: Reabilitação do 2.º quadrante"
             />
           </FormField>
-          <FormField label="Description">
+          <FormField label="Descrição">
             <Textarea
               value={form.description}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              placeholder="Plan description…"
+              placeholder="O que o plano cobre, por palavras do clínico…"
             />
           </FormField>
-          <div className="section-label mb-2">Phases</div>
+          <div className="section-label mb-2">Fases</div>
           {form.phases.map((ph, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: phases have no id; index matches updatePhase/removePhase's own indexing
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
               <div style={{ width: 60, fontSize: 12, fontWeight: 600, color: '#5E6C84', paddingBottom: 10 }}>
-                Phase {ph.phase}
+                Fase {ph.phase}
               </div>
               <Inp
-                placeholder="Description"
+                placeholder="Descrição da fase"
                 value={ph.description}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => updatePhase(i, 'description', e.target.value)}
                 style={{ flex: 1 }}
               />
               <Inp
                 type="number"
-                placeholder="Fee"
+                placeholder="Valor €"
                 value={ph.fee}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => updatePhase(i, 'fee', e.target.value)}
                 style={{ width: 100 }}
@@ -262,16 +263,16 @@ export default function TreatmentPlansPage() {
             </div>
           ))}
           <GhostBtn onClick={addPhase} style={{ fontSize: 12, marginBottom: 12 }}>
-            + Add Phase
+            + Acrescentar fase
           </GhostBtn>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#172B4D', marginBottom: 16 }}>
-            Total Fee: ${totalFee.toLocaleString()}
+            Valor total: {formatEUR(totalFee)}
           </div>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={create} disabled={saving || !form.title}>
-              {saving ? 'Creating…' : 'Create Plan'}
+              {saving ? 'A criar…' : 'Criar Plano'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}
@@ -281,7 +282,7 @@ export default function TreatmentPlansPage() {
           {detailModal.description && (
             <p style={{ fontSize: 13, color: '#5E6C84', marginBottom: 16 }}>{detailModal.description}</p>
           )}
-          <div className="section-label mb-2">Phases</div>
+          <div className="section-label mb-2">Fases</div>
           {(detailModal.phases || []).map((ph, i) => (
             <div
               // biome-ignore lint/suspicious/noArrayIndexKey: phases have no id and this list is static (read-only detail view)
@@ -294,14 +295,10 @@ export default function TreatmentPlansPage() {
               }}
             >
               <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#97A0AF', marginRight: 8 }}>
-                  PHASE {ph.phase}
-                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#97A0AF', marginRight: 8 }}>FASE {ph.phase}</span>
                 <span style={{ fontSize: 13, color: '#172B4D' }}>{ph.description}</span>
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#172B4D' }}>
-                ${Number(ph.fee || 0).toLocaleString()}
-              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#172B4D' }}>{formatEUR(Number(ph.fee || 0))}</span>
             </div>
           ))}
           <div
@@ -317,16 +314,16 @@ export default function TreatmentPlansPage() {
             }}
           >
             <span>Total</span>
-            <span>${Number(detailModal.total_fee || 0).toLocaleString()}</span>
+            <span>{formatEUR(Number(detailModal.total_fee || 0))}</span>
           </div>
           {detailModal.approved_by && (
             <AlertBanner type="success">
-              Approved by {detailModal.approved_by} on{' '}
-              {detailModal.approved_at ? new Date(detailModal.approved_at).toLocaleDateString() : '—'}
+              Aprovado por {detailModal.approved_by} em{' '}
+              {detailModal.approved_at ? new Date(detailModal.approved_at).toLocaleDateString('pt-PT') : '—'}
             </AlertBanner>
           )}
           <div className="flex gap-3 mt-2">
-            <GhostBtn onClick={() => setDetailModal(null)}>Close</GhostBtn>
+            <GhostBtn onClick={() => setDetailModal(null)}>Fechar</GhostBtn>
             {detailModal.status === 'draft' && (
               <PrimaryBtn
                 onClick={async () => {
@@ -334,7 +331,7 @@ export default function TreatmentPlansPage() {
                   setDetailModal(null);
                 }}
               >
-                Approve
+                Aprovar
               </PrimaryBtn>
             )}
           </div>

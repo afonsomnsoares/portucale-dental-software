@@ -7,7 +7,8 @@
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { closePool, queryOne, withTransaction } from '../../lib/db.ts';
+import pg from 'pg';
+import { closePool, queryOne } from '../../lib/db.ts';
 import type { TestUser } from './authedRequest.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -31,15 +32,39 @@ export function ensureSeeded(): Promise<void> {
   return seededPromise;
 }
 
+// Pool dedicado só para o arranque (abaixo). Não usa lib/db.ts de propósito:
+// os helpers de lá envolvem CADA query numa transação (para o SET LOCAL do
+// contexto RLS), e uma transação aberta é exatamente o que não pode existir
+// aqui — ver o comentário em doEnsureSeeded.
+let bootstrapPool: pg.Pool | null = null;
+function getBootstrapPool() {
+  if (!bootstrapPool) bootstrapPool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+  return bootstrapPool;
+}
+
 async function doEnsureSeeded() {
   if (!process.env.DATABASE_URL) {
     throw new Error(
       'DATABASE_URL not set. Run integration tests with:\n' +
-        '  node --import tsx --env-file=.env.test --test test/integration/',
+        "  node --import tsx --env-file=.env.test --test 'test/integration/*.test.ts'",
     );
   }
 
-  await withTransaction(async (client) => {
+  // ─── Porque é que isto NÃO corre dentro de uma transação ────────────────────
+  // Corria, e bloqueava para sempre contra uma base de dados vazia: o processo
+  // que ganhava o advisory lock fazia o `SELECT ... FROM tenants` dentro da
+  // transação aberta (ficando com ACCESS SHARE sobre `tenants`) e só depois
+  // lançava o seed.ts, cujo `DROP TABLE ... CASCADE` espera por ACCESS
+  // EXCLUSIVE — ou seja, pela transação do próprio pai, que por sua vez está
+  // parado à espera do filho. Auto-deadlock, e só numa base vazia: com a base
+  // já semeada ninguém chegava a lançar o seed e o suite passava.
+  //
+  // Sem BEGIN, cada statement faz autocommit e larga os locks de tabela de
+  // imediato. O advisory lock é de sessão, por isso continua seguro pelo mesmo
+  // cliente enquanto o seed corre — que é precisamente o que serializa os
+  // processos que `node --test` lança em paralelo.
+  const client = await getBootstrapPool().connect();
+  try {
     await client.query('SELECT pg_advisory_lock($1)', [SEED_LOCK_KEY]);
     try {
       if (!(await tenantExists(client, TENANT_A_NAME))) {
@@ -66,7 +91,9 @@ async function doEnsureSeeded() {
     } finally {
       await client.query('SELECT pg_advisory_unlock($1)', [SEED_LOCK_KEY]);
     }
-  });
+  } finally {
+    client.release();
+  }
 }
 
 async function tenantExists(client: import('pg').PoolClient, name: string) {
@@ -124,6 +151,27 @@ export async function getSeededUser(email: string): Promise<TestUser> {
   return { id: row.id, name: row.name, role: row.role, clinic: row.clinic, tenantId: row.tenant_id };
 }
 
+// O seed cria um super-admin (tenant_id NULL), uma rececionista e um dentista — nunca um
+// admin de uma clínica concreta, que é o papel de que alguns testes precisam. Isto cria-o
+// de verdade, em vez de assinar um JWT com um UUID inventado: desde que hasPermission()
+// revalida a sessão contra a tabela `users` (ver lib/permissions.ts), um token para um
+// utilizador que não existe é — corretamente — recusado com 403.
+//
+// Idempotente por email, para não deixar uma linha nova por cada execução da suite.
+export async function getOrCreateTenantAdmin(tenantId: string, clinic: string): Promise<TestUser> {
+  const email = 'admin.tenant-a@portucale.test';
+  const row = await queryOne(
+    `INSERT INTO users (email, password, name, role, clinic, tenant_id, active)
+     VALUES ($1, 'x-nao-usado-nunca-ha-login-nestes-testes', 'Admin A (teste)', 'admin', $2, $3, TRUE)
+     ON CONFLICT (email) DO UPDATE
+       SET role='admin', clinic=EXCLUDED.clinic, tenant_id=EXCLUDED.tenant_id, active=TRUE
+     RETURNING id, name, role, clinic, tenant_id`,
+    [email, clinic, tenantId],
+  );
+  if (!row) throw new Error(`Não foi possível criar o admin de teste para o tenant ${tenantId}.`);
+  return { id: row.id, name: row.name, role: row.role, clinic: row.clinic, tenantId: row.tenant_id };
+}
+
 export async function getSeededPatientId(tenantId: string): Promise<string> {
   const row = await queryOne(`SELECT id FROM patients WHERE tenant_id=$1 ORDER BY created_at LIMIT 1`, [tenantId]);
   if (!row) throw new Error(`No seeded patient found for tenant ${tenantId}.`);
@@ -140,4 +188,8 @@ export async function getSeededDentistId(tenantId: string): Promise<string> {
 // closed), so every file doing this is safe even though they share the same global pool.
 export async function closeTestDb() {
   await closePool();
+  if (bootstrapPool) {
+    await bootstrapPool.end();
+    bootstrapPool = null;
+  }
 }

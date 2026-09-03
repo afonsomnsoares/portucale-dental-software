@@ -34,7 +34,7 @@ export default function PatientTreatmentsTab({ treatments }: { treatments: Treat
                 color: '#0052CC',
               }}
             >
-              {t.tooth_num ? `#${t.tooth_num}` : '—'}
+              {t.treatment_code || '—'}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{t.description}</div>

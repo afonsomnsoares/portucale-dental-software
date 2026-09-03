@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { DangerBtn, DataTable, Empty, GhostBtn, PageHeader, Sel, Spinner, TD } from '@/components/ui';
+import { Badge, DangerBtn, DataTable, Empty, GhostBtn, PageHeader, Sel, Spinner, TD } from '@/components/ui';
 import type { PatientTask, PatientTaskType } from '@/lib/types';
 
 interface TasksQueueViewProps {
@@ -23,6 +23,7 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
   const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState<'all' | 'mine' | 'unassigned'>('all');
   const [typeFilter, setTypeFilter] = useState<PatientTaskType | 'all'>('all');
+  const [assigning, setAssigning] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,6 +39,16 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
   async function setStatus(id: string, patch: { complete?: boolean; cancel?: boolean }) {
     const row = await api(`/patient-tasks/${id}`, { method: 'PUT', body: patch }).catch(() => null);
     if (row) setTasks((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  // Item 11 — "distribuição de tarefas", manualmente accionada. O mesmo router que
+  // os jobs usam (lib/taskRouting.ts): quem está de turno, do papel certo, com
+  // menos tarefas abertas. A tarefa continua na lista, agora com dono.
+  async function autoAssign(id: string) {
+    setAssigning(id);
+    const row = await api(`/patient-tasks/${id}`, { method: 'PUT', body: { autoAssign: true } }).catch(() => null);
+    setAssigning(null);
+    if (row) setTasks((prev) => prev.map((t) => (t.id === id ? row : t)));
   }
 
   const visible = tasks.filter((t) => {
@@ -89,9 +100,27 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
                 <TD color={overdue ? 'var(--red)' : undefined}>
                   {t.due_at ? new Date(t.due_at).toLocaleDateString('pt-PT') : '—'}
                 </TD>
-                <TD>{t.assigned_to_name || 'Fila da equipa'}</TD>
+                <TD>
+                  {t.assigned_to_name ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {t.assigned_to_name}
+                      {t.auto_assigned && <Badge label="auto" bg="var(--brand-bg)" color="var(--brand)" />}
+                    </span>
+                  ) : (
+                    'Fila da equipa'
+                  )}
+                </TD>
                 <TD right>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    {!t.assigned_to && (
+                      <GhostBtn
+                        onClick={() => autoAssign(t.id)}
+                        disabled={assigning === t.id}
+                        style={{ padding: '5px 10px', fontSize: 12 }}
+                      >
+                        {assigning === t.id ? 'A atribuir…' : 'Atribuir automaticamente'}
+                      </GhostBtn>
+                    )}
                     <GhostBtn
                       onClick={() => setStatus(t.id, { complete: true })}
                       style={{ padding: '5px 10px', fontSize: 12 }}

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   if (purpose === 'document_upload') {
     const task = body.taskId ? await getTask(user.tenantId, String(body.taskId)) : null;
-    if (!task || task.type !== 'document_request' || task.patient_id !== patient.id || task.status !== 'pending') {
+    if (task?.type !== 'document_request' || task.patient_id !== patient.id || task.status !== 'pending') {
       return badRequest('taskId must be a pending document_request task for this patient');
     }
     taskId = task.id;

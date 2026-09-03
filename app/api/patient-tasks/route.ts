@@ -1,42 +1,29 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { badRequest, created } from '@/lib/http';
 import { createTask, listTasks } from '@/lib/patientTasks';
-import { hasPermission } from '@/lib/permissions';
-import { getOwnedPatient } from '@/lib/tenantGuard';
+import { withRoute } from '@/lib/route';
+import { getOwnedPatient, getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, asEnum, sanitizeString } from '@/lib/validate';
 
 const TASK_TYPES = ['generic', 'call', 'document_request', 'follow_up', 'data_missing'] as const;
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'patient-tasks:read'))) return forbidden();
-  if (!user.tenantId) return forbidden();
-
+export const GET = withRoute({ permission: 'patient-tasks:read' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const assignedTo = searchParams.get('assignedTo');
   // Default to only open work — callers that want history pass status=done/cancelled explicitly.
   const status = searchParams.get('status') ?? 'pending';
 
-  const rows = await listTasks(user.tenantId, {
+  const rows = await listTasks(tenantId, {
     patientId,
     assignedTo,
     status: status === 'all' ? null : status,
   });
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'patient-tasks:create'))) return forbidden();
-  if (!user.tenantId) return forbidden();
-
+export const POST = withRoute({ permission: 'patient-tasks:create' }, async ({ request, user, tenantId }) => {
   const body = await request.json();
   const title = sanitizeString(body.title, 200);
   if (!title) return badRequest('title is required');
@@ -48,6 +35,15 @@ export async function POST(request: NextRequest) {
     return badRequest('Invalid dueAt');
   }
 
+  // Um assignedTo explícito é um id de utilizador vindo do cliente — a FK só
+  // garante que existe, não que é desta clínica (ver getOwnedUser).
+  let assignedTo: string | null = null;
+  if (body.assignedTo) {
+    const assignee = await getOwnedUser(body.assignedTo, user);
+    if (!assignee) return badRequest('assignedTo is not a user in this clinic');
+    assignedTo = assignee.id;
+  }
+
   let patientId: string | null = null;
   if (body.patientId) {
     const patient = await getOwnedPatient(body.patientId, user);
@@ -55,13 +51,16 @@ export async function POST(request: NextRequest) {
     patientId = patient.id;
   }
 
-  const row = await createTask(user.tenantId, user.id, {
+  const row = await createTask(tenantId, user.id, {
     patientId,
     type: type || 'generic',
     title,
     notes: sanitizeString(body.notes, 2000),
     dueAt: body.dueAt || null,
-    assignedTo: body.assignedTo || null,
+    assignedTo,
+    // Opt-in: a UI oferece "atribuir automaticamente" como alternativa a escolher
+    // uma pessoa, e nunca sobrepõe um assignedTo explícito (ver lib/patientTasks.ts).
+    autoAssign: body.autoAssign === true,
   });
 
   if (patientId) {
@@ -77,4 +76,4 @@ export async function POST(request: NextRequest) {
   );
 
   return created(row);
-}
+});

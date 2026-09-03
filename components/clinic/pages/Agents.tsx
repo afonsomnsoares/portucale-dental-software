@@ -1,0 +1,227 @@
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/app/providers';
+import { AlertBanner, Badge, Empty, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { formatEUR } from '@/lib/constants';
+import type { AgentInsight, AgentStatus } from '@/lib/types/agent';
+
+// Página de Agentes do admin da clínica.
+//
+// Regra que governa este ecrã: não mostra nada que não seja verdade. Os cartões
+// vêm de lib/agents/registry.ts (o desenho), e a última execução de cada um vem de
+// job_runs (o que realmente aconteceu). Um agente que nunca correu diz que nunca
+// correu. Operações e Lead já têm IA ligada (o cartão diz "IA ativa"); os restantes
+// continuam determinísticos e o cartão também diz isso — prometer capacidade que
+// não existe é como se perdeu a Imagiologia (ver o commit 353c129).
+export default function ClinicAgentsPage() {
+  const { api } = useAuth();
+  const [agents, setAgents] = useState<AgentStatus[]>([]);
+  const [insights, setInsights] = useState<AgentInsight[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErr('');
+    const [res, ins] = await Promise.all([
+      api('/agents').catch((e) => {
+        setErr(e instanceof Error ? e.message : 'Falha ao carregar');
+        return null;
+      }),
+      api('/agent-insights').catch(() => []),
+    ]);
+    setAgents(res?.agents || []);
+    setInsights(ins || []);
+    setLoading(false);
+  }, [api]);
+
+  async function resolveInsight(id: string) {
+    await api('/agent-insights', { method: 'PATCH', body: { id } }).catch(() => null);
+    load();
+  }
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const comRegisto = agents.filter((a) => a.lastRun).length;
+
+  return (
+    <div>
+      <PageHeader title="Agentes" sub="O que corre sozinho nesta clínica, e quem responde por cada parte">
+        <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
+          Atualizar
+        </GhostBtn>
+      </PageHeader>
+
+      <AlertBanner type="info">
+        Estes agentes agrupam as {agents.reduce((n, a) => n + a.jobs.length, 0)} tarefas automáticas que já correm hoje.
+        Os que <strong>agem</strong> fazem-no dentro de fronteiras: o Operações prepara a encomenda de stock mas deixa-a
+        em rascunho, o Lead escreve a resposta mas não a envia. Os que <strong>analisam</strong> (Agenda, Doente,
+        Finanças, Gestão, Grupo) não agem de todo — escrevem as conclusões em baixo. O Conformidade continua
+        determinístico de propósito: apagar dados por decisão de um modelo é o que a fronteira dele proíbe.
+      </AlertBanner>
+
+      {err && (
+        <div
+          className="card p-4 mb-4"
+          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+        >
+          {err}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="card p-5">
+          <Spinner />
+        </div>
+      ) : !agents.length ? (
+        <Empty message="Sem agentes registados." />
+      ) : (
+        <>
+          <div className="text-xs mb-3" style={{ color: '#97A0AF' }}>
+            {comRegisto} de {agents.length} com execuções registadas nesta clínica
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+            {agents.map((agent) => (
+              <AgentCard key={agent.id} agent={agent} />
+            ))}
+          </div>
+
+          <div className="card p-5 mt-4">
+            <div className="section-label mb-3">🔎 O QUE OS AGENTES ENCONTRARAM</div>
+            {insights.length === 0 ? (
+              <p className="text-sm" style={{ color: '#5E6C84', margin: 0 }}>
+                Nada por tratar. Os agentes de análise escrevem aqui quando a próxima corrida encontrar alguma coisa —
+                sem ANTHROPIC_API_KEY configurada, não correm de todo e esta lista fica sempre vazia.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {insights.map((insight) => (
+                  <InsightRow key={insight.id} insight={insight} onResolve={() => resolveInsight(insight.id)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card p-5 mt-4" style={{ borderLeft: '4px solid #5243AA' }}>
+            <div className="section-label mb-2">💬 COMUNICAÇÃO — CAMADA DE POLÍTICA</div>
+            <p className="text-sm" style={{ color: '#5E6C84', lineHeight: 1.6, margin: 0 }}>
+              Comunicar não é um agente, é o canal por onde todos passam. O consentimento do doente, o canal preferido,
+              o limite de mensagens por semana, as horas de silêncio e a deduplicação entre agentes vivem num sítio só —
+              senão os seis escrevem à mesma pessoa na mesma manhã.
+            </p>
+            <p className="text-xs mt-3" style={{ color: '#97A0AF', margin: '12px 0 0' }}>
+              Hoje: a tarefa <code>send</code> despacha a fila e <code>lib/commPrefs.ts</code> guarda as preferências.
+              Os limites e a deduplicação ainda não existem.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AgentCard({ agent }: { agent: AgentStatus }) {
+  const run = agent.lastRun;
+  const falhou = run?.status === 'failed';
+
+  return (
+    <div className="card p-5" style={{ borderLeft: `4px solid ${falhou ? '#DE350B' : run ? '#00875A' : '#DFE1E6'}` }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 20, lineHeight: 1 }}>{agent.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#172B4D' }}>{agent.name}</div>
+          <div className="text-xs" style={{ color: '#97A0AF' }}>
+            {agent.jobs.length} {agent.jobs.length === 1 ? 'tarefa' : 'tarefas'}
+          </div>
+        </div>
+        <Badge
+          label={agent.ai === 'none' ? 'IA por ligar' : agent.ai === 'partial' ? 'IA parcial' : 'IA ativa'}
+          bg={agent.ai === 'none' ? '#F4F7FA' : '#E3FCEF'}
+          color={agent.ai === 'none' ? '#5E6C84' : '#00875A'}
+        />
+      </div>
+
+      <p className="text-sm" style={{ color: '#5E6C84', lineHeight: 1.5, margin: '0 0 10px' }}>
+        {agent.summary}
+      </p>
+
+      <p className="text-xs" style={{ color: '#97A0AF', lineHeight: 1.5, margin: '0 0 12px', fontStyle: 'italic' }}>
+        Fronteira: {agent.boundary}
+      </p>
+
+      <div className="section-label mb-2">TAREFAS QUE GOVERNA</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        {agent.jobs.map((job) => (
+          <span
+            key={job}
+            style={{
+              fontFamily: '"JetBrains Mono",monospace',
+              fontSize: 11,
+              background: '#F4F7FA',
+              color: '#5E6C84',
+              borderRadius: 4,
+              padding: '2px 7px',
+            }}
+          >
+            {job}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ borderTop: '1px solid #F4F7FA', paddingTop: 10 }}>
+        {!run ? (
+          <div className="text-xs" style={{ color: '#97A0AF' }}>
+            Sem execuções registadas nesta clínica.
+          </div>
+        ) : (
+          <div className="text-xs" style={{ color: falhou ? '#DE350B' : '#5E6C84' }}>
+            Última execução: <strong>{run.jobName}</strong> · {falhou ? 'falhou' : 'concluída'} ·{' '}
+            {new Date(run.startedAt).toLocaleString('pt-PT')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const SEVERITY_STYLE: Record<string, { label: string; bg: string; color: string; border: string }> = {
+  critical: { label: 'Crítico', bg: '#FFEBE6', color: '#DE350B', border: '#DE350B' },
+  warning: { label: 'Atenção', bg: '#FFF7E6', color: '#B25000', border: '#FF8B00' },
+  info: { label: 'Nota', bg: '#F4F7FA', color: '#5E6C84', border: '#DFE1E6' },
+};
+
+function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: () => void }) {
+  const style = SEVERITY_STYLE[insight.severity] || SEVERITY_STYLE.info;
+  const impact = insight.impact_eur == null ? null : Number(insight.impact_eur);
+
+  return (
+    <div style={{ border: `1px solid ${style.border}`, borderRadius: 8, padding: 12, background: style.bg }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Badge label={style.label} bg="#FFFFFF" color={style.color} />
+            <span className="text-xs" style={{ color: '#5E6C84', fontWeight: 700 }}>
+              {insight.agent_id}
+            </span>
+            {impact != null && impact > 0 && (
+              <span className="text-xs" style={{ color: style.color, fontWeight: 800 }}>
+                {formatEUR(impact)}
+              </span>
+            )}
+          </div>
+          <div style={{ fontWeight: 700, color: '#172B4D', fontSize: 14 }}>{insight.title}</div>
+          {insight.body && (
+            <p className="text-sm" style={{ color: '#5E6C84', margin: '4px 0 0', lineHeight: 1.5 }}>
+              {insight.body}
+            </p>
+          )}
+        </div>
+        <GhostBtn onClick={onResolve} style={{ padding: '5px 10px', whiteSpace: 'nowrap' }}>
+          Tratado
+        </GhostBtn>
+      </div>
+    </div>
+  );
+}

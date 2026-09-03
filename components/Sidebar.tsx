@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/app/providers';
-import { NAV, ROLE_META } from '@/lib/constants';
+import { NAV, ROLE_HOME, ROLE_META } from '@/lib/constants';
 import { AppLogo, Avatar } from './ui';
 
 function ToothIcon({ size = 18, color = 'currentColor' }) {
@@ -95,7 +95,6 @@ function Icon({ name, active }: { name: string; active: boolean }) {
       </svg>
     );
   }
-  if (name === 'Odontograma') return <ToothIcon {...common} />;
   if (name === 'Histórico Clínico') {
     return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -254,6 +253,16 @@ function Icon({ name, active }: { name: string; active: boolean }) {
       </svg>
     );
   }
+  if (name === 'Agentes') {
+    return (
+      <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="4" y="8" width="16" height="11" rx="3" stroke={c} strokeWidth="1.8" />
+        <path d="M12 4v4" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="12" cy="3.5" r="1.4" stroke={c} strokeWidth="1.6" />
+        <path d="M9 12.5v1.5M15 12.5v1.5" stroke={c} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
   if (name === 'Operações') {
     return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -294,6 +303,7 @@ export default function Sidebar() {
   const role = user?.role as keyof typeof NAV | undefined;
   const nav = (role && NAV[role]) || [];
   const meta: { label?: string; sub?: string } = (role && ROLE_META[role]) || {};
+  const roleHome = (role && (ROLE_HOME as Record<string, string>)[role]) || '';
   const roleIcon: { icon?: ReactNode; color?: string } = (role && ROLE_ICONS[role]) || {};
   const tenantLabel = user?.tenantName ? `${user.tenantName}${user.tenantCity ? ` · ${user.tenantCity}` : ''}` : '';
   const sidebarClinic = tenantLabel || user?.clinic || '';
@@ -367,7 +377,13 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-3 pb-2 pt-1">
         <div className="section-label px-2 mb-2 mt-2">NAVEGAÇÃO</div>
         {nav.map((item) => {
-          const active = pathname === item.href || (item.href.length > 20 && pathname.startsWith(item.href));
+          // A entrada de raiz de cada role (a "Visão Geral"/"Painel", cujo href é o
+          // ROLE_HOME) é prefixo de todas as outras dessa árvore, por isso só acende em
+          // correspondência exata; as restantes acendem também nas suas subpáginas
+          // (ex.: /dashboard/admin/invoices/<id> mantém "Faturas" ativa). O barra final
+          // no startsWith evita que /dashboard/admin/team apanhe /dashboard/admin/teams.
+          const isRoleHome = item.href === roleHome;
+          const active = pathname === item.href || (!isRoleHome && pathname.startsWith(`${item.href}/`));
           return (
             <Link key={item.href} href={item.href} className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}>
               <span

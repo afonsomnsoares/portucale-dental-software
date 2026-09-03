@@ -5,8 +5,10 @@
 // the client; the suggestion engine below needs the same duration lookup —
 // both get it from the shared, browser-safe constants file instead of it
 // living in one place and being duplicated in the other.
-import { getAppointmentTypeOption, getDefaultDuration } from './constants';
+import { DEFAULT_APPOINTMENT_DURATION, getAppointmentTypeOption, getDefaultDuration } from './constants';
 import { query } from './db';
+import { getPreferencesFor } from './schedulingPrefs';
+import { hasAnyPreference, preferenceFit, type SchedulingPreferences } from './schedulingPrefsCalc';
 import type { SuggestedSlot, SuggestSlotsResult } from './types/scheduling';
 
 export { APPOINTMENT_TYPES, DEFAULT_APPOINTMENT_DURATION, getDefaultDuration } from './constants';
@@ -135,15 +137,43 @@ export interface SlotCandidate {
   startMinutes: number;
 }
 
-// Earliest-first, but a candidate that falls on a day the patient already has
-// another appointment is boosted ahead of an earlier-but-isolated one — the
-// "agrupar/coordenar consultas do mesmo paciente" heuristic.
+// Ordem de desempate, da mais forte para a mais fraca:
+//
+//   1. Preferências explícitas do doente (item 9 — "preferências dos pacientes"):
+//      dias, janela horária e dentista que ELE pediu. Fica em primeiro porque é
+//      o único critério que o doente declarou; os outros dois são inferências
+//      nossas sobre o que lhe é conveniente. Suave, nunca filtro — um horário
+//      que viola tudo continua a ser oferecido, só vai para o fim da lista.
+//   2. Agrupar com outra consulta do mesmo doente no mesmo dia — poupa-lhe uma
+//      deslocação ("agrupar/coordenar consultas do mesmo paciente").
+//   3. Mais cedo primeiro.
 export function rankSlotCandidates(
   candidates: SlotCandidate[],
-  opts: { patientAppointmentDates?: string[] } = {},
+  opts: { patientAppointmentDates?: string[]; preferences?: SchedulingPreferences | null; duration?: number } = {},
 ): SlotCandidate[] {
   const preferredDates = new Set(opts.patientAppointmentDates || []);
+  const prefs = opts.preferences;
+  const duration = opts.duration ?? DEFAULT_APPOINTMENT_DURATION;
+
+  // Pré-calculado uma vez por candidato em vez de dentro do comparador, que corre
+  // O(n log n) vezes.
+  const fitOf = new Map<SlotCandidate, number>();
+  if (hasAnyPreference(prefs)) {
+    for (const c of candidates) {
+      const fit = preferenceFit(prefs, {
+        date: c.date,
+        startMinutes: c.startMinutes,
+        durationMinutes: duration,
+        dentistId: c.dentistId,
+      });
+      fitOf.set(c, fit.score);
+    }
+  }
+
   return [...candidates].sort((a, b) => {
+    const aFit = fitOf.get(a) ?? 0;
+    const bFit = fitOf.get(b) ?? 0;
+    if (aFit !== bFit) return bFit - aFit; // mais critérios satisfeitos primeiro
     const aBoost = preferredDates.has(a.date) ? 0 : 1;
     const bBoost = preferredDates.has(b.date) ? 0 : 1;
     if (aBoost !== bBoost) return aBoost - bBoost;
@@ -186,9 +216,16 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
           `SELECT id, name, specialties FROM users WHERE role='dentist' AND active=TRUE AND tenant_id=$1 ORDER BY name`,
           [tenantId],
         ),
-    query(`SELECT chair, tags FROM clinic_equipment WHERE tenant_id=$1 AND active=TRUE AND chair IS NOT NULL`, [
-      tenantId,
-    ]),
+    // status='operational' além de active: 'active' diz que o equipamento está no
+    // catálogo da clínica, 'status' diz que está a funcionar hoje (migração 043). Uma
+    // cadeira cujo equipamento está em manutenção ou avariado deixa de contar para os
+    // procedimentos que precisam dele — antes disto, o otimizador continuava a marcar
+    // lá, e a avaria só se descobria com o doente sentado.
+    query(
+      `SELECT chair, tags FROM clinic_equipment
+        WHERE tenant_id=$1 AND active=TRUE AND status='operational' AND chair IS NOT NULL`,
+      [tenantId],
+    ),
   ]);
   if (!allDentists.length) return { duration, slots: [], warnings };
 
@@ -221,7 +258,8 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
       allowedChairs = new Set(matchingChairs);
     } else {
       warnings.push(
-        `Nenhuma cadeira com o equipamento necessário (${required.join(', ')}) — a mostrar todas as cadeiras.`,
+        `Nenhuma cadeira com o equipamento necessário a funcionar (${required.join(', ')}) — ` +
+          'a mostrar todas as cadeiras. Verifica se algum está em manutenção ou avariado.',
       );
     }
   }
@@ -229,7 +267,7 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
   const dentistIds = dentists.map((d) => d.id as string);
   const dateList = Array.from({ length: days }, (_, i) => addDays(fromDate, i));
 
-  const [shifts, timeOff, appts, patientAppts] = await Promise.all([
+  const [shifts, timeOff, appts, patientAppts, preferences] = await Promise.all([
     query(
       `SELECT user_id, weekday, start_time, end_time FROM staff_schedules WHERE tenant_id=$1 AND user_id = ANY($2::uuid[])`,
       [tenantId, dentistIds],
@@ -252,6 +290,10 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
           [tenantId, patientId, fromDate],
         )
       : Promise.resolve([]),
+    // Item 9 — "preferências dos pacientes". Só faz sentido com um doente
+    // concreto: a marcação de um walk-in sem ficha não tem preferências a
+    // respeitar.
+    patientId ? getPreferencesFor(tenantId, patientId) : Promise.resolve(null),
   ]);
 
   const patientAppointmentDates = patientAppts.map((r) => r.appt_date as string);
@@ -293,13 +335,52 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
     }
   }
 
-  const top = rankSlotCandidates(candidates, { patientAppointmentDates }).slice(0, limit);
-  const slots: SuggestedSlot[] = top.map((c) => ({
-    dentistId: c.dentistId,
-    dentistName: c.dentistName,
-    chair: c.chair,
-    date: c.date,
-    startTime: minutesToTime(c.startMinutes),
-  }));
+  const ranked = rankSlotCandidates(candidates, { patientAppointmentDates, preferences, duration });
+
+  // Mesmo espírito de best-effort do resto do motor (especialidade e equipamento
+  // acima): as preferências nunca eliminam horários, mas se NENHUM dos sugeridos
+  // as respeitar por inteiro, quem está a marcar tem de saber — senão liga ao
+  // doente a propor exatamente aquilo que ele já tinha dito que não podia.
+  const top = ranked.slice(0, limit);
+  if (hasAnyPreference(preferences) && top.length) {
+    const anySatisfied = top.some(
+      (c) =>
+        preferenceFit(preferences, {
+          date: c.date,
+          startMinutes: c.startMinutes,
+          durationMinutes: duration,
+          dentistId: c.dentistId,
+        }).satisfied,
+    );
+    if (!anySatisfied) {
+      const worst = preferenceFit(preferences, {
+        date: top[0].date,
+        startMinutes: top[0].startMinutes,
+        durationMinutes: duration,
+        dentistId: top[0].dentistId,
+      });
+      warnings.push(
+        `Nenhum horário disponível respeita todas as preferências do doente (${worst.violations.join('; ')}).`,
+      );
+    }
+  }
+
+  const slots: SuggestedSlot[] = top.map((c) => {
+    const fit = preferenceFit(preferences, {
+      date: c.date,
+      startMinutes: c.startMinutes,
+      durationMinutes: duration,
+      dentistId: c.dentistId,
+    });
+    return {
+      dentistId: c.dentistId,
+      dentistName: c.dentistName,
+      chair: c.chair,
+      date: c.date,
+      startTime: minutesToTime(c.startMinutes),
+      matchesPreferences: fit.satisfied,
+      preferenceViolations: fit.violations,
+    };
+  });
   return { duration, slots, warnings };
 }

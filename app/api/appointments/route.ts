@@ -4,7 +4,7 @@ import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth'
 import { query, queryOne, withTransaction } from '@/lib/db';
 import { conflict } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
-import { getOwnedPatient } from '@/lib/tenantGuard';
+import { getOwnedPatient, getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, requireFields, validateAppointmentBody } from '@/lib/validate';
 
 // Internal-only signal from the transaction below to the catch block — never
@@ -31,7 +31,20 @@ export async function GET(request: NextRequest) {
   `;
 
   let rows = [];
-  if (from || to) {
+  // Um paciente concreto, sem janela de datas — é o que a emissão de documentos
+  // administrativos precisa (escolher a consulta que a declaração refere, ver
+  // app/api/documents/route.ts). Ordenado do mais recente para o mais antigo,
+  // que é a ordem em que se procura "a consulta de que estamos a falar".
+  const patientId = searchParams.get('patientId');
+  if (patientId) {
+    rows = await query(
+      `${baseSql}
+       WHERE a.patient_id = $1 AND a.tenant_id = $2
+       ORDER BY a.appt_date DESC, a.start_time DESC
+       LIMIT $3`,
+      [patientId, user.tenantId, limit],
+    );
+  } else if (from || to) {
     const today = new Date().toISOString().slice(0, 10);
     const f = from || to || today;
     const t = to || from || today;
@@ -74,10 +87,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
 
-  const dentist = await queryOne(
-    `SELECT id, name FROM users WHERE id=$1 AND role='dentist' AND active=TRUE AND tenant_id=$2`,
-    [body.dentistId, user.tenantId],
-  );
+  const dentist = await getOwnedUser(body.dentistId, user, { role: 'dentist', activeOnly: true });
   if (!dentist) return Response.json({ error: 'Invalid dentist' }, { status: 400 });
 
   const chair = Math.max(1, Math.min(99, Number(body.chair) || 1));

@@ -1,7 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
+import { hasPermission } from '@/lib/permissions';
 
 const VALID_TRANSITIONS = {
   ordered: ['sent'],
@@ -14,6 +15,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'lab-orders:manage'))) return forbidden();
   const { id } = await params;
   const body = await request.json();
 
@@ -41,14 +43,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const [updated] = await query(
     `UPDATE lab_orders
-     SET lab_name=$1, case_type=$2, tooth_nums=$3, description=$4,
-         instructions=$5, due_date=$6, fee=$7, status=$8,
-         received_by=$9, received_at=$10, updated_at=NOW()
-     WHERE id=$11 RETURNING *`,
+     SET lab_name=$1, case_type=$2, description=$3,
+         instructions=$4, due_date=$5, fee=$6, status=$7,
+         received_by=$8, received_at=$9, updated_at=NOW()
+     WHERE id=$10 RETURNING *`,
     [
       body.labName ?? prev.lab_name,
       body.caseType ?? prev.case_type,
-      body.toothNums ?? prev.tooth_nums,
       body.description ?? prev.description,
       body.instructions ?? prev.instructions,
       body.dueDate ?? prev.due_date,

@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS patients (
   insurance     TEXT,
   balance       DECIMAL(10,2) DEFAULT 0,
   status        TEXT DEFAULT 'registered'
-    CHECK (status IN ('registered','waiting','in-operatory','ready-dismissal','departed')),
+    CHECK (status IN ('registered','waiting','in-operatory','ready-dismissal','departed','anonymized')),
   custom_fields JSONB DEFAULT '{}'::jsonb,
   no_show_count INTEGER DEFAULT 0,
   visit_count   INTEGER DEFAULT 0,
@@ -106,19 +106,6 @@ CREATE TABLE IF NOT EXISTS appointments (
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ─── TEETH ──────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS teeth (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  patient_id  UUID REFERENCES patients(id) ON DELETE CASCADE,
-  tooth_num   INTEGER NOT NULL CHECK (tooth_num BETWEEN 1 AND 32),
-  condition   TEXT NOT NULL DEFAULT 'healthy',
-  surfaces    TEXT[] DEFAULT '{}',
-  notes       TEXT,
-  updated_at  TIMESTAMPTZ DEFAULT NOW(),
-  updated_by  UUID REFERENCES users(id),
-  UNIQUE(patient_id, tooth_num)
-);
-
 -- ─── TREATMENTS ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS treatments (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -126,7 +113,6 @@ CREATE TABLE IF NOT EXISTS treatments (
   -- Left RESTRICT on purpose (no name-snapshot column, clinical retention
   -- rules apply) — see scripts/migrations/009_fk_on_delete_consistency.sql.
   patient_id  UUID REFERENCES patients(id),
-  tooth_num   INTEGER,
   treatment_code TEXT,
   description TEXT NOT NULL,
   phase       INTEGER DEFAULT 1,
@@ -199,26 +185,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_schema_fields_global_field
   WHERE tenant_id IS NULL;
 
 -- ─── SETTINGS (LOOKUPS) ──────────────────────────────────────
+-- tenant_id NULL = linha do catálogo global (o que o seed instala); uma linha com
+-- tenant_id é o override dessa clínica para aquele código. Mesmo padrão de
+-- schema_fields. Ver scripts/migrations/035_per_tenant_catalogues.sql.
 CREATE TABLE IF NOT EXISTS treatment_codes (
-  code        TEXT PRIMARY KEY,
+  id          BIGSERIAL PRIMARY KEY,
+  tenant_id   UUID REFERENCES tenants(id) ON DELETE CASCADE,
+  code        TEXT NOT NULL,
   description TEXT NOT NULL,
   category    TEXT NOT NULL DEFAULT '',
   fee         DECIMAL(10,2) NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_treatment_codes_tenant_code
+  ON treatment_codes(tenant_id, code) WHERE tenant_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_treatment_codes_global_code
+  ON treatment_codes(code) WHERE tenant_id IS NULL;
 
-CREATE TABLE IF NOT EXISTS tooth_conditions (
-  key         TEXT PRIMARY KEY,
-  label       TEXT NOT NULL,
-  color       TEXT NOT NULL
-);
-
+-- Mesma convenção de treatment_codes acima: NULL = workflow global por omissão,
+-- uma linha com tenant_id sobrepõe esse estado para a clínica.
 CREATE TABLE IF NOT EXISTS statuses (
-  key         TEXT PRIMARY KEY,
+  id          BIGSERIAL PRIMARY KEY,
+  tenant_id   UUID REFERENCES tenants(id) ON DELETE CASCADE,
+  key         TEXT NOT NULL,
   label       TEXT NOT NULL,
   bg          TEXT NOT NULL,
   color       TEXT NOT NULL,
   transitions TEXT[] DEFAULT '{}'
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_statuses_tenant_key
+  ON statuses(tenant_id, key) WHERE tenant_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_statuses_global_key
+  ON statuses(key) WHERE tenant_id IS NULL;
 
 
 -- ─── AUDIT LOG (append-only) ─────────────────────────────────
@@ -288,12 +285,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE TABLE IF NOT EXISTS job_runs (
   id          BIGSERIAL PRIMARY KEY,
+  -- NULLABLE: linhas anteriores à migração 038 não têm clínica atribuível. A RLS
+  -- (bloco em laço no fim deste ficheiro) filtra-as para quem não é super_admin.
+  tenant_id   UUID REFERENCES tenants(id) ON DELETE CASCADE,
   job_name    TEXT NOT NULL,
   status      TEXT NOT NULL,
   started_at  TIMESTAMPTZ DEFAULT NOW(),
   finished_at TIMESTAMPTZ,
   details     JSONB NOT NULL DEFAULT '{}'::jsonb
 );
+CREATE INDEX IF NOT EXISTS idx_job_runs_tenant_job ON job_runs (tenant_id, job_name, started_at DESC);
 
 CREATE TABLE IF NOT EXISTS uploads (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -356,7 +357,6 @@ CREATE TABLE IF NOT EXISTS lab_orders (
   patient_id    UUID REFERENCES patients(id),
   lab_name      TEXT NOT NULL,
   case_type     TEXT DEFAULT '',
-  tooth_nums    TEXT DEFAULT '',
   description   TEXT DEFAULT '',
   instructions  TEXT DEFAULT '',
   due_date      DATE,
@@ -526,7 +526,6 @@ CREATE INDEX IF NOT EXISTS idx_appointments_pt    ON appointments(patient_id);
 CREATE INDEX IF NOT EXISTS idx_treatments_patient ON treatments(patient_id);
 CREATE INDEX IF NOT EXISTS idx_timeline_patient   ON patient_timeline(patient_id);
 CREATE INDEX IF NOT EXISTS idx_audit_created      ON audit_log(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_teeth_patient      ON teeth(patient_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_due  ON notifications(status, next_retry_at);
 CREATE INDEX IF NOT EXISTS idx_prescriptions_pt   ON prescriptions(patient_id);
 CREATE INDEX IF NOT EXISTS idx_lab_orders_pt      ON lab_orders(patient_id);
@@ -579,20 +578,35 @@ REVOKE UPDATE, DELETE ON audit_log, patient_timeline FROM portucale_app;
 -- Only the tables schema.sql itself creates go here — appointment_cancellations,
 -- waitlist_entries, slot_offers, patient_lifecycle_state, recall_schedule and
 -- recovery_snapshots don't exist yet at this point (they're added by
--- scripts/migrations/*.sql, applied after this file by `npm run db:migrate`);
--- scripts/migrations/011_row_level_security.sql covers the complete set,
--- including those six, once migrate.ts has run.
+-- scripts/migrations/*.sql, applied after this file by `npm run db:migrate`).
+-- scripts/migrations/011_row_level_security.sql covers five of those six once
+-- migrate.ts has run; waitlist_entries was left out of 011's array by mistake
+-- (this comment used to claim otherwise) and is covered by
+-- scripts/migrations/033_waitlist_entries_rls.sql, which also adds the
+-- `tenant_tables_without_rls` view so the next omission surfaces immediately.
 DO $$
 DECLARE
   tbl text;
-  tenant_tables text[] := ARRAY[
-    'consent_forms','data_retention_policies','data_subject_requests','dpo_contacts',
-    'inventory_stock','invoices','lab_orders','leads','medical_history','notifications',
-    'patient_data_consents','patients','prescriptions','privacy_notices','processing_activities',
-    'recalls','role_permissions','treatment_plans','treatments','uploads','users'
-  ];
+  -- Derivado do catálogo, não de uma lista literal. A lista literal que aqui
+  -- estava tinha ficado para trás da migração 011 e deixava `appointments` —
+  -- a tabela central, com nomes de pacientes — sem política numa instalação de
+  -- raiz, enquanto uma base migrada ficava correta. Percorrer as tabelas que
+  -- têm mesmo a coluna significa que uma tabela nova adicionada acima ganha
+  -- RLS sem ninguém se lembrar de a inscrever aqui.
+  --
+  -- Excluídas as que precisam de uma política diferente e a têm logo a seguir:
+  -- os catálogos com linha global partilhada (tenant_id NULL visível a todos) e
+  -- `tenants`, que se chaveia em `id` e não em `tenant_id`.
+  excluded text[] := ARRAY['schema_fields','treatment_codes','statuses','tenants'];
 BEGIN
-  FOREACH tbl IN ARRAY tenant_tables LOOP
+  FOR tbl IN
+    SELECT c.relname
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND a.attnum > 0 AND NOT a.attisdropped
+    WHERE n.nspname = 'public' AND c.relkind = 'r' AND NOT (c.relname = ANY(excluded))
+    ORDER BY c.relname
+  LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
     EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', tbl);
     IF NOT EXISTS (
@@ -601,6 +615,60 @@ BEGIN
       EXECUTE format(
         $f$CREATE POLICY tenant_isolation ON %I
              USING (current_setting('app.is_super_admin', true) = 'true'
+                    OR tenant_id = current_setting('app.tenant_id', true)::uuid)
+             WITH CHECK (current_setting('app.is_super_admin', true) = 'true'
+                         OR tenant_id = current_setting('app.tenant_id', true)::uuid)$f$,
+        tbl
+      );
+    END IF;
+  END LOOP;
+END $$;
+
+-- ─── Contador de rate limit partilhado entre instâncias ──────────────────────
+-- Ver scripts/migrations/036_shared_rate_limit.sql. Sem tenant_id de propósito:
+-- o login acontece antes de existir sessão, e a contagem é do sistema, não de
+-- nenhuma clínica — por isso também não leva política de RLS.
+CREATE TABLE IF NOT EXISTS rate_limit_counters (
+  key          TEXT PRIMARY KEY,
+  window_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  count        INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_rate_limit_counters_window ON rate_limit_counters(window_start);
+
+-- ─── Rede de aviso contra deriva de RLS ──────────────────────────────────────
+-- Lista qualquer tabela com coluna `tenant_id` que não tenha política
+-- `tenant_isolation`. Definida também em scripts/migrations/033_waitlist_entries_rls.sql
+-- — repetida aqui porque uma instalação de raiz corre só este ficheiro e ficaria
+-- sem a rede de aviso, que é precisamente a divergência que ela existe para
+-- apanhar. test/integration/rls-coverage.test.ts falha se devolver linhas.
+CREATE OR REPLACE VIEW tenant_tables_without_rls AS
+SELECT c.relname AS table_name
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND a.attnum > 0 AND NOT a.attisdropped
+WHERE n.nspname = 'public'
+  AND c.relkind = 'r'
+  AND NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = c.relname AND policyname = 'tenant_isolation'
+  )
+ORDER BY c.relname;
+
+-- Catálogos com linha global partilhada (tenant_id NULL) — ver migração 035.
+DO $$
+DECLARE
+  tbl text;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['treatment_codes','statuses'] LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
+    EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', tbl);
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = tbl AND policyname = 'tenant_isolation'
+    ) THEN
+      EXECUTE format(
+        $f$CREATE POLICY tenant_isolation ON %I
+             USING (current_setting('app.is_super_admin', true) = 'true'
+                    OR tenant_id IS NULL
                     OR tenant_id = current_setting('app.tenant_id', true)::uuid)
              WITH CHECK (current_setting('app.is_super_admin', true) = 'true'
                          OR tenant_id = current_setting('app.tenant_id', true)::uuid)$f$,
@@ -642,8 +710,8 @@ BEGIN
   END IF;
 END $$;
 
--- patient_timeline, audit_log and teeth have no tenant_id column to key a
--- policy on — left uncovered, same app-level-only trust as today.
+-- patient_timeline and audit_log have no tenant_id column to key a policy on
+-- — left uncovered, same app-level-only trust as today.
 
 -- ─── AUDIT TRAIL: hash-chain tamper-evidence ─────────────────────────────────
 -- See scripts/migrations/015_audit_hash_chain.sql for the full rationale.
@@ -714,7 +782,7 @@ DECLARE
   tables_with_updated_at text[] := ARRAY[
     'data_subject_requests','dpo_contacts','inventory_items','inventory_stock','invoices',
     'lab_orders','leads','medical_history','prescriptions',
-    'processing_activities','recalls','teeth','treatment_plans','treatments'
+    'processing_activities','recalls','treatment_plans','treatments'
   ];
 BEGIN
   FOREACH tbl IN ARRAY tables_with_updated_at LOOP

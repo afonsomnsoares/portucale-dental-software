@@ -20,7 +20,15 @@ async function totals(sql: string, params: unknown[]) {
 }
 
 export async function computeRecovery(tenantId: string) {
-  const codes = await query(`SELECT fee FROM treatment_codes WHERE fee IS NOT NULL`).catch(() => []);
+  // Preços por clínica (migração 035) — sem este filtro a tarifa média desta
+  // clínica sairia da tabela de preços de outra.
+  const codes = await query(
+    `SELECT DISTINCT ON (code) fee
+       FROM treatment_codes
+      WHERE fee IS NOT NULL AND (tenant_id IS NULL OR tenant_id = $1::uuid)
+      ORDER BY code, (tenant_id IS NOT NULL) DESC`,
+    [tenantId],
+  ).catch(() => []);
   const fees = codes.map((c) => Number(c.fee));
   const apptFee = avgFee(fees, RECOVERY_DEFAULTS.avgAppointmentFee);
   const visitFee = avgFee(fees, RECOVERY_DEFAULTS.visitFee);
@@ -179,14 +187,14 @@ export async function computeRecovery(tenantId: string) {
     ),
     totals(
       `SELECT COUNT(*)::int AS count FROM patients
-       WHERE tenant_id=$1 AND COALESCE(visit_count,0) > 0
+       WHERE tenant_id=$1 AND status <> 'anonymized' AND COALESCE(visit_count,0) > 0
          AND (last_visit IS NULL OR last_visit < CURRENT_DATE - ($2::int * INTERVAL '1 month'))`,
       [tenantId, inactiveMonths],
     ),
     query(
       `SELECT id AS patient_id, name AS patient_name, phone, last_visit
        FROM patients
-       WHERE tenant_id=$1 AND COALESCE(visit_count,0) > 0
+       WHERE tenant_id=$1 AND status <> 'anonymized' AND COALESCE(visit_count,0) > 0
          AND (last_visit IS NULL OR last_visit < CURRENT_DATE - ($2::int * INTERVAL '1 month'))
        ORDER BY last_visit NULLS FIRST
        LIMIT ${ITEMS_LIMIT}`,
@@ -194,7 +202,7 @@ export async function computeRecovery(tenantId: string) {
     ),
     totals(
       `SELECT COUNT(*)::int AS count FROM patients p
-       WHERE p.tenant_id=$1 AND COALESCE(p.visit_count,0)=0
+       WHERE p.tenant_id=$1 AND p.status <> 'anonymized' AND COALESCE(p.visit_count,0)=0
          AND NOT EXISTS (
            SELECT 1 FROM appointments a
            WHERE a.patient_id=p.id AND a.appt_date >= CURRENT_DATE AND a.status NOT IN ('no-show','cancelled')
@@ -204,7 +212,7 @@ export async function computeRecovery(tenantId: string) {
     query(
       `SELECT p.id AS patient_id, p.name AS patient_name, p.phone, p.created_at
        FROM patients p
-       WHERE p.tenant_id=$1 AND COALESCE(p.visit_count,0)=0
+       WHERE p.tenant_id=$1 AND p.status <> 'anonymized' AND COALESCE(p.visit_count,0)=0
          AND NOT EXISTS (
            SELECT 1 FROM appointments a
            WHERE a.patient_id=p.id AND a.appt_date >= CURRENT_DATE AND a.status NOT IN ('no-show','cancelled')

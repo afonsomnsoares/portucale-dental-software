@@ -4,6 +4,7 @@ import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth'
 import { snapshotItems } from '@/lib/checklistCalc';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, conflict, created } from '@/lib/http';
+import { hasPermission } from '@/lib/permissions';
 import { asDate } from '@/lib/validate';
 
 function resolveTenantId(request: NextRequest, user: { tenantId?: string | null }, bodyTenantId: unknown) {
@@ -18,6 +19,7 @@ function resolveTenantId(request: NextRequest, user: { tenantId?: string | null 
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
   const tenantId = resolveTenantId(request, user, null);
   if (!tenantId) return forbidden();
 
@@ -54,6 +56,7 @@ export async function POST(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
 
   const body = await request.json();
   const tenantId = resolveTenantId(request, user, body.tenantId);

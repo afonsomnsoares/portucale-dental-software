@@ -58,20 +58,19 @@ export async function POST(request: NextRequest) {
   const treatmentErrors = validateTreatmentBody(body);
   if (treatmentErrors) return Response.json({ error: treatmentErrors.join('; ') }, { status: 400 });
 
-  const { patientId, toothNum, treatmentCode, description, phase, fee, notes } = body;
+  const { patientId, treatmentCode, description, phase, fee, notes } = body;
 
   if (!(await getOwnedPatient(patientId, user))) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
 
   const [t] = await query(
-    `INSERT INTO treatments (tenant_id, patient_id, tooth_num, treatment_code, description, phase, status, fee, notes, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,'proposed',$7,$8,$9)
+    `INSERT INTO treatments (tenant_id, patient_id, treatment_code, description, phase, status, fee, notes, created_by)
+     VALUES ($1,$2,$3,$4,$5,'proposed',$6,$7,$8)
      RETURNING *`,
     [
       user.tenantId,
       patientId,
-      toothNum || null,
       String(treatmentCode || '').slice(0, 30),
       String(description).slice(0, 500),
       phase || 1,
@@ -81,12 +80,7 @@ export async function POST(request: NextRequest) {
     ],
   );
 
-  await appendTimeline(
-    patientId,
-    user,
-    'clinical',
-    `Tratamento proposto: ${description}${toothNum ? ` (Dente #${toothNum})` : ''} — €${fee}`,
-  );
+  await appendTimeline(patientId, user, 'clinical', `Tratamento proposto: ${description} — €${fee}`);
   await appendAudit(user, 'CREATE', `Tratamento: ${description}`, null, 'proposto', user.clinic);
 
   return Response.json(t, { status: 201 });

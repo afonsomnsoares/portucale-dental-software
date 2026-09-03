@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryOne } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
 import { asDate, asInt, sanitizeString } from '@/lib/validate';
@@ -73,11 +73,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Fornecedor opcional mas validado (migração 044): sem ele a encomenda é uma lista de
+  // compras. Tem de ser desta clínica — a FK só prova que a linha existe, não de quem é.
+  let supplierId: string | null = null;
+  if (body.supplierId) {
+    const supplier = await queryOne(`SELECT id FROM suppliers WHERE id=$1 AND tenant_id=$2 AND active=TRUE`, [
+      String(body.supplierId),
+      tenantId,
+    ]);
+    if (!supplier) return badRequest('supplierId não é um fornecedor ativo desta clínica');
+    supplierId = String(supplier.id);
+  }
+
   const [order] = await query(
-    `INSERT INTO purchase_orders (tenant_id, status, source, notes, created_by)
-     VALUES ($1,'draft','manual',$2,$3)
+    `INSERT INTO purchase_orders (tenant_id, status, source, notes, created_by, supplier_id)
+     VALUES ($1,'draft','manual',$2,$3,$4)
      RETURNING *`,
-    [tenantId, sanitizeString(body.notes, 1000), user.id],
+    [tenantId, sanitizeString(body.notes, 1000), user.id, supplierId],
   );
 
   for (const it of items) {

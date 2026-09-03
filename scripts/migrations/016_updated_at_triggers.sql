@@ -36,6 +36,12 @@ DECLARE
   ];
 BEGIN
   FOREACH tbl IN ARRAY tables_with_updated_at LOOP
+    -- Saltar tabelas que já não existem. `teeth` foi removida pela migração 034
+    -- (remoção do odontograma) e deixou de ser criada por scripts/schema.sql, o
+    -- que fazia esta migração rebentar — e com ela todo o `npm run db:migrate` —
+    -- em qualquer instalação nova. Uma base já migrada nunca voltou aqui, por
+    -- isso o erro só aparecia a quem instalava de raiz.
+    CONTINUE WHEN to_regclass(format('public.%I', tbl)) IS NULL;
     EXECUTE format('DROP TRIGGER IF EXISTS trg_set_updated_at ON %I', tbl);
     EXECUTE format(
       'CREATE TRIGGER trg_set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()',

@@ -1,14 +1,28 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
+import { reviewFinance } from './agents/financeAgent';
+import { reviewGroup } from './agents/groupAgent';
+import { followUpColdLeads, reviewLeadSources, triageOpenLeads } from './agents/leadAgent';
+import { reviewManagement } from './agents/managementAgent';
+import { reviewPatients } from './agents/patientAgent';
+import { generateReorderSuggestionsAI } from './agents/reorderAgent';
+import { reviewSchedule } from './agents/schedulingAgent';
 import { appendAudit, appendTimeline } from './audit';
 import type { SessionUser } from './auth';
 import { canAutoContact } from './commPrefs';
 import { query, queryOne } from './db';
-import { generateReorderSuggestions } from './inventory';
+import { findEquipmentNeedingAttention } from './equipment';
 import { computeLifecycleTransitions, markLifecycleOutreachSent } from './lifecycle';
 import { createTask } from './patientTasks';
+import { sweepRateLimitCounters } from './rateLimitShared';
 import { saveRecoverySnapshot } from './recovery';
+import { enforceRetentionPolicies } from './retention';
 import { computeUpcomingRisk } from './scheduleIntel';
+import { currentOrLastBlock, isNearShiftEnd, shiftLabelForBlock } from './shiftHandoffCalc';
+import { sendSms } from './sms';
+import type { ScheduleBlock } from './staffAvailabilityCalc';
+import { assignOrphanTasks } from './taskRouting';
+import { ADMIN_TASK_ROLES } from './taskRoutingCalc';
 import { toE164 } from './validate';
 import { expireStaleOffers, findCandidates } from './waitlist';
 
@@ -44,6 +58,11 @@ const INCIDENT_ESCALATION_HOURS = 4;
 // checklist can go un-started before it's worth nagging about. 'other'-type templates
 // use the closing hour too — there's no natural time-of-day default for them.
 const CHECKLIST_REMINDER_HOUR: Record<string, number> = { opening: 10, closing: 20, other: 20 };
+// Item 11 — "handoffs": quão perto do fim do turno é que vale a pena lembrar
+// alguém de deixar a passagem. A janela é simétrica (ver isNearShiftEnd), por
+// isso 60 minutos cobre tanto quem escreve antes de sair como quem só se lembra
+// já depois da hora.
+const HANDOFF_REMINDER_WINDOW_MINUTES = 60;
 
 // Used when a job runs without a human behind it (the cron script) — the audit trail and
 // patient timeline still need *some* actor, same pattern already used for the SMS
@@ -67,12 +86,27 @@ export const JOB_NAMES = [
   'planFollowup',
   'escalateIncidents',
   'checklistReminders',
+  'assignTasks',
+  'handoffReminders',
   'send',
   'waitlistExpire',
   'retention',
+  'retentionPolicies',
   'summary',
   'recovery',
   'reorderSuggestions',
+  'equipmentMaintenance',
+  'leadTriage',
+  'leadFollowup',
+  'leadSourceReview',
+  'scheduleReview',
+  'patientReview',
+  'financeReview',
+  'managementReview',
+  // Transversal a todas as clínicas — ao contrário de todas as outras, NÃO corre no
+  // 'all' de uma clínica (correria N vezes a mesma comparação). Ver runJob abaixo e a
+  // chamada única em scripts/run-jobs.ts.
+  'groupReview',
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number] | 'all';
 
@@ -82,43 +116,20 @@ function computeNextRetry(attempts: number) {
   return new Date(Date.now() + delay).toISOString();
 }
 
-// Sends a plain-text SMS via the Twilio REST API. Unlike WhatsApp Business, Twilio needs
-// no pre-approved message templates, so callers just pass the final message body — see
-// the queue*() functions below for where that text is composed.
-async function sendSms({ to, body }: { to: string; body: string }) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM_NUMBER;
-  if (!accountSid || !authToken || !from) {
-    return {
-      ok: false,
-      error: 'SMS provider not configured (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER).',
-    };
-  }
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(accountSid)}/Messages.json`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({ To: to, From: from, Body: body }),
-  });
+// sendSms agora vive em lib/sms.ts (importado acima) — deixou de ser só desta pipeline
+// quando app/api/leads/[id]/send-reply/route.ts precisou de a chamar também.
 
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    return { ok: false, error: data?.message || `SMS error (${res.status})` };
-  }
-  const msgId = data?.sid || null;
-  return { ok: true, id: msgId };
-}
-
-async function logJobRun(jobName: string, status: string, details: Record<string, unknown>) {
-  const [row] = await query(`INSERT INTO job_runs (job_name, status, details) VALUES ($1,$2,$3::jsonb) RETURNING *`, [
-    jobName,
-    status,
-    JSON.stringify(details || {}),
-  ]);
+// `tenantId` passou a ser guardado na migração 038: o runJob() sempre soube de que
+// clínica era a execução, mas a linha não o registava, por isso a página de Agentes
+// não tinha como filtrar. Ver scripts/migrations/038_job_runs_tenant.sql.
+// tenantId nullable: o agente Grupo (runGroupReview abaixo) corre sobre todas as
+// clínicas e não pertence a nenhuma — a migração 038 deixou a coluna nullable
+// exatamente para este caso.
+async function logJobRun(tenantId: string | null, jobName: string, status: string, details: Record<string, unknown>) {
+  const [row] = await query(
+    `INSERT INTO job_runs (tenant_id, job_name, status, details) VALUES ($1,$2,$3,$4::jsonb) RETURNING *`,
+    [tenantId, jobName, status, JSON.stringify(details || {})],
+  );
   return row;
 }
 
@@ -389,6 +400,11 @@ async function escalateIncidents(tenantId: string) {
       type: 'follow_up',
       title: `Incidente ${r.severity} por atribuir: ${r.title}`,
       notes: `incident:${r.id}`,
+      // Item 11 — "distribuição de tarefas". ADMIN_TASK_ROLES em vez do mapa por
+      // tipo: o tipo é 'follow_up' por reaproveitamento do CHECK de 018, mas quem
+      // responde por um incidente é a direção, não a receção.
+      autoAssign: true,
+      preferredRoles: ADMIN_TASK_ROLES,
     });
     escalated += 1;
   }
@@ -424,10 +440,80 @@ async function checklistReminders(tenantId: string) {
       type: 'follow_up',
       title: `Checklist por iniciar: ${r.name}`,
       notes: `checklist:${r.id}:${new Date().toLocaleDateString('en-CA')}`,
+      // Ao contrário do escalamento de incidentes, uma checklist de abertura/fecho
+      // é trabalho de quem está ao balcão — deixa o mapa por tipo decidir.
+      autoAssign: true,
     });
     queued += 1;
   }
   return { queued, scanned: rows.length };
+}
+
+// Item 11 — "handoffs": quem está a acabar o turno e ainda não deixou passagem
+// recebe uma tarefa a lembrá-lo. Só quem tem turno HOJE entra na conta (blocos em
+// staff_schedules), e só dentro da janela à volta da hora de saída — fora disso
+// não há nada a passar ainda.
+//
+// O marcador `handoff:<userId>:<date>:<label>` segue o mesmo idioma de
+// escalateIncidents/checklistReminders acima, e inclui o rótulo do turno de
+// propósito: um turno partido (manhã + tarde) tem duas passagens legítimas no
+// mesmo dia, por isso a chave não pode ser só o dia.
+async function handoffReminders(tenantId: string) {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-CA');
+  const weekday = now.getDay();
+
+  const rows = await query(
+    `SELECT u.id AS user_id, u.name, s.start_time, s.end_time
+     FROM users u
+     JOIN staff_schedules s ON s.user_id = u.id AND s.weekday = $2
+     WHERE u.tenant_id=$1 AND u.active=TRUE AND s.tenant_id=$1`,
+    [tenantId, weekday],
+  );
+
+  const blocksByUser = new Map<string, { name: string; blocks: ScheduleBlock[] }>();
+  for (const r of rows) {
+    const entry = blocksByUser.get(r.user_id) || { name: String(r.name), blocks: [] as ScheduleBlock[] };
+    entry.blocks.push({
+      weekday,
+      startTime: String(r.start_time).slice(0, 5),
+      endTime: String(r.end_time).slice(0, 5),
+    });
+    blocksByUser.set(r.user_id, entry);
+  }
+
+  let queued = 0;
+  for (const [userId, { blocks }] of blocksByUser) {
+    if (!isNearShiftEnd(blocks, now, HANDOFF_REMINDER_WINDOW_MINUTES)) continue;
+    const label = shiftLabelForBlock(currentOrLastBlock(blocks, now));
+
+    const written = await queryOne(
+      `SELECT 1 FROM shift_handoffs
+       WHERE tenant_id=$1 AND from_user_id=$2 AND handoff_date=$3::date AND shift_label=$4
+       LIMIT 1`,
+      [tenantId, userId, dateStr, label],
+    );
+    if (written) continue;
+
+    const marker = `handoff:${userId}:${dateStr}:${label}`;
+    const already = await queryOne(
+      `SELECT 1 FROM patient_tasks WHERE tenant_id=$1 AND notes=$2 AND status <> 'cancelled' LIMIT 1`,
+      [tenantId, marker],
+    );
+    if (already) continue;
+
+    // assignedTo explícito (não autoAssign): a passagem é de quem fez o turno,
+    // não de quem estiver com menos carga.
+    await createTask(tenantId, SYSTEM_ACTOR.id || null, {
+      patientId: null,
+      type: 'follow_up',
+      title: 'Passagem de turno por escrever',
+      notes: marker,
+      assignedTo: userId,
+    });
+    queued += 1;
+  }
+  return { queued, scanned: blocksByUser.size };
 }
 
 async function sendDueNotifications(tenantId: string, limit = 25) {
@@ -537,6 +623,56 @@ async function nightlySummary(tenantId: string) {
   };
 }
 
+// Item 14 — "calendário de manutenção" e "alertas": um equipamento com revisão vencida
+// não avisa ninguém sozinho, e o custo de o descobrir tarde é uma cadeira parada com a
+// agenda cheia. Isto varre o que está vencido ou nunca foi assistido e deixa a tarefa
+// na fila da equipa.
+//
+// Só o que está mesmo vencido gera tarefa. O 'due_soon' aparece no ecrã de equipamento
+// mas não incomoda ninguém — avisar duas semanas antes, todos os dias, é a forma mais
+// rápida de ensinar a equipa a ignorar o aviso.
+async function equipmentMaintenanceReminders(tenantId: string) {
+  const attention = await findEquipmentNeedingAttention(tenantId);
+  const needsTask = [...attention.overdue, ...attention.neverServiced];
+  let created = 0;
+
+  for (const eq of needsTask) {
+    // Marcador estável por equipamento: uma revisão vencida há três semanas não gera
+    // uma tarefa por dia. Mesmo padrão do 'next-session:' em appointments/[id]/status.
+    const marker = `equipment-service:${eq.id}`;
+    const existing = await queryOne(
+      `SELECT 1 FROM patient_tasks WHERE tenant_id=$1 AND notes=$2 AND status='pending' LIMIT 1`,
+      [tenantId, marker],
+    );
+    if (existing) continue;
+
+    const porque =
+      eq.serviceState === 'never_serviced'
+        ? 'nunca foi assistido'
+        : `revisão vencida há ${Math.abs(eq.daysUntilService ?? 0)} dias`;
+    await createTask(tenantId, null, {
+      // Sem patient_id: é trabalho sobre a casa, não sobre um doente. A coluna é
+      // nullable exatamente para isto.
+      patientId: null,
+      type: 'generic',
+      title: `Manutenção — ${eq.name}${eq.chair ? ` (cadeira ${eq.chair})` : ''}: ${porque}`,
+      notes: marker,
+      // Manutenção é trabalho de direção, não de quem está ao balcão.
+      preferredRoles: ADMIN_TASK_ROLES,
+      autoAssign: true,
+    });
+    created += 1;
+  }
+
+  return {
+    created,
+    overdue: attention.overdue.length,
+    neverServiced: attention.neverServiced.length,
+    dueSoon: attention.dueSoon.length,
+    outOfService: attention.outOfService.length,
+  };
+}
+
 // Runs one job (or 'all' of them) for a single tenant and records it — used by both the
 // admin-triggered HTTP route and the unattended cron script. `actor` identifies who/what
 // triggered the run for the audit log; defaults to SYSTEM_ACTOR for unattended callers.
@@ -572,6 +708,14 @@ export async function runJob(
     if (job === 'all' || job === 'checklistReminders') {
       details.checklistReminders = await checklistReminders(tenantId);
     }
+    // Depois de checklistReminders/escalateIncidents, para a varredura já apanhar
+    // o que eles acabaram de criar caso não tenha havido ninguém disponível.
+    if (job === 'all' || job === 'assignTasks') {
+      details.assignTasks = await assignOrphanTasks(tenantId);
+    }
+    if (job === 'all' || job === 'handoffReminders') {
+      details.handoffReminders = await handoffReminders(tenantId);
+    }
     if (job === 'all' || job === 'send') {
       details.send = await sendDueNotifications(tenantId, 50);
     }
@@ -580,6 +724,16 @@ export async function runJob(
     }
     if (job === 'all' || job === 'retention') {
       details.retention = await cleanupUploads();
+      // Janelas de rate limit já expiradas. O espaço de chaves é escolhido por
+      // quem chama (IP + email tentado), por isso sem varredura a tabela cresce
+      // sem limite — mesmo raciocínio do sweep em lib/rateLimit.ts.
+      details.rateLimitSweep = await sweepRateLimitCounters();
+    }
+    // Separado de 'retention' (que é limpeza de ficheiros por variável de
+    // ambiente): este aplica as políticas que a clínica declarou em
+    // data_retention_policies, e é o único que as lê. Ver lib/retention.ts.
+    if (job === 'all' || job === 'retentionPolicies') {
+      details.retentionPolicies = await enforceRetentionPolicies(tenantId);
     }
     if (job === 'all' || job === 'summary') {
       details.summary = await nightlySummary(tenantId);
@@ -588,14 +742,48 @@ export async function runJob(
       details.recoverySnapshot = await saveRecoverySnapshot(tenantId, actor.id || null);
     }
     if (job === 'all' || job === 'reorderSuggestions') {
-      details.reorderSuggestions = await generateReorderSuggestions(tenantId);
+      // Agente Operações com IA ligada (lib/agents/reorderAgent.ts) — decide sozinho
+      // o rascunho de reposição; cai para a regra fixa sem intervenção se a IA não
+      // estiver configurada ou a chamada falhar. Ver o cabeçalho desse ficheiro.
+      details.reorderSuggestions = await generateReorderSuggestionsAI(tenantId);
     }
-    await logJobRun(job, 'completed', details);
+    if (job === 'all' || job === 'equipmentMaintenance') {
+      details.equipmentMaintenance = await equipmentMaintenanceReminders(tenantId);
+    }
+    if (job === 'all' || job === 'leadTriage') {
+      // Agente Lead (lib/agents/leadAgent.ts) — qualifica e escreve o rascunho de
+      // resposta a leads novos. Nunca envia nada: sem ANTHROPIC_API_KEY, ou se a
+      // chamada falhar, simplesmente não triagem nada nesta corrida (a próxima
+      // apanha-os) — ao contrário do agente Operações, não há regra fixa
+      // equivalente para cair de fallback aqui, a decisão É o valor do agente.
+      details.leadTriage = await triageOpenLeads(tenantId);
+    }
+    if (job === 'all' || job === 'leadFollowup') {
+      details.leadFollowup = await followUpColdLeads(tenantId);
+    }
+    if (job === 'all' || job === 'leadSourceReview') {
+      details.leadSourceReview = await reviewLeadSources(tenantId);
+    }
+    if (job === 'all' || job === 'scheduleReview') {
+      details.scheduleReview = await reviewSchedule(tenantId);
+    }
+    if (job === 'all' || job === 'patientReview') {
+      details.patientReview = await reviewPatients(tenantId);
+    }
+    if (job === 'all' || job === 'financeReview') {
+      details.financeReview = await reviewFinance(tenantId);
+    }
+    if (job === 'all' || job === 'managementReview') {
+      details.managementReview = await reviewManagement(tenantId);
+    }
+    // 'groupReview' não aparece aqui de propósito: é transversal às clínicas, não cabe
+    // num runJob(tenantId), e tem o seu próprio ponto de entrada (runGroupReview).
+    await logJobRun(tenantId, job, 'completed', details);
     await appendAudit(actor, 'UPDATE', `Jobs run: ${job}`, null, 'completed', actor.clinic);
     return { ok: true as const, job, tenantId, details };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    await logJobRun(job, 'failed', { error: message });
+    await logJobRun(tenantId, job, 'failed', { error: message });
     return { ok: false as const, job, tenantId, error: message || 'Job failed' };
   }
 }
@@ -603,4 +791,21 @@ export async function runJob(
 export async function listActiveTenantIds(): Promise<string[]> {
   const rows = await query(`SELECT id FROM tenants WHERE status='active' ORDER BY name`);
   return rows.map((r) => String(r.id));
+}
+
+// O agente Grupo compara clínicas entre si, por isso não pertence a nenhuma e não cabe
+// no runJob(tenantId): corre uma vez por passagem do cron, depois do ciclo das clínicas
+// (ver scripts/run-jobs.ts). A execução fica em job_runs com tenant_id NULL — que é
+// exatamente o caso que a migração 038 previu ao deixar essa coluna nullable.
+export async function runGroupReview() {
+  try {
+    const details = { groupReview: await reviewGroup() };
+    await logJobRun(null, 'groupReview', 'completed', details);
+    await appendAudit(SYSTEM_ACTOR, 'UPDATE', 'Jobs run: groupReview', null, 'completed', SYSTEM_ACTOR.clinic);
+    return { ok: true as const, job: 'groupReview' as const, details };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await logJobRun(null, 'groupReview', 'failed', { error: message });
+    return { ok: false as const, job: 'groupReview' as const, error: message || 'Job failed' };
+  }
 }

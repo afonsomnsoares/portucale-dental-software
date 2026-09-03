@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { formatEUR } from '@/lib/constants';
 import { withTransaction } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { asFee } from '@/lib/validate';
@@ -50,12 +51,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   if (result.error) return Response.json({ error: result.error }, { status: result.status });
 
-  const event = `Pagamento de €${payAmount} recebido na Fatura ${formatId(id)} — ${result.newStatus}`;
+  const event = `Pagamento de ${formatEUR(payAmount)} recebido na Fatura ${formatId(id)} — ${result.newStatus}`;
   await appendTimeline(result.inv.patient_id, user, 'financial', event);
   await appendAudit(
     user,
     'PAYMENT',
-    `Invoice ${formatId(id)} — $${payAmount} via ${result.method}`,
+    `Fatura ${formatId(id)} — ${formatEUR(payAmount)} via ${result.method}`,
     result.inv.status,
     result.newStatus,
     user.clinic,

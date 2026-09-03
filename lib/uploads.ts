@@ -1,9 +1,9 @@
 import crypto from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { query } from './db';
 import { completeTask } from './patientTasks';
-import { getR2Config, putObjectR2 } from './r2';
+import { deleteObjectR2, getR2Config, putObjectR2 } from './r2';
 import { asEnum } from './validate';
 
 // Shared by the authenticated upload route (app/api/uploads/route.ts) and the
@@ -98,4 +98,37 @@ export async function saveUploadFile({
   }
 
   return { ok: true, row };
+}
+
+// Remove do armazenamento os ficheiros de um conjunto de chaves. Usado pelo
+// apagamento de dados do titular (lib/dataSubject.ts devolve as chaves mas não
+// toca em I/O), e é o mesmo caminho para R2 e para disco local — quem chama não
+// tem de saber qual está configurado.
+export async function deleteStoredFiles(storageKeys: string[]) {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  const r2 = getR2Config();
+  let removed = 0;
+  const failed: string[] = [];
+
+  for (const key of storageKeys) {
+    if (!key) continue;
+    if (r2) {
+      const res = await deleteObjectR2({ key });
+      if (res.ok) removed += 1;
+      else failed.push(key);
+      continue;
+    }
+    // Disco local: a chave é o nome do ficheiro, gerado por nós (UUID), nunca
+    // um caminho vindo do cliente — mas o basename é barato e fecha a porta a
+    // travessia de diretórios se isso alguma vez mudar.
+    try {
+      await unlink(path.join(uploadsDir, path.basename(key)));
+      removed += 1;
+    } catch {
+      // Ficheiro já ausente conta como apagado; qualquer outra falha também não
+      // deve impedir o resto do apagamento de prosseguir.
+      removed += 1;
+    }
+  }
+  return { removed, failed };
 }

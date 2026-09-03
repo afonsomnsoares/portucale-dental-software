@@ -18,6 +18,12 @@ import {
 import type { Patient, Recall } from '@/lib/types';
 
 const RECALL_TYPES = ['checkup', 'prophylaxis', 'follow-up', 'other'];
+const RECALL_TYPE_LABELS: Record<string, string> = {
+  checkup: 'Consulta de controlo',
+  prophylaxis: 'Higiene oral',
+  'follow-up': 'Seguimento',
+  other: 'Outro',
+};
 
 interface NewRecallForm {
   recallType: string;
@@ -87,23 +93,23 @@ export default function RecallsPage() {
   }
 
   function recallStatus(r: Recall) {
-    if (!r.active) return { label: 'Inactive', bg: '#F4F7FA', color: '#97A0AF' };
+    if (!r.active) return { label: 'Inativo', bg: '#F4F7FA', color: '#97A0AF' };
     const due = r.next_due ? new Date(r.next_due) : null;
-    if (due && due < new Date()) return { label: 'Overdue', bg: '#FFEBE6', color: '#DE350B' };
-    return { label: 'Active', bg: '#DEEBFF', color: '#0052CC' };
+    if (due && due < new Date()) return { label: 'Em atraso', bg: '#FFEBE6', color: '#DE350B' };
+    return { label: 'Ativo', bg: '#DEEBFF', color: '#0052CC' };
   }
 
-  const cols = ['Type', 'Interval', 'Last Done', 'Next Due', 'Status', 'Reminder Sent', 'Actions'];
+  const cols = ['Tipo', 'Intervalo', 'Última vez', 'Próximo', 'Estado', 'Lembrete enviado', 'Ações'];
 
   return (
     <div>
-      <PageHeader title="Recalls" sub="Patient recall schedule — automated follow-up reminders" />
+      <PageHeader title="Recalls" sub="Chamadas de retorno do doente, com lembrete automático" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
             <input
               className="input"
-              placeholder="Search name or ID…"
+              placeholder="Procurar por nome ou nº…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -112,7 +118,7 @@ export default function RecallsPage() {
             {loading ? (
               <Spinner />
             ) : !patients.length ? (
-              <Empty message="No patients" />
+              <Empty message="Sem doentes" />
             ) : (
               patients.map((p) => (
                 <button
@@ -151,10 +157,10 @@ export default function RecallsPage() {
         {selected ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <PrimaryBtn onClick={() => setModal(true)}>+ Add Recall</PrimaryBtn>
+              <PrimaryBtn onClick={() => setModal(true)}>+ Novo Recall</PrimaryBtn>
             </div>
             {!recalls.length ? (
-              <Empty message="No recall schedule" />
+              <Empty message="Sem recalls definidos" />
             ) : (
               <div className="card" style={{ padding: 0 }}>
                 <DataTable
@@ -163,10 +169,10 @@ export default function RecallsPage() {
                     const s = recallStatus(r);
                     return (
                       <tr key={r.id}>
-                        <td className="data-td" style={{ fontWeight: 600, textTransform: 'capitalize' }}>
-                          {r.recall_type}
+                        <td className="data-td" style={{ fontWeight: 600 }}>
+                          {RECALL_TYPE_LABELS[r.recall_type] || r.recall_type}
                         </td>
-                        <td className="data-td">{r.interval_months} months</td>
+                        <td className="data-td">{r.interval_months} meses</td>
                         <td className="data-td">{r.last_done ? r.last_done.slice(0, 10) : '—'}</td>
                         <td className="data-td">{r.next_due ? r.next_due.slice(0, 10) : '—'}</td>
                         <td className="data-td">
@@ -182,10 +188,10 @@ export default function RecallsPage() {
                                 style={{ padding: '4px 12px', fontSize: 11, marginRight: 4 }}
                                 onClick={() => complete(r.id)}
                               >
-                                Complete
+                                Marcar feito
                               </GhostBtn>
                               <DangerBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => deactivate(r.id)}>
-                                Deactivate
+                                Desativar
                               </DangerBtn>
                             </>
                           )}
@@ -198,22 +204,22 @@ export default function RecallsPage() {
             )}
           </div>
         ) : (
-          <Empty message="Select a patient to view recalls" />
+          <Empty message="Selecione um doente para ver os recalls" />
         )}
       </div>
 
       {modal && (
-        <Modal title="Add Recall" onClose={() => setModal(false)} width={460}>
-          <FormField label="Recall Type">
+        <Modal title="Novo Recall" onClose={() => setModal(false)} width={460}>
+          <FormField label="Tipo de recall">
             <Sel value={form.recallType} onChange={(e) => setForm((p) => ({ ...p, recallType: e.target.value }))}>
               {RECALL_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                  {RECALL_TYPE_LABELS[t] || t}
                 </option>
               ))}
             </Sel>
           </FormField>
-          <FormField label="Interval (months)">
+          <FormField label="Intervalo (meses)">
             <Inp
               type="number"
               min={1}
@@ -224,7 +230,7 @@ export default function RecallsPage() {
               }
             />
           </FormField>
-          <FormField label="Next Due Date *">
+          <FormField label="Próxima data *">
             <Inp
               type="date"
               value={form.nextDue}
@@ -233,9 +239,9 @@ export default function RecallsPage() {
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={create} disabled={saving || !form.nextDue}>
-              {saving ? 'Creating…' : 'Add Recall'}
+              {saving ? 'A criar…' : 'Criar Recall'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

@@ -10,6 +10,15 @@ export interface Lead {
   patient_id?: string | null;
   created_at: string;
   updated_at: string;
+  // Preenchidos pelo agente Lead (lib/agents/leadAgent.ts) — ai_triaged_at é o único
+  // que diz se já passou pelo agente; os restantes ficam null até lá.
+  ai_qualification?: 'hot' | 'warm' | 'cold' | null;
+  ai_intent?: string | null;
+  ai_draft_channel?: 'sms' | 'email' | null;
+  ai_draft_reply?: string | null;
+  ai_triaged_at?: string | null;
+  // Só uma pessoa preenche isto, via POST /api/leads/[id]/send-reply — nunca o agente.
+  ai_reply_sent_at?: string | null;
 }
 
 // The 8-stage pipeline shown in /dashboard/*/lifecycle (Lead → Marcação → Primeira

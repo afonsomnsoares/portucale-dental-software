@@ -5,7 +5,6 @@ export interface LabOrder {
   patient_name: string | null;
   lab_name: string;
   case_type: string;
-  tooth_nums: string;
   description: string;
   instructions: string;
   due_date: string | null;

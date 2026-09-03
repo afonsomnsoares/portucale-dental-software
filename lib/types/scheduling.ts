@@ -10,6 +10,11 @@ export interface SuggestedSlot {
   chair: number;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:MM
+  // Item 9 — "preferências dos pacientes". true também quando o doente não tem
+  // preferências nenhumas definidas: não há nada por respeitar. As violações
+  // acompanham o horário para a UI as poder mostrar sem recalcular.
+  matchesPreferences: boolean;
+  preferenceViolations: string[];
 }
 
 export interface SuggestSlotsResult {

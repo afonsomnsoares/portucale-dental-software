@@ -8,3 +8,8 @@ yarn-error.log*
 pnpm-debug.log*
 *.tsbuildinfo
 dist/
+
+# Fallback local de uploads (lib/uploads.ts cria a pasta com mkdir recursive quando
+# o R2 não está configurado). É onde aterram documentos de doentes nesse modo — não
+# é conteúdo do repositório, e versioná-lo poria dados clínicos no histórico do git.
+public/uploads/

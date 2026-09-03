@@ -18,11 +18,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading || !user) return;
     const role = user.role as keyof typeof ROLE_HOME;
-    // 'admin' and 'platform' are separate trees now, one role each — see
-    // middleware.ts's DASHBOARD_ACCESS, which this mirrors client-side for a snappier
-    // redirect than waiting on a full navigation round-trip.
+    // 'admin' e 'super-admin' são árvores separadas, uma por papel — ver o
+    // DASHBOARD_ACCESS de middleware.ts, que isto espelha do lado do cliente para
+    // redirecionar sem esperar por uma navegação completa ao servidor.
     if (pathname.startsWith('/dashboard/admin') && role !== 'admin') router.replace(ROLE_HOME[role] || '/');
-    if (pathname.startsWith('/dashboard/platform') && role !== 'super_admin') router.replace(ROLE_HOME[role] || '/');
+    if (pathname.startsWith('/dashboard/super-admin') && role !== 'super_admin') router.replace(ROLE_HOME[role] || '/');
     if (pathname.startsWith('/dashboard/dentist') && role !== 'dentist') router.replace(ROLE_HOME[role] || '/');
     if (pathname.startsWith('/dashboard/receptionist') && role !== 'receptionist')
       router.replace(ROLE_HOME[role] || '/');

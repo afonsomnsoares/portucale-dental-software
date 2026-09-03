@@ -28,8 +28,8 @@ test('addDays / weekdayOf', () => {
 });
 
 test('getDefaultDuration falls back for unknown types', () => {
-  assert.equal(getDefaultDuration('Root Canal'), 60);
-  assert.equal(getDefaultDuration('Something Made Up'), DEFAULT_APPOINTMENT_DURATION);
+  assert.equal(getDefaultDuration('Endodontia'), 60);
+  assert.equal(getDefaultDuration('Tipo Escrito à Mão'), DEFAULT_APPOINTMENT_DURATION);
 });
 
 test('getWorkingWindows filters by weekday and supports split shifts', () => {
@@ -118,5 +118,94 @@ test('rankSlotCandidates falls back to earliest-first with no patient context', 
     { dentistId: 'b', dentistName: 'Dr. B', chair: 2, date: '2026-03-02', startMinutes: 600 },
   ];
   const ranked = rankSlotCandidates(candidates);
+  assert.equal(ranked[0].date, '2026-03-02');
+});
+
+// 2026-03-02 é segunda, 2026-03-05 quinta, 2026-03-07 sábado.
+test('rankSlotCandidates puts a slot matching the patient preferences ahead of an earlier one', () => {
+  const candidates = [
+    { dentistId: 'a', dentistName: 'Dr. A', chair: 1, date: '2026-03-02', startMinutes: 900 }, // Mon 15:00
+    { dentistId: 'b', dentistName: 'Dr. B', chair: 2, date: '2026-03-05', startMinutes: 600 }, // Thu 10:00
+  ];
+  const ranked = rankSlotCandidates(candidates, {
+    preferences: {
+      preferredDentistId: null,
+      preferredDays: null,
+      preferredTimeStart: '09:00',
+      preferredTimeEnd: '13:00',
+    },
+    duration: 30,
+  });
+  assert.equal(ranked[0].date, '2026-03-05');
+});
+
+test('rankSlotCandidates: patient preferences outrank the same-day grouping boost', () => {
+  const candidates = [
+    { dentistId: 'a', dentistName: 'Dr. A', chair: 1, date: '2026-03-02', startMinutes: 900 },
+    { dentistId: 'b', dentistName: 'Dr. B', chair: 2, date: '2026-03-05', startMinutes: 600 },
+  ];
+  const ranked = rankSlotCandidates(candidates, {
+    // The patient already comes in on the 2nd — normally that wins.
+    patientAppointmentDates: ['2026-03-02'],
+    preferences: {
+      preferredDentistId: null,
+      preferredDays: null,
+      preferredTimeStart: '09:00',
+      preferredTimeEnd: '13:00',
+    },
+    duration: 30,
+  });
+  assert.equal(ranked[0].date, '2026-03-05');
+});
+
+test('rankSlotCandidates: preferences are soft — a violating slot is demoted, never dropped', () => {
+  const candidates = [
+    { dentistId: 'a', dentistName: 'Dr. A', chair: 1, date: '2026-03-02', startMinutes: 900 },
+    { dentistId: 'b', dentistName: 'Dr. B', chair: 2, date: '2026-03-05', startMinutes: 600 },
+  ];
+  const ranked = rankSlotCandidates(candidates, {
+    preferences: {
+      preferredDentistId: null,
+      preferredDays: null,
+      preferredTimeStart: '09:00',
+      preferredTimeEnd: '13:00',
+    },
+    duration: 30,
+  });
+  assert.equal(ranked.length, 2);
+});
+
+test('rankSlotCandidates: a slot satisfying more preference criteria wins', () => {
+  const candidates = [
+    // Right dentist, wrong day.
+    { dentistId: 'd1', dentistName: 'Dr. A', chair: 1, date: '2026-03-07', startMinutes: 600 },
+    // Right dentist and right day.
+    { dentistId: 'd1', dentistName: 'Dr. A', chair: 2, date: '2026-03-05', startMinutes: 600 },
+  ];
+  const ranked = rankSlotCandidates(candidates, {
+    preferences: {
+      preferredDentistId: 'd1',
+      preferredDays: [4], // Thursday
+      preferredTimeStart: null,
+      preferredTimeEnd: null,
+    },
+    duration: 30,
+  });
+  assert.equal(ranked[0].date, '2026-03-05');
+});
+
+test('rankSlotCandidates: an empty preference profile behaves exactly like no preferences', () => {
+  const candidates = [
+    { dentistId: 'a', dentistName: 'Dr. A', chair: 1, date: '2026-03-05', startMinutes: 540 },
+    { dentistId: 'b', dentistName: 'Dr. B', chair: 2, date: '2026-03-02', startMinutes: 600 },
+  ];
+  const ranked = rankSlotCandidates(candidates, {
+    preferences: {
+      preferredDentistId: null,
+      preferredDays: null,
+      preferredTimeStart: null,
+      preferredTimeEnd: null,
+    },
+  });
   assert.equal(ranked[0].date, '2026-03-02');
 });

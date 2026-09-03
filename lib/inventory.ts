@@ -118,7 +118,24 @@ export interface InventoryOverviewRow {
 // expiry alerts) — the single read model both app/api/inventory/forecast and
 // app/dashboard/admin/inventory's forecast/batches tabs are built from.
 export async function computeInventoryOverview(tenantId: string): Promise<InventoryOverviewRow[]> {
-  const items = await query(`SELECT * FROM inventory_items ORDER BY item`);
+  // O catálogo é partilhado entre clínicas (inventory_items não tem tenant_id, e isso é
+  // deliberado — ninguém quer manter a mesma lista de luvas em vinte clínicas), mas a
+  // política de reposição não pode ser: uma clínica com três cadeiras e outra com doze
+  // não repõem no mesmo ponto. A migração 044 dá a cada clínica um override próprio.
+  //
+  // O LEFT JOIN com o filtro de `active` também corrige um erro antigo: sem ele, uma
+  // clínica sem nenhuma linha de stock via TODO o catálogo global como "em risco"
+  // (quantidade 0 <= qualquer reorder_at), e uma clínica nova estreava-se com uma
+  // encomenda automática de tudo o que existe.
+  const items = await query(
+    `SELECT i.id, i.item, i.unit,
+            COALESCE(s.reorder_at, i.reorder_at) AS reorder_at
+       FROM inventory_items i
+       LEFT JOIN inventory_item_settings s ON s.item_id = i.id AND s.tenant_id = $1
+      WHERE COALESCE(s.active, TRUE) = TRUE
+      ORDER BY i.item`,
+    [tenantId],
+  );
   const stockRows = await query(`SELECT item_id, quantity FROM inventory_stock WHERE tenant_id=$1`, [tenantId]);
   const stockMap = new Map(stockRows.map((r) => [r.item_id, Number(r.quantity)]));
 
@@ -255,8 +272,13 @@ export async function generateReorderSuggestions(tenantId: string) {
   if (!candidates.length) return { suggested: 0, purchaseOrderId: null };
 
   return withTransaction(async (client) => {
+    // source IN ('auto','ai'): reaproveita também um rascunho que o agente de IA
+    // (lib/agents/reorderAgent.ts) tenha deixado aberto — p.ex. quando
+    // ANTHROPIC_API_KEY é removida a meio e esta função volta a ser a que corre.
+    // Sem isto, as duas fontes nunca se encontravam e cada mudança de configuração
+    // deixava para trás um rascunho órfão.
     const { rows: existing } = await client.query(
-      `SELECT id FROM purchase_orders WHERE tenant_id=$1 AND status='draft' AND source='auto'
+      `SELECT id FROM purchase_orders WHERE tenant_id=$1 AND status='draft' AND source IN ('auto','ai')
        ORDER BY created_at DESC LIMIT 1`,
       [tenantId],
     );

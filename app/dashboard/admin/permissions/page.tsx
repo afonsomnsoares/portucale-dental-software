@@ -1,4 +1,4 @@
-import Permissions from '@/components/admin/pages/Permissions';
+import Permissions from '@/components/clinic/pages/Permissions';
 
 export default function Page() {
   return <Permissions />;

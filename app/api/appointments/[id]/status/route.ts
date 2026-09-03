@@ -1,10 +1,17 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
-import { query, queryOne, withTransaction } from '@/lib/db';
+import { formatEUR } from '@/lib/constants';
+import { queryOne, withTransaction } from '@/lib/db';
+import { badRequest } from '@/lib/http';
 import { createTask } from '@/lib/patientTasks';
 import { hasPermission } from '@/lib/permissions';
+import { asFee } from '@/lib/validate';
 import { notifyWaitlistOfFreedSlot } from '@/lib/waitlist';
+
+// O estado em que a consulta acaba e o doente sai. É aqui — e só aqui — que se lança o
+// valor da consulta, porque é este o momento em que a receção o sabe.
+const CLOSING_STATUS = 'departed';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const originCheck = requireSameOrigin(request);
@@ -13,8 +20,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'appointments:status'))) return forbidden();
   const { id } = await params;
-  const { status }: { status: string } = await request.json();
+  const body = await request.json();
+  const status = String(body?.status || '');
   const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+
+  // Valor da consulta, opcional: nem toda a consulta cobra (seguimento incluído,
+  // comparticipação, cortesia). Quando vem, tem de ser um número válido — um valor
+  // que alguém escreveu e o sistema descartou em silêncio é pior do que um erro.
+  const rawAmount = body?.amount;
+  const hasAmount = rawAmount !== undefined && rawAmount !== null && String(rawAmount).trim() !== '';
+  const amount = hasAmount ? asFee(rawAmount) : null;
+  if (hasAmount) {
+    if (amount === null || amount <= 0) return badRequest('O valor da consulta tem de ser um número maior que zero');
+    if (status !== CLOSING_STATUS) return badRequest('O valor só pode ser lançado quando o doente sai da consulta');
+    // Lançar um valor é criar um registo de conta corrente — quem fecha a consulta não
+    // tem necessariamente essa permissão, e não é a de mudar estado que a concede.
+    if (!(await hasPermission(user, 'invoices:create'))) return forbidden();
+    if (!user.tenantId) return forbidden();
+  }
 
   const result = await withTransaction(async (client) => {
     const { rows } = await client.query(
@@ -24,7 +47,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const apt = rows[0];
     if (!apt) return { error: 'Not found', status: 404 };
 
-    const { rows: statusRows } = await client.query(`SELECT transitions FROM statuses WHERE key=$1`, [apt.status]);
+    // Workflow por clínica (migração 035): o override desta clínica ganha ao
+    // estado global com a mesma chave.
+    const { rows: statusRows } = await client.query(
+      `SELECT transitions FROM statuses
+        WHERE key=$1 AND (tenant_id IS NULL OR tenant_id = $2::uuid)
+        ORDER BY (tenant_id IS NOT NULL) DESC LIMIT 1`,
+      [apt.status, tenantId],
+    );
     const allowed = statusRows[0]?.transitions || [];
 
     if (!allowed.includes(status)) return { error: `Cannot transition ${apt.status} → ${status}`, status: 400 };
@@ -53,7 +83,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       await client.query(`UPDATE patients SET no_show_count = no_show_count + 1 WHERE id=$1`, [apt.patient_id]);
     }
 
-    return { apt, updated };
+    // O valor entra na mesma transação que o fecho da consulta, de propósito: se a
+    // criação do registo falhar, o estado não avança. A alternativa — duas chamadas —
+    // deixa a receção a pensar que lançou um valor que se perdeu.
+    let invoice = null;
+    if (amount !== null && status === CLOSING_STATUS) {
+      // Uma consulta gera um registo só. O índice único da migração 042 garante-o na
+      // base de dados; esta verificação transforma a violação num erro legível.
+      const { rows: existing } = await client.query(`SELECT id FROM invoices WHERE appointment_id=$1`, [id]);
+      if (existing.length) return { error: 'Esta consulta já tem um valor lançado', status: 409 };
+
+      const today = new Date().toLocaleDateString('en-CA');
+      const { rows: invRows } = await client.query(
+        `INSERT INTO invoices
+           (tenant_id, patient_id, patient_name, dentist_id, appointment_id, amount, items, notes,
+            invoice_date, due_date, status, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,'[]'::jsonb,$7,$8::date,$8::date,'pending',$9)
+         RETURNING *`,
+        [
+          apt.tenant_id,
+          apt.patient_id,
+          apt.patient_name,
+          apt.dentist_id,
+          id,
+          amount,
+          `Consulta de ${apt.type || 'clínica'} em ${String(apt.appt_date).slice(0, 10)}`,
+          today,
+          user.id || null,
+        ],
+      );
+      invoice = invRows[0];
+      await client.query(`UPDATE patients SET balance = balance + $1 WHERE id=$2`, [amount, apt.patient_id]);
+    }
+
+    return { apt, updated, invoice };
   });
 
   if (result.error) return Response.json({ error: result.error }, { status: result.status });
@@ -61,7 +124,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const msgs: Record<string, string> = {
     waiting: 'Check-in feito — estado: À espera',
     'in-operatory': 'Registo aberto — Em atendimento',
-    'procedure-active': 'Procedimento ativo no odontograma',
+    'procedure-active': 'Procedimento ativo',
     'ready-dismissal': 'Dentista terminou — Pronto para alta',
     departed: 'Paciente saiu',
     'no-show': 'Marcado como falta',
@@ -73,6 +136,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     msgs[status] || `Status → ${status}`,
   );
   await appendAudit(user, 'UPDATE', `Appointment — status`, result.apt.status, status, user.clinic);
+
+  if (result.invoice) {
+    const valor = formatEUR(Number(result.invoice.amount));
+    await appendTimeline(result.apt.patient_id, user, 'financial', `Valor da consulta lançado: ${valor}`);
+    await appendAudit(user, 'CREATE', `Valor de consulta — ${valor}`, null, 'pending', user.clinic);
+  }
 
   // Same-day walk-in fill: unlike a cancellation (DELETE, which always frees the slot —
   // see app/api/appointments/[id]/route.ts), a no-show only frees the chair for the
@@ -129,10 +198,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           type: 'follow_up',
           title: `Marcar próxima sessão — ${apt.patient_name || 'paciente'}`,
           notes: marker,
+          // Item 11 — marcar a próxima sessão é trabalho de receção e nasce aqui
+          // sem dono; o router escolhe quem está de turno com menos carga aberta.
+          autoAssign: true,
         });
       }
     }
   }
 
-  return Response.json(result.updated);
+  return Response.json({ ...result.updated, invoice: result.invoice ?? null });
 }

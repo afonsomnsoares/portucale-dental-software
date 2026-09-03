@@ -15,11 +15,27 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { formatEUR } from '@/lib/constants';
 import type { LabOrder, Patient } from '@/lib/types';
 
 const CASE_TYPES = ['crown', 'bridge', 'denture', 'implant', 'veneer', 'ortho', 'other'];
+const CASE_TYPE_LABELS: Record<string, string> = {
+  crown: 'Coroa',
+  bridge: 'Ponte',
+  denture: 'Prótese removível',
+  implant: 'Implante',
+  veneer: 'Faceta',
+  ortho: 'Ortodontia',
+  other: 'Outro',
+};
 
 const STATUS_FLOW = ['ordered', 'sent', 'in-progress', 'received'];
+const STATUS_LABELS: Record<string, string> = {
+  ordered: 'Por enviar',
+  sent: 'Enviado',
+  'in-progress': 'Em execução',
+  received: 'Recebido',
+};
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   ordered: { bg: '#FFEBE6', color: '#DE350B' },
   sent: { bg: '#DEEBFF', color: '#0052CC' },
@@ -30,7 +46,6 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 interface NewLabOrderForm {
   labName: string;
   caseType: string;
-  toothNums: string;
   description: string;
   instructions: string;
   dueDate: string;
@@ -49,7 +64,6 @@ export default function LabOrdersPage() {
   const [form, setForm] = useState<NewLabOrderForm>({
     labName: '',
     caseType: 'crown',
-    toothNums: '',
     description: '',
     instructions: '',
     dueDate: '',
@@ -94,7 +108,6 @@ export default function LabOrdersPage() {
       setForm({
         labName: '',
         caseType: 'crown',
-        toothNums: '',
         description: '',
         instructions: '',
         dueDate: '',
@@ -114,20 +127,20 @@ export default function LabOrdersPage() {
 
   function renderStatusBadge(s: string) {
     const cfg = STATUS_COLORS[s] || { bg: '#F4F7FA', color: '#5E6C84' };
-    return <Badge label={s} bg={cfg.bg} color={cfg.color} />;
+    return <Badge label={STATUS_LABELS[s] || s} bg={cfg.bg} color={cfg.color} />;
   }
 
-  const cols = ['Lab', 'Case Type', 'Tooth #', 'Status', 'Due Date', 'Fee', 'Actions'];
+  const cols = ['Laboratório', 'Tipo de trabalho', 'Estado', 'Prazo', 'Valor', 'Ações'];
 
   return (
     <div>
-      <PageHeader title="Lab Orders" sub="Dental laboratory orders — track status across the workflow" />
+      <PageHeader title="Encomendas de Laboratório" sub="Trabalhos protéticos, do envio à receção" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
             <input
               className="input"
-              placeholder="Search name or ID…"
+              placeholder="Procurar por nome ou nº…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -136,7 +149,7 @@ export default function LabOrdersPage() {
             {loading ? (
               <Spinner />
             ) : !patients.length ? (
-              <Empty message="No patients" />
+              <Empty message="Sem doentes" />
             ) : (
               patients.map((p) => (
                 <button
@@ -175,10 +188,10 @@ export default function LabOrdersPage() {
         {selected ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <PrimaryBtn onClick={() => setModal(true)}>+ New Lab Order</PrimaryBtn>
+              <PrimaryBtn onClick={() => setModal(true)}>+ Nova Encomenda</PrimaryBtn>
             </div>
             {!orders.length ? (
-              <Empty message="No lab orders" />
+              <Empty message="Sem encomendas de laboratório" />
             ) : (
               <div className="card" style={{ padding: 0 }}>
                 <DataTable
@@ -188,17 +201,20 @@ export default function LabOrdersPage() {
                       <td className="data-td" style={{ fontWeight: 600 }}>
                         {o.lab_name}
                       </td>
-                      <td className="data-td">{o.case_type}</td>
-                      <td className="data-td">{o.tooth_nums || '—'}</td>
+                      <td className="data-td">{CASE_TYPE_LABELS[o.case_type] || o.case_type}</td>
                       <td className="data-td">{renderStatusBadge(o.status)}</td>
                       <td className="data-td">{o.due_date ? o.due_date.slice(0, 10) : '—'}</td>
                       <td className="data-td" style={{ fontWeight: 600 }}>
-                        ${Number(o.fee || 0).toLocaleString()}
+                        {formatEUR(Number(o.fee || 0))}
                       </td>
                       <td className="data-td">
                         {o.status !== 'received' && (
                           <GhostBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => advanceStatus(o)}>
-                            {o.status === 'ordered' ? 'Send' : o.status === 'sent' ? 'In Progress' : 'Receive'}
+                            {o.status === 'ordered'
+                              ? 'Marcar enviado'
+                              : o.status === 'sent'
+                                ? 'Em execução'
+                                : 'Marcar recebido'}
                           </GhostBtn>
                         )}
                       </td>
@@ -209,64 +225,57 @@ export default function LabOrdersPage() {
             )}
           </div>
         ) : (
-          <Empty message="Select a patient to view lab orders" />
+          <Empty message="Selecione um doente para ver as encomendas" />
         )}
       </div>
 
       {modal && (
-        <Modal title="New Lab Order" onClose={() => setModal(false)} width={540}>
+        <Modal title="Nova Encomenda de Laboratório" onClose={() => setModal(false)} width={540}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Lab Name *">
+            <FormField label="Laboratório *">
               <Inp
                 value={form.labName}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, labName: e.target.value }))}
-                placeholder="Lab name"
+                placeholder="Nome do laboratório"
               />
             </FormField>
-            <FormField label="Case Type">
+            <FormField label="Tipo de trabalho">
               <Sel value={form.caseType} onChange={(e) => setForm((p) => ({ ...p, caseType: e.target.value }))}>
                 {CASE_TYPES.map((c) => (
                   <option key={c} value={c}>
-                    {c.charAt(0).toUpperCase() + c.slice(1)}
+                    {CASE_TYPE_LABELS[c] || c}
                   </option>
                 ))}
               </Sel>
             </FormField>
           </div>
-          <FormField label="Tooth Numbers">
-            <Inp
-              value={form.toothNums}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, toothNums: e.target.value }))}
-              placeholder="e.g. 14,15,18"
-            />
-          </FormField>
-          <FormField label="Description *">
+          <FormField label="Descrição *">
             <Textarea
               value={form.description}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              placeholder="Case description…"
+              placeholder="O que se pede ao laboratório…"
             />
           </FormField>
-          <FormField label="Instructions">
+          <FormField label="Instruções">
             <Textarea
               value={form.instructions}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setForm((p) => ({ ...p, instructions: e.target.value }))
               }
-              placeholder="Lab instructions…"
+              placeholder="Cor, material, notas de execução…"
             />
           </FormField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Due Date">
+            <FormField label="Prazo de entrega">
               <Inp
                 type="date"
                 value={form.dueDate}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, dueDate: e.target.value }))}
               />
             </FormField>
-            <FormField label="Fee ($)">
+            <FormField label="Valor (€)">
               <Inp
                 type="number"
                 value={form.fee}
@@ -276,9 +285,9 @@ export default function LabOrdersPage() {
           </div>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={create} disabled={saving || !form.labName || !form.description}>
-              {saving ? 'Creating…' : 'Create Lab Order'}
+              {saving ? 'A criar…' : 'Criar Encomenda'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

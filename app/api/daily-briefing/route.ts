@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { forbidden, getAuth, unauthorized } from '@/lib/auth';
 import { computeDailyBriefing } from '@/lib/dailyBriefing';
+import { revalidateSession } from '@/lib/permissions';
 import { asDate } from '@/lib/validate';
 
 // Read-only — no permission gate beyond having a session, same as GET /api/appointments
@@ -10,6 +11,10 @@ import { asDate } from '@/lib/validate';
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
+  // A sessão pode ter sido desativada, despromovida ou movida de clínica depois de o
+  // token ser assinado; revalidateSession() confirma-o contra `users` e realinha
+  // user.role/user.tenantId. Ver lib/permissions.ts.
+  if (!(await revalidateSession(user))) return unauthorized();
   if (!user.tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);

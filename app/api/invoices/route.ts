@@ -1,8 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { formatEUR } from '@/lib/constants';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import { getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, asFee, asString, requireFields } from '@/lib/validate';
 
 export async function GET(request: NextRequest) {
@@ -76,9 +78,12 @@ export async function POST(request: NextRequest) {
   const amount = asFee(body.amount);
   if (amount === null) return Response.json({ error: 'Invalid amount' }, { status: 400 });
 
+  // Era validado sem filtro de tenant, o que permitia emitir uma fatura desta
+  // clínica em nome de um dentista de outra. getOwnedUser aplica o mesmo
+  // critério que as rotas de marcações já usavam inline.
   let dentistId = body.dentistId || null;
   if (dentistId) {
-    const dentist = await queryOne(`SELECT id FROM users WHERE id=$1 AND role='dentist'`, [dentistId]);
+    const dentist = await getOwnedUser(dentistId, user, { role: 'dentist' });
     if (!dentist) dentistId = null;
   }
 
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
   await appendAudit(
     user,
     'CREATE',
-    `Invoice ${formatId(inv.id)} — $${amount} for ${patient.name}`,
+    `Fatura ${formatId(inv.id)} — ${formatEUR(amount)} · ${patient.name}`,
     null,
     'pending',
     user.clinic,

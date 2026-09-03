@@ -1,15 +1,37 @@
 import type { NextRequest } from 'next/server';
 import { getAuth, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { revalidateSession } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
+  // A sessão pode ter sido desativada, despromovida ou movida de clínica depois de o
+  // token ser assinado; revalidateSession() confirma-o contra `users` e realinha
+  // user.role/user.tenantId. Ver lib/permissions.ts.
+  if (!(await revalidateSession(user))) return unauthorized();
 
-  const [treatmentCodes, conditions, statuses] = await Promise.all([
-    query('SELECT code, description AS desc, category, fee FROM treatment_codes ORDER BY code'),
-    query('SELECT key, label, color FROM tooth_conditions ORDER BY key'),
-    query('SELECT key, label, bg, color, transitions FROM statuses ORDER BY key'),
+  // Catálogos por clínica (migração 035): cada tabela tem a linha global
+  // (tenant_id NULL) e, opcionalmente, o override desta clínica. O DISTINCT ON
+  // com `(tenant_id IS NOT NULL) DESC` no ORDER BY escolhe o override quando
+  // existe e cai no global quando não existe — uma clínica só precisa de
+  // inserir os códigos que quer repricar, não o catálogo inteiro.
+  const tenantId = user.tenantId || null;
+  const [treatmentCodes, statuses] = await Promise.all([
+    query(
+      `SELECT DISTINCT ON (code) code, description AS desc, category, fee
+         FROM treatment_codes
+        WHERE tenant_id IS NULL OR tenant_id = $1::uuid
+        ORDER BY code, (tenant_id IS NOT NULL) DESC`,
+      [tenantId],
+    ),
+    query(
+      `SELECT DISTINCT ON (key) key, label, bg, color, transitions
+         FROM statuses
+        WHERE tenant_id IS NULL OR tenant_id = $1::uuid
+        ORDER BY key, (tenant_id IS NOT NULL) DESC`,
+      [tenantId],
+    ),
   ]);
 
   const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {};
@@ -22,7 +44,6 @@ export async function GET(request: NextRequest) {
 
   return Response.json({
     TANOMD_CODES: treatmentCodes,
-    TOOTH_CONDITIONS: conditions,
     STATUS_META,
     STATUS_TRANSITIONS,
   });

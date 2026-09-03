@@ -1,4 +1,4 @@
-import LeadSources from '@/components/admin/pages/LeadSources';
+import LeadSources from '@/components/clinic/pages/LeadSources';
 
 export default function Page() {
   return <LeadSources />;

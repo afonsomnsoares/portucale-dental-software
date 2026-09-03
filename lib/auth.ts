@@ -13,6 +13,9 @@ export type AuthRequest = Request & {
   cookies?: { get(name: string): { value: string } | undefined };
 };
 
+// ⚠️ Duplicado em lib/jwt-edge.ts para o Edge runtime (middleware.ts), que não
+// tem `node:crypto`. Qualquer alteração aqui — ordem dos segredos, formato,
+// validações — tem de ser espelhada lá. Ver o cabeçalho desse ficheiro.
 function getJwtSecrets() {
   const rawSecrets = (process.env.JWT_SECRETS || '')
     .split(',')

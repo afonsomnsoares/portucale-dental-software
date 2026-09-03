@@ -49,11 +49,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const [updated] = await query(
     `UPDATE treatments
-     SET tooth_num=$1, treatment_code=$2, description=$3, phase=$4,
-         status=$5, fee=$6, notes=$7, updated_at=NOW()
-     WHERE id=$8 RETURNING *`,
+     SET treatment_code=$1, description=$2, phase=$3,
+         status=$4, fee=$5, notes=$6, updated_at=NOW()
+     WHERE id=$7 RETURNING *`,
     [
-      body.toothNum ?? prev.tooth_num,
       body.treatmentCode ?? prev.treatment_code,
       body.description ?? prev.description,
       body.phase ?? prev.phase,

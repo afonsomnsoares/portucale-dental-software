@@ -1,4 +1,4 @@
-import Invoices from '@/components/admin/pages/Invoices';
+import Invoices from '@/components/clinic/pages/Invoices';
 
 export default function Page() {
   return <Invoices />;

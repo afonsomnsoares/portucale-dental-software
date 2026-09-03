@@ -110,8 +110,6 @@ export function validateTreatmentBody(body: BodyRecord) {
   const errors: string[] = [];
   if (!body.patientId) errors.push('patientId is required');
   if (!body.description || String(body.description).trim().length < 1) errors.push('description is required');
-  if (body.toothNum !== undefined && body.toothNum !== null && asInt(body.toothNum, { min: 1, max: 32 }) === null)
-    errors.push('toothNum must be 1-32');
   if (body.fee !== undefined && asFee(body.fee) === null) errors.push('Invalid fee value');
   return errors.length ? errors : null;
 }

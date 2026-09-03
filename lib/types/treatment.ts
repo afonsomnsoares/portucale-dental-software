@@ -3,7 +3,6 @@ export interface Treatment {
   tenant_id: string | null;
   patient_id: string;
   patient_name: string | null;
-  tooth_num: number | null;
   treatment_code: string | null;
   description: string;
   phase: number;

@@ -3,6 +3,7 @@ import { appendAudit, appendTimeline } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
+import { getOwnedUser } from '@/lib/tenantGuard';
 import { notifyWaitlistOfFreedSlot } from '@/lib/waitlist';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -22,10 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   const dentistId = body.dentistId ?? body.dentist_id ?? prev.dentist_id;
   if (dentistId) {
-    const d = await queryOne(`SELECT id FROM users WHERE id=$1 AND role='dentist' AND active=TRUE AND tenant_id=$2`, [
-      dentistId,
-      tenantId,
-    ]);
+    const d = await getOwnedUser(dentistId, { tenantId }, { role: 'dentist', activeOnly: true });
     if (!d) return Response.json({ error: 'Invalid dentist' }, { status: 400 });
   }
 

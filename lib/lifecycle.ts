@@ -72,7 +72,9 @@ export async function computeLifecycleTransitions(tenantId: string): Promise<{
             (SELECT COALESCE(SUM(paid), 0) FROM invoices WHERE patient_id = p.id)::numeric AS lifetime_value
      FROM patients p
      LEFT JOIN patient_lifecycle_state ls ON ls.patient_id = p.id AND ls.tenant_id = p.tenant_id
-     WHERE p.tenant_id = $1`,
+     -- Quem exerceu o direito ao apagamento não entra em segmentação nem em
+     -- campanhas de reativação. É o oposto exato do que pediu.
+     WHERE p.tenant_id = $1 AND p.status <> 'anonymized'`,
     [tenantId, REACTIVATION_CONSENT_TYPE],
   );
 

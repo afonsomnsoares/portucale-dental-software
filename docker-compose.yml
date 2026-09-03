@@ -23,6 +23,35 @@ services:
       timeout: 5s
       retries: 5
 
+  # O initdb do postgres acima aplica APENAS scripts/schema.sql, que define 32 das 61
+  # tabelas — patients, patient_tasks, inventory_items, suppliers, shift_handoffs e mais
+  # duas dezenas nascem das migrações em scripts/migrations/. Sem este serviço,
+  # `docker compose up -d` levantava uma app que arranca, serve tráfego e falha em quase
+  # todas as páginas por tabelas inexistentes (lib/db.ts's warnSchemaGap avisa no log, o
+  # que é tarde). Corre uma vez até ao fim e sai; app e jobs esperam por esse fim.
+  #
+  # Usa deliberadamente a ligação admin, tal como o serviço `jobs`: aplicar DDL é
+  # exatamente o que o papel restrito portucale_app não pode nem deve fazer.
+  #
+  # scripts/migrate.ts é seguro de repetir — envolve tudo numa transação única com
+  # ROLLBACK em erro, e salta as migrações já registadas em schema_migrations, por isso
+  # um `docker compose up` numa base de dados já migrada é um no-op.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: portucale-migrate
+    # Um passo de arranque, não um serviço: sem isto o Compose reiniciava-o em ciclo
+    # depois de terminar com sucesso.
+    restart: 'no'
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+    command: ['node', '--import', 'tsx', 'scripts/migrate.ts']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   pgadmin:
     image: dpage/pgadmin4:9
     container_name: portucale-pgadmin
@@ -40,6 +69,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # Needed at BUILD time, not just runtime: next.config.mjs bakes the R2 origin
+      # into the Content-Security-Policy, and a value passed only through
+      # `environment:` below arrives too late to appear in it. See the Dockerfile.
+      args:
+        R2_ENDPOINT: ${R2_ENDPOINT:-}
+        R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
     container_name: portucale-app
     restart: unless-stopped
     ports:
@@ -63,9 +98,19 @@ services:
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # File storage — also passed as build args above, because the two public
+      # origins are part of the CSP. The keys are runtime-only, as they should be.
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
+      # Não basta o Postgres estar de pé: tem de estar migrado. Ver o serviço `migrate`.
+      migrate:
+        condition: service_completed_successfully
 
   # Unattended counterpart to the admin "Run Jobs" action: periodically runs
   # scripts/run-jobs.ts (see that file / lib/jobsRunner.ts) for every active tenant —
@@ -103,6 +148,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Pela mesma razão do serviço `app`: o pipeline de jobs toca em job_runs,
+      # patient_tasks, inventory_* e notifications, nenhuma delas criada por schema.sql.
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:

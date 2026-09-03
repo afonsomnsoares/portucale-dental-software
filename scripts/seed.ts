@@ -40,9 +40,9 @@ async function seed() {
           patient_data_consents, data_subject_requests, processing_activities,
           data_retention_policies, dpo_contacts, privacy_notices,
           audit_log, patient_timeline, inventory_stock, inventory_items, schema_fields,
-          invoices, treatments, teeth, appointments,
+          invoices, treatments, appointments,
           patient_alerts, patients, users, tenants,
-          treatment_codes, tooth_conditions, statuses,
+          treatment_codes, statuses,
           leads, notifications, job_runs, uploads, role_permissions,
           medical_history, prescriptions, lab_orders, treatment_plans, recalls, consent_forms,
           recall_schedule, recovery_snapshots, appointment_cancellations,
@@ -130,18 +130,6 @@ async function seed() {
       { code: '10.01.01.02', desc: 'Radiografia panorâmica (OPG)', category: '10 Radiologia', fee: 50 },
     ];
 
-    const TOOTH_CONDITIONS = [
-      { key: 'healthy', label: 'Saudável', color: '#00A3BF' },
-      { key: 'caries', label: 'Cárie', color: '#DE350B' },
-      { key: 'filling', label: 'Restaurado', color: '#0052CC' },
-      { key: 'crown', label: 'Coroa', color: '#FF8B00' },
-      { key: 'missing', label: 'Ausente', color: '#97A0AF' },
-      { key: 'impacted', label: 'Incluso', color: '#5243AA' },
-      { key: 'root_canal', label: 'Desvitalizado', color: '#00875A' },
-      { key: 'bridge', label: 'Ponte', color: '#00A3BF' },
-      { key: 'implant', label: 'Implante', color: '#FF8B00' },
-    ];
-
     const STATUS_META = {
       confirmed: { label: 'Confirmado', bg: '#DEEBFF', color: '#0052CC' },
       registered: { label: 'Registado', bg: '#EBECF0', color: '#5E6C84' },
@@ -178,13 +166,6 @@ async function seed() {
         `INSERT INTO treatment_codes (code, description, category, fee) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
         [c.code, c.desc, c.category, c.fee],
       );
-    }
-    for (const c of TOOTH_CONDITIONS) {
-      await client.query(`INSERT INTO tooth_conditions (key, label, color) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`, [
-        c.key,
-        c.label,
-        c.color,
-      ]);
     }
     for (const [key, meta] of Object.entries(STATUS_META)) {
       const trans = (STATUS_TRANSITIONS as Record<string, string[]>)[key] || [];
@@ -451,7 +432,6 @@ async function seed() {
           patientId: patientIds[2],
           labName: 'Laboratório Dentário Premium',
           caseType: 'coroa',
-          toothNums: [14],
           description: 'Coroa PFM dente 14',
           fee: 1200,
           created_by: dentistUser?.id,
@@ -460,7 +440,6 @@ async function seed() {
           patientId: patientIds[3],
           labName: 'Laboratório Apex',
           caseType: 'ponte',
-          toothNums: [19, 20, 21],
           description: 'Ponte 3 unidades dentes 19, 20, 21',
           fee: 3400,
           created_by: dentistUser?.id,
@@ -469,14 +448,13 @@ async function seed() {
       ];
       for (const lo of LAB_ORDERS) {
         await client.query(
-          `INSERT INTO lab_orders (tenant_id, patient_id, lab_name, case_type, tooth_nums, description, fee, status, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          `INSERT INTO lab_orders (tenant_id, patient_id, lab_name, case_type, description, fee, status, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
           [
             tenantId,
             lo.patientId,
             lo.labName,
             lo.caseType,
-            lo.toothNums,
             lo.description,
             lo.fee,
             lo.status || 'ordered',

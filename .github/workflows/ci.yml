@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Uma execução por branch — um push novo cancela a anterior em vez de as pôr em fila.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint, tipos e testes unitários: não precisam de base de dados, por isso
+  # correm num job próprio que dá feedback em segundos.
+  static:
+    name: Lint · Tipos · Testes unitários
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint (biome)
+        run: npm run lint
+      - name: Verificação de tipos
+        run: npm run typecheck
+      - name: Testes unitários
+        run: npm test
+
+  # Testes de integração contra um Postgres a sério. Vale por si, mas sobretudo
+  # porque é aqui que corre test/integration/rls-coverage.test.ts, que falha se
+  # alguma tabela com `tenant_id` ficar sem política `tenant_isolation`.
+  integration:
+    name: Integração (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: portucale_dental_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # .env.test é gitignored (tem credenciais locais), por isso o CI escreve o seu.
+      - name: Preparar .env.test
+        run: |
+          cat > .env.test <<EOF
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/portucale_dental_test
+          JWT_SECRET=ci-secret-nao-usar-fora-do-ci-$(openssl rand -hex 16)
+          NODE_ENV=test
+          EOF
+
+      - name: Aplicar schema e migrações
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portucale_dental_test
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f scripts/schema.sql
+          # E não `npm run db:migrate`: esse script traz `--env-file=.env`, e .env é
+          # gitignored — não existe no CI. O node aborta com "not found" antes de
+          # chegar a correr o script, por isso este passo nunca chegou a aplicar
+          # migração nenhuma aqui. O DATABASE_URL do bloco `env:` acima já chega.
+          node --import tsx scripts/migrate.ts
+
+      - name: Testes de integração
+        run: npm run test:integration
+
+  # O build é a única coisa que apanha erros de compilação do Next (RSC,
+  # fronteiras server/client) que o `tsc --noEmit` não vê.
+  build:
+    name: Build de produção
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          # next.config.mjs monta a CSP em build time — sem estes, a política
+          # publicada fica mais apertada, o que é exatamente o que se quer num
+          # build de CI que não usa R2.
+          NODE_ENV: production

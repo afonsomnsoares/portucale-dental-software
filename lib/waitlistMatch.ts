@@ -37,8 +37,8 @@ function toMinutes(hhmm: string) {
 
 export function matchesSlot(candidate: WaitlistCandidate, slot: FreedSlot, now = new Date()) {
   if (candidate.status !== 'active') return false;
-  // "filtrar por tratamento" — a candidate waitlisted for a Hygiene Cleaning shouldn't be
-  // offered a freed Root Canal slot just because it's the next free chair time. Both sides
+  // "filtrar por tratamento" — a candidate waitlisted for a Destartarização shouldn't be
+  // offered a freed Endodontia slot just because it's the next free chair time. Both sides
   // are free text (waitlist_entries.treatment_type / appointments.type), so this is an
   // exact case/whitespace-insensitive match, not a fuzzy one.
   if (normalizedType(candidate.treatment_type) !== normalizedType(slot.type)) return false;

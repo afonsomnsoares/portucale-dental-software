@@ -103,17 +103,17 @@ export default function PrescriptionsPage() {
     if (u) setPrescriptions((prev) => prev.map((p) => (p.id === id ? u : p)));
   }
 
-  const cols = ['Medication', 'Dosage', 'Frequency', 'Status', 'Date', 'Actions'];
+  const cols = ['Medicamento', 'Dosagem', 'Frequência', 'Estado', 'Data', 'Ações'];
 
   return (
     <div>
-      <PageHeader title="Prescriptions" sub="Patient prescriptions — create and manage" />
+      <PageHeader title="Prescrições" sub="Prescrições do doente — emitir e acompanhar" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
             <input
               className="input"
-              placeholder="Search name or ID…"
+              placeholder="Procurar por nome ou nº…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -122,7 +122,7 @@ export default function PrescriptionsPage() {
             {loading ? (
               <Spinner />
             ) : !patients.length ? (
-              <Empty message="No patients" />
+              <Empty message="Sem doentes" />
             ) : (
               patients.map((p) => (
                 <button
@@ -161,10 +161,10 @@ export default function PrescriptionsPage() {
         {selected ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <PrimaryBtn onClick={() => setModal(true)}>+ New Prescription</PrimaryBtn>
+              <PrimaryBtn onClick={() => setModal(true)}>+ Nova Prescrição</PrimaryBtn>
             </div>
             {!prescriptions.length ? (
-              <Empty message="No prescriptions" />
+              <Empty message="Sem prescrições" />
             ) : (
               <div className="card" style={{ padding: 0 }}>
                 <DataTable
@@ -183,7 +183,7 @@ export default function PrescriptionsPage() {
                       <td className="data-td">
                         {p.status !== 'cancelled' && (
                           <DangerBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => cancel(p.id)}>
-                            Cancel
+                            Anular
                           </DangerBtn>
                         )}
                       </td>
@@ -194,61 +194,61 @@ export default function PrescriptionsPage() {
             )}
           </div>
         ) : (
-          <Empty message="Select a patient to view prescriptions" />
+          <Empty message="Selecione um doente para ver as prescrições" />
         )}
       </div>
 
       {modal && (
-        <Modal title="New Prescription" onClose={() => setModal(false)} width={540}>
-          <FormField label="Medication *">
+        <Modal title="Nova Prescrição" onClose={() => setModal(false)} width={540}>
+          <FormField label="Medicamento *">
             <Inp
               value={form.medication}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, medication: e.target.value }))}
-              placeholder="Medication name"
+              placeholder="Nome do medicamento"
             />
           </FormField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Dosage *">
+            <FormField label="Dosagem *">
               <Inp
                 value={form.dosage}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, dosage: e.target.value }))}
-                placeholder="e.g. 500mg"
+                placeholder="ex: 500 mg"
               />
             </FormField>
-            <FormField label="Frequency *">
+            <FormField label="Frequência *">
               <Inp
                 value={form.frequency}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, frequency: e.target.value }))}
-                placeholder="e.g. BID"
+                placeholder="ex: 2x por dia"
               />
             </FormField>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Route">
+            <FormField label="Via">
               <Sel value={form.route} onChange={(e) => setForm((p) => ({ ...p, route: e.target.value }))}>
                 <option value="oral">Oral</option>
-                <option value="topical">Topical</option>
+                <option value="topical">Tópica</option>
                 <option value="IV">IV</option>
                 <option value="IM">IM</option>
               </Sel>
             </FormField>
-            <FormField label="Duration">
+            <FormField label="Duração">
               <Inp
                 value={form.duration}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, duration: e.target.value }))}
-                placeholder="e.g. 7 days"
+                placeholder="ex: 7 dias"
               />
             </FormField>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Quantity">
+            <FormField label="Quantidade">
               <Inp
                 type="number"
                 value={form.quantity}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, quantity: e.target.value }))}
               />
             </FormField>
-            <FormField label="Refills">
+            <FormField label="Renovações">
               <Inp
                 type="number"
                 min={0}
@@ -257,20 +257,20 @@ export default function PrescriptionsPage() {
               />
             </FormField>
           </div>
-          <FormField label="Instructions">
+          <FormField label="Instruções">
             <Textarea
               value={form.instructions}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setForm((p) => ({ ...p, instructions: e.target.value }))
               }
-              placeholder="Usage instructions…"
+              placeholder="Posologia e instruções de utilização…"
             />
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={create} disabled={saving || !form.medication || !form.dosage || !form.frequency}>
-              {saving ? 'Creating…' : 'Create Prescription'}
+              {saving ? 'A emitir…' : 'Emitir Prescrição'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

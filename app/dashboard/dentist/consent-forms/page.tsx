@@ -85,17 +85,17 @@ export default function ConsentFormsPage() {
     setSaving(false);
   }
 
-  const cols = ['Procedure', 'Patient Signed', 'Status', 'Actions'];
+  const cols = ['Procedimento', 'Assinado por', 'Estado', 'Ações'];
 
   return (
     <div>
-      <PageHeader title="Consent Forms" sub="Patient consent forms — digital signatures and records" />
+      <PageHeader title="Consentimentos" sub="Consentimento informado por procedimento, com registo da assinatura" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
             <input
               className="input"
-              placeholder="Search name or ID…"
+              placeholder="Procurar por nome ou nº…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -104,7 +104,7 @@ export default function ConsentFormsPage() {
             {loading ? (
               <Spinner />
             ) : !patients.length ? (
-              <Empty message="No patients" />
+              <Empty message="Sem doentes" />
             ) : (
               patients.map((p) => (
                 <button
@@ -143,10 +143,10 @@ export default function ConsentFormsPage() {
         {selected ? (
           <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-              <PrimaryBtn onClick={() => setModal(true)}>+ New Consent Form</PrimaryBtn>
+              <PrimaryBtn onClick={() => setModal(true)}>+ Novo Consentimento</PrimaryBtn>
             </div>
             {!forms.length ? (
-              <Empty message="No consent forms" />
+              <Empty message="Sem consentimentos" />
             ) : (
               <div className="card" style={{ padding: 0 }}>
                 <DataTable
@@ -162,7 +162,7 @@ export default function ConsentFormsPage() {
                       </td>
                       <td className="data-td">
                         <GhostBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => setDetailModal(f)}>
-                          View
+                          Ver
                         </GhostBtn>
                       </td>
                     </tr>
@@ -172,36 +172,36 @@ export default function ConsentFormsPage() {
             )}
           </div>
         ) : (
-          <Empty message="Select a patient to view consent forms" />
+          <Empty message="Selecione um doente para ver os consentimentos" />
         )}
       </div>
 
       {modal && (
-        <Modal title="New Consent Form" onClose={() => setModal(false)} width={540}>
-          <FormField label="Procedure Name *">
+        <Modal title="Novo Consentimento" onClose={() => setModal(false)} width={540}>
+          <FormField label="Procedimento *">
             <Inp
               value={form.procedureName}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, procedureName: e.target.value }))}
-              placeholder="Procedure name"
+              placeholder="Ex: Extração do 38"
             />
           </FormField>
-          <FormField label="Description">
+          <FormField label="Descrição">
             <Textarea
               value={form.description}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              placeholder="Procedure description…"
+              placeholder="Riscos, alternativas e cuidados explicados ao doente…"
             />
           </FormField>
-          <FormField label="Signed By (Patient Name) *">
+          <FormField label="Assinado por (nome do doente) *">
             <Inp
               value={form.signedBy}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, signedBy: e.target.value }))}
-              placeholder="Patient name"
+              placeholder="Nome do doente"
             />
           </FormField>
-          <FormField label="Signature URL">
+          <FormField label="Ligação ao documento assinado">
             <Inp
               value={form.signatureUrl}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, signatureUrl: e.target.value }))}
@@ -210,9 +210,9 @@ export default function ConsentFormsPage() {
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={create} disabled={saving || !form.procedureName || !form.signedBy}>
-              {saving ? 'Creating…' : 'Create Consent Form'}
+              {saving ? 'A registar…' : 'Registar Consentimento'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}
@@ -222,42 +222,42 @@ export default function ConsentFormsPage() {
           <div style={{ display: 'grid', gap: 14 }}>
             {detailModal.description && (
               <div>
-                <div className="section-label mb-1">Description</div>
+                <div className="section-label mb-1">Descrição</div>
                 <p style={{ fontSize: 13, color: '#5E6C84' }}>{detailModal.description}</p>
               </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <div className="section-label mb-1">Signed By</div>
+                <div className="section-label mb-1">Assinado por</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#172B4D' }}>{detailModal.signed_by}</div>
               </div>
               <div>
-                <div className="section-label mb-1">Date Signed</div>
+                <div className="section-label mb-1">Data da assinatura</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#172B4D' }}>
-                  {detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString() : '—'}
+                  {detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString('pt-PT') : '—'}
                 </div>
               </div>
             </div>
             {detailModal.signature_url && (
               <div>
-                <div className="section-label mb-1">Signature Document</div>
+                <div className="section-label mb-1">Documento assinado</div>
                 <a
                   href={detailModal.signature_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ fontSize: 13, color: '#0052CC', fontWeight: 600, textDecoration: 'none' }}
                 >
-                  View Signature PDF ↗
+                  Abrir PDF da assinatura ↗
                 </a>
               </div>
             )}
             <div>
-              <div className="section-label mb-1">Status</div>
+              <div className="section-label mb-1">Estado</div>
               <Badge s="signed" />
             </div>
           </div>
           <div className="flex gap-3 mt-4">
-            <GhostBtn onClick={() => setDetailModal(null)}>Close</GhostBtn>
+            <GhostBtn onClick={() => setDetailModal(null)}>Fechar</GhostBtn>
           </div>
         </Modal>
       )}

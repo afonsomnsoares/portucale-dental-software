@@ -1,9 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { type ChecklistRunItem, countChecked, isRunComplete, toggleItem } from '@/lib/checklistCalc';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, notFound } from '@/lib/http';
+import { hasPermission } from '@/lib/permissions';
 import { asInt } from '@/lib/validate';
 
 // Toggling a single item is self-service (no 'checklists:manage' needed) — anyone on
@@ -16,6 +17,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
   const { id } = await params;
   const tenantId = user.role === 'super_admin' ? null : user.tenantId;
 

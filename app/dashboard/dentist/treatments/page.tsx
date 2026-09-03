@@ -18,7 +18,6 @@ import type { Patient, Treatment } from '@/lib/types';
 
 interface NewTreatmentForm {
   patientId: string;
-  toothNum: string;
   treatmentCode: string;
   description: string;
   phase: string;
@@ -44,7 +43,6 @@ export default function DentistTreatmentsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<NewTreatmentForm>({
     patientId: '',
-    toothNum: '',
     treatmentCode: '',
     description: '',
     phase: '1',
@@ -70,7 +68,6 @@ export default function DentistTreatmentsPage() {
       method: 'POST',
       body: {
         patientId: form.patientId,
-        toothNum: form.toothNum ? Number(form.toothNum) : null,
         treatmentCode: form.treatmentCode || null,
         description: form.description,
         phase: Number(form.phase),
@@ -81,7 +78,7 @@ export default function DentistTreatmentsPage() {
     if (t) {
       setTreatments((prev) => [t, ...prev]);
       setModal(false);
-      setForm({ patientId: '', toothNum: '', treatmentCode: '', description: '', phase: '1', fee: '', notes: '' });
+      setForm({ patientId: '', treatmentCode: '', description: '', phase: '1', fee: '', notes: '' });
     }
     setSaving(false);
   }
@@ -235,7 +232,7 @@ export default function DentistTreatmentsPage() {
                             fontWeight: 700,
                           }}
                         >
-                          {t.tooth_num ? `T-${t.tooth_num}` : 'General'}
+                          {t.treatment_code || 'Geral'}
                         </span>
                         <Badge s={t.status} />
                       </div>
@@ -334,16 +331,7 @@ export default function DentistTreatmentsPage() {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <FormField label="Tooth #">
-              <Inp
-                type="number"
-                min={1}
-                max={32}
-                value={form.toothNum}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, toothNum: e.target.value }))}
-              />
-            </FormField>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <FormField label="Phase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: e.target.value }))}>
                 <option value="1">1 — Emergency</option>

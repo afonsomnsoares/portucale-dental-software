@@ -131,19 +131,19 @@ export default function MedicalHistoryPage() {
               {it.notes && <span style={{ fontSize: 11, color: '#97A0AF', marginLeft: 8 }}>— {it.notes}</span>}
             </div>
             <DangerBtn style={{ padding: '3px 10px', fontSize: 11 }} onClick={() => removeListItem(listKey, i)}>
-              Remove
+              Retirar
             </DangerBtn>
           </div>
         ))}
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <Inp
-            placeholder={placeholder || 'Name'}
+            placeholder={placeholder || 'Designação'}
             value={item.name}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setItem((p) => ({ ...p, name: e.target.value }))}
             style={{ flex: 1 }}
           />
           <Inp
-            placeholder="Notes"
+            placeholder="Notas"
             value={item.notes}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setItem((p) => ({ ...p, notes: e.target.value }))}
             style={{ flex: 1 }}
@@ -180,13 +180,13 @@ export default function MedicalHistoryPage() {
 
   return (
     <div>
-      <PageHeader title="Medical History" sub="Patient medical history — allergies, medications, conditions" />
+      <PageHeader title="Histórico Clínico" sub="Anamnese do doente — alergias, medicação e condições" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
             <input
               className="input"
-              placeholder="Search name or ID…"
+              placeholder="Procurar por nome ou nº…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -195,7 +195,7 @@ export default function MedicalHistoryPage() {
             {loading ? (
               <Spinner />
             ) : !patients.length ? (
-              <Empty message="No patients" />
+              <Empty message="Sem doentes" />
             ) : (
               patients.map((p) => (
                 <button
@@ -234,49 +234,49 @@ export default function MedicalHistoryPage() {
         {selected ? (
           <div>
             {error && <AlertBanner type="danger">{error}</AlertBanner>}
-            {renderListEditor('Allergies', 'allergies', newAllergy, setNewAllergy, 'Allergen')}
-            {renderListEditor('Medications', 'medications', newMed, setNewMed, 'Medication')}
-            {renderListEditor('Conditions', 'conditions', newCond, setNewCond, 'Condition')}
+            {renderListEditor('Alergias', 'allergies', newAllergy, setNewAllergy, 'Alergénio')}
+            {renderListEditor('Medicação', 'medications', newMed, setNewMed, 'Medicamento')}
+            {renderListEditor('Condições', 'conditions', newCond, setNewCond, 'Condição')}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FormField label="Smoking">
+              <FormField label="Tabagismo">
                 <Sel value={form.smoking} onChange={(e) => setForm((p) => ({ ...p, smoking: e.target.value }))}>
-                  <option value="never">Never</option>
-                  <option value="former">Former</option>
-                  <option value="current">Current</option>
+                  <option value="never">Nunca fumou</option>
+                  <option value="former">Ex-fumador</option>
+                  <option value="current">Fumador</option>
                 </Sel>
               </FormField>
-              <FormField label="Pregnancy">
+              <FormField label="Gravidez">
                 <Sel value={form.pregnancy} onChange={(e) => setForm((p) => ({ ...p, pregnancy: e.target.value }))}>
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                  <option value="not-applicable">Not Applicable</option>
+                  <option value="no">Não</option>
+                  <option value="yes">Sim</option>
+                  <option value="not-applicable">Não aplicável</option>
                 </Sel>
               </FormField>
             </div>
-            <FormField label="Family History">
+            <FormField label="História Familiar">
               <Textarea
                 value={form.family_history}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                   setForm((p) => ({ ...p, family_history: e.target.value }))
                 }
-                placeholder="Family medical history…"
+                placeholder="Antecedentes familiares relevantes…"
               />
             </FormField>
-            <FormField label="Notes">
+            <FormField label="Notas">
               <Textarea
                 value={form.notes}
                 onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setForm((p) => ({ ...p, notes: e.target.value }))}
-                placeholder="Additional notes…"
+                placeholder="Outras notas clínicas…"
               />
             </FormField>
             <div className="flex gap-3 mt-2">
               <PrimaryBtn onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save Medical History'}
+                {saving ? 'A guardar…' : 'Guardar Histórico'}
               </PrimaryBtn>
             </div>
           </div>
         ) : (
-          <Empty message="Select a patient to view their medical history" />
+          <Empty message="Selecione um doente para ver o histórico clínico" />
         )}
       </div>
     </div>

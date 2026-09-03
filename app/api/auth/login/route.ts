@@ -4,14 +4,57 @@ import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
 import { requireSameOrigin, signToken } from '@/lib/auth';
 import { queryOne, withSystemContext } from '@/lib/db';
-import { getClientIp, rateLimit } from '@/lib/rateLimit';
+import { getClientIp } from '@/lib/rateLimit';
+import { rateLimitShared } from '@/lib/rateLimitShared';
+
+// Compared against when no user matches the submitted email, so the unknown-email and
+// wrong-password paths both pay one full bcrypt verification. The response bodies were
+// already identical ('Invalid credentials', 401) — the leak was in the timing: skipping
+// bcrypt.compare returned in ~0ms against ~100ms for a real user, which is a reliable
+// oracle for "does this email have an account here". For a dental clinic that is
+// patient- and staff-identifying information, not just an account-existence detail.
+//
+// A real bcrypt hash (cost 10, matching app/api/users/route.ts) of a passphrase nothing
+// can be registered with — compare() must do the actual key derivation for the timing to
+// match, so a made-up string here would be rejected as malformed and return instantly,
+// reintroducing the very gap this closes.
+const DUMMY_PASSWORD_HASH = '$2a$10$opCM9Y.iMAYaRakapLUl9Oq1b7R/o2WQ5aDmdHy3stHAUc/2/z53i';
+
+// Dois baldes, porque travam ataques diferentes.
+//
+// O por-conta trava força bruta contra UM utilizador. Sozinho não trava nada
+// contra password spraying — a mesma password experimentada em mil emails —
+// porque incluir o email na chave dá a cada endereço o seu próprio balde. Daí o
+// segundo, só por IP: mais largo, para não expulsar uma clínica inteira atrás de
+// um NAT, mas apertado o suficiente para que varrer contas deixe de compensar.
+const PER_ACCOUNT_LIMIT = { limit: 10, windowMs: 10 * 60 * 1000 };
+const PER_IP_LIMIT = { limit: 50, windowMs: 60 * 60 * 1000 };
 
 export async function POST(request: NextRequest) {
   const originCheck = requireSameOrigin(request);
   if (originCheck) return originCheck;
-  const { email, password } = await request.json();
+  // Corpo malformado é erro do cliente (400), não do servidor (500).
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== 'object') {
+    return Response.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+  const email = String(body.email || '');
+  // Normalizada aqui, uma vez, para os DOIS caminhos de bcrypt.compare abaixo.
+  // Enquanto só o caminho do email desconhecido a normalizava, um pedido sem
+  // password devolvia 500 numa conta existente e 401 numa inexistente — um
+  // oráculo de enumeração de contas muito mais fácil de explorar do que o canal
+  // de timing que o DUMMY_PASSWORD_HASH abaixo existe para fechar.
+  const password = String(body.password || '');
   const ip = getClientIp(request);
-  const rl = rateLimit(`login:${ip}:${String(email || '').toLowerCase()}`, { limit: 10, windowMs: 10 * 60 * 1000 });
+
+  // Contadores no Postgres, não em memória: em memória cada instância tem o seu
+  // balde, e com duas instâncias o travão do login deixa de travar. Ver
+  // lib/rateLimitShared.ts.
+  const [perAccount, perIp] = await Promise.all([
+    rateLimitShared(`login:acct:${ip}:${email.toLowerCase()}`, PER_ACCOUNT_LIMIT),
+    rateLimitShared(`login:ip:${ip}`, PER_IP_LIMIT),
+  ]);
+  const rl = !perAccount.ok ? perAccount : perIp;
   if (!rl.ok) {
     await appendAudit(
       { name: String(email || 'Unknown'), role: 'anonymous', clinic: 'System' },
@@ -48,6 +91,10 @@ export async function POST(request: NextRequest) {
   );
 
   if (!user) {
+    // Burn the same work a real verification would cost before answering — see
+    // DUMMY_PASSWORD_HASH above. The result is discarded (it is always false); it is
+    // awaited purely so the two failure paths take comparable time.
+    await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
     await appendAudit(
       { name: String(email || 'Unknown'), role: 'anonymous', clinic: 'System' },
       'AUTH_FAIL',

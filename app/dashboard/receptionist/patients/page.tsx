@@ -6,6 +6,7 @@ import NextActionBanner from '@/components/patient/NextActionBanner';
 import PatientDocumentsTab from '@/components/patient/PatientDocumentsTab';
 import PatientInteractionsTab from '@/components/patient/PatientInteractionsTab';
 import PatientTasksTab from '@/components/patient/PatientTasksTab';
+import SchedulingPrefsCard from '@/components/patient/SchedulingPrefsCard';
 import PatientCreateModal, { type NewPatientForm } from '@/components/receptionist/PatientCreateModal';
 import PatientEditExtraFieldsModal from '@/components/receptionist/PatientEditExtraFieldsModal';
 import PatientImportCsvModal from '@/components/receptionist/PatientImportCsvModal';
@@ -222,6 +223,7 @@ export default function ReceptionPatientsPage() {
                   onEditExtra={openEditExtra}
                 />
                 <CommPrefsCard api={api} patient={selected} onUpdated={setSelected} />
+                <SchedulingPrefsCard api={api} patient={selected} />
               </div>
             )}
 

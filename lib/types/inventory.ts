@@ -11,6 +11,11 @@ export interface InventoryStock {
   item_id: number;
   tenant_id: string;
   quantity: number;
+  // Ponto de reposição EFETIVO desta clínica para este item — o override de
+  // inventory_item_settings quando existe, senão o global de inventory_items.
+  // Resolvido em SQL por app/api/inventory/stock/route.ts para as duas páginas de
+  // inventário lerem o mesmo número. Ver migração 044.
+  reorder_at: number;
 }
 
 export type InventoryMovementReason = 'received' | 'consumed' | 'adjusted' | 'wastage' | 'expired';

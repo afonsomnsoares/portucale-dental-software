@@ -8,6 +8,54 @@ declare global {
   var __pgPool: import('pg').Pool | undefined;
 }
 
+// Processes that legitimately need the admin/owner connection (cross-tenant reads,
+// DDL) opt out of the production guard below by setting this to '1' — today only
+// scripts/run-jobs.ts, which already deletes APP_DATABASE_URL for the same reason.
+// It is deliberately an explicit opt-in marker rather than something inferred from
+// the environment: "is this the web server or a maintenance script" is not a
+// question the runtime can answer reliably, and guessing wrong in the permissive
+// direction is exactly the failure this guard exists to prevent.
+const ADMIN_CONNECTION_OPT_OUT = process.env.PORTUCALE_ADMIN_CONNECTION === '1';
+
+// One-time check that the role we actually connected as cannot bypass the RLS
+// policies. Superusers ignore row-level security unconditionally — FORCE included —
+// so a deployment that sets APP_DATABASE_URL to a superuser DSN gets every policy in
+// scripts/migrations/011_row_level_security.sql silently disabled, with no error and
+// no behavioural difference until a tenant sees another tenant's rows. Checking the
+// env var is set is not enough; this checks what the database says about us.
+//
+// Deliberately a loud log rather than a throw: it runs after the pool already exists
+// and killing every in-flight request on a misconfiguration we can still serve
+// correctly (the app-level tenant filters are all still in place) would turn a
+// hardening gap into an outage.
+async function assertRoleCannotBypassRls(pool: import('pg').Pool) {
+  if (ADMIN_CONNECTION_OPT_OUT) return;
+  try {
+    const { rows } = await pool.query(
+      `SELECT current_user AS role,
+              (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) AS is_superuser,
+              pg_catalog.has_database_privilege(current_user, current_database(), 'CREATE') AS can_create`,
+    );
+    const row = rows[0];
+    if (row?.is_superuser) {
+      console.error(
+        `[db] SEGURANÇA: ligado como "${row.role}", que é SUPERUSER — o Row-Level Security ` +
+          `NÃO está a ser aplicado (superusers ignoram RLS, FORCE incluído). ` +
+          `Define APP_DATABASE_URL a apontar para o papel portucale_app ` +
+          `(ver scripts/migrations/011_row_level_security.sql).`,
+      );
+    } else if (row?.can_create) {
+      console.warn(
+        `[db] AVISO: o papel "${row.role}" tem privilégio CREATE nesta base de dados — ` +
+          `provavelmente é o dono do schema, e o dono só respeita as políticas graças ao ` +
+          `FORCE ROW LEVEL SECURITY. Preferir APP_DATABASE_URL com portucale_app.`,
+      );
+    }
+  } catch (e) {
+    console.warn('[db] não foi possível verificar o papel da ligação:', e instanceof Error ? e.message : e);
+  }
+}
+
 // Lazy singleton pool — created on first query, reused across hot reloads in dev.
 // Keeps module import side-effect-free (unit tests import lib/* without a database).
 function getPool(): import('pg').Pool {
@@ -17,21 +65,39 @@ function getPool(): import('pg').Pool {
     // subject to the Row-Level Security policies in
     // scripts/migrations/011_row_level_security.sql — see that file's header
     // comment. Falls back to DATABASE_URL (the admin/owner connection) when
-    // unset, which is today's behavior and what scripts/migrate.ts,
-    // scripts/seed.ts and scripts/run-jobs.ts (see the guard at the top of
-    // that file) all keep using, since they legitimately need cross-tenant or
-    // DDL access that RLS would otherwise block.
+    // unset, which is what scripts/migrate.ts, scripts/seed.ts and
+    // scripts/run-jobs.ts (see the guard at the top of that file) all keep
+    // using, since they legitimately need cross-tenant or DDL access that RLS
+    // would otherwise block.
+    //
+    // In production that fallback is refused outright: it is silent — the app
+    // starts, serves traffic and behaves identically, with every RLS policy
+    // inert — so the failure mode is a tenant-isolation breach that surfaces
+    // only when someone notices another clinic's data. A process that really
+    // needs the admin connection says so with PORTUCALE_ADMIN_CONNECTION=1.
+    if (process.env.NODE_ENV === 'production' && !process.env.APP_DATABASE_URL && !ADMIN_CONNECTION_OPT_OUT) {
+      throw new Error(
+        'APP_DATABASE_URL is required in production — it is the RLS-restricted connection ' +
+          '(role portucale_app, see scripts/migrations/011_row_level_security.sql). Falling back ' +
+          'to DATABASE_URL would run the app as the schema owner and disable tenant isolation ' +
+          'at the database level. Set PORTUCALE_ADMIN_CONNECTION=1 only for maintenance ' +
+          'processes that genuinely need cross-tenant access.',
+      );
+    }
+
     const connectionString = process.env.APP_DATABASE_URL || process.env.DATABASE_URL;
     if (!connectionString) throw new Error('DATABASE_URL is required');
-    g.__pgPool = new Pool({
+    const pool = new Pool({
       connectionString,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 15000,
     });
-    g.__pgPool.on('error', (err) => {
+    pool.on('error', (err) => {
       console.error('PostgreSQL pool error:', err.message);
     });
+    g.__pgPool = pool;
+    void assertRoleCannotBypassRls(pool);
   }
   return g.__pgPool;
 }
@@ -67,11 +133,24 @@ export function enterTenantContext(user: { tenantId?: string | null; role?: stri
   });
 }
 
-// Explicit escape hatch for the two routes that must query `users` *before* a
-// session exists (login, bootstrap) — searching across every tenant by email
-// is inherent to that step, not a bug. Nothing else should need this.
+// Explicit escape hatch for the steps that must query `users` *before* — or
+// independently of — the tenant the caller claims to be in. Three today, all of
+// the same shape: login and bootstrap (no session exists yet), and
+// lib/permissions.ts's session revalidation (a session exists, but the tenant it
+// asserts is exactly what is being checked; `users` is under FORCE row security,
+// so reading it under a stale tenant would return no row and deny a legitimate
+// user who simply changed clinic). Nothing else should need this.
 export function withSystemContext<T>(fn: () => Promise<T>): Promise<T> {
   return tenantContextStorage.run({ tenantId: null, isSuperAdmin: true }, fn);
+}
+
+// A identidade do pedido em curso, para quem precise de memorizar trabalho pelo
+// tempo de vida de um pedido e não mais do que isso. Devolve o próprio objeto do
+// AsyncLocalStorage — serve de chave de WeakMap (ver lib/permissions.ts), que é
+// libertada sozinha quando o pedido acaba. Undefined fora de um pedido
+// autenticado (jobs, scripts, testes de unidade), e aí quem chama não memoiza.
+export function currentRequestKey(): object | undefined {
+  return tenantContextStorage.getStore();
 }
 
 async function applyTenantContext(client: import('pg').PoolClient) {

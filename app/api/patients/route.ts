@@ -4,7 +4,7 @@ import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth'
 import { normalizeCustomFields } from '@/lib/customFields';
 import { query, warnSchemaGap } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { hasPermission, revalidateSession } from '@/lib/permissions';
 import { validatePatientBody } from '@/lib/validate';
 
 async function safeSchemaQuery(sql: string, params: unknown[] = []) {
@@ -23,6 +23,10 @@ async function safeSchemaQuery(sql: string, params: unknown[] = []) {
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
+  // Ao contrário do POST abaixo, listar doentes não exige uma ação — os quatro papéis
+  // precisam da lista. Continua a exigir uma sessão que ainda seja válida: sem isto, uma
+  // conta desativada lia a lista de doentes da clínica com o token que já tinha.
+  if (!(await revalidateSession(user))) return unauthorized();
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('q') || '';
   const tenantId = user.role === 'super_admin' ? null : user.tenantId;
@@ -34,6 +38,11 @@ export async function GET(request: NextRequest) {
      LEFT JOIN patient_alerts pa ON pa.patient_id = p.id
      WHERE ($1 = '' OR p.name ILIKE $2 OR p.global_seq::text ILIKE $2)
        AND ($3::uuid IS NULL OR p.tenant_id = $3::uuid)
+       -- Pacientes anonimizados a pedido do titular (RGPD art. 17.º) ficam como
+       -- âncora das chaves estrangeiras, mas não são pessoas que a clínica possa
+       -- voltar a contactar — mostrá-los na lista da receção seria oferecer uma
+       -- ficha vazia de alguém que pediu para ser esquecido.
+       AND p.status <> 'anonymized'
      GROUP BY p.id
      ORDER BY p.name`,
     [search, `%${search}%`, tenantId],

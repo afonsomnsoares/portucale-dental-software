@@ -3,15 +3,17 @@ import { ROLE_HOME } from '@/lib/constants';
 import { verifyTokenEdge } from '@/lib/jwt-edge';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
 
-// Explicit prefix -> allowed role(s), one entry per role. 'admin' and 'super_admin' used
-// to share '/dashboard/admin' (derived from lib/constants.ts's ROLE_HOME, back when both
-// mapped to the same home path) — they now have fully separate trees
-// (/dashboard/admin vs /dashboard/platform), so this no longer needs to be derived by
-// grouping ROLE_HOME entries; a flat list is both simpler and can't silently merge two
-// roles onto the same prefix again.
+// Prefixo explícito -> papel(éis) permitido(s), uma entrada por papel. 'admin' e
+// 'super_admin' partilhavam '/dashboard/admin' (derivado do ROLE_HOME de lib/constants.ts,
+// quando os dois apontavam para a mesma home) — hoje têm árvores completamente separadas
+// (/dashboard/admin vs /dashboard/super-admin), por isso isto já não precisa de ser
+// derivado por agrupamento do ROLE_HOME; uma lista explícita é mais simples e não pode
+// voltar a juntar dois papéis no mesmo prefixo por acidente.
+// Nota: '/dashboard/super-admin' não começa por '/dashboard/admin', por isso a ordem das
+// entradas é indiferente — nenhuma apanha o prefixo da outra.
 const DASHBOARD_ACCESS: Array<[prefix: string, roles: string[]]> = [
   ['/dashboard/admin', ['admin']],
-  ['/dashboard/platform', ['super_admin']],
+  ['/dashboard/super-admin', ['super_admin']],
   ['/dashboard/receptionist', ['receptionist']],
   ['/dashboard/dentist', ['dentist']],
 ];

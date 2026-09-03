@@ -4,6 +4,7 @@ import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth'
 import { badRequest, notFound } from '@/lib/http';
 import { getTask, updateTask } from '@/lib/patientTasks';
 import { hasPermission } from '@/lib/permissions';
+import { getOwnedUser } from '@/lib/tenantGuard';
 import { asEnum, sanitizeString } from '@/lib/validate';
 
 const TASK_STATUSES = ['pending', 'done', 'cancelled'] as const;
@@ -31,11 +32,28 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (body.complete === true) status = 'done';
   if (body.cancel === true) status = 'cancelled';
 
+  // Reatribuição: o id vem do cliente, por isso confirma-se que é alguém desta
+  // clínica antes de o gravar (ver getOwnedUser). `null` é válido — devolve a
+  // tarefa à fila partilhada.
+  let assignedTo: string | null | undefined;
+  if (body.assignedTo !== undefined) {
+    if (body.assignedTo === null || body.assignedTo === '') {
+      assignedTo = null;
+    } else {
+      const assignee = await getOwnedUser(body.assignedTo, user);
+      if (!assignee) return badRequest('assignedTo is not a user in this clinic');
+      assignedTo = assignee.id;
+    }
+  }
+
   const row = await updateTask(user.tenantId, id, {
     title: body.title !== undefined ? sanitizeString(body.title, 200) || prev.title : undefined,
     notes: body.notes !== undefined ? sanitizeString(body.notes, 2000) : undefined,
     dueAt: body.dueAt !== undefined ? body.dueAt : undefined,
-    assignedTo: body.assignedTo !== undefined ? body.assignedTo : undefined,
+    assignedTo,
+    // Botão "Atribuir automaticamente" na fila de tarefas — deixa o router
+    // escolher em vez de obrigar a rececionista a saber quem está de turno.
+    autoAssign: body.autoAssign === true,
     status,
   });
   if (!row) return notFound('Task not found');

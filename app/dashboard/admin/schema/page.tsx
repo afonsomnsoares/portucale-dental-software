@@ -1,4 +1,4 @@
-import Schema from '@/components/admin/pages/Schema';
+import Schema from '@/components/clinic/pages/Schema';
 
 export default function Page() {
   return <Schema />;

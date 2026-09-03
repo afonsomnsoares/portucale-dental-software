@@ -1,3 +1,14 @@
+// Implementação de verificação de JWT para o Edge runtime (middleware.ts), onde
+// `node:crypto` não existe e é preciso usar WebCrypto.
+//
+// ⚠️ GÉMEA DE lib/auth.ts — os dois ficheiros têm de concordar. `getJwtSecrets`
+// abaixo é uma cópia literal do de lib/auth.ts, e verifyTokenEdge tem de aceitar
+// exatamente os mesmos tokens que verifyToken: mesma ordem de segredos (rotação),
+// mesmas verificações de `exp`/`nbf`. Uma alteração de segurança feita só de um
+// lado abre uma divergência entre o que o middleware deixa passar e o que a rota
+// aceita — que é precisamente o tipo de falha que ninguém nota até ser tarde.
+// Não se unificam porque os runtimes têm APIs de cripto diferentes; a duplicação
+// é deliberada e este comentário é o que a torna segura.
 export interface EdgeSessionUser {
   id: string;
   name: string;

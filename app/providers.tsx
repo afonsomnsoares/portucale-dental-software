@@ -20,7 +20,6 @@ interface StatusMeta {
 
 export interface AppSettings {
   TANOMD_CODES: Array<{ code: string; desc: string; category: string; fee: number }>;
-  TOOTH_CONDITIONS: Array<{ key: string; label: string; color: string }>;
   STATUS_META: Record<string, StatusMeta>;
   STATUS_TRANSITIONS: Record<string, string[]>;
 }

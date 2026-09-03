@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
 import { forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
+import { revalidateSession } from '@/lib/permissions';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { sanitizeString } from '@/lib/validate';
 
@@ -10,6 +11,10 @@ import { sanitizeString } from '@/lib/validate';
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
+  // A sessão pode ter sido desativada, despromovida ou movida de clínica depois de o
+  // token ser assinado; revalidateSession() confirma-o contra `users` e realinha
+  // user.role/user.tenantId. Ver lib/permissions.ts.
+  if (!(await revalidateSession(user))) return unauthorized();
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
 
@@ -35,6 +40,10 @@ export async function POST(request: NextRequest) {
   if (originCheck) return originCheck;
   const user = getAuth(request);
   if (!user) return unauthorized();
+  // A sessão pode ter sido desativada, despromovida ou movida de clínica depois de o
+  // token ser assinado; revalidateSession() confirma-o contra `users` e realinha
+  // user.role/user.tenantId. Ver lib/permissions.ts.
+  if (!(await revalidateSession(user))) return unauthorized();
   if (!requireRoles(user, 'dentist', 'admin', 'super_admin')) return forbidden();
 
   const { patientId, noteText } = await request.json();

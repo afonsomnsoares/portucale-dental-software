@@ -1,4 +1,4 @@
-import ScheduleIntel from '@/components/admin/pages/ScheduleIntel';
+import ScheduleIntel from '@/components/clinic/pages/ScheduleIntel';
 
 export default function Page() {
   return <ScheduleIntel />;

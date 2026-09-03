@@ -123,3 +123,44 @@ export interface WaitlistData {
   entries: WaitlistEntry[];
   pendingOffers: SlotOffer[];
 }
+
+// ─── Otimizador da agenda (item 9) ────────────────────────────────────────
+// Ver lib/scheduleOptimizerCalc.ts. `gainMinutes` é 0 nas propostas que
+// melhoram a qualidade da marcação sem alterar a ocupação (dentista em falta,
+// preferência do doente violada) — só as outras somam para recoverableMinutes.
+export type OptimizerMoveKind = 'gap_fill' | 'unassigned_dentist' | 'equipment_block' | 'preference_mismatch';
+
+export interface OptimizerMove {
+  kind: OptimizerMoveKind;
+  key: string;
+  title: string;
+  detail: string;
+  gainMinutes: number;
+  appointmentId?: string;
+  patientName?: string;
+  date?: string;
+}
+
+export interface ScheduleOptimization {
+  windowDays: number;
+  generatedAt: string;
+  moves: OptimizerMove[];
+  totals: { moves: number; recoverableMinutes: number };
+  warnings: string[];
+}
+
+// ─── Preferências de agendamento do doente (item 9) ───────────────────────
+export interface PatientSchedulingPrefs {
+  id: string;
+  tenant_id: string;
+  patient_id: string;
+  preferred_dentist_id: string | null;
+  preferred_dentist_name?: string | null;
+  preferred_days: number[] | null;
+  preferred_time_start: string | null;
+  preferred_time_end: string | null;
+  notes: string;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}

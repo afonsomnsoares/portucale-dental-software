@@ -133,13 +133,13 @@ test('suggestReorderQuantity: nunca sugere uma quantidade negativa', () => {
 
 test('procedureDemand: soma qty_per_procedure × nº de consultas desse tipo, por item', () => {
   const counts = [
-    { type: 'Root Canal', count: 5 },
-    { type: 'Hygiene Cleaning', count: 10 },
+    { type: 'Endodontia', count: 5 },
+    { type: 'Destartarização', count: 10 },
   ];
   const usage = [
-    { itemId: 1, appointmentType: 'Root Canal', qtyPerProcedure: 2 },
-    { itemId: 2, appointmentType: 'Root Canal', qtyPerProcedure: 0.5 },
-    { itemId: 1, appointmentType: 'Hygiene Cleaning', qtyPerProcedure: 1 },
+    { itemId: 1, appointmentType: 'Endodontia', qtyPerProcedure: 2 },
+    { itemId: 2, appointmentType: 'Endodontia', qtyPerProcedure: 0.5 },
+    { itemId: 1, appointmentType: 'Destartarização', qtyPerProcedure: 1 },
   ];
   const demand = procedureDemand(counts, usage);
   assert.deepEqual(
@@ -153,11 +153,11 @@ test('procedureDemand: soma qty_per_procedure × nº de consultas desse tipo, po
 
 test('procedureDemand: um tipo de consulta sem mapeamento não contribui nada', () => {
   const counts = [{ type: 'Unmapped Type', count: 20 }];
-  const usage = [{ itemId: 1, appointmentType: 'Root Canal', qtyPerProcedure: 2 }];
+  const usage = [{ itemId: 1, appointmentType: 'Endodontia', qtyPerProcedure: 2 }];
   assert.deepEqual(procedureDemand(counts, usage), []);
 });
 
 test('procedureDemand: sem consultas futuras não há procura', () => {
-  const usage = [{ itemId: 1, appointmentType: 'Root Canal', qtyPerProcedure: 2 }];
+  const usage = [{ itemId: 1, appointmentType: 'Endodontia', qtyPerProcedure: 2 }];
   assert.deepEqual(procedureDemand([], usage), []);
 });

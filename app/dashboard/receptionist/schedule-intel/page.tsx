@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import EfficiencyTab from '@/components/receptionist/EfficiencyTab';
 import HeatmapTab from '@/components/receptionist/HeatmapTab';
+import OptimizerTab from '@/components/receptionist/OptimizerTab';
 import PendingOffersTable from '@/components/receptionist/PendingOffersTable';
 import RiskTab from '@/components/receptionist/RiskTab';
 import WaitlistCreateModal, {
@@ -17,6 +18,7 @@ import type {
   Patient,
   RiskData,
   RiskHeatmapData,
+  ScheduleOptimization,
   SlotOffer,
   WaitlistData,
   WaitlistEntry,
@@ -30,6 +32,7 @@ export default function ScheduleIntelReceptionistPage() {
   const [heatmap, setHeatmap] = useState<RiskHeatmapData | null>(null);
   const [efficiency, setEfficiency] = useState<AgendaEfficiency | null>(null);
   const [waitlist, setWaitlist] = useState<WaitlistData | null>(null);
+  const [optimization, setOptimization] = useState<ScheduleOptimization | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [dentists, setDentists] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -42,7 +45,7 @@ export default function ScheduleIntelReceptionistPage() {
 
   const load = useCallback(async () => {
     setErr('');
-    const [r, h, e, w] = await Promise.all([
+    const [r, h, e, w, o] = await Promise.all([
       api('/schedule-intel/risk?days=14').catch((err) => {
         setErr(err instanceof Error ? err.message : 'Falha ao carregar');
         return null;
@@ -50,11 +53,13 @@ export default function ScheduleIntelReceptionistPage() {
       api('/schedule-intel/heatmap').catch(() => null),
       api('/schedule-intel/efficiency?days=14').catch(() => null),
       api('/waitlist').catch(() => null),
+      api('/schedule-intel/optimizer?days=14').catch(() => null),
     ]);
     setRisk(r);
     setHeatmap(h);
     setEfficiency(e);
     setWaitlist(w);
+    setOptimization(o);
     setLoading(false);
   }, [api]);
 
@@ -141,6 +146,7 @@ export default function ScheduleIntelReceptionistPage() {
           { key: 'risk', label: 'Risco', count: highRiskCount || undefined },
           { key: 'heatmap', label: 'Heatmap' },
           { key: 'efficiency', label: 'Eficiência' },
+          { key: 'optimizer', label: 'Otimizador', count: optimization?.totals.moves || undefined },
           { key: 'waitlist', label: 'Lista de Espera', count: waitlist?.pendingOffers?.length || undefined },
         ]}
       />
@@ -152,6 +158,7 @@ export default function ScheduleIntelReceptionistPage() {
           {tab === 'risk' && <RiskTab appointments={risk?.appointments || []} />}
           {tab === 'heatmap' && <HeatmapTab heatmap={heatmap} />}
           {tab === 'efficiency' && <EfficiencyTab efficiency={efficiency} />}
+          {tab === 'optimizer' && <OptimizerTab optimization={optimization} />}
 
           {tab === 'waitlist' && (
             <div>

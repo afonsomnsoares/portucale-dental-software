@@ -2,11 +2,10 @@
 //   node --import tsx --env-file=.env.test --test test/integration/
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import crypto from 'node:crypto';
 import { GET as getAudit } from '../../app/api/audit/route.ts';
 import { appendAudit } from '../../lib/audit.ts';
 import { authedRequest } from '../helpers/authedRequest.ts';
-import { closeTestDb, ensureSeeded, getSeededUser, getTenantAId } from '../helpers/testDb.ts';
+import { closeTestDb, ensureSeeded, getOrCreateTenantAdmin, getSeededUser, getTenantAId } from '../helpers/testDb.ts';
 import type { TestUser } from '../helpers/authedRequest.ts';
 
 const CLINIC_A = 'Clínica Portucale';
@@ -22,11 +21,11 @@ before(async () => {
   const tenantAId = await getTenantAId();
   superAdmin = await getSeededUser('admin@portucale.dental');
   receptionistA = await getSeededUser('rececao@portucale.dental');
-  // Synthetic tenant-scoped admin: getAuth() only decodes the signed JWT's claims
-  // (role/tenantId/clinic) — none of these routes re-check the users table for identity —
-  // so this is a faithful stand-in for "an admin belonging to tenant A" without needing to
-  // seed one specifically.
-  adminA = { id: crypto.randomUUID(), name: 'Admin A (teste)', role: 'admin', clinic: CLINIC_A, tenantId: tenantAId };
+  // Admin de clínica a sério, e não um JWT assinado sobre um UUID inventado: desde que
+  // hasPermission() revalida a sessão contra a tabela `users` (lib/permissions.ts), um
+  // token cujo `id` não corresponde a nenhuma linha ativa é recusado com 403 — que é
+  // precisamente o ponto da revalidação, e por isso o stand-in sintético deixou de servir.
+  adminA = await getOrCreateTenantAdmin(tenantAId, CLINIC_A);
 
   await appendAudit({ name: 'Seed', role: 'admin', clinic: CLINIC_A }, 'CREATE', MARKER, null, 'x', CLINIC_A);
   await appendAudit({ name: 'Seed', role: 'admin', clinic: CLINIC_B }, 'CREATE', MARKER, null, 'x', CLINIC_B);

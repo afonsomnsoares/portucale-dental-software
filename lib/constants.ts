@@ -33,13 +33,14 @@ export const FONTS = {
   display: "'Bricolage Grotesque', 'DM Sans', sans-serif",
 };
 
-// 'admin' (clinic admin, tenant-scoped)'s own nav, hrefs under /dashboard/admin.
-// super_admin (platform-wide, no clinic of its own) gets the mirrored PLATFORM_NAV below,
-// under the separate /dashboard/platform prefix — the two roles no longer share a URL
-// tree (see middleware.ts's DASHBOARD_ACCESS) even though most of these 14 pages render
-// the exact same component either way: each one already scopes itself to the caller's
-// own tenant for a clinic admin, or shows a tenant picker for super_admin (see that
-// pattern across app/api/*, and components/admin/pages/*).
+// Navegação do 'admin' (o admin da clínica, sempre confinado a um tenant), com hrefs sob
+// /dashboard/admin. O super_admin (âmbito de plataforma, sem clínica própria) tem o
+// SUPER_ADMIN_NAV espelhado abaixo, sob o prefixo separado /dashboard/super-admin. Os dois
+// papéis não partilham nem a árvore de URLs (ver DASHBOARD_ACCESS em middleware.ts) nem os
+// componentes de página: /dashboard/admin/* renderiza components/clinic/pages/*,
+// /dashboard/super-admin/* renderiza components/super-admin/pages/*. As etiquetas coincidem
+// porque os dois papéis fazem o mesmo *tipo* de trabalho, mas as páginas de clínica estão
+// presas ao tenant de quem chama e as de plataforma escolhem a clínica primeiro.
 const ADMIN_NAV: Array<{ label: string; href: string }> = [
   { label: 'Visão Geral', href: '/dashboard/admin' },
   { label: 'Utilizadores', href: '/dashboard/admin/users' },
@@ -56,21 +57,41 @@ const ADMIN_NAV: Array<{ label: string; href: string }> = [
   { label: 'Fontes de Leads', href: '/dashboard/admin/lead-sources' },
   { label: 'Equipa', href: '/dashboard/admin/team' },
   { label: 'Operações', href: '/dashboard/admin/operations' },
+  { label: 'Agentes', href: '/dashboard/admin/agents' },
+  { label: 'Documentos', href: '/dashboard/admin/documents' },
 ];
 
-// super_admin's own tree, mirroring ADMIN_NAV's 14 entries under /dashboard/platform
-// instead of /dashboard/admin (see ROLE_HOME below and middleware.ts's DASHBOARD_ACCESS —
-// the two roles no longer share a URL prefix, so this can't just reuse ADMIN_NAV's hrefs
-// directly), plus 'Clínicas' (platform-only — see app/api/tenants/route.ts's
-// requireSuperAdmin), inserted right after 'Visão Geral'/'Utilizadores' same as before.
-const PLATFORM_NAV: Array<{ label: string; href: string }> = ADMIN_NAV.map((item) => ({
+// Páginas do admin de clínica que NÃO existem sob /dashboard/super-admin. A regra
+// geral é que as duas árvores são espelhadas (ver SUPER_ADMIN_NAV abaixo), mas
+// estas duas dependem de haver uma clínica concreta, e o super_admin não tem
+// tenantId próprio:
+//
+//   'Documentos' emite declarações para um doente de uma clínica — trabalho de
+//   chão de clínica, não de plataforma.
+//
+//   'Agentes' mostra as execuções de job_runs desta clínica. GET /api/agents usa
+//   o withRoute com a política de tenant por omissão ('required'), que devolve
+//   403 a quem não tem tenantId. Um link aqui seria um beco — exatamente o que
+//   acontece hoje com 'Tratamentos' na receção. Uma visão de plataforma sobre os
+//   agentes é uma página diferente, com seletor de clínica, e ainda não existe.
+const SUPER_ADMIN_NAV_EXCLUDE = new Set(['/dashboard/admin/documents', '/dashboard/admin/agents']);
+
+// A árvore do super_admin, espelhando ADMIN_NAV (menos SUPER_ADMIN_NAV_EXCLUDE acima) sob
+// /dashboard/super-admin em vez de /dashboard/admin (ver ROLE_HOME abaixo e o
+// DASHBOARD_ACCESS de middleware.ts — os dois papéis não partilham prefixo, por isso isto
+// não pode reutilizar os hrefs de ADMIN_NAV tal e qual), mais 'Clínicas' (só existe na
+// plataforma — ver requireSuperAdmin em app/api/tenants/route.ts), inserida logo a seguir
+// a 'Visão Geral'/'Utilizadores'.
+const SUPER_ADMIN_NAV: Array<{ label: string; href: string }> = ADMIN_NAV.filter(
+  (item) => !SUPER_ADMIN_NAV_EXCLUDE.has(item.href),
+).map((item) => ({
   ...item,
-  href: item.href.replace('/dashboard/admin', '/dashboard/platform'),
+  href: item.href.replace('/dashboard/admin', '/dashboard/super-admin'),
 }));
-PLATFORM_NAV.splice(2, 0, { label: 'Clínicas', href: '/dashboard/platform/tenants' });
+SUPER_ADMIN_NAV.splice(2, 0, { label: 'Clínicas', href: '/dashboard/super-admin/tenants' });
 
 export const NAV = {
-  super_admin: PLATFORM_NAV,
+  super_admin: SUPER_ADMIN_NAV,
   admin: ADMIN_NAV,
   receptionist: [
     { label: 'Painel', href: '/dashboard/receptionist' },
@@ -88,13 +109,13 @@ export const NAV = {
     { label: 'Tarefas', href: '/dashboard/receptionist/tasks' },
     { label: 'Lembretes', href: '/dashboard/receptionist/notifications' },
     { label: 'Equipa', href: '/dashboard/receptionist/team' },
+    { label: 'Documentos', href: '/dashboard/receptionist/documents' },
     { label: 'Operações', href: '/dashboard/receptionist/operations' },
   ],
   dentist: [
     { label: 'Painel', href: '/dashboard/dentist' },
     { label: 'Doentes', href: '/dashboard/dentist/patients' },
     { label: 'Tratamentos', href: '/dashboard/dentist/treatments' },
-    { label: 'Odontograma', href: '/dashboard/dentist/odontogram' },
     { label: 'Histórico Clínico', href: '/dashboard/dentist/medical-history' },
     { label: 'Prescrições', href: '/dashboard/dentist/prescriptions' },
     { label: 'Encomendas Lab', href: '/dashboard/dentist/lab-orders' },
@@ -102,6 +123,7 @@ export const NAV = {
     { label: 'Recalls', href: '/dashboard/dentist/recalls' },
     { label: 'Tarefas', href: '/dashboard/dentist/tasks' },
     { label: 'Consentimentos', href: '/dashboard/dentist/consent-forms' },
+    { label: 'Documentos', href: '/dashboard/dentist/documents' },
     { label: 'Equipa', href: '/dashboard/dentist/team' },
     { label: 'Operações', href: '/dashboard/dentist/operations' },
   ],
@@ -115,20 +137,11 @@ export const ROLE_META = {
 };
 
 export const ROLE_HOME = {
-  super_admin: '/dashboard/platform',
+  super_admin: '/dashboard/super-admin',
   admin: '/dashboard/admin',
   receptionist: '/dashboard/receptionist',
   dentist: '/dashboard/dentist',
 };
-
-// A handful of shared page components (Invoices → invoice detail, Reports → Recovery)
-// link to another page within the same admin/platform tree. Since the identical
-// component now mounts at two different prefixes (app/dashboard/admin/*/page.tsx and
-// app/dashboard/platform/*/page.tsx both rendering it — see components/admin/pages/),
-// it can't hardcode which one it's in; call this with the current usePathname() instead.
-export function basePathFor(pathname: string): '/dashboard/admin' | '/dashboard/platform' {
-  return pathname.startsWith('/dashboard/platform') ? '/dashboard/platform' : '/dashboard/admin';
-}
 
 export const INSURERS = ['ADSE', 'Médis', 'Multicare', 'AdvanceCare', 'SAMS', 'Fidelidade', 'Allianz', 'Particular'];
 
@@ -173,21 +186,28 @@ export interface AppointmentTypeOption {
 // not on `appointments.type`, which has always been a free-text label picked
 // from this fixed list (or typed manually) — see app/api/appointments/route.ts,
 // which stores `type` as-is with no FK.
+// Os rótulos são gravados tal e qual em `appointments.type` e em
+// `procedure_item_usage.appointment_type` — não são chaves com tradução por
+// cima. Traduzi-los é por isso uma migração de dados, não uma mudança de UI:
+// ver scripts/migrations/045_appointment_types_pt.sql, que reescreve as linhas
+// já existentes. Mudar um rótulo aqui sem acrescentar lá o mapeamento deixa as
+// consultas antigas órfãs do catálogo (perdem requiredSpecialty /
+// requiredEquipmentTags) e desliga a previsão de consumo desse procedimento.
 export const APPOINTMENT_TYPES: AppointmentTypeOption[] = [
-  { label: 'Comprehensive Exam', defaultDuration: 45 },
-  { label: 'Hygiene Cleaning', defaultDuration: 45 },
-  { label: 'X-Ray Review', defaultDuration: 15, requiredEquipmentTags: ['xray'] },
-  { label: 'Root Canal', defaultDuration: 60, requiredEquipmentTags: ['endo_motor'] },
-  { label: 'Crown Preparation', defaultDuration: 60 },
-  { label: 'Extraction', defaultDuration: 30 },
-  { label: 'Whitening', defaultDuration: 60, requiredEquipmentTags: ['whitening_lamp'] },
-  { label: 'Implant Consultation', defaultDuration: 30, requiredSpecialty: 'Implantologia' },
+  { label: 'Consulta de Avaliação', defaultDuration: 45 },
+  { label: 'Destartarização', defaultDuration: 45 },
+  { label: 'Avaliação Radiográfica', defaultDuration: 15, requiredEquipmentTags: ['xray'] },
+  { label: 'Endodontia', defaultDuration: 60, requiredEquipmentTags: ['endo_motor'] },
+  { label: 'Preparação de Coroa', defaultDuration: 60 },
+  { label: 'Extração', defaultDuration: 30 },
+  { label: 'Branqueamento', defaultDuration: 60, requiredEquipmentTags: ['whitening_lamp'] },
+  { label: 'Consulta de Implantologia', defaultDuration: 30, requiredSpecialty: 'Implantologia' },
   {
-    label: 'Full Mouth Rehabilitation',
+    label: 'Reabilitação Oral Completa',
     defaultDuration: 120,
     requiredSpecialty: 'Reabilitação Oral',
   },
-  { label: 'Orthodontic Consult', defaultDuration: 30, requiredSpecialty: 'Ortodontia' },
+  { label: 'Consulta de Ortodontia', defaultDuration: 30, requiredSpecialty: 'Ortodontia' },
 ];
 
 export const DEFAULT_APPOINTMENT_DURATION = 30;

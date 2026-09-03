@@ -5,7 +5,6 @@ import type { Treatment } from '@/lib/types';
 import { Badge, FormField, GhostBtn, Inp, Modal, PrimaryBtn, Sel } from './ui';
 
 interface TreatmentEditForm {
-  toothNum: number | string;
   treatmentCode: string;
   description: string;
   phase: number;
@@ -32,7 +31,6 @@ export default function TreatmentTable({
 
   const [editing, setEditing] = useState<Treatment | null>(null);
   const [form, setForm] = useState<TreatmentEditForm>({
-    toothNum: '',
     treatmentCode: '',
     description: '',
     phase: 1,
@@ -44,7 +42,6 @@ export default function TreatmentTable({
 
   function openEdit(t: Treatment) {
     setForm({
-      toothNum: t.tooth_num || '',
       treatmentCode: t.treatment_code || '',
       description: t.description || '',
       phase: t.phase || 1,
@@ -75,7 +72,6 @@ export default function TreatmentTable({
           <thead>
             <tr>
               {showPatient && <th className="data-th">Doente</th>}
-              <th className="data-th">Dente</th>
               <th className="data-th">Código TANOMD</th>
               <th className="data-th">Descrição</th>
               <th className="data-th">Fase</th>
@@ -94,24 +90,6 @@ export default function TreatmentTable({
                     {t.patient_name}
                   </td>
                 )}
-                <td className="data-td" style={{ color: '#5E6C84' }}>
-                  {t.tooth_num ? (
-                    <span
-                      style={{
-                        background: '#DEEBFF',
-                        color: '#0052CC',
-                        borderRadius: 4,
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        fontWeight: 700,
-                      }}
-                    >
-                      #{t.tooth_num}
-                    </span>
-                  ) : (
-                    '—'
-                  )}
-                </td>
                 <td className="data-td">
                   {t.treatment_code ? (
                     <span
@@ -159,7 +137,7 @@ export default function TreatmentTable({
             ))}
             {treatments.length === 0 && (
               <tr>
-                <td colSpan={showPatient ? 8 : 7} className="data-td text-center py-12" style={{ color: '#97A0AF' }}>
+                <td colSpan={showPatient ? 7 : 6} className="data-td text-center py-12" style={{ color: '#97A0AF' }}>
                   Sem tratamentos encontrados
                 </td>
               </tr>
@@ -171,15 +149,6 @@ export default function TreatmentTable({
       {editing && (
         <Modal title={`Editar — ${editing.description}`} onClose={() => setEditing(null)}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Número do Dente">
-              <Inp
-                type="number"
-                min={1}
-                max={32}
-                value={form.toothNum}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, toothNum: e.target.value }))}
-              />
-            </FormField>
             <FormField label="Código TANOMD">
               <Sel
                 value={form.treatmentCode}
