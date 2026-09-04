@@ -47,7 +47,7 @@ const ADMIN_NAV: Array<{ label: string; href: string }> = [
   { label: 'Campos Schema', href: '/dashboard/admin/schema' },
   { label: 'Permissões', href: '/dashboard/admin/permissions' },
   { label: 'Recuperação', href: '/dashboard/admin/recovery' },
-  { label: 'Agenda Inteligente', href: '/dashboard/admin/schedule-intel' },
+  { label: 'Agente de Agenda', href: '/dashboard/admin/schedule-intel' },
   { label: 'Jornada do Paciente', href: '/dashboard/admin/lifecycle' },
   { label: 'Auditoria', href: '/dashboard/admin/audit' },
   { label: 'Faturas', href: '/dashboard/admin/invoices' },
@@ -102,7 +102,7 @@ export const NAV = {
     { label: 'Faturas', href: '/dashboard/receptionist/invoices' },
     { label: 'Finanças', href: '/dashboard/receptionist/finance' },
     { label: 'Recuperação', href: '/dashboard/receptionist/recovery' },
-    { label: 'Agenda Inteligente', href: '/dashboard/receptionist/schedule-intel' },
+    { label: 'Agente de Agenda', href: '/dashboard/receptionist/schedule-intel' },
     { label: 'Jornada do Paciente', href: '/dashboard/receptionist/lifecycle' },
     { label: 'Recalls', href: '/dashboard/receptionist/recalls' },
     { label: 'Tarefas', href: '/dashboard/receptionist/tasks' },
@@ -194,6 +194,13 @@ export interface AppointmentTypeOption {
 // requiredEquipmentTags) e desliga a previsão de consumo desse procedimento.
 export const APPOINTMENT_TYPES: AppointmentTypeOption[] = [
   { label: 'Consulta de Avaliação', defaultDuration: 45 },
+  // A consulta de seguimento: a segunda, a terceira e a décima sessão de um
+  // plano já aceite. Faltava ao catálogo — marcava-se escrevendo à mão, o que a
+  // deixava fora de tudo o que se agarra ao rótulo (previsão de consumo,
+  // requisitos de equipamento) e, agora, fora do Dynamic Scheduling: é o tipo
+  // com que um plano de tratamento parado volta à cadeira (ver
+  // FOLLOW_UP_APPOINTMENT_TYPE abaixo e lib/demandPool.ts).
+  { label: 'Consulta de Acompanhamento', defaultDuration: 30 },
   { label: 'Destartarização', defaultDuration: 45 },
   { label: 'Avaliação Radiográfica', defaultDuration: 15, requiredEquipmentTags: ['xray'] },
   { label: 'Endodontia', defaultDuration: 60, requiredEquipmentTags: ['endo_motor'] },
@@ -210,6 +217,65 @@ export const APPOINTMENT_TYPES: AppointmentTypeOption[] = [
 ];
 
 export const DEFAULT_APPOINTMENT_DURATION = 30;
+
+// O tipo com que se retoma um tratamento cuja descrição não corresponde a
+// nenhum rótulo do catálogo — o caso normal, porque `treatments.description` é
+// texto clínico escrito por quem propôs o plano, não uma escolha desta lista.
+export const FOLLOW_UP_APPOINTMENT_TYPE = 'Consulta de Acompanhamento';
+// O tipo com que se marca um recall vencido ou se reativa um doente parado:
+// primeiro vê-se a boca, decide-se depois.
+export const CHECKUP_APPOINTMENT_TYPE = 'Consulta de Avaliação';
+// O tipo de uma higiene — o recall mais comum de todos.
+export const HYGIENE_APPOINTMENT_TYPE = 'Destartarização';
+
+/**
+ * Mapeia texto livre (um `recalls.recall_type`, uma descrição de tratamento)
+ * para um rótulo do catálogo. Sem correspondência devolve null e quem chama
+ * decide o que fazer — nunca se inventa um tipo, porque o tipo determina
+ * duração, especialidade e equipamento exigidos.
+ */
+export function matchAppointmentType(text: unknown): string | null {
+  const needle = String(text ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+  if (!needle) return null;
+
+  const normalized = (label: string) =>
+    label
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+  const exact = APPOINTMENT_TYPES.find((t) => normalized(t.label) === needle);
+  if (exact) return exact.label;
+
+  // Os valores que o produto já grava em `recalls.recall_type` desde o início
+  // (ver scripts/seed.ts) são chaves em inglês, anteriores ao catálogo em
+  // português — traduzi-las aqui evita uma migração de dados clínicos por uma
+  // questão de vocabulário.
+  const ALIASES: Record<string, string> = {
+    checkup: CHECKUP_APPOINTMENT_TYPE,
+    'check-up': CHECKUP_APPOINTMENT_TYPE,
+    revisao: CHECKUP_APPOINTMENT_TYPE,
+    avaliacao: CHECKUP_APPOINTMENT_TYPE,
+    prophylaxis: HYGIENE_APPOINTMENT_TYPE,
+    higiene: HYGIENE_APPOINTMENT_TYPE,
+    limpeza: HYGIENE_APPOINTMENT_TYPE,
+    destartarizacao: HYGIENE_APPOINTMENT_TYPE,
+    'follow-up': FOLLOW_UP_APPOINTMENT_TYPE,
+    followup: FOLLOW_UP_APPOINTMENT_TYPE,
+    seguimento: FOLLOW_UP_APPOINTMENT_TYPE,
+    acompanhamento: FOLLOW_UP_APPOINTMENT_TYPE,
+  };
+  if (ALIASES[needle]) return ALIASES[needle];
+
+  // Último recurso: a descrição contém o nome de um procedimento do catálogo
+  // ("Endodontia do 26", "branqueamento — 2.ª sessão").
+  const contained = APPOINTMENT_TYPES.find((t) => needle.includes(normalized(t.label)));
+  return contained?.label ?? null;
+}
 
 export function getDefaultDuration(type: string): number {
   return APPOINTMENT_TYPES.find((t) => t.label === type)?.defaultDuration ?? DEFAULT_APPOINTMENT_DURATION;

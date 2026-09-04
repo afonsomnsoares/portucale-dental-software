@@ -2,6 +2,7 @@
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
+import DynamicSchedulingTab from '@/components/receptionist/DynamicSchedulingTab';
 import EfficiencyTab from '@/components/receptionist/EfficiencyTab';
 import HeatmapTab from '@/components/receptionist/HeatmapTab';
 import OptimizerTab from '@/components/receptionist/OptimizerTab';
@@ -15,6 +16,7 @@ import WaitlistEntriesTable from '@/components/receptionist/WaitlistEntriesTable
 import { GhostBtn, PageHeader, PrimaryBtn, Spinner, Tabs } from '@/components/ui';
 import type {
   AgendaEfficiency,
+  DynamicPlan,
   Patient,
   RiskData,
   RiskHeatmapData,
@@ -26,13 +28,14 @@ import type {
 
 export default function ScheduleIntelReceptionistPage() {
   const { api } = useAuth();
-  const [tab, setTab] = useState('risk');
+  const [tab, setTab] = useState('agent');
 
   const [risk, setRisk] = useState<RiskData | null>(null);
   const [heatmap, setHeatmap] = useState<RiskHeatmapData | null>(null);
   const [efficiency, setEfficiency] = useState<AgendaEfficiency | null>(null);
   const [waitlist, setWaitlist] = useState<WaitlistData | null>(null);
   const [optimization, setOptimization] = useState<ScheduleOptimization | null>(null);
+  const [plan, setPlan] = useState<DynamicPlan | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [dentists, setDentists] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -45,7 +48,7 @@ export default function ScheduleIntelReceptionistPage() {
 
   const load = useCallback(async () => {
     setErr('');
-    const [r, h, e, w, o] = await Promise.all([
+    const [r, h, e, w, o, d] = await Promise.all([
       api('/schedule-intel/risk?days=14').catch((err) => {
         setErr(err instanceof Error ? err.message : 'Falha ao carregar');
         return null;
@@ -54,12 +57,14 @@ export default function ScheduleIntelReceptionistPage() {
       api('/schedule-intel/efficiency?days=14').catch(() => null),
       api('/waitlist').catch(() => null),
       api('/schedule-intel/optimizer?days=14').catch(() => null),
+      api('/schedule-intel/dynamic').catch(() => null),
     ]);
     setRisk(r);
     setHeatmap(h);
     setEfficiency(e);
     setWaitlist(w);
     setOptimization(o);
+    setPlan(d);
     setLoading(false);
   }, [api]);
 
@@ -124,7 +129,10 @@ export default function ScheduleIntelReceptionistPage() {
 
   return (
     <div>
-      <PageHeader title="Agenda Inteligente" sub="Previsão de faltas, eficiência da agenda e lista de espera">
+      <PageHeader
+        title="Agente de Agenda"
+        sub="Quem devia estar em cada cadeira vazia — mais risco de faltas, eficiência e lista de espera"
+      >
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
@@ -143,6 +151,7 @@ export default function ScheduleIntelReceptionistPage() {
         active={tab}
         onChange={setTab}
         tabs={[
+          { key: 'agent', label: 'Preenchimento', count: plan?.totals.plannedOffers || undefined },
           { key: 'risk', label: 'Risco', count: highRiskCount || undefined },
           { key: 'heatmap', label: 'Heatmap' },
           { key: 'efficiency', label: 'Eficiência' },
@@ -155,6 +164,7 @@ export default function ScheduleIntelReceptionistPage() {
         <Spinner />
       ) : (
         <>
+          {tab === 'agent' && <DynamicSchedulingTab plan={plan} />}
           {tab === 'risk' && <RiskTab appointments={risk?.appointments || []} />}
           {tab === 'heatmap' && <HeatmapTab heatmap={heatmap} />}
           {tab === 'efficiency' && <EfficiencyTab efficiency={efficiency} />}

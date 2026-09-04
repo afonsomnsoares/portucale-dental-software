@@ -1,10 +1,36 @@
 import { canAutoContact } from './commPrefs';
 import { query, queryOne } from './db';
-import { toE164 } from './validate';
+import { createOffer } from './slotOffers';
 import { type FreedSlot, rankCandidates, type WaitlistCandidate } from './waitlistMatch';
+
+// A lista de espera: quem se inscreveu explicitamente à espera de vaga. Continua
+// a ser a fonte de procura mais forte que existe (ver SOURCE_INTENT em
+// lib/demandPoolCalc.ts) — deixou é de ser a única.
+//
+// O ciclo de vida da oferta mudou de casa para lib/slotOffers.ts na migração
+// 046, quando uma oferta deixou de pertencer por construção a uma entrada desta
+// lista. O que fica aqui é a lista em si e o caminho reativo do cancelamento:
+// libertou-se uma vaga CONCRETA (mesmo tipo, mesmo dentista, mesma hora), logo
+// quem a queria exatamente assim tem prioridade sobre qualquer pontuação. É por
+// isso que este caminho não passa pelo Dynamic Scheduling.
 
 const MAX_OFFERS_PER_SLOT = 3;
 export const OFFER_EXPIRY_HOURS = 24;
+
+// O ciclo de vida das ofertas vive em lib/slotOffers.ts desde a migração 046.
+// Reexportado daqui porque as rotas e os jobs sempre o importaram deste módulo,
+// e mudar o sítio de onde se importa não é a melhoria — a melhoria é a oferta
+// ter deixado de depender da lista.
+export {
+  acceptOfferAndBook,
+  type BookOfferError,
+  type BookOfferResult,
+  declineOffer,
+  expireStaleOffers,
+  getOffer,
+  latestPendingOfferForPatient,
+  recordOfferBooking,
+} from './slotOffers';
 
 export interface AddWaitlistInput {
   patientId: string;
@@ -57,11 +83,16 @@ export async function listWaitlist(tenantId: string, status?: string | null) {
   return query(sql, vals);
 }
 
+// Todas as ofertas por responder, venham da lista de espera ou do agente. O JOIN
+// à lista de espera passou a LEFT JOIN quando a oferta deixou de exigir uma
+// entrada: com o INNER JOIN, uma oferta do Dynamic Scheduling simplesmente não
+// aparecia na página, e a receção não sabia que ela existia.
 export async function listPendingOffers(tenantId: string) {
   return query(
-    `SELECT o.*, p.name AS patient_name, p.phone, w.treatment_type
+    `SELECT o.*, p.name AS patient_name, p.phone,
+            COALESCE(o.offered_type, w.treatment_type) AS treatment_type
      FROM slot_offers o
-     JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
+     LEFT JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
      LEFT JOIN patients p ON p.id = o.patient_id
      WHERE o.tenant_id=$1 AND o.status='sent'
      ORDER BY o.created_at`,
@@ -131,10 +162,18 @@ export async function findCandidates(
   return rankCandidates(candidates, slot, new Date(), limit);
 }
 
-// Called when a future appointment is cancelled: finds waitlist candidates for the freed
-// slot, offers it to up to MAX_OFFERS_PER_SLOT of them (SMS, via the existing
-// notifications queue), and marks those entries 'offered'. The receptionist confirms the
-// actual booking by hand from the Waitlist page once a patient replies.
+// Chamada quando uma consulta futura é cancelada (ou marcada como falta no
+// próprio dia): oferece a vaga LIBERTADA a quem a queria exatamente assim.
+//
+// Este caminho não passa pela pontuação do Dynamic Scheduling de propósito. Uma
+// vaga libertada tem tipo de tratamento e dentista concretos, e lib/waitlistMatch.ts
+// filtra por eles; quem se inscreveu a pedir "Endodontia com a Dra. Costa" tem
+// direito de preferência sobre um candidato que o motor pontuaria mais alto por
+// outras razões. O Dynamic Scheduling trata do problema inverso — espaço vazio
+// sem tipo nem dentista definidos.
+//
+// A marcação continua a exigir uma pessoa (ou um "SIM" do doente, com a política
+// 'autobook' — ver app/api/webhooks/sms/route.ts).
 export async function notifyWaitlistOfFreedSlot(
   tenantId: string,
   slot: FreedSlot,
@@ -144,187 +183,44 @@ export async function notifyWaitlistOfFreedSlot(
   const ranked = await findCandidates(tenantId, slot, MAX_OFFERS_PER_SLOT, excludeEntryIds);
   if (!ranked.length) return { offered: 0 };
 
+  // A validade não pode ultrapassar o próprio horário oferecido: uma vaga para
+  // amanhã de manhã não fica "à espera de resposta" 24 horas.
+  const slotStart = new Date(`${slot.date}T${slot.startTime}:00`);
+  const expiresAt = new Date(
+    Math.min(Date.now() + OFFER_EXPIRY_HOURS * 3600_000, slotStart.getTime() || Number.POSITIVE_INFINITY),
+  );
+
   let offered = 0;
   for (const c of ranked) {
     const patient = await queryOne(`SELECT name, phone, comm_prefs FROM patients WHERE id=$1`, [c.patient_id]);
-    // Respect an explicit "don't SMS me" the same way every automated queue*() job in
-    // lib/jobsRunner.ts does (see lib/commPrefs.ts) — a waitlist offer is still an
-    // automated outreach, not a human typing a message.
-    const phone = canAutoContact(patient?.comm_prefs, 'sms') ? toE164(patient?.phone) : '';
+    // Respeita um "não me mandem SMS" explícito, como todos os jobs automáticos
+    // de lib/jobsRunner.ts (ver lib/commPrefs.ts) — uma oferta de vaga continua
+    // a ser contacto automático, não uma pessoa a escrever uma mensagem.
+    const phone = canAutoContact(patient?.comm_prefs, 'sms') ? patient?.phone || '' : '';
 
-    const body = `Olá ${patient?.name || ''}, ficou uma vaga disponível no dia ${slot.date} às ${slot.startTime}. Contacte-nos se quiser ficar com ela.`;
-    const [notification] = phone
-      ? await query(
-          `INSERT INTO notifications
-             (tenant_id, patient_id, channel, to_addr, payload, status, next_retry_at)
-           VALUES ($1,$2,'sms',$3,$4::jsonb,'queued',NOW())
-           RETURNING *`,
-          [tenantId, c.patient_id, phone, JSON.stringify({ kind: 'slot_offer', body })],
-        )
-      : [null];
-
-    const [offer] = await query(
-      `INSERT INTO slot_offers
-         (tenant_id, waitlist_entry_id, patient_id, cancelled_appointment_id,
-          offered_date, offered_start_time, offered_duration, offered_chair, offered_dentist_id, notification_id)
-       VALUES ($1,$2,$3,$4,$5::date,$6::time,$7,$8,$9,$10)
-       RETURNING *`,
-      [
-        tenantId,
-        c.id,
-        c.patient_id,
-        cancelledAppointmentId,
-        slot.date,
-        slot.startTime,
-        slot.duration,
-        slot.chair,
-        slot.dentistId,
-        notification?.id || null,
-      ],
-    );
-    await query(`UPDATE waitlist_entries SET status='offered', updated_at=NOW() WHERE id=$1`, [c.id]);
+    const offer = await createOffer(tenantId, {
+      source: 'waitlist',
+      patientId: c.patient_id,
+      patientName: patient?.name || null,
+      phone,
+      waitlistEntryId: c.id,
+      cancelledAppointmentId,
+      date: slot.date,
+      startTime: slot.startTime,
+      duration: slot.duration,
+      chair: slot.chair,
+      dentistId: slot.dentistId,
+      type: slot.type || c.treatment_type,
+      reason: 'Vaga libertada por cancelamento',
+      expiresAt,
+      // O caminho do cancelamento nunca marca sozinho: a página da lista de
+      // espera é que confirma. Quem responde SIM a esta SMS cai no webhook, e é
+      // lá que a política da clínica decide se isso marca ou fica pendente.
+      autoBook: false,
+      notificationKind: 'slot_offer',
+      messageBody: `Olá ${patient?.name || ''}, ficou uma vaga disponível no dia ${slot.date} às ${slot.startTime}. Responda SIM para ficar com ela.`,
+    });
     if (offer) offered += 1;
   }
   return { offered };
-}
-
-export async function getOffer(tenantId: string, offerId: string) {
-  return queryOne(
-    `SELECT o.*, w.treatment_type
-     FROM slot_offers o JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
-     WHERE o.id=$1 AND o.tenant_id=$2`,
-    [offerId, tenantId],
-  );
-}
-
-// Other pending offers for the same freed slot become moot once one candidate is booked
-// (or all are given up on) — decline them too and let their entries go back to 'active'.
-async function declineSiblingOffers(tenantId: string, cancelledAppointmentId: string | null, exceptOfferId: string) {
-  if (!cancelledAppointmentId) return;
-  const siblings = await query(
-    `SELECT * FROM slot_offers
-     WHERE tenant_id=$1 AND cancelled_appointment_id=$2 AND status='sent' AND id<>$3`,
-    [tenantId, cancelledAppointmentId, exceptOfferId],
-  );
-  for (const s of siblings) {
-    await query(`UPDATE slot_offers SET status='expired', responded_at=NOW() WHERE id=$1`, [s.id]);
-    await query(`UPDATE waitlist_entries SET status='active', updated_at=NOW() WHERE id=$1 AND status='offered'`, [
-      s.waitlist_entry_id,
-    ]);
-  }
-}
-
-// Patient declined (or the receptionist recorded a decline on their behalf): free the
-// entry back up and try the next-in-line candidate for that same slot.
-export async function declineOffer(tenantId: string, offerId: string) {
-  const offer = await getOffer(tenantId, offerId);
-  if (offer?.status !== 'sent') return null;
-
-  await query(`UPDATE slot_offers SET status='declined', responded_at=NOW() WHERE id=$1`, [offerId]);
-  await query(`UPDATE waitlist_entries SET status='active', updated_at=NOW() WHERE id=$1`, [offer.waitlist_entry_id]);
-
-  const slot: FreedSlot = {
-    date: String(offer.offered_date).slice(0, 10),
-    startTime: String(offer.offered_start_time).slice(0, 5),
-    type: String(offer.treatment_type || ''),
-    duration: Number(offer.offered_duration),
-    dentistId: (offer.offered_dentist_id as string) || null,
-    chair: Number(offer.offered_chair) || 1,
-  };
-  let reoffered = 0;
-  if (slot.date >= new Date().toISOString().slice(0, 10)) {
-    const result = await notifyWaitlistOfFreedSlot(tenantId, slot, offer.cancelled_appointment_id, [
-      offer.waitlist_entry_id,
-    ]);
-    reoffered = result.offered;
-  }
-  return { offer, reoffered };
-}
-
-export interface BookOfferResult {
-  offer: Record<string, unknown>;
-  appointment: Record<string, unknown>;
-}
-
-// Receptionist confirms the patient accepted: creates the real appointment on the freed
-// slot, marks this offer accepted + the entry fulfilled, and drops the other candidates
-// who were offered the same slot.
-export async function acceptOfferAndBook(tenantId: string, offerId: string): Promise<BookOfferResult | null> {
-  const offer = await getOffer(tenantId, offerId);
-  if (offer?.status !== 'sent') return null;
-
-  const patient = await queryOne(`SELECT id, name FROM patients WHERE id=$1 AND tenant_id=$2`, [
-    offer.patient_id,
-    tenantId,
-  ]);
-  if (!patient) return null;
-
-  const dentist = offer.offered_dentist_id
-    ? await queryOne(`SELECT id, name FROM users WHERE id=$1 AND role='dentist' AND active=TRUE AND tenant_id=$2`, [
-        offer.offered_dentist_id,
-        tenantId,
-      ])
-    : null;
-
-  const [appointment] = await query(
-    `INSERT INTO appointments
-       (tenant_id, patient_id, patient_name, dentist_id, chair, appt_date, start_time, duration, type, status, notes)
-     VALUES ($1,$2,$3,$4,$5,$6::date,$7::time,$8,$9,'confirmed',$10)
-     RETURNING *`,
-    [
-      tenantId,
-      patient.id,
-      patient.name,
-      dentist?.id || null,
-      offer.offered_chair || 1,
-      offer.offered_date,
-      offer.offered_start_time,
-      offer.offered_duration,
-      offer.treatment_type,
-      'Marcado a partir da lista de espera',
-    ],
-  );
-
-  await query(`UPDATE slot_offers SET status='accepted', responded_at=NOW() WHERE id=$1`, [offerId]);
-  await query(`UPDATE waitlist_entries SET status='fulfilled', updated_at=NOW() WHERE id=$1`, [
-    offer.waitlist_entry_id,
-  ]);
-  await declineSiblingOffers(tenantId, offer.cancelled_appointment_id, offerId);
-
-  return { offer, appointment };
-}
-
-// Marks unanswered offers older than OFFER_EXPIRY_HOURS as expired, reverts the entry to
-// 'active' so it can be matched again, and tries the next candidate for that same slot.
-export async function expireStaleOffers(tenantId: string) {
-  const stale = await query(
-    `SELECT o.*, w.treatment_type
-     FROM slot_offers o JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
-     WHERE o.tenant_id=$1 AND o.status='sent' AND o.created_at < NOW() - ($2::int * INTERVAL '1 hour')`,
-    [tenantId, OFFER_EXPIRY_HOURS],
-  );
-
-  let expired = 0;
-  let reoffered = 0;
-  for (const o of stale) {
-    await query(`UPDATE slot_offers SET status='expired', responded_at=NOW() WHERE id=$1`, [o.id]);
-    await query(`UPDATE waitlist_entries SET status='active', updated_at=NOW() WHERE id=$1 AND status='offered'`, [
-      o.waitlist_entry_id,
-    ]);
-    expired += 1;
-
-    const slot: FreedSlot = {
-      date: String(o.offered_date).slice(0, 10),
-      startTime: String(o.offered_start_time).slice(0, 5),
-      type: String(o.treatment_type || ''),
-      duration: Number(o.offered_duration),
-      dentistId: (o.offered_dentist_id as string) || null,
-      chair: Number(o.offered_chair) || 1,
-    };
-    if (slot.date >= new Date().toISOString().slice(0, 10)) {
-      const result = await notifyWaitlistOfFreedSlot(tenantId, slot, o.cancelled_appointment_id, [o.waitlist_entry_id]);
-      reoffered += result.offered;
-    }
-  }
-  return { expired, reoffered };
 }

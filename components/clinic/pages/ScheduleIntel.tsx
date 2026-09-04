@@ -1,11 +1,21 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
+import SchedulingPolicyCard from '@/components/clinic/SchedulingPolicyCard';
+import DynamicSchedulingTab from '@/components/receptionist/DynamicSchedulingTab';
 import EfficiencyTab from '@/components/receptionist/EfficiencyTab';
 import OptimizerTab from '@/components/receptionist/OptimizerTab';
 import { Badge, Empty, GhostBtn, PageHeader, RiskBadge, Spinner, Tabs } from '@/components/ui';
 import { formatPhonePT } from '@/lib/constants';
-import type { AgendaEfficiency, RiskData, RiskHeatmapData, ScheduleOptimization, WaitlistData } from '@/lib/types';
+import type {
+  AgendaEfficiency,
+  DynamicPlan,
+  RiskData,
+  RiskHeatmapData,
+  ScheduleOptimization,
+  SchedulingPolicyView,
+  WaitlistData,
+} from '@/lib/types';
 
 const WEEKDAYS = [
   { key: 1, label: 'Seg' },
@@ -41,22 +51,29 @@ function heatColor(rate: number) {
 // /schedule-intel/* e /waitlist já confinam tudo a user.tenantId, por isso não se passa
 // ?tenantId= e a página carrega direta.
 export default function ClinicScheduleIntelPage() {
-  const { api } = useAuth();
-  const [tab, setTab] = useState('risk');
+  const { api, user } = useAuth();
+  const [tab, setTab] = useState('agent');
+  // Pista para a interface, não a autorização: quem manda é a permissão
+  // 'scheduling-agent:manage' verificada em app/api/scheduling-policy/route.ts.
+  const canManage = user?.role === 'admin' || user?.role === 'super_admin';
 
   const [risk, setRisk] = useState<RiskData | null>(null);
   const [heatmap, setHeatmap] = useState<RiskHeatmapData | null>(null);
   const [efficiency, setEfficiency] = useState<AgendaEfficiency | null>(null);
   const [waitlist, setWaitlist] = useState<WaitlistData | null>(null);
   const [optimization, setOptimization] = useState<ScheduleOptimization | null>(null);
+  const [plan, setPlan] = useState<DynamicPlan | null>(null);
+  const [policy, setPolicy] = useState<SchedulingPolicyView | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [running, setRunning] = useState(false);
 
   const load = useCallback(async () => {
     setErr('');
     setLoading(true);
-    const [r, h, e, w, o] = await Promise.all([
+    const [r, h, e, w, o, d, pol] = await Promise.all([
       api('/schedule-intel/risk?days=14').catch((err) => {
         setErr(err instanceof Error ? err.message : 'Falha ao carregar');
         return null;
@@ -65,14 +82,47 @@ export default function ClinicScheduleIntelPage() {
       api('/schedule-intel/efficiency?days=14').catch(() => null),
       api('/waitlist').catch(() => null),
       api('/schedule-intel/optimizer?days=14').catch(() => null),
+      api('/schedule-intel/dynamic').catch(() => null),
+      api('/scheduling-policy').catch(() => null),
     ]);
     setRisk(r);
     setHeatmap(h);
     setEfficiency(e);
     setWaitlist(w);
     setOptimization(o);
+    setPlan(d);
+    setPolicy(pol);
     setLoading(false);
   }, [api]);
+
+  async function savePolicy(patch: Partial<SchedulingPolicyView>) {
+    setSavingPolicy(true);
+    setErr('');
+    try {
+      const saved = await api('/scheduling-policy', { method: 'PUT', body: patch });
+      setPolicy(saved);
+      // A política manda no cálculo (horizonte, pontuação mínima, fontes), por
+      // isso o plano que está no ecrã deixou de corresponder ao que ela diz.
+      setPlan(await api('/schedule-intel/dynamic').catch(() => null));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Falha ao guardar a política');
+    } finally {
+      setSavingPolicy(false);
+    }
+  }
+
+  async function runAgent() {
+    setRunning(true);
+    setErr('');
+    try {
+      const result = await api('/schedule-intel/dynamic', { method: 'POST', body: {} });
+      setPlan(result?.plan || null);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Falha ao correr o agente');
+    } finally {
+      setRunning(false);
+    }
+  }
 
   useEffect(() => {
     load();
@@ -88,7 +138,10 @@ export default function ClinicScheduleIntelPage() {
 
   return (
     <div>
-      <PageHeader title="Agenda Inteligente" sub="Previsão de faltas, eficiência da agenda e lista de espera">
+      <PageHeader
+        title="Agente de Agenda"
+        sub="Quem devia estar em cada cadeira vazia — mais risco de faltas, eficiência e lista de espera"
+      >
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
@@ -113,13 +166,23 @@ export default function ClinicScheduleIntelPage() {
             active={tab}
             onChange={setTab}
             tabs={[
+              { key: 'agent', label: 'Preenchimento', count: plan?.totals.plannedOffers || undefined },
               { key: 'risk', label: 'Risco', count: highRiskCount || undefined },
               { key: 'heatmap', label: 'Heatmap' },
               { key: 'efficiency', label: 'Eficiência' },
               { key: 'optimizer', label: 'Otimizador', count: optimization?.totals.moves || undefined },
               { key: 'waitlist', label: 'Lista de Espera', count: waitlist?.pendingOffers?.length || undefined },
+              { key: 'policy', label: 'Política' },
             ]}
           />
+
+          {tab === 'agent' && (
+            <DynamicSchedulingTab plan={plan} canManage={canManage} running={running} onRun={runAgent} />
+          )}
+
+          {tab === 'policy' && (
+            <SchedulingPolicyCard policy={policy} canManage={canManage} saving={savingPolicy} onSave={savePolicy} />
+          )}
 
           {tab === 'risk' &&
             (!risk?.appointments?.length ? (

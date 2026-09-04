@@ -9,6 +9,7 @@ import { appendAudit, appendTimeline } from './audit';
 import type { SessionUser } from './auth';
 import { canAutoContact } from './commPrefs';
 import { query, queryOne } from './db';
+import { runDynamicScheduling } from './dynamicScheduling';
 import { findEquipmentNeedingAttention } from './equipment';
 import { computeLifecycleTransitions, markLifecycleOutreachSent } from './lifecycle';
 import { createTask } from './patientTasks';
@@ -88,6 +89,7 @@ export const JOB_NAMES = [
   'handoffReminders',
   'send',
   'waitlistExpire',
+  'dynamicScheduling',
   'retention',
   'retentionPolicies',
   'summary',
@@ -714,6 +716,27 @@ export async function runJob(
     }
     if (job === 'all' || job === 'waitlistExpire') {
       details.waitlistExpire = await expireStaleOffers(tenantId);
+    }
+    // Depois de waitlistExpire, e a ordem importa: uma oferta que acabou de
+    // caducar liberta o candidato e volta a pôr o espaço em jogo. Correr antes
+    // deixaria esse espaço de fora até à passagem seguinte do cron.
+    //
+    // Só age até onde a política da clínica deixar (o valor por omissão é
+    // 'propose', que não contacta ninguém) — ver lib/dynamicScheduling.ts.
+    if (job === 'all' || job === 'dynamicScheduling') {
+      const run = await runDynamicScheduling(tenantId, actor);
+      // O plano inteiro não vai para job_runs: são dezenas de espaços com
+      // dezenas de candidatos, e o que interessa a quem lê o histórico é o que
+      // foi feito e porque não foi mais.
+      details.dynamicScheduling = {
+        mode: run.mode,
+        decidedBy: run.decidedBy,
+        offersSent: run.offersSent,
+        slotsTouched: run.slotsTouched,
+        skipped: run.skipped,
+        plannedOffers: run.plan.totals.plannedOffers,
+        openings: run.plan.totals.openings,
+      };
     }
     if (job === 'all' || job === 'retention') {
       details.retention = await cleanupUploads();

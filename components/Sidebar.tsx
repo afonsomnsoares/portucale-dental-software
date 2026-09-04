@@ -187,7 +187,7 @@ function Icon({ name, active }: { name: string; active: boolean }) {
       </svg>
     );
   }
-  if (name === 'Agenda Inteligente') {
+  if (name === 'Agente de Agenda') {
     return (
       <svg width={s} height={s} viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M7 4v3M17 4v3M5 9h14M6 7h12v14H6V7Z" stroke={c} strokeWidth="1.8" strokeLinejoin="round" />

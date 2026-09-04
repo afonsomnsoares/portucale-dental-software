@@ -103,7 +103,7 @@ export default function ScheduleIntelAdminPage() {
 
   return (
     <div>
-      <PageHeader title="Agenda Inteligente" sub="Previsão de faltas, eficiência da agenda e lista de espera">
+      <PageHeader title="Agente de Agenda" sub="Previsão de faltas, eficiência da agenda e lista de espera">
         {loading ? (
           <Spinner />
         ) : (

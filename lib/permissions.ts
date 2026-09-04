@@ -98,6 +98,13 @@ export const PERMISSION_ACTIONS = [
   // escrita, por isso não vai à boleia do 'agents:read' — quem lê o diagnóstico não é
   // necessariamente quem decide que está resolvido.
   'agents:resolve',
+  // A autonomia do agente de agenda (tenant_scheduling_policy, migração 046):
+  // decidir se o software contacta doentes sozinho, e se um "SIM" marca a
+  // consulta. Não é 'agents:read' (ver o que correu) nem 'schedule:read' (ver a
+  // agenda) — é assumir responsabilidade pelo que a clínica faz sem ninguém
+  // presente, e por isso fica com a direção. Cobre também disparar uma corrida à
+  // mão, que envia SMS reais.
+  'scheduling-agent:manage',
 ];
 
 const DEFAULT: Record<string, Set<string>> = {

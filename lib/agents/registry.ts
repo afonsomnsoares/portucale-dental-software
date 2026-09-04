@@ -58,10 +58,23 @@ export const AGENTS: readonly AgentDefinition[] = [
     id: 'scheduling',
     name: 'Agenda',
     icon: '📅',
-    summary: 'Encaixa procura nos recursos: cadeiras, especialidade do dentista, lista de espera e risco de falta.',
-    boundary: 'Agenda de doentes. Turnos e férias do pessoal são de Operações.',
-    jobs: ['reminders', 'risk', 'riskOutreach', 'waitlistExpire', 'scheduleReview'],
-    reads: ['lib/scheduleOptimizer.ts', 'lib/waitlistMatch.ts', 'lib/noShowRisk.ts', 'lib/agents/schedulingAgent.ts'],
+    summary:
+      'Decide a utilização da capacidade: procura os espaços vazios, escolhe de toda a base quem os deve ocupar e oferece-os.',
+    boundary:
+      'Agenda de doentes; turnos e férias do pessoal são de Operações. Até onde contacta e se marca sozinho não é decidido aqui — é a política que a clínica assina (tenant_scheduling_policy, migração 046). Por omissão calcula e mostra, sem contactar ninguém. Nunca desmarca uma consulta que já existe: propõe (ver lib/scheduleOptimizer.ts).',
+    jobs: ['reminders', 'risk', 'riskOutreach', 'waitlistExpire', 'dynamicScheduling', 'scheduleReview'],
+    reads: [
+      'lib/dynamicScheduling.ts',
+      'lib/demandPool.ts',
+      'lib/demandPoolCalc.ts',
+      'lib/agendaOpenings.ts',
+      'lib/scheduleOptimizer.ts',
+      'lib/waitlistMatch.ts',
+      'lib/noShowRisk.ts',
+      'lib/schedulingPolicyCalc.ts',
+      'lib/agents/schedulingAgent.ts',
+      'lib/agents/dynamicSchedulingAgent.ts',
+    ],
     ai: 'wired',
   },
   {

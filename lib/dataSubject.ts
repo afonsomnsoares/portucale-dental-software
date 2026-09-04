@@ -112,6 +112,12 @@ export const PATIENT_TABLE_RULES: PatientTableRule[] = [
   { table: 'patient_scheduling_prefs', disposition: 'delete', why: 'Preferências de marcação', tenantScoped: true },
   { table: 'waitlist_entries', disposition: 'delete', why: 'Lista de espera', tenantScoped: true },
   { table: 'slot_offers', disposition: 'delete', why: 'Ofertas de vaga', tenantScoped: true },
+  // As respostas por SMS do próprio titular (migração 046). Apagam-se, e não se
+  // anonimizam: o conteúdo É a mensagem que ele escreveu, e uma mensagem sem
+  // remetente não passa a ser anónima — continua a dizer o que a pessoa disse
+  // sobre a sua saúde e os seus horários. É o mesmo raciocínio que já se aplica
+  // a `notifications` (mensagens enviadas) e a `patient_interactions`.
+  { table: 'sms_inbound', disposition: 'delete', why: 'Respostas por SMS do titular', tenantScoped: true },
   { table: 'appointment_cancellations', disposition: 'delete', why: 'Motivos de cancelamento', tenantScoped: true },
   { table: 'leads', disposition: 'delete', why: 'Contacto comercial anterior ao registo', tenantScoped: true },
 
