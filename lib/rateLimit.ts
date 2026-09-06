@@ -22,10 +22,14 @@ declare global {
 //     quem tentar adivinhar passwords só tem de calhar noutra instância, e um
 //     balanceador round-robin garante-lhe isso de graça.
 //
-// Não é ignorância do problema, é a escolha certa para a topologia atual. Antes
-// de escalar horizontalmente, isto tem de passar a um contador partilhado
-// (Redis/Upstash) — o middleware corre no Edge runtime, por isso a escolha tem
-// de falar HTTP e não TCP. Manter esta nota junto ao código que a causa.
+// Não é ignorância do problema, é a escolha certa para a topologia atual.
+// O middleware corre no Edge runtime, onde não há acesso a Postgres —
+// por isso o rate limit aqui é em memória. Para route handlers que rodam
+// no Node runtime (e podem usar Postgres), existe lib/rateLimitGlobal.ts
+// com contador partilhado na tabela rate_limit_counters. Antes de escalar
+// horizontalmente, o middleware também precisa de uma solução Edge-friendly
+// (Upstash/Redis) ou de ser movido para Node.
+// Manter esta nota junto ao código que a causa.
 
 // ─── Why this store needs sweeping ──────────────────────────────────────────
 // Keys are per-identity: `api:user:<id>` for signed-in callers, but `api:ip:<addr>`

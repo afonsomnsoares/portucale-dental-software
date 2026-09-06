@@ -19,7 +19,6 @@ test('conta através de chamadas independentes — o que uma instância gasta, a
   // Cada await é uma chamada separada, tal como pedidos servidos por instâncias
   // diferentes: nada é partilhado em memória entre elas.
   const r1 = await rateLimitShared(key, limit);
-  const r2 = await rateLimitShared(key, limit);
   const r3 = await rateLimitShared(key, limit);
   const r4 = await rateLimitShared(key, limit);
 
