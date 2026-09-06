@@ -172,12 +172,13 @@ export function warnSchemaGap(scope: string, e: unknown) {
   }
 }
 
-// Helper — run a query and return rows. Wrapped in its own transaction so
-// applyTenantContext's `set_config(..., true)` (SET LOCAL semantics) is
-// actually in effect for the statement that follows it — without an explicit
-// transaction, each is its own implicit one and the setting wouldn't carry
-// over. See the RLS session context section above.
-export async function query(sql: string, params: unknown[] = []) {
+// Helper — run a read-only query and return rows. Uses the same
+// BEGIN/COMMIT transaction wrapper as query() because applyTenantContext()
+// relies on SET LOCAL semantics (which only persist within a transaction).
+// Named separately so callers and reviewers can identify read paths at a
+// glance, and so that future read-specific optimizations (batch fetching,
+// replica routing) can be scoped to this function without touching writes.
+export async function queryRead(sql: string, params: unknown[] = []) {
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
@@ -194,10 +195,30 @@ export async function query(sql: string, params: unknown[] = []) {
   }
 }
 
-// Helper — return first row only
+// Helper — return first row only. Delegates to queryRead() for read-only
+// access, keeping the read/write distinction explicit.
 export async function queryOne(sql: string, params: unknown[] = []) {
-  const rows = await query(sql, params);
+  const rows = await queryRead(sql, params);
   return rows[0] || null;
+}
+
+// Helper — run a write query inside a transaction. Use for mutations;
+// for reads prefer queryRead()/queryOne().
+export async function query(sql: string, params: unknown[] = []) {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await applyTenantContext(client);
+    const res = await client.query(sql, params);
+    await client.query('COMMIT');
+    // biome-ignore lint/suspicious/noExplicitAny: raw SQL rows — column shape varies per query, callers know their own schema
+    return res.rows as Record<string, any>[];
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // Closes the singleton pool and clears the global reference. Not used by the app itself
