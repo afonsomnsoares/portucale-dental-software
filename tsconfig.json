@@ -11,8 +11,8 @@
     "jsx": "react-jsx",
     "strict": true,
     "noUncheckedIndexedAccess": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "allowJs": true,
     "checkJs": false,
     "skipLibCheck": true,
@@ -34,6 +34,7 @@
     "noEmit": true
   },
   "include": [
+    "hooks/**/*.ts",
     "next-env.d.ts",
     "middleware.ts",
     "app/**/*.ts",

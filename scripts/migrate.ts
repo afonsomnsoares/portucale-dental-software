@@ -1,5 +1,4 @@
 // scripts/migrate.ts — run with: node --import tsx scripts/migrate.ts
-// @ts-nocheck
 
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';

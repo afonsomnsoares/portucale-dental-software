@@ -21,12 +21,12 @@ Dimensão atual do código:
 
 | | |
 |---|---|
-| Rotas de API | 108 |
-| Páginas de dashboard | 68 |
+| Rotas de API | 112 |
+| Páginas de dashboard | 59 |
 | Tabelas PostgreSQL | 62 |
-| Migrações incrementais | 43 |
-| Testes unitários | 307 (27 ficheiros, sem base de dados) |
-| Testes de integração | 107 (19 ficheiros, contra PostgreSQL real) |
+| Migrações incrementais | 44 |
+| Testes unitários | 335 (29 ficheiros, sem base de dados) |
+| Testes de integração | 124 (21 ficheiros, contra PostgreSQL real) |
 
 ---
 
@@ -50,6 +50,9 @@ npm run db:seed -- --with-demo-users
 # 4. Servidor
 npm run dev            # http://localhost:3000
 ```
+
+> **Âmbito:** o que este produto é — e o que deliberadamente não é — está em
+> **[PRODUCT.md](PRODUCT.md)**, com o estado de cada capacidade mapeado ao código.
 
 Em produção não se usa `--with-demo-users`: cria-se o super admin uma única vez com
 `ADMIN_EMAIL=... ADMIN_NAME="..." ADMIN_PASSWORD=... npm run create-admin`, e todos os
@@ -100,14 +103,14 @@ Sem ORM, sem biblioteca de estado, sem framework de componentes: SQL escrito à 
 portucale_dental/
 ├── scripts/
 │   ├── schema.sql             ← Schema base PostgreSQL
-│   ├── migrations/            ← 43 migrações incrementais (001 → 044)
+│   ├── migrations/            ← 44 migrações incrementais (001 → 045)
 │   ├── seed.ts                ← Dados demo (clínica, utilizadores, doentes, catálogos)
 │   ├── migrate.ts             ← Runner de migrações (tabela schema_migrations)
 │   ├── run-jobs.ts            ← Pipeline de jobs, para todas as clínicas ativas
 │   ├── create-admin.ts        ← Criação única do super admin da plataforma
 │   └── check-dburl.ts         ← Diagnóstico de DATABASE_URL
 │
-├── lib/                       ← Regra de negócio (58 módulos + 13 de agentes)
+├── lib/                       ← Regra de negócio (63 módulos + 13 de agentes)
 │   ├── db.ts                  ← Pool singleton, contexto de tenant para RLS
 │   ├── auth.ts / jwt-edge.ts  ← JWT (Node e Edge), CSRF, sessão
 │   ├── permissions.ts         ← ~65 ações, defaults por papel + override por clínica
@@ -115,7 +118,7 @@ portucale_dental/
 │   ├── tenantGuard.ts         ← Verificação de pertença à clínica
 │   ├── rateLimit.ts           ← Limite genérico em memória (middleware Edge)
 │   ├── rateLimitShared.ts     ← Limite de login partilhado, persistido em Postgres
-│   ├── jobsRunner.ts          ← Pipeline de 25 jobs em segundo plano
+│   ├── jobsRunner.ts          ← Pipeline de 26 jobs em segundo plano
 │   ├── agents/                ← Catálogo de agentes + os que já usam IA
 │   ├── *Calc.ts               ← Lógica pura, sem BD — é o que os testes unitários cobrem
 │   └── types/                 ← Tipos partilhados por domínio
@@ -123,18 +126,18 @@ portucale_dental/
 ├── app/
 │   ├── page.tsx               ← Login
 │   ├── portal/[token]/        ← Portal do doente (sem sessão, token de uso único)
-│   ├── api/                   ← 108 rotas
+│   ├── api/                   ← 112 rotas
 │   └── dashboard/
 │       ├── super-admin/       ← Plataforma: clínicas, utilizadores, comparação de grupo
 │       ├── admin/             ← Direção da clínica
 │       ├── receptionist/      ← Receção
 │       └── dentist/           ← Clínico
 │
-├── components/                ← 80 componentes (ui, clinic, super-admin, patient,
+├── components/                ← 71 componentes (ui, clinic, super-admin, patient,
 │                                 receptionist, dentist, inventory, operations, team…)
 ├── hooks/useSpeechRecognition.ts
-├── test/                      ← 27 ficheiros unitários
-│   └── integration/           ← 19 ficheiros contra PostgreSQL real
+├── test/                      ← 29 ficheiros unitários
+│   └── integration/           ← 21 ficheiros contra PostgreSQL real
 ├── middleware.ts              ← Rate limit de /api/* + guards de rota por papel
 └── docker-compose.yml         ← postgres, pgadmin, app, jobs
 ```
@@ -195,7 +198,7 @@ Ver `lib/permissions.ts`.
 
 ## Modelo de dados
 
-62 tabelas, definidas em `scripts/schema.sql` e evoluídas por 43 migrações aplicadas por
+62 tabelas, definidas em `scripts/schema.sql` e evoluídas por 44 migrações aplicadas por
 ordem de nome e registadas em `schema_migrations`.
 
 | Domínio | Tabelas |
@@ -388,7 +391,7 @@ que ainda estão por tratar e preservando o histórico dos já resolvidos.
 ## Jobs em segundo plano
 
 Pipeline central em `lib/jobsRunner.ts`, corrido por `scripts/run-jobs.ts` (cron ou o serviço
-`jobs` do Docker Compose) ou sob pedido de um admin. 25 jobs por clínica, mais `groupReview`,
+`jobs` do Docker Compose) ou sob pedido de um admin. 26 jobs por clínica, mais `groupReview`,
 que corre uma vez por passagem porque é transversal às clínicas:
 
 | Grupo | Jobs |
@@ -398,7 +401,7 @@ que corre uma vez por passagem porque é transversal às clínicas:
 | Lead | `leadTriage`, `leadFollowup`, `leadSourceReview` |
 | Finanças | `summary`, `recovery`, `financeReview` |
 | Operações | `escalateIncidents`, `checklistReminders`, `handoffReminders`, `reorderSuggestions`, `equipmentMaintenance` |
-| Gestão/Grupo | `managementReview`, `groupReview` |
+| Gestão/Grupo | `managementReview`, `anomalyReview`, `groupReview` |
 | Conformidade | `retention`, `retentionPolicies` |
 | Comunicação | `send` |
 
@@ -441,8 +444,8 @@ O que está de facto implementado, e não apenas previsto no schema:
 ## Testes
 
 ```bash
-npm run test              # 307 unitários, 27 ficheiros — sem base de dados
-npm run test:integration  # 107 de integração, 19 ficheiros — precisa do PostgreSQL de .env.test
+npm run test              # 335 unitários, 29 ficheiros — sem base de dados
+npm run test:integration  # 124 de integração, 21 ficheiros — precisa do PostgreSQL de .env.test
 npm run test:all
 ```
 
@@ -560,8 +563,8 @@ docker compose run --rm \
 
 | Área | Estado atual | Caminho |
 |------|--------------|---------|
-| Rate limit genérico de `/api/*` | Em memória, por instância (o do login já é partilhado) | Redis, ou a mesma tabela `rate_limit_counters` se o middleware sair do Edge |
-| Tempo real | Refetch depois da ação | WebSockets (Pusher / Ably) |
+| Rate limit genérico de `/api/*` | Em memória, por instância no middleware Edge. Os route handlers do runtime Node já têm contador partilhado em Postgres (`lib/rateLimitGlobal.ts`) | Solução Edge-friendly (Upstash/Redis), ou mover o middleware para Node |
+| Tempo real | Canal SSE (`app/api/sse/`, `hooks/useSSE.ts`) escrito, ainda sem consumidores na UI | Ligar as páginas ao hook, ou WebSockets se houver tráfego bidirecional |
 | Notas clínicas | Texto simples na BD | Cifra ao nível da coluna com KMS por clínica |
 | Faturação | Registo interno de valores | Integração com software certificado para o documento fiscal |
 | Auth | JWT próprio | Suficiente hoje; NextAuth/Clerk se houver necessidade de SSO |

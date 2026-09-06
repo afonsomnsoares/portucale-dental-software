@@ -21,7 +21,8 @@ import pg from 'pg';
 const { Pool } = pg;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 10; // matches app/api/users/route.ts's own floor
+const MIN_PASSWORD_LENGTH = 10; // keep in step with MIN_PASSWORD_LENGTH in lib/constants.ts
+// (not imported: this script runs standalone under tsx, outside the app's module graph)
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/portucale_dental',
