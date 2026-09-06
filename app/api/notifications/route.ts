@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
+  const tenantId = scopeTenant(user, request, requestedTenantId);
   if (!tenantId) return forbidden();
 
   const status = searchParams.get('status');

@@ -10,6 +10,13 @@ export interface AuthUser {
   tenantName?: string | null;
   tenantCity?: string | null;
   operatories?: number;
+  // Ações efetivas, vindas de /api/auth/me e /api/auth/login (lib/permissions.ts,
+  // effectiveActions). A Sidebar filtra o menu por elas.
+  permissions?: string[];
+  // Clínica em que o super_admin entrou (POST /api/tenants/enter). Ausente para todos os
+  // outros papéis e para o super_admin fora de qualquer clínica.
+  actingTenantId?: string | null;
+  actingTenantName?: string | null;
 }
 
 interface StatusMeta {

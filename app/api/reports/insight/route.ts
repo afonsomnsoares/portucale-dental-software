@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { computeClinicComparison, computeClinicSummary } from '@/lib/reports';
 
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const from = clampDate(body.from) || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
   const to = clampDate(body.to) || new Date().toISOString().slice(0, 10);
   const requestedTenantId = body.tenantId ? String(body.tenantId) : null;
-  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
+  const tenantId = scopeTenant(user, request, requestedTenantId);
 
   // No key configured: degrade gracefully (same pattern as the SMS integration in
   // app/api/jobs/run/route.ts) instead of erroring the whole reports page.

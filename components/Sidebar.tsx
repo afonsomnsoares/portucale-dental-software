@@ -301,9 +301,24 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const role = user?.role as keyof typeof NAV | undefined;
-  const nav = (role && NAV[role]) || [];
+  // O menu segue as PERMISSÕES, não só o papel. Antes era `NAV[role]` e mais nada: a UI de
+  // permissões por clínica (role_permissions) não tinha qualquer efeito aqui, pelo que
+  // retirar 'finance:read' à receção deixava 'Finanças' à vista, a levar a um 403.
+  //
+  // `permissions` chega de /api/auth/me. Enquanto não chegar (primeiro render, ou uma
+  // sessão antiga anterior a este campo) mostra-se o menu do papel, como antes — esconder
+  // tudo faria a sidebar piscar a cada carregamento.
+  const permissions = user?.permissions;
+  // Dentro de uma clínica, o super_admin está nas páginas do admin — o menu tem de ser o
+  // do admin, senão via a navegação de plataforma por cima de páginas de clínica.
+  const navRole = role === 'super_admin' && user?.actingTenantId ? 'admin' : role;
+  const nav = ((navRole && NAV[navRole]) || []).filter(
+    (item) => !item.requires || !permissions || permissions.includes(item.requires),
+  );
   const meta: { label?: string; sub?: string } = (role && ROLE_META[role]) || {};
-  const roleHome = (role && (ROLE_HOME as Record<string, string>)[role]) || '';
+  // Segue navRole: dentro de uma clínica a raiz é a Visão Geral do admin, para o logótipo
+  // e para o realce da entrada de raiz não apontarem para fora da clínica.
+  const roleHome = (navRole && (ROLE_HOME as Record<string, string>)[navRole]) || '';
   const roleIcon: { icon?: ReactNode; color?: string } = (role && ROLE_ICONS[role]) || {};
   const tenantLabel = user?.tenantName ? `${user.tenantName}${user.tenantCity ? ` · ${user.tenantCity}` : ''}` : '';
   const sidebarClinic = tenantLabel || user?.clinic || '';

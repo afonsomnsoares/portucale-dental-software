@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
 import { computeLifecycleTransitions, listOpenLeads } from '@/lib/lifecycle';
 import { computeJourneyPipeline } from '@/lib/patientJourney';
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   if (!(await hasPermission(user, 'lifecycle:read'))) return forbidden();
 
   const requestedTenantId = new URL(request.url).searchParams.get('tenantId');
-  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
+  const tenantId = scopeTenant(user, request, requestedTenantId);
   if (!tenantId) return forbidden();
 
   const tenant = await queryOne(`SELECT id FROM tenants WHERE id=$1`, [tenantId]);

@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
@@ -22,10 +22,11 @@ export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'equipment:manage'))) return forbidden();
-  if (!user.tenantId) return forbidden();
+  const tenantId = scopeTenant(user, request);
+  if (!tenantId) return forbidden();
 
   const rows = await query(`SELECT * FROM clinic_equipment WHERE tenant_id=$1 ORDER BY chair NULLS LAST, name`, [
-    user.tenantId,
+    tenantId,
   ]);
   return Response.json(rows);
 }
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'equipment:manage'))) return forbidden();
-  if (!user.tenantId) return forbidden();
+  const tenantId = scopeTenant(user, request);
+  if (!tenantId) return forbidden();
 
   const body = await request.json();
   const name = sanitizeString(body.name, 200);
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
     `INSERT INTO clinic_equipment (tenant_id, name, chair, tags, created_by)
      VALUES ($1,$2,$3,$4,$5)
      RETURNING *`,
-    [user.tenantId, name, chair, tags, user.id],
+    [tenantId, name, chair, tags, user.id],
   );
 
   await appendAudit(user, 'CREATE', `Equipamento: ${name}`, null, 'active', user.clinic);

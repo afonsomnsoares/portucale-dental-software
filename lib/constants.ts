@@ -28,10 +28,26 @@ export const C = {
   SHM: '0 4px 12px rgba(23,43,77,.14),0 0 0 1px rgba(23,43,77,.08)',
 };
 
+// Mínimo de caracteres de uma password, partilhado pelo servidor (app/api/users/route.ts,
+// app/api/users/[id]/route.ts) e pelos formulários que lá escrevem. Estava escrito à mão
+// em cada um dos sítios: o formulário deixava submeter qualquer password não-vazia e só o
+// servidor recusava, pelo que a pessoa preenchia tudo e levava com um 400 no fim.
+export const MIN_PASSWORD_LENGTH = 10;
+
 export const FONTS = {
   body: "'DM Sans', system-ui, sans-serif",
   display: "'Bricolage Grotesque', 'DM Sans', sans-serif",
 };
+
+// Uma entrada de menu. `requires` nomeia a ação que a página exige para mostrar o que
+// interessa — a Sidebar esconde a entrada a quem não a tem. Sem isto, a UI de permissões
+// por clínica (role_permissions) não tinha efeito nenhum na navegação: tirar 'finance:read'
+// à receção deixava o link 'Finanças' visível e a levar a um 403.
+//
+// Fica indefinido de propósito nas páginas cuja lista principal só exige sessão válida
+// (Painel, Doentes, Leads, Equipa) — essas não têm ação que as possa esconder.
+export type Role = 'super_admin' | 'admin' | 'receptionist' | 'dentist';
+export type NavItem = { label: string; href: string; requires?: string };
 
 // Navegação do 'admin' (o admin da clínica, sempre confinado a um tenant), com hrefs sob
 // /dashboard/admin. O super_admin (âmbito de plataforma, sem clínica própria) tem o
@@ -41,91 +57,91 @@ export const FONTS = {
 // /dashboard/super-admin/* renderiza components/super-admin/pages/*. As etiquetas coincidem
 // porque os dois papéis fazem o mesmo *tipo* de trabalho, mas as páginas de clínica estão
 // presas ao tenant de quem chama e as de plataforma escolhem a clínica primeiro.
-const ADMIN_NAV: Array<{ label: string; href: string }> = [
+const ADMIN_NAV: NavItem[] = [
   { label: 'Visão Geral', href: '/dashboard/admin' },
-  { label: 'Utilizadores', href: '/dashboard/admin/users' },
-  { label: 'Campos Schema', href: '/dashboard/admin/schema' },
-  { label: 'Permissões', href: '/dashboard/admin/permissions' },
-  { label: 'Relatórios', href: '/dashboard/admin/reports' },
-  { label: 'Recuperação', href: '/dashboard/admin/recovery' },
-  { label: 'Agenda Inteligente', href: '/dashboard/admin/schedule-intel' },
-  { label: 'Jornada do Paciente', href: '/dashboard/admin/lifecycle' },
-  { label: 'Auditoria', href: '/dashboard/admin/audit' },
-  { label: 'Faturas', href: '/dashboard/admin/invoices' },
-  { label: 'Finanças', href: '/dashboard/admin/finance' },
-  { label: 'Inventário', href: '/dashboard/admin/inventory' },
-  { label: 'Fontes de Leads', href: '/dashboard/admin/lead-sources' },
-  { label: 'Equipa', href: '/dashboard/admin/team' },
-  { label: 'Operações', href: '/dashboard/admin/operations' },
-  { label: 'Agentes', href: '/dashboard/admin/agents' },
-  { label: 'Documentos', href: '/dashboard/admin/documents' },
+  { label: 'Utilizadores', href: '/dashboard/admin/users', requires: 'users:manage' },
+  { label: 'Campos Schema', href: '/dashboard/admin/schema', requires: 'schema:manage' },
+  { label: 'Permissões', href: '/dashboard/admin/permissions', requires: 'permissions:manage' },
+  { label: 'Relatórios', href: '/dashboard/admin/reports', requires: 'reports:read' },
+  { label: 'Recuperação', href: '/dashboard/admin/recovery', requires: 'recovery:read' },
+  { label: 'Agenda Inteligente', href: '/dashboard/admin/schedule-intel', requires: 'schedule:read' },
+  { label: 'Jornada do Paciente', href: '/dashboard/admin/lifecycle', requires: 'lifecycle:read' },
+  { label: 'Auditoria', href: '/dashboard/admin/audit', requires: 'audit:read' },
+  { label: 'Faturas', href: '/dashboard/admin/invoices', requires: 'invoices:read' },
+  { label: 'Finanças', href: '/dashboard/admin/finance', requires: 'finance:read' },
+  { label: 'Inventário', href: '/dashboard/admin/inventory', requires: 'inventory:manage' },
+  { label: 'Fontes de Leads', href: '/dashboard/admin/lead-sources', requires: 'lead-sources:manage' },
+  { label: 'Equipa', href: '/dashboard/admin/team', requires: 'staff-schedules:manage' },
+  { label: 'Operações', href: '/dashboard/admin/operations', requires: 'checklists:run' },
+  { label: 'Agentes', href: '/dashboard/admin/agents', requires: 'agents:read' },
+  { label: 'Documentos', href: '/dashboard/admin/documents', requires: 'documents:read' },
 ];
 
-// Páginas do admin de clínica que NÃO existem sob /dashboard/super-admin. A regra
-// geral é que as duas árvores são espelhadas (ver SUPER_ADMIN_NAV abaixo), mas
-// estas duas dependem de haver uma clínica concreta, e o super_admin não tem
-// tenantId próprio:
+// Navegação do super_admin: só o que é PLATAFORMA.
 //
-//   'Documentos' emite declarações para um doente de uma clínica — trabalho de
-//   chão de clínica, não de plataforma.
+// Até aqui esta lista não era uma lista — era ADMIN_NAV com um .replace() no href, menos
+// duas entradas. Nunca se decidiu o que o super admin devia ver: decidiu-se o que o admin
+// vê e o super admin herdou o resto. Daí as duas sidebars serem praticamente iguais, e daí
+// 12 das 16 entradas serem, na prática, a página de uma clínica com um seletor por cima.
 //
-//   'Agentes' mostra as execuções de job_runs desta clínica. GET /api/agents usa
-//   o withRoute com a política de tenant por omissão ('required'), que devolve
-//   403 a quem não tem tenantId. Um link aqui seria um beco — exatamente o que
-//   acontece hoje com 'Tratamentos' na receção. Uma visão de plataforma sobre os
-//   agentes é uma página diferente, com seletor de clínica, e ainda não existe.
-const SUPER_ADMIN_NAV_EXCLUDE = new Set(['/dashboard/admin/documents', '/dashboard/admin/agents']);
+// As páginas de clínica (Faturas, Finanças, Inventário, Equipa, Operações, Recuperação,
+// Agenda Inteligente, Jornada do Paciente, Fontes de Leads) saíram: chega-se a elas
+// entrando na clínica (POST /api/tenants/enter), que leva às páginas do próprio admin.
+// Uma árvore em vez de duas a divergir — já divergiam ao ponto de uma estar em inglês.
+const SUPER_ADMIN_NAV: NavItem[] = [
+  { label: 'Visão Geral da Rede', href: '/dashboard/super-admin' },
+  { label: 'Clínicas', href: '/dashboard/super-admin/tenants', requires: 'tenants:manage' },
+  { label: 'Utilizadores', href: '/dashboard/super-admin/users', requires: 'users:manage' },
+  // O que resta de 'Relatórios': a comparação entre clínicas do grupo. /api/reports/compare
+  // já exigia o papel super_admin — é a única parte de Relatórios que é de plataforma.
+  { label: 'Comparação de Clínicas', href: '/dashboard/super-admin/reports', requires: 'reports:read' },
+  { label: 'Auditoria', href: '/dashboard/super-admin/audit', requires: 'audit:read' },
+  // Configuração de uma clínica feita de fora: ambas mantêm o seletor de clínica.
+  { label: 'Permissões', href: '/dashboard/super-admin/permissions', requires: 'permissions:manage' },
+  { label: 'Campos Schema', href: '/dashboard/super-admin/schema', requires: 'schema:manage' },
+];
 
-// A árvore do super_admin, espelhando ADMIN_NAV (menos SUPER_ADMIN_NAV_EXCLUDE acima) sob
-// /dashboard/super-admin em vez de /dashboard/admin (ver ROLE_HOME abaixo e o
-// DASHBOARD_ACCESS de middleware.ts — os dois papéis não partilham prefixo, por isso isto
-// não pode reutilizar os hrefs de ADMIN_NAV tal e qual), mais 'Clínicas' (só existe na
-// plataforma — ver requireSuperAdmin em app/api/tenants/route.ts), inserida logo a seguir
-// a 'Visão Geral'/'Utilizadores'.
-const SUPER_ADMIN_NAV: Array<{ label: string; href: string }> = ADMIN_NAV.filter(
-  (item) => !SUPER_ADMIN_NAV_EXCLUDE.has(item.href),
-).map((item) => ({
-  ...item,
-  href: item.href.replace('/dashboard/admin', '/dashboard/super-admin'),
-}));
-SUPER_ADMIN_NAV.splice(2, 0, { label: 'Clínicas', href: '/dashboard/super-admin/tenants' });
-
-export const NAV = {
+export const NAV: Record<Role, NavItem[]> = {
   super_admin: SUPER_ADMIN_NAV,
   admin: ADMIN_NAV,
   receptionist: [
     { label: 'Painel', href: '/dashboard/receptionist' },
-    { label: 'Marcações', href: '/dashboard/receptionist/appointments' },
+    { label: 'Marcações', href: '/dashboard/receptionist/appointments', requires: 'appointments:update' },
     { label: 'Doentes', href: '/dashboard/receptionist/patients' },
     { label: 'Leads', href: '/dashboard/receptionist/leads' },
-    { label: 'Tratamentos', href: '/dashboard/receptionist/treatments' },
-    { label: 'Sala de Espera', href: '/dashboard/receptionist/floor' },
-    { label: 'Faturas', href: '/dashboard/receptionist/invoices' },
-    { label: 'Finanças', href: '/dashboard/receptionist/finance' },
-    { label: 'Recuperação', href: '/dashboard/receptionist/recovery' },
-    { label: 'Agenda Inteligente', href: '/dashboard/receptionist/schedule-intel' },
-    { label: 'Jornada do Paciente', href: '/dashboard/receptionist/lifecycle' },
-    { label: 'Recalls', href: '/dashboard/receptionist/recalls' },
-    { label: 'Tarefas', href: '/dashboard/receptionist/tasks' },
-    { label: 'Lembretes', href: '/dashboard/receptionist/notifications' },
+    { label: 'Tratamentos', href: '/dashboard/receptionist/treatments', requires: 'treatments:read' },
+    { label: 'Sala de Espera', href: '/dashboard/receptionist/floor', requires: 'appointments:status' },
+    { label: 'Faturas', href: '/dashboard/receptionist/invoices', requires: 'invoices:read' },
+    { label: 'Finanças', href: '/dashboard/receptionist/finance', requires: 'finance:read' },
+    { label: 'Recuperação', href: '/dashboard/receptionist/recovery', requires: 'recovery:read' },
+    { label: 'Agenda Inteligente', href: '/dashboard/receptionist/schedule-intel', requires: 'schedule:read' },
+    { label: 'Jornada do Paciente', href: '/dashboard/receptionist/lifecycle', requires: 'lifecycle:read' },
+    { label: 'Recalls', href: '/dashboard/receptionist/recalls', requires: 'recalls:read' },
+    { label: 'Tarefas', href: '/dashboard/receptionist/tasks', requires: 'patient-tasks:read' },
+    { label: 'Lembretes', href: '/dashboard/receptionist/notifications', requires: 'notifications:read' },
     { label: 'Equipa', href: '/dashboard/receptionist/team' },
-    { label: 'Documentos', href: '/dashboard/receptionist/documents' },
-    { label: 'Operações', href: '/dashboard/receptionist/operations' },
+    { label: 'Documentos', href: '/dashboard/receptionist/documents', requires: 'documents:read' },
+    { label: 'Operações', href: '/dashboard/receptionist/operations', requires: 'checklists:run' },
   ],
   dentist: [
     { label: 'Painel', href: '/dashboard/dentist' },
     { label: 'Doentes', href: '/dashboard/dentist/patients' },
-    { label: 'Tratamentos', href: '/dashboard/dentist/treatments' },
-    { label: 'Histórico Clínico', href: '/dashboard/dentist/medical-history' },
-    { label: 'Prescrições', href: '/dashboard/dentist/prescriptions' },
-    { label: 'Encomendas Lab', href: '/dashboard/dentist/lab-orders' },
-    { label: 'Planos Tratamento', href: '/dashboard/dentist/treatment-plans' },
-    { label: 'Recalls', href: '/dashboard/dentist/recalls' },
-    { label: 'Tarefas', href: '/dashboard/dentist/tasks' },
-    { label: 'Consentimentos', href: '/dashboard/dentist/consent-forms' },
-    { label: 'Documentos', href: '/dashboard/dentist/documents' },
+    { label: 'Tratamentos', href: '/dashboard/dentist/treatments', requires: 'treatments:read' },
+    { label: 'Marcações', href: '/dashboard/dentist/appointments', requires: 'appointments:status' },
+    { label: 'Histórico Clínico', href: '/dashboard/dentist/medical-history', requires: 'medical-history:read' },
+    { label: 'Prescrições', href: '/dashboard/dentist/prescriptions', requires: 'prescriptions:read' },
+    { label: 'Encomendas Lab', href: '/dashboard/dentist/lab-orders', requires: 'lab-orders:read' },
+    { label: 'Planos Tratamento', href: '/dashboard/dentist/treatment-plans', requires: 'treatment-plans:read' },
+    { label: 'Recalls', href: '/dashboard/dentist/recalls', requires: 'recalls:read' },
+    { label: 'Tarefas', href: '/dashboard/dentist/tasks', requires: 'patient-tasks:read' },
+    { label: 'Consentimentos', href: '/dashboard/dentist/consent-forms', requires: 'consent-forms:read' },
+    { label: 'Documentos', href: '/dashboard/dentist/documents', requires: 'documents:read' },
+    { label: 'Agenda Inteligente', href: '/dashboard/dentist/schedule-intel', requires: 'schedule:read' },
+    // Estas duas páginas já existiam (app/dashboard/dentist/{operations,team}) e o
+    // dentista já tinha as ações que elas exigem, mas não havia entrada no menu que lá
+    // chegasse. A receção tem a mesma página e o link desde sempre.
+    { label: 'Operações', href: '/dashboard/dentist/operations', requires: 'checklists:run' },
     { label: 'Equipa', href: '/dashboard/dentist/team' },
-    { label: 'Operações', href: '/dashboard/dentist/operations' },
   ],
 };
 

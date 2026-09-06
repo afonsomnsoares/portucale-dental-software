@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asDate, asTime, requireFields } from '@/lib/validate';
@@ -10,11 +10,12 @@ export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'waitlist:manage'))) return forbidden();
-  if (!user.tenantId) return forbidden();
+  const tenantId = scopeTenant(user, request);
+  if (!tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
-  const [entries, offers] = await Promise.all([listWaitlist(user.tenantId, status), listPendingOffers(user.tenantId)]);
+  const [entries, offers] = await Promise.all([listWaitlist(tenantId, status), listPendingOffers(tenantId)]);
   return Response.json({ entries, pendingOffers: offers });
 }
 
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'waitlist:manage'))) return forbidden();
-  if (!user.tenantId) return forbidden();
+  const tenantId = scopeTenant(user, request);
+  if (!tenantId) return forbidden();
 
   const body = await request.json();
   const missing = requireFields(body, ['patientId', 'treatmentType']);
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
 
-  const row = await addToWaitlist(user.tenantId, user.id, {
+  const row = await addToWaitlist(tenantId, user.id, {
     patientId: body.patientId,
     treatmentType: String(body.treatmentType).slice(0, 200),
     preferredDentistId: body.preferredDentistId || null,

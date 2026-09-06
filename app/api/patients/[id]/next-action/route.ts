@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { getAuth, unauthorized } from '@/lib/auth';
+import { getAuth, scopeTenant, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { computeLifecycleStage } from '@/lib/lifecycleCalc';
 import { findMissingFields, type RequiredSchemaField } from '@/lib/missingData';
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   // user.role/user.tenantId. Ver lib/permissions.ts.
   if (!(await revalidateSession(user))) return unauthorized();
   const { id } = await params;
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
 
   const patient = await queryOne(
     `SELECT id, tenant_id, phone, email, dob, custom_fields, visit_count, last_visit, created_at

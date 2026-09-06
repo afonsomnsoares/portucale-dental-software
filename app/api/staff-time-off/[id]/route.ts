@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
@@ -21,7 +21,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
   // idiom as app/api/lead-sources/[id]/route.ts. A tenant-scoped user (including one
   // cancelling their own request) is still confined to their own tenant as before.
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   if (!tenantId && user.role !== 'super_admin') return forbidden();
 
   const prev = await queryOne(`SELECT * FROM staff_time_off WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [

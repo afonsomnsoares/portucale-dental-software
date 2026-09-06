@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
@@ -10,12 +10,6 @@ const CATEGORIES = ['equipment', 'patient_safety', 'complaint', 'security', 'oth
 const SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
 const STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 
-function resolveTenantId(request: NextRequest, user: { tenantId?: string | null }, bodyTenantId: unknown) {
-  if (user.tenantId) return user.tenantId;
-  const qsTenantId = new URL(request.url).searchParams.get('tenantId');
-  return (bodyTenantId as string) || qsTenantId || null;
-}
-
 // GET is open to any tenant member — seeing what's been reported is operational
 // transparency, same reasoning as app/api/staff-schedules. Reporting one (POST) is
 // self-service too; only assigning/resolving (app/api/incidents/[id]) requires
@@ -24,7 +18,7 @@ export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'incidents:read'))) return forbidden();
-  const tenantId = resolveTenantId(request, user, null);
+  const tenantId = scopeTenant(user, request, new URL(request.url).searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);
@@ -63,7 +57,8 @@ export async function POST(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'incidents:report'))) return forbidden();
-  if (!user.tenantId) return forbidden();
+  const tenantId = scopeTenant(user, request);
+  if (!tenantId) return forbidden();
 
   const body = await request.json();
   const title = sanitizeString(body.title, 200);
@@ -79,7 +74,7 @@ export async function POST(request: NextRequest) {
     `INSERT INTO incidents (tenant_id, title, description, category, severity, reported_by)
      VALUES ($1,$2,$3,$4,$5,$6)
      RETURNING *`,
-    [user.tenantId, title, sanitizeString(body.description, 2000), category || 'other', severity || 'low', user.id],
+    [tenantId, title, sanitizeString(body.description, 2000), category || 'other', severity || 'low', user.id],
   );
 
   await appendAudit(user, 'CREATE', `Incident: ${title}`, null, `severity:${row.severity}`, user.clinic);

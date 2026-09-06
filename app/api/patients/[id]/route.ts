@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { normalizeCustomFields } from '@/lib/customFields';
 import { query, queryOne, warnSchemaGap } from '@/lib/db';
 import { badRequest, notFound, ok } from '@/lib/http';
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const user = getAuth(request);
   if (!user) return unauthorized();
   const { id } = await params;
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   const p = await queryOne(
     `SELECT p.*,
             ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100)::int AS no_show_score,
@@ -54,8 +54,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!allowed.includes(body.status)) return badRequest('Invalid status');
   }
 
-  let schemaTenantId = user.tenantId || null;
-  if (user.role === 'super_admin') {
+  // Os campos de schema são por clínica. Com uma clínica ativa (super_admin lá dentro) ou
+  // com clínica própria, é essa; fora dela, deriva-se da do próprio doente.
+  let schemaTenantId = scopeTenant(user, request);
+  if (!schemaTenantId) {
     const p = await queryOne(`SELECT tenant_id FROM patients WHERE id=$1`, [id]);
     schemaTenantId = p?.tenant_id || null;
   }
@@ -86,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
   const commPrefsJson = body.commPrefs && typeof body.commPrefs === 'object' ? JSON.stringify(body.commPrefs) : null;
 
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   const [updated] = await query(
     `UPDATE patients SET name=$1, dob=$2, phone=$3, email=$4, insurance=$5, status=COALESCE($6,status),
         custom_fields = COALESCE($8::jsonb, custom_fields),

@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { requireSameOrigin, signToken } from '@/lib/auth';
+import { getDummyPasswordHash, requireSameOrigin, signToken } from '@/lib/auth';
 import { queryOne, withSystemContext } from '@/lib/db';
+import { effectiveActions } from '@/lib/permissions';
 import { getClientIp } from '@/lib/rateLimit';
 import { rateLimitShared } from '@/lib/rateLimitShared';
 
@@ -18,15 +19,7 @@ import { rateLimitShared } from '@/lib/rateLimitShared';
 // can be registered with — compare() must do the actual key derivation for the timing to
 // match, so a made-up string here would be rejected as malformed and return instantly,
 // reintroducing the very gap this closes.
-const DUMMY_PASSWORD_HASH = '$2a$10$opCM9Y.iMAYaRakapLUl9Oq1b7R/o2WQ5aDmdHy3stHAUc/2/z53i';
-
-// Dois baldes, porque travam ataques diferentes.
-//
-// O por-conta trava força bruta contra UM utilizador. Sozinho não trava nada
-// contra password spraying — a mesma password experimentada em mil emails —
-// porque incluir o email na chave dá a cada endereço o seu próprio balde. Daí o
-// segundo, só por IP: mais largo, para não expulsar uma clínica inteira atrás de
-// um NAT, mas apertado o suficiente para que varrer contas deixe de compensar.
+// O hash é gerado em runtime por getDummyPasswordHash() (lib/auth.ts).
 const PER_ACCOUNT_LIMIT = { limit: 10, windowMs: 10 * 60 * 1000 };
 const PER_IP_LIMIT = { limit: 50, windowMs: 60 * 60 * 1000 };
 
@@ -43,7 +36,7 @@ export async function POST(request: NextRequest) {
   // Enquanto só o caminho do email desconhecido a normalizava, um pedido sem
   // password devolvia 500 numa conta existente e 401 numa inexistente — um
   // oráculo de enumeração de contas muito mais fácil de explorar do que o canal
-  // de timing que o DUMMY_PASSWORD_HASH abaixo existe para fechar.
+  // de timing que o getDummyPasswordHash() existe para fechar.
   const password = String(body.password || '');
   const ip = getClientIp(request);
 
@@ -92,9 +85,9 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     // Burn the same work a real verification would cost before answering — see
-    // DUMMY_PASSWORD_HASH above. The result is discarded (it is always false); it is
+    // getDummyPasswordHash() above. The result is discarded (it is always false); it is
     // awaited purely so the two failure paths take comparable time.
-    await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+    await bcrypt.compare(password, getDummyPasswordHash());
     await appendAudit(
       { name: String(email || 'Unknown'), role: 'anonymous', clinic: 'System' },
       'AUTH_FAIL',
@@ -155,6 +148,15 @@ export async function POST(request: NextRequest) {
       tenantName: user.tenant_name,
       tenantCity: user.tenant_city,
       operatories: Number(user.operatories || 3),
+      // Ações efetivas do próprio: a Sidebar usa-as para esconder as entradas que a pessoa
+      // não pode usar. Antes decidia só pelo papel, pelo que os overrides por clínica não
+      // tinham efeito nenhum no menu (link visível a levar a um 403).
+      // Sob withSystemContext como a leitura de `users` acima: role_permissions está sob
+      // RLS (scripts/migrations/011_row_level_security.sql) e neste ponto ainda não há
+      // contexto de tenant — getAuth() só corre nos pedidos seguintes. Sem isto a query
+      // devolvia zero linhas, os overrides da clínica eram silenciosamente ignorados e o
+      // menu logo após o login mostrava entradas que a clínica tinha retirado.
+      permissions: await withSystemContext(() => effectiveActions(user.role, user.tenant_id)),
     },
   });
 }

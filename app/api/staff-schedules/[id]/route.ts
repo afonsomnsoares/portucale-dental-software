@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
@@ -14,7 +14,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { id } = await params;
   // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
   // idiom as app/api/lead-sources/[id]/route.ts.
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
 
   const prev = await queryOne(
     `SELECT s.*, u.name AS user_name FROM staff_schedules s JOIN users u ON u.id = s.user_id

@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { asDate } from '@/lib/validate';
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
   // tenant via the query string; everyone else is confined to their own,
   // matching the pattern used everywhere else (e.g. app/api/patients/route.ts).
-  const tenantId = user.role === 'super_admin' ? searchParams.get('tenantId') : user.tenantId;
+  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
   const from = asDate(searchParams.get('from'));

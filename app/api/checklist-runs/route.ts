@@ -1,17 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { snapshotItems } from '@/lib/checklistCalc';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, conflict, created } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
 import { asDate } from '@/lib/validate';
-
-function resolveTenantId(request: NextRequest, user: { tenantId?: string | null }, bodyTenantId: unknown) {
-  if (user.tenantId) return user.tenantId;
-  const qsTenantId = new URL(request.url).searchParams.get('tenantId');
-  return (bodyTenantId as string) || qsTenantId || null;
-}
 
 // Both GET and POST are self-service (no 'checklists:manage' needed) — starting today's
 // opening checklist and ticking it off is something anyone on shift does, not a management
@@ -20,7 +14,7 @@ export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
-  const tenantId = resolveTenantId(request, user, null);
+  const tenantId = scopeTenant(user, request, new URL(request.url).searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);
@@ -59,7 +53,11 @@ export async function POST(request: NextRequest) {
   if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
 
   const body = await request.json();
-  const tenantId = resolveTenantId(request, user, body.tenantId);
+  const tenantId = scopeTenant(
+    user,
+    request,
+    (body.tenantId as string) || new URL(request.url).searchParams.get('tenantId'),
+  );
   if (!tenantId) return badRequest('tenantId is required');
   if (!body.templateId) return badRequest('templateId is required');
   const runDate = asDate(body.runDate) || new Date().toLocaleDateString('en-CA');

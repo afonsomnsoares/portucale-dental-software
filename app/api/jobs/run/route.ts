@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireRoles, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { type JobName, runJob } from '@/lib/jobsRunner';
 import { hasPermission } from '@/lib/permissions';
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const job = (searchParams.get('job') || 'all') as JobName;
   const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
+  const tenantId = scopeTenant(user, request, requestedTenantId);
   if (!tenantId) return forbidden();
 
   const result = await runJob(tenantId, job, { id: user.id, name: user.name, role: user.role, clinic: user.clinic });

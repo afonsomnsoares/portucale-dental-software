@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { formatEUR } from '@/lib/constants';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
   // tenant via the query string; everyone else is confined to their own,
   // matching the pattern used everywhere else (e.g. app/api/patients/route.ts).
-  const tenantId = user.role === 'super_admin' ? searchParams.get('tenantId') : user.tenantId;
+  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
   const status = searchParams.get('status');
@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'invoices:create'))) return forbidden();
-  if (!user.tenantId) return forbidden();
+  const tenantId = scopeTenant(user, request);
+  if (!tenantId) return forbidden();
 
   const body = await request.json();
   const missing = requireFields(body, ['patientId', 'amount']);
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   const patient = await queryOne(`SELECT id, name, tenant_id FROM patients WHERE id=$1`, [body.patientId]);
   if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
-  if (patient.tenant_id !== user.tenantId) return forbidden();
+  if (patient.tenant_id !== tenantId) return forbidden();
 
   const amount = asFee(body.amount);
   if (amount === null) return Response.json({ error: 'Invalid amount' }, { status: 400 });
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     `INSERT INTO invoices (tenant_id, patient_id, patient_name, dentist_id, amount, items, notes, invoice_date, due_date, status, created_by)
      VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8::date,$9::date,'pending',$10)
      RETURNING *`,
-    [user.tenantId, patient.id, patient.name, dentistId, amount, items, notes, invoiceDate, dueDate, user.id],
+    [tenantId, patient.id, patient.name, dentistId, amount, items, notes, invoiceDate, dueDate, user.id],
   );
 
   await appendAudit(

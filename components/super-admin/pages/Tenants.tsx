@@ -23,6 +23,7 @@ export default function TenantsPage() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: '', city: '', operatories: 3 });
   const [saving, setSaving] = useState(false);
+  const [entering, setEntering] = useState<string | null>(null);
 
   useEffect(() => {
     api('/tenants')
@@ -30,6 +31,16 @@ export default function TenantsPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [api]);
+
+  // Entrar na clínica: grava a clínica ativa (POST /api/tenants/enter) e leva às páginas
+  // do admin. Recarrega a página em vez de navegar, para que /api/auth/me seja lido de novo
+  // e o âmbito da sessão (faixa, sidebar, permissões) venha já com a clínica.
+  async function enterClinic(id: string) {
+    setEntering(id);
+    const ok = await api('/tenants/enter', { method: 'POST', body: { tenantId: id } }).catch(() => null);
+    if (ok) window.location.href = '/dashboard/admin';
+    else setEntering(null);
+  }
 
   async function provision() {
     setSaving(true);
@@ -49,16 +60,16 @@ export default function TenantsPage() {
   return (
     <div>
       <PageHeader
-        title="Tenant Provisioning Engine"
-        sub="Manage and provision clinic environments globally"
-        action="+ Provision Clinic"
+        title="Clínicas"
+        sub="Criar clínicas e entrar em cada uma para ver o que lá se passa"
+        action="+ Nova clínica"
         onAction={() => setModal(true)}
       />
       <div style={{ marginBottom: 16 }}>
         <input
           className="input"
           style={{ maxWidth: 300 }}
-          placeholder="Search clinics or cities…"
+          placeholder="Procurar clínica ou cidade…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -68,7 +79,7 @@ export default function TenantsPage() {
           <Spinner />
         ) : (
           <DataTable
-            cols={['Clinic', 'City', 'Patients', 'Status', 'Uptime', 'Created', '']}
+            cols={['Clínica', 'Cidade', 'Doentes', 'Estado', 'Disponibilidade', 'Criada', '']}
             rows={filtered.map((t) => (
               <tr key={t.id}>
                 <td className="data-td" style={{ fontWeight: 600 }}>
@@ -90,7 +101,9 @@ export default function TenantsPage() {
                   {t.created_at?.slice(0, 10)}
                 </td>
                 <td className="data-td">
-                  <GhostBtn className="btn-sm">View</GhostBtn>
+                  <GhostBtn className="btn-sm" onClick={() => enterClinic(t.id)} disabled={entering === t.id}>
+                    {entering === t.id ? 'A entrar…' : 'Entrar'}
+                  </GhostBtn>
                 </td>
               </tr>
             ))}
@@ -98,22 +111,22 @@ export default function TenantsPage() {
         )}
       </div>
       {modal && (
-        <Modal title="Provision New Clinic" onClose={() => setModal(false)}>
-          <FormField label="Clinic Name">
+        <Modal title="Nova clínica" onClose={() => setModal(false)}>
+          <FormField label="Nome da clínica">
             <Inp
-              placeholder="Manhattan Smile Center"
+              placeholder="Clínica Dentária do Porto"
               value={form.name}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, name: e.target.value }))}
             />
           </FormField>
-          <FormField label="City, Country">
+          <FormField label="Cidade, país">
             <Inp
-              placeholder="New York, USA"
+              placeholder="Porto, Portugal"
               value={form.city}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, city: e.target.value }))}
             />
           </FormField>
-          <FormField label="Operatories (Dentist Rooms)">
+          <FormField label="Gabinetes">
             <Sel
               value={String(form.operatories)}
               onChange={(e) => setForm((p) => ({ ...p, operatories: Number(e.target.value) }))}
@@ -127,9 +140,9 @@ export default function TenantsPage() {
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={provision} disabled={saving || !form.name}>
-              {saving ? 'Provisioning…' : 'Provision Clinic'}
+              {saving ? 'A criar…' : 'Criar clínica'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

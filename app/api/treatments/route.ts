@@ -10,12 +10,9 @@ import { asFee, requireFields, validateTreatmentBody } from '@/lib/validate';
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (
-    !(await hasPermission(user, 'treatments:update')) &&
-    !(await hasPermission(user, 'treatments:create')) &&
-    !(await hasPermission(user, 'treatments:delete'))
-  )
-    return forbidden();
+  // Ler exige 'treatments:read', não as três ações de escrita. Exigir escrita para
+  // ler mantinha a rececionista fora de uma página que o menu lhe oferece.
+  if (!(await hasPermission(user, 'treatments:read'))) return forbidden();
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const status = searchParams.get('status');

@@ -8,6 +8,11 @@ export const PERMISSION_ACTIONS = [
   'appointments:update',
   'appointments:cancel',
   'appointments:status',
+  // Ler tratamentos é trabalho de receção tanto quanto clínico — a faturação parte
+  // deles. Até aqui GET /api/treatments usava as três ações de ESCRITA abaixo como
+  // sucedâneo de leitura, o que deixava a rececionista com o menu 'Tratamentos' a
+  // levar a um 403 (o beco que lib/constants.ts:74 já nomeava como precedente mau).
+  'treatments:read',
   'treatments:create',
   'treatments:update',
   'treatments:delete',
@@ -101,12 +106,24 @@ export const PERMISSION_ACTIONS = [
   'agents:resolve',
 ];
 
+// Ações que só fazem sentido ao nível da plataforma. Até aqui 'admin' e 'super_admin'
+// tinham conjuntos IDÊNTICOS, o que deixava o admin de clínica com 'tenants:manage' —
+// uma ação que ele nunca poderia exercer, porque app/api/tenants/route.ts exige o papel
+// antes de olhar para a permissão. O comentário dessa rota já dizia, por escrito, que a
+// permissão sozinha o deixaria passar: era um remendo numa rota em vez da correção na
+// origem, e qualquer rota nova que confiasse só em hasPermission('tenants:manage')
+// nasceria aberta ao admin de clínica.
+export const PLATFORM_ACTIONS = ['tenants:manage'];
+
 const DEFAULT: Record<string, Set<string>> = {
+  // O super_admin mantém todas as ações: na Fase 3 passa a operar as clínicas por dentro,
+  // com as páginas do admin, e precisa das mesmas ações de clínica.
   super_admin: new Set(PERMISSION_ACTIONS),
-  admin: new Set(PERMISSION_ACTIONS),
+  admin: new Set(PERMISSION_ACTIONS.filter((a) => !PLATFORM_ACTIONS.includes(a))),
   receptionist: new Set([
     'patients:create',
     'patients:update',
+    'treatments:read',
     'appointments:create',
     'appointments:update',
     'appointments:cancel',
@@ -142,6 +159,12 @@ const DEFAULT: Record<string, Set<string>> = {
   ]),
   dentist: new Set([
     'appointments:status',
+    // 'schedule:read': a Agenda Inteligente do dentista (app/dashboard/dentist/
+    // schedule-intel) chama /api/schedule-intel/risk, que a exige. A página foi
+    // criada para ele e a permissão ficou por dar — a lista de risco vinha sempre
+    // vazia por 403.
+    'schedule:read',
+    'treatments:read',
     'treatments:create',
     'treatments:update',
     'treatments:delete',
@@ -306,11 +329,33 @@ export async function hasPermission(user: SessionUser | null | undefined, action
 
   // A partir daqui manda a base de dados, não o token.
   const role = live.role;
-  if (role === 'super_admin') return true;
+  // Antes: `return true`. O super_admin nunca chegava a ser confrontado com as ações, o
+  // que tornava o DEFAULT.super_admin acima código morto — declarava-se um conjunto que
+  // nada lia. Agora segue o mesmo caminho que todos; salta apenas o permissionOverride,
+  // que é por clínica (role_permissions.tenant_id) e ele não tem nenhuma.
+  if (role === 'super_admin') return defaultAllows(role, action);
   const tenantId = live.tenantId;
   const override = await permissionOverride(tenantId, role, action);
   if (override !== null) return override;
   return defaultAllows(role, action);
+}
+
+// Conjunto de ações efetivas de UM utilizador — defaults do papel, com os overrides da
+// sua clínica aplicados por cima. É o que /api/auth/me devolve para a Sidebar poder
+// esconder o que a pessoa não pode fazer.
+//
+// Até agora não havia forma de alguém saber as suas próprias permissões: /api/permissions
+// exige 'permissions:manage' e o papel admin/super_admin, pelo que uma rececionista nunca
+// as podia consultar. Uma query só, pela mesma chave indexada que permissionOverride usa.
+export async function effectiveActions(role: string, tenantId: string | null | undefined): Promise<string[]> {
+  if (role === 'super_admin') return PERMISSION_ACTIONS.filter((a) => defaultAllows(role, a));
+  if (!tenantId) return [];
+  const rows = await safeQuery(`SELECT action, allowed FROM role_permissions WHERE tenant_id=$1 AND role=$2`, [
+    tenantId,
+    role,
+  ]);
+  const override = new Map<string, boolean>(rows.map((r) => [String(r.action), !!r.allowed]));
+  return PERMISSION_ACTIONS.filter((a) => (override.has(a) ? !!override.get(a) : defaultAllows(role, a)));
 }
 
 export async function getPermissionMatrix(tenantId: string) {

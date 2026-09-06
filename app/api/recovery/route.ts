@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { computeRecovery } from '@/lib/recovery';
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!(await hasPermission(user, 'recovery:read'))) return forbidden();
 
   const requestedTenantId = new URL(request.url).searchParams.get('tenantId');
-  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
+  const tenantId = scopeTenant(user, request, requestedTenantId);
   if (!tenantId) return forbidden();
 
   const tenant = await queryOne(`SELECT id, name, operatories FROM tenants WHERE id=$1`, [tenantId]);

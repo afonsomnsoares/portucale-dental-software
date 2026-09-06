@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { formatEUR } from '@/lib/constants';
 import { queryOne, withTransaction } from '@/lib/db';
 import { badRequest } from '@/lib/http';
@@ -22,7 +22,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const body = await request.json();
   const status = String(body?.status || '');
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
 
   // Valor da consulta, opcional: nem toda a consulta cobra (seguimento incluído,
   // comparticipação, cortesia). Quando vem, tem de ser um número válido — um valor

@@ -1,4 +1,3 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { badRequest, created } from '@/lib/http';
 import { createTask, listTasks } from '@/lib/patientTasks';

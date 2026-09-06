@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import type { NextRequest } from 'next/server';
 import { appendAudit, logBlockedAccess } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 import { asEmail } from '@/lib/validate';
@@ -23,8 +24,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   }
   const normalizedEmail = asEmail(email);
   if (!normalizedEmail) return Response.json({ error: 'Invalid email format' }, { status: 400 });
-  if (password && String(password).length < 10) {
-    return Response.json({ error: 'Password must be at least 10 characters' }, { status: 400 });
+  if (password && String(password).length < MIN_PASSWORD_LENGTH) {
+    return Response.json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }, { status: 400 });
   }
 
   try {

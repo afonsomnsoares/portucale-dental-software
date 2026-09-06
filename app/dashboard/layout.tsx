@@ -2,6 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useEffect } from 'react';
 import { useAuth } from '@/app/providers';
+import ActingClinicBanner from '@/components/ActingClinicBanner';
 import Sidebar from '@/components/Sidebar';
 import { AppLogo } from '@/components/ui';
 import { ROLE_HOME } from '@/lib/constants';
@@ -18,10 +19,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading || !user) return;
     const role = user.role as keyof typeof ROLE_HOME;
+    // O super_admin dentro de uma clínica usa a árvore do admin — mesma exceção que o
+    // middleware faz do lado do servidor. Sem isto, este espelho expulsava-o de
+    // /dashboard/admin no primeiro render e "entrar na clínica" nunca chegava a funcionar.
+    const insideClinic = role === 'super_admin' && !!user.actingTenantId;
     // 'admin' e 'super-admin' são árvores separadas, uma por papel — ver o
     // DASHBOARD_ACCESS de middleware.ts, que isto espelha do lado do cliente para
     // redirecionar sem esperar por uma navegação completa ao servidor.
-    if (pathname.startsWith('/dashboard/admin') && role !== 'admin') router.replace(ROLE_HOME[role] || '/');
+    if (pathname.startsWith('/dashboard/admin') && role !== 'admin' && !insideClinic)
+      router.replace(ROLE_HOME[role] || '/');
     if (pathname.startsWith('/dashboard/super-admin') && role !== 'super_admin') router.replace(ROLE_HOME[role] || '/');
     if (pathname.startsWith('/dashboard/dentist') && role !== 'dentist') router.replace(ROLE_HOME[role] || '/');
     if (pathname.startsWith('/dashboard/receptionist') && role !== 'receptionist')
@@ -64,7 +70,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F4F7FA' }}>
       <Sidebar />
-      <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>{children}</main>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <ActingClinicBanner />
+        <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>{children}</main>
+      </div>
     </div>
   );
 }

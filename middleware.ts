@@ -24,6 +24,8 @@ const DASHBOARD_ACCESS: Array<[prefix: string, roles: string[]]> = [
 // this is just the generic ceiling for everything else.
 // Runs in the Edge runtime, so it can't write to Postgres (audit_log) — blocks
 // are logged with console.warn, which the hosting platform captures.
+// The Postgres-based general rate limiter (lib/rateLimitGlobal.ts) is for
+// route handlers in the Node runtime.
 const AUTHENTICATED_LIMIT = { limit: 240, windowMs: 60 * 1000 }; // ~4 req/s per signed-in user
 const ANONYMOUS_LIMIT = { limit: 60, windowMs: 60 * 1000 }; // per IP — most /api routes require auth anyway
 
@@ -64,7 +66,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // O super_admin entra na árvore do admin quando está dentro de uma clínica (cookie
+    // posto por POST /api/tenants/enter). É assim que ele vê o interior de uma clínica
+    // desde que as páginas espelhadas de /dashboard/super-admin/* deixaram de existir.
+    // Sem clínica ativa continua barrado: sem ela as páginas não saberiam de que clínica
+    // falam. O cookie é ignorado para todos os outros papéis (ver lib/auth.ts:scopeTenant).
+    const actingTenant = request.cookies.get('acting_tenant')?.value;
+    const superAdminInsideClinic = user.role === 'super_admin' && !!actingTenant;
+
     for (const [prefix, roles] of DASHBOARD_ACCESS) {
+      if (prefix === '/dashboard/admin' && superAdminInsideClinic) continue;
       if (pathname.startsWith(prefix) && !roles.includes(user.role)) {
         const url = request.nextUrl.clone();
         url.pathname = (ROLE_HOME as Record<string, string>)[user.role] || '/';

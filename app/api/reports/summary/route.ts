@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { computeClinicSummary } from '@/lib/reports';
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const to = clampDate(searchParams.get('to')) || new Date().toISOString().slice(0, 10);
 
   const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = user.role === 'super_admin' ? requestedTenantId : user.tenantId;
+  const tenantId = scopeTenant(user, request, requestedTenantId);
   if (!tenantId) return forbidden();
 
   const summary = await computeClinicSummary(tenantId, from, to);

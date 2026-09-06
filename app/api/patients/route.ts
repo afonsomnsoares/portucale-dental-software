@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { normalizeCustomFields } from '@/lib/customFields';
 import { query, warnSchemaGap } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   if (!(await revalidateSession(user))) return unauthorized();
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('q') || '';
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   const rows = await query(
     `SELECT p.*,
             ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100)::int AS no_show_score,

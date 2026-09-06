@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers';
 import type { NextRequest } from 'next/server';
-import { getAuth, unauthorized } from '@/lib/auth';
+import { actingTenantId, getAuth, unauthorized } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
+import { effectiveActions } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   const session = getAuth(request);
@@ -23,6 +24,15 @@ export async function GET(request: NextRequest) {
     return unauthorized();
   }
 
+  // Clínica em que o super_admin entrou, se alguma — a faixa de aviso do dashboard
+  // precisa do nome, e a sidebar precisa de saber que está lá dentro.
+  const activeTenant = user.role === 'super_admin' ? actingTenantId(request) : null;
+  const acting = activeTenant
+    ? await queryOne(`SELECT id, name FROM tenants WHERE id=$1`, [activeTenant]).then((t) =>
+        t ? { actingTenantId: t.id, actingTenantName: t.name } : {},
+      )
+    : {};
+
   return Response.json({
     user: {
       id: user.id,
@@ -33,6 +43,11 @@ export async function GET(request: NextRequest) {
       tenantName: user.tenant_name,
       tenantCity: user.tenant_city,
       operatories: Number(user.operatories || 3),
+      // Ações efetivas do próprio: a Sidebar usa-as para esconder as entradas que a pessoa
+      // não pode usar. Antes decidia só pelo papel, pelo que os overrides por clínica não
+      // tinham efeito nenhum no menu (link visível a levar a um 403).
+      permissions: await effectiveActions(user.role, user.tenant_id),
+      ...acting,
     },
   });
 }

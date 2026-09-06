@@ -14,6 +14,7 @@ import {
   Spinner,
   TD,
 } from '@/components/ui';
+import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import type { DbUser, Tenant } from '@/lib/types';
 
 interface UserForm {
@@ -49,6 +50,10 @@ export default function AdminUsersPage() {
     active: true,
     specialties: '',
   });
+
+  // Ao editar, deixar a password vazia significa "manter a atual" — só se valida o que
+  // foi de facto escrito. Ao criar, é obrigatória (o `required` do campo trata disso).
+  const passwordTooShort = !!form.password && form.password.length < MIN_PASSWORD_LENGTH;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,6 +110,9 @@ export default function AdminUsersPage() {
   async function save(e: FormEvent) {
     e.preventDefault();
     if (!form.name || !form.email || (!editingId && !form.password)) return;
+    // O servidor recusa abaixo de MIN_PASSWORD_LENGTH (app/api/users/route.ts). Sem esta
+    // guarda o formulário deixava submeter e a pessoa só descobria no 400 de volta.
+    if (passwordTooShort) return;
 
     setSaving(true);
     setErr('');
@@ -244,7 +252,14 @@ export default function AdminUsersPage() {
               />
             </FormField>
 
-            <FormField label={editingId ? 'New Password (leave blank to keep current)' : 'Password *'}>
+            <FormField
+              label={editingId ? 'Nova palavra-passe (deixar vazio para manter)' : 'Palavra-passe *'}
+              hint={
+                passwordTooShort
+                  ? `Mínimo ${MIN_PASSWORD_LENGTH} caracteres (tens ${form.password.length})`
+                  : `Mínimo ${MIN_PASSWORD_LENGTH} caracteres`
+              }
+            >
               <Inp
                 type="password"
                 value={form.password}
@@ -353,6 +368,7 @@ export default function AdminUsersPage() {
                   !form.name ||
                   !form.email ||
                   (!editingId && !form.password) ||
+                  passwordTooShort ||
                   (isSuperAdmin && form.role !== 'super_admin' && !form.tenantId)
                 }
                 style={{ flex: 1, justifyContent: 'center' }}

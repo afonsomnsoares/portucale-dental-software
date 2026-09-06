@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireRoles, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { getPermissionMatrix, hasPermission, setPermissionOverrides } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   // tenant via the query string; a tenant-scoped admin is confined to their
   // own — matching the pattern used everywhere else (e.g. app/api/patients/route.ts)
   // and the check the PUT handler below already applies.
-  const tenantId = user.role === 'super_admin' ? searchParams.get('tenantId') : user.tenantId;
+  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
   const data = await getPermissionMatrix(tenantId);

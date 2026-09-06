@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { badRequest, created } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
 import { createHandoff, listHandoffs } from '@/lib/shiftHandoff';
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'shift-handoffs:manage'))) return forbidden();
   const { searchParams } = new URL(request.url);
-  const tenantId = user.tenantId || (user.role === 'super_admin' ? searchParams.get('tenantId') : null);
+  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
   const status = searchParams.get('status');

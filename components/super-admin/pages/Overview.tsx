@@ -33,36 +33,41 @@ export default function AdminOverview() {
   return (
     <div>
       <PageHeader
-        title="Enterprise Overview"
-        sub={`Network health dashboard — ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`}
+        title="Visão Geral da Rede"
+        sub={new Date().toLocaleDateString('pt-PT', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
         <MetricCard
-          label="ACTIVE CLINICS"
+          label="CLÍNICAS ATIVAS"
           value={stats?.activeClinics ?? '—'}
-          sub={`of ${stats?.totalTenants ?? '—'} total`}
+          sub={`de ${stats?.totalTenants ?? '—'} no total`}
           color="#0052CC"
           icon={<Building2 size={22} />}
         />
         <MetricCard
-          label="GLOBAL PATIENTS"
-          value={stats ? Number(stats.totalPatients).toLocaleString() : '—'}
-          sub="+142 this month"
+          label="DOENTES NA REDE"
+          value={stats ? Number(stats.totalPatients).toLocaleString('pt-PT') : '—'}
+          sub="em todas as clínicas"
           color="#00875A"
           icon={<Users size={22} />}
         />
         <MetricCard
-          label="OUTSTANDING BALANCE"
-          value={stats ? `$${Number(stats.outstanding).toLocaleString()}` : '—'}
-          sub="across all clinics"
+          label="POR COBRAR"
+          value={stats ? `${Number(stats.outstanding).toLocaleString('pt-PT')} €` : '—'}
+          sub="soma de todas as clínicas"
           color="#FF8B00"
           icon={<CreditCard size={22} />}
         />
         <MetricCard
-          label="HIGH-RISK APPTS"
+          label="MARCAÇÕES DE RISCO"
           value={stats?.highRisk ?? '—'}
-          sub="require confirmation"
+          sub="a confirmar"
           color="#DE350B"
           icon={<AlertTriangle size={22} />}
         />
@@ -70,7 +75,7 @@ export default function AdminOverview() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
         <div className="card p-5">
-          <div className="section-label mb-4">RECENT AUDIT ACTIVITY</div>
+          <div className="section-label mb-4">AUDITORIA RECENTE</div>
           {!audit.length ? (
             <Spinner />
           ) : (
@@ -102,7 +107,7 @@ export default function AdminOverview() {
                       {l.resource}
                     </div>
                     <div style={{ fontSize: 11, color: '#97A0AF' }}>
-                      {l.user_name} · {l.clinic} · {new Date(l.created_at).toLocaleTimeString()}
+                      {l.user_name} · {l.clinic} · {new Date(l.created_at).toLocaleTimeString('pt-PT')}
                     </div>
                   </div>
                   <div
@@ -131,7 +136,7 @@ export default function AdminOverview() {
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: '#172B4D' }}>{t.city?.split(',')[0]}</div>
                 <div style={{ fontSize: 11, color: '#97A0AF' }}>
-                  {Number(t.patients || 0).toLocaleString()} patients
+                  {Number(t.patients || 0).toLocaleString('pt-PT')} doentes
                 </div>
               </div>
               <Badge s={t.status} />

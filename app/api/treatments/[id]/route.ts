@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { hasPermission } from '@/lib/permissions';
 
@@ -8,14 +8,10 @@ import { hasPermission } from '@/lib/permissions';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getAuth(request);
   if (!user) return unauthorized();
-  if (
-    !(await hasPermission(user, 'treatments:update')) &&
-    !(await hasPermission(user, 'treatments:create')) &&
-    !(await hasPermission(user, 'treatments:delete'))
-  )
-    return forbidden();
+  // Mesma correção da rota de listagem: ler é 'treatments:read', não escrever.
+  if (!(await hasPermission(user, 'treatments:read'))) return forbidden();
   const { id } = await params;
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   const t = await queryOne(
     `SELECT t.*, p.name as patient_name FROM treatments t
      JOIN patients p ON p.id=t.patient_id
@@ -35,7 +31,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   if (!(await hasPermission(user, 'treatments:update'))) return forbidden();
   const { id } = await params;
   const body = await request.json();
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
     id,
     tenantId,
@@ -91,7 +87,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (!user) return unauthorized();
   if (!(await hasPermission(user, 'treatments:delete'))) return forbidden();
   const { id } = await params;
-  const tenantId = user.role === 'super_admin' ? null : user.tenantId;
+  const tenantId = scopeTenant(user, request);
   const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
     id,
     tenantId,

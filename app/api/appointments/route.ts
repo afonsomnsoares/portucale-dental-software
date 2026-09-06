@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
-import { query, queryOne, withTransaction } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 import { conflict } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
 import { getOwnedPatient, getOwnedUser } from '@/lib/tenantGuard';
