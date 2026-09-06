@@ -7,6 +7,7 @@ import { reviewManagement } from './agents/managementAgent';
 import { reviewPatients } from './agents/patientAgent';
 import { generateReorderSuggestionsAI } from './agents/reorderAgent';
 import { reviewSchedule } from './agents/schedulingAgent';
+import { runAnomalyReview } from './anomaly';
 import { appendAudit, appendTimeline } from './audit';
 import type { SessionUser } from './auth';
 import { canAutoContact } from './commPrefs';
@@ -103,6 +104,9 @@ export const JOB_NAMES = [
   'patientReview',
   'financeReview',
   'managementReview',
+  // Deteção de anomalias — determinística, sem IA (lib/anomaly.ts). Corre a par do
+  // managementReview e escreve sob o mesmo agente, separada por tipo de conclusão.
+  'anomalyReview',
   // Transversal a todas as clínicas — ao contrário de todas as outras, NÃO corre no
   // 'all' de uma clínica (correria N vezes a mesma comparação). Ver runJob abaixo e a
   // chamada única em scripts/run-jobs.ts.
@@ -775,6 +779,9 @@ export async function runJob(
     }
     if (job === 'all' || job === 'managementReview') {
       details.managementReview = await reviewManagement(tenantId);
+    }
+    if (job === 'all' || job === 'anomalyReview') {
+      details.anomalyReview = await runAnomalyReview(tenantId);
     }
     // 'groupReview' não aparece aqui de propósito: é transversal às clínicas, não cabe
     // num runJob(tenantId), e tem o seu próprio ponto de entrada (runGroupReview).

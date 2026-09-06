@@ -97,8 +97,8 @@ export const AGENTS: readonly AgentDefinition[] = [
       'Compara o período com o anterior, identifica o desvio, explica a causa provável e quantifica a perda em euros.',
     boundary:
       'Diagnostica e quantifica — não age. Agir sobre a agenda, o dinheiro ou os doentes pertence ao agente de cada um desses domínios, com as fronteiras deles.',
-    jobs: ['managementReview'],
-    reads: ['lib/reports.ts', 'lib/agents/managementAgent.ts'],
+    jobs: ['managementReview', 'anomalyReview'],
+    reads: ['lib/reports.ts', 'lib/agents/managementAgent.ts', 'lib/anomaly.ts', 'lib/anomalyCalc.ts'],
     ai: 'wired',
   },
   {

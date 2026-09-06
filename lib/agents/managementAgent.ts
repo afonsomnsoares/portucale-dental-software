@@ -98,5 +98,10 @@ export async function reviewManagement(tenantId: string) {
   });
   if (!insights.length) return { insights: 0, configured: true as const };
 
-  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: true as const };
+  // Só substitui os tipos que este agente escreve: as anomalias de lib/anomaly.ts vivem
+  // sob o mesmo agente e não podem ser apagadas por esta corrida.
+  return {
+    ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR, { kinds: KINDS })),
+    configured: true as const,
+  };
 }

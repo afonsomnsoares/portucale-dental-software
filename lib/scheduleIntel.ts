@@ -104,7 +104,7 @@ export async function computeRiskHeatmap(tenantId: string) {
 // Same per-unit capacity model as the tenant-wide figure below (workMinutesPerDay ×
 // business days) — one dentist, like one chair, can only ever host one patient at a
 // time, so neither is multiplied by `operatories` the way the tenant total is.
-const WORK_MINUTES_PER_DAY = 480;
+export const WORK_MINUTES_PER_DAY = 480;
 
 // Agenda inefficiency signals beyond the static "empty slots" KPI already in Revenue
 // Recovery: chair/dentist utilization, schedule fragmentation (gaps between appointments
@@ -176,7 +176,7 @@ export async function computeAgendaEfficiency(tenantId: string, days = UPCOMING_
   ]);
 
   const days2 = businessDays(days);
-  const capacityMinutes = operatories * 480 * days2;
+  const capacityMinutes = operatories * WORK_MINUTES_PER_DAY * days2;
   const bookedMinutes = Number(bookedRow?.minutes || 0);
   const utilizationPct = capacityMinutes > 0 ? Math.round((bookedMinutes / capacityMinutes) * 100) : 0;
 
