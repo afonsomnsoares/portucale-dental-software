@@ -46,6 +46,7 @@ const ADMIN_NAV: Array<{ label: string; href: string }> = [
   { label: 'Utilizadores', href: '/dashboard/admin/users' },
   { label: 'Campos Schema', href: '/dashboard/admin/schema' },
   { label: 'Permissões', href: '/dashboard/admin/permissions' },
+  { label: 'Relatórios', href: '/dashboard/admin/reports' },
   { label: 'Recuperação', href: '/dashboard/admin/recovery' },
   { label: 'Agenda Inteligente', href: '/dashboard/admin/schedule-intel' },
   { label: 'Jornada do Paciente', href: '/dashboard/admin/lifecycle' },

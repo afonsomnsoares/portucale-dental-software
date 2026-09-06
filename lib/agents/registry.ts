@@ -14,16 +14,13 @@ import type { AgentDefinition, AgentId } from '@/lib/types/agent';
 // mesmo cuidado de fronteiras.
 //
 // Taxonomia alinhada ao roadmap de fases do produto (Fase 1: Agenda/Doente/Lead,
-// Fase 2: Finanças/Operações). Existia antes um agente 'revenue' à parte
-// ("Receita") que hoje está absorvido aqui: as tarefas de pré-fatura
-// (planFollowup, recallOutreach, lifecycleOutreach) são claramente jornada do
-// doente, por isso ficam em 'patient'; 'recovery' (saldo em dívida) é dinheiro,
-// por isso fica em 'finance'.
-//
-// Houve aqui dois agentes de análise — 'Gestão' (comparava períodos) e 'Grupo'
-// (comparava clínicas entre si) — removidos com o módulo de Relatórios de que
-// dependiam (liam lib/reports.ts). Este catálogo passou a ter só agentes que
-// agem sobre o trabalho da clínica, não que o comentam.
+// Fase 2: Finanças/Operações/Gestão, Fase 3: Grupo). Existia antes um agente
+// 'revenue' à parte ("Receita") que hoje está absorvido aqui: as tarefas de
+// pré-fatura (planFollowup, recallOutreach, lifecycleOutreach) são claramente
+// jornada do doente, por isso ficam em 'patient'; 'recovery' (saldo em dívida) é
+// dinheiro, por isso fica em 'finance'. 'Gestão' e 'Grupo' ainda não têm nenhuma
+// tarefa real e por isso não aparecem aqui — a mesma regra que manteve 'lead' de
+// fora até ter a primeira tarefa de verdade (ver git log deste ficheiro).
 export const AGENTS: readonly AgentDefinition[] = [
   {
     id: 'lead',
@@ -71,7 +68,7 @@ export const AGENTS: readonly AgentDefinition[] = [
     summary: 'Dinheiro já faturado: cobrança, valores pendentes, saldo em dívida e indicadores do período.',
     boundary: 'Antes da fatura existir, o assunto é do Doente/Lead.',
     jobs: ['summary', 'recovery', 'financeReview'],
-    reads: ['lib/recovery.ts', 'lib/agents/financeAgent.ts'],
+    reads: ['lib/reportsCalc.ts', 'lib/recovery.ts', 'lib/agents/financeAgent.ts'],
     ai: 'wired',
   },
   {
@@ -90,6 +87,29 @@ export const AGENTS: readonly AgentDefinition[] = [
       'lib/agents/reorderAgent.ts',
       'lib/equipment.ts',
     ],
+    ai: 'wired',
+  },
+  {
+    id: 'management',
+    name: 'Gestão',
+    icon: '📊',
+    summary:
+      'Compara o período com o anterior, identifica o desvio, explica a causa provável e quantifica a perda em euros.',
+    boundary:
+      'Diagnostica e quantifica — não age. Agir sobre a agenda, o dinheiro ou os doentes pertence ao agente de cada um desses domínios, com as fronteiras deles.',
+    jobs: ['managementReview'],
+    reads: ['lib/reports.ts', 'lib/agents/managementAgent.ts'],
+    ai: 'wired',
+  },
+  {
+    id: 'group',
+    name: 'Grupo',
+    icon: '🏥',
+    summary: 'Compara as clínicas do grupo entre si: onde a diferença é estrutural e o que é ruído do mês.',
+    boundary:
+      'Só existe ao nível da plataforma — as conclusões ficam com tenant_id NULL e só o super-admin as vê (RLS da migração 041). Uma clínica nunca lê o que este agente diz das outras.',
+    jobs: ['groupReview'],
+    reads: ['lib/reports.ts', 'lib/agents/groupAgent.ts'],
     ai: 'wired',
   },
   {

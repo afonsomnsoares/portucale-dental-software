@@ -1,7 +1,9 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { reviewFinance } from './agents/financeAgent';
+import { reviewGroup } from './agents/groupAgent';
 import { followUpColdLeads, reviewLeadSources, triageOpenLeads } from './agents/leadAgent';
+import { reviewManagement } from './agents/managementAgent';
 import { reviewPatients } from './agents/patientAgent';
 import { generateReorderSuggestionsAI } from './agents/reorderAgent';
 import { reviewSchedule } from './agents/schedulingAgent';
@@ -100,6 +102,11 @@ export const JOB_NAMES = [
   'scheduleReview',
   'patientReview',
   'financeReview',
+  'managementReview',
+  // Transversal a todas as clínicas — ao contrário de todas as outras, NÃO corre no
+  // 'all' de uma clínica (correria N vezes a mesma comparação). Ver runJob abaixo e a
+  // chamada única em scripts/run-jobs.ts.
+  'groupReview',
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number] | 'all';
 
@@ -115,9 +122,9 @@ function computeNextRetry(attempts: number) {
 // `tenantId` passou a ser guardado na migração 038: o runJob() sempre soube de que
 // clínica era a execução, mas a linha não o registava, por isso a página de Agentes
 // não tinha como filtrar. Ver scripts/migrations/038_job_runs_tenant.sql.
-// tenantId continua nullable: a migração 038 deixou-o assim para execuções que não
-// pertencem a nenhuma clínica. Hoje todos os jobs correm por clínica, mas a coluna
-// mantém-se aberta para não fechar a porta a um job de plataforma.
+// tenantId nullable: o agente Grupo (runGroupReview abaixo) corre sobre todas as
+// clínicas e não pertence a nenhuma — a migração 038 deixou a coluna nullable
+// exatamente para este caso.
 async function logJobRun(tenantId: string | null, jobName: string, status: string, details: Record<string, unknown>) {
   const [row] = await query(
     `INSERT INTO job_runs (tenant_id, job_name, status, details) VALUES ($1,$2,$3,$4::jsonb) RETURNING *`,
@@ -766,6 +773,11 @@ export async function runJob(
     if (job === 'all' || job === 'financeReview') {
       details.financeReview = await reviewFinance(tenantId);
     }
+    if (job === 'all' || job === 'managementReview') {
+      details.managementReview = await reviewManagement(tenantId);
+    }
+    // 'groupReview' não aparece aqui de propósito: é transversal às clínicas, não cabe
+    // num runJob(tenantId), e tem o seu próprio ponto de entrada (runGroupReview).
     await logJobRun(tenantId, job, 'completed', details);
     await appendAudit(actor, 'UPDATE', `Jobs run: ${job}`, null, 'completed', actor.clinic);
     return { ok: true as const, job, tenantId, details };
@@ -779,4 +791,21 @@ export async function runJob(
 export async function listActiveTenantIds(): Promise<string[]> {
   const rows = await query(`SELECT id FROM tenants WHERE status='active' ORDER BY name`);
   return rows.map((r) => String(r.id));
+}
+
+// O agente Grupo compara clínicas entre si, por isso não pertence a nenhuma e não cabe
+// no runJob(tenantId): corre uma vez por passagem do cron, depois do ciclo das clínicas
+// (ver scripts/run-jobs.ts). A execução fica em job_runs com tenant_id NULL — que é
+// exatamente o caso que a migração 038 previu ao deixar essa coluna nullable.
+export async function runGroupReview() {
+  try {
+    const details = { groupReview: await reviewGroup() };
+    await logJobRun(null, 'groupReview', 'completed', details);
+    await appendAudit(SYSTEM_ACTOR, 'UPDATE', 'Jobs run: groupReview', null, 'completed', SYSTEM_ACTOR.clinic);
+    return { ok: true as const, job: 'groupReview' as const, details };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await logJobRun(null, 'groupReview', 'failed', { error: message });
+    return { ok: false as const, job: 'groupReview' as const, error: message || 'Job failed' };
+  }
 }

@@ -23,7 +23,7 @@ delete process.env.APP_DATABASE_URL;
 // there would (correctly) take this for a misconfigured web server.
 process.env.PORTUCALE_ADMIN_CONNECTION = '1';
 
-import { listActiveTenantIds, runJob, SYSTEM_ACTOR } from '../lib/jobsRunner.ts';
+import { listActiveTenantIds, runGroupReview, runJob, SYSTEM_ACTOR } from '../lib/jobsRunner.ts';
 
 async function main() {
   const tenantIds = await listActiveTenantIds();
@@ -38,6 +38,17 @@ async function main() {
       failures += 1;
       console.error(`[run-jobs] tenant ${tenantId}: FAILED — ${result.error}`);
     }
+  }
+
+  // O agente Grupo compara clínicas, por isso corre uma vez no fim e não dentro do
+  // ciclo — ver runGroupReview em lib/jobsRunner.ts. Um grupo com menos de duas
+  // clínicas não tem nada a comparar e a função devolve zero sem chamar a IA.
+  const group = await runGroupReview();
+  if (group.ok) {
+    console.log('[run-jobs] grupo: ok', JSON.stringify(group.details));
+  } else {
+    failures += 1;
+    console.error(`[run-jobs] grupo: FAILED — ${group.error}`);
   }
 
   if (failures > 0) {

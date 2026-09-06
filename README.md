@@ -21,12 +21,12 @@ Dimensão atual do código:
 
 | | |
 |---|---|
-| Rotas de API | 106 |
-| Páginas de dashboard | 65 |
+| Rotas de API | 108 |
+| Páginas de dashboard | 68 |
 | Tabelas PostgreSQL | 62 |
 | Migrações incrementais | 43 |
-| Testes unitários | 301 (26 ficheiros, sem base de dados) |
-| Testes de integração | 124 (21 ficheiros, contra PostgreSQL real) |
+| Testes unitários | 307 (27 ficheiros, sem base de dados) |
+| Testes de integração | 107 (19 ficheiros, contra PostgreSQL real) |
 
 ---
 
@@ -81,7 +81,7 @@ produção.**
 | Ícones | Lucide React | ^1.22.0 | Biblioteca de ícones |
 | Voz | Web Speech API | Nativo | Ditado clínico (pt-PT) |
 | Auth | JWT próprio + bcrypt | HMAC-SHA256 | Sessão em cookie + CSRF |
-| IA | @anthropic-ai/sdk (Claude) | ^0.120.0 | Agentes |
+| IA | @anthropic-ai/sdk (Claude) | ^0.120.0 | Agentes e análise de relatórios |
 | SMS | Twilio (API REST) | — | Lembretes e notificações |
 | Ficheiros | Cloudflare R2 | S3-compatível | Uploads (fallback em disco local) |
 | Lint/Format | Biome | ^2.5.0 | Lint + formatação |
@@ -107,7 +107,7 @@ portucale_dental/
 │   ├── create-admin.ts        ← Criação única do super admin da plataforma
 │   └── check-dburl.ts         ← Diagnóstico de DATABASE_URL
 │
-├── lib/                       ← Regra de negócio (56 módulos + 11 de agentes)
+├── lib/                       ← Regra de negócio (58 módulos + 13 de agentes)
 │   ├── db.ts                  ← Pool singleton, contexto de tenant para RLS
 │   ├── auth.ts / jwt-edge.ts  ← JWT (Node e Edge), CSRF, sessão
 │   ├── permissions.ts         ← ~65 ações, defaults por papel + override por clínica
@@ -115,7 +115,7 @@ portucale_dental/
 │   ├── tenantGuard.ts         ← Verificação de pertença à clínica
 │   ├── rateLimit.ts           ← Limite genérico em memória (middleware Edge)
 │   ├── rateLimitShared.ts     ← Limite de login partilhado, persistido em Postgres
-│   ├── jobsRunner.ts          ← Pipeline de 24 jobs em segundo plano
+│   ├── jobsRunner.ts          ← Pipeline de 25 jobs em segundo plano
 │   ├── agents/                ← Catálogo de agentes + os que já usam IA
 │   ├── *Calc.ts               ← Lógica pura, sem BD — é o que os testes unitários cobrem
 │   └── types/                 ← Tipos partilhados por domínio
@@ -123,9 +123,9 @@ portucale_dental/
 ├── app/
 │   ├── page.tsx               ← Login
 │   ├── portal/[token]/        ← Portal do doente (sem sessão, token de uso único)
-│   ├── api/                   ← 106 rotas
+│   ├── api/                   ← 108 rotas
 │   └── dashboard/
-│       ├── super-admin/       ← Plataforma: clínicas, utilizadores, esquema
+│       ├── super-admin/       ← Plataforma: clínicas, utilizadores, comparação de grupo
 │       ├── admin/             ← Direção da clínica
 │       ├── receptionist/      ← Receção
 │       └── dentist/           ← Clínico
@@ -133,10 +133,10 @@ portucale_dental/
 ├── components/                ← 80 componentes (ui, clinic, super-admin, patient,
 │                                 receptionist, dentist, inventory, operations, team…)
 ├── hooks/useSpeechRecognition.ts
-├── test/                      ← 26 ficheiros unitários
-│   └── integration/           ← 21 ficheiros contra PostgreSQL real
+├── test/                      ← 27 ficheiros unitários
+│   └── integration/           ← 19 ficheiros contra PostgreSQL real
 ├── middleware.ts              ← Rate limit de /api/* + guards de rota por papel
-└── docker-compose.yml         ← postgres, migrate, pgadmin, app, jobs
+└── docker-compose.yml         ← postgres, pgadmin, app, jobs
 ```
 
 ---
@@ -147,8 +147,8 @@ Quatro papéis, com árvores de dashboard separadas (`middleware.ts` → `DASHBO
 
 | Papel | Âmbito | Acesso |
 |-------|--------|--------|
-| **Super Admin** | Plataforma (`tenant_id NULL`) | Clínicas, utilizadores, esquema, permissões e auditoria, através de todas as clínicas |
-| **Admin** | Uma clínica | Tudo dentro da sua clínica: finanças, operações, equipa, inventário, permissões |
+| **Super Admin** | Plataforma (`tenant_id NULL`) | Clínicas, utilizadores, esquema, permissões, auditoria, e a comparação entre clínicas do grupo |
+| **Admin** | Uma clínica | Tudo dentro da sua clínica: finanças, relatórios, operações, equipa, inventário, permissões |
 | **Rececionista** | Uma clínica | Doentes, leads, agenda, tratamentos, faturação, sala de espera, recalls, tarefas, documentos |
 | **Dentista** | Uma clínica | Processo clínico, historial médico, prescrições, laboratório, planos, consentimentos, notas |
 
@@ -290,7 +290,7 @@ cópia por clínica do catálogo inteiro.
 - Faturação interna com linhas de item, pagamentos parciais ou totais, métodos (Multibanco,
   seguro, numerário) e saldo em dívida
 - Faturas ligadas à consulta que as gerou (migração 042)
-- Estatísticas financeiras por clínica
+- Estatísticas financeiras por clínica e comparação entre clínicas do grupo
 
 > **Esta plataforma não processa pagamentos nem emite documentos fiscais.** Regista o valor
 > e a conta corrente do doente; a fatura legal é emitida pelo software certificado da
@@ -343,6 +343,12 @@ desenho.
   entregue. Sem PUT nem DELETE na API, pela mesma razão que `audit_log` não os tem
 - Impressão direta do browser, sem dependências novas
 
+### Relatórios
+- Resumo e comparação de desempenho entre clínicas: receita, ocupação, conversão de planos,
+  faltas
+- **Diagnóstico por IA** (Claude) a partir das métricas já calculadas — degrada com
+  elegância se `ANTHROPIC_API_KEY` não estiver definida
+
 ### Campos dinâmicos
 Campos definidos pelo admin (string, boolean, integer, decimal, enum, uuid_ref), aplicáveis
 por clínica ou globalmente, com percentagem de rollout e obrigatoriedade.
@@ -351,7 +357,7 @@ por clínica ou globalmente, com percentagem de rollout e obrigatoriedade.
 
 ## Agentes
 
-Seis agentes (`lib/agents/registry.ts`), cada um com um domínio, uma fronteira explícita e o
+Oito agentes (`lib/agents/registry.ts`), cada um com um domínio, uma fronteira explícita e o
 conjunto de jobs que já governa. O ponto importante: **nenhum agente é trabalho novo a
 inventar** — são jobs determinísticos que já corriam, agrupados por quem decide o quê. O
 catálogo é só dados (sem BD, sem IA), por isso testa-se sem Postgres.
@@ -363,6 +369,8 @@ catálogo é só dados (sem BD, sem IA), por isso testa-se sem Postgres.
 | 📅 **Agenda** | Encaixa procura nos recursos: cadeiras, especialidade, lista de espera, risco de falta | Agenda de doentes; turnos e férias são de Operações |
 | 💳 **Finanças** | Dinheiro já faturado: cobrança, pendentes, saldo em dívida | Antes da fatura existir, o assunto é do Doente/Lead |
 | ⚙️ **Operações** | Checklists, incidentes, passagem de turno, stock, reposição, manutenção | A IA decide o rascunho de encomenda, mas nunca sai de `draft` |
+| 📊 **Gestão** | Compara períodos, identifica o desvio, explica a causa provável e quantifica a perda | Diagnostica e quantifica — não age |
+| 🏥 **Grupo** | Compara as clínicas do grupo entre si | Só ao nível da plataforma: os insights ficam com `tenant_id NULL` e só o super-admin os vê |
 | 🔐 **Conformidade** | RGPD, retenção e auditoria: prazos vencidos e pedidos do titular | Prepara e sinaliza — nunca apaga |
 
 A comunicação não é um agente: é o canal por onde todos passam, e por isso a política
@@ -380,7 +388,8 @@ que ainda estão por tratar e preservando o histórico dos já resolvidos.
 ## Jobs em segundo plano
 
 Pipeline central em `lib/jobsRunner.ts`, corrido por `scripts/run-jobs.ts` (cron ou o serviço
-`jobs` do Docker Compose) ou sob pedido de um admin. 24 jobs, todos por clínica:
+`jobs` do Docker Compose) ou sob pedido de um admin. 25 jobs por clínica, mais `groupReview`,
+que corre uma vez por passagem porque é transversal às clínicas:
 
 | Grupo | Jobs |
 |-------|------|
@@ -389,6 +398,7 @@ Pipeline central em `lib/jobsRunner.ts`, corrido por `scripts/run-jobs.ts` (cron
 | Lead | `leadTriage`, `leadFollowup`, `leadSourceReview` |
 | Finanças | `summary`, `recovery`, `financeReview` |
 | Operações | `escalateIncidents`, `checklistReminders`, `handoffReminders`, `reorderSuggestions`, `equipmentMaintenance` |
+| Gestão/Grupo | `managementReview`, `groupReview` |
 | Conformidade | `retention`, `retentionPolicies` |
 | Comunicação | `send` |
 
@@ -477,7 +487,7 @@ Há um `.env.example` na raiz com todas elas comentadas — copiar para `.env` e
 | `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BASE_URL` | Cloudflare R2. Sem isto, os uploads ficam em disco local | Opcional |
 | `UPLOAD_RETENTION_DAYS` | Retenção de ficheiros | `90` |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | SMS | Opcional |
-| `ANTHROPIC_API_KEY` | IA: agente Operações (reposição) e agente Lead (triagem) | Opcional — cada um degrada à sua maneira |
+| `ANTHROPIC_API_KEY` | IA: análise de relatórios, agente Operações (reposição) e agente Lead (triagem) | Opcional — cada um degrada à sua maneira |
 | `JOB_INTERVAL_SECONDS` | Intervalo do serviço `jobs` do Docker Compose | `900` |
 | `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` | Só para `npm run create-admin` | — |
 
