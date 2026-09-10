@@ -34,7 +34,7 @@ function r2Origins() {
 // `script-src` still carries 'unsafe-inline' and that is a deliberate, documented
 // compromise rather than an oversight. Next.js's App Router streams the RSC payload
 // through inline <script> tags; removing 'unsafe-inline' requires a per-request nonce
-// threaded from middleware.ts through every rendered document, and getting that subtly
+// threaded from proxy.ts through every rendered document, and getting that subtly
 // wrong takes the whole app down rather than degrading. The directives that need no
 // such machinery are locked down properly instead, and each earns its place:
 //

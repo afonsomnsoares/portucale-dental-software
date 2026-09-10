@@ -1,4 +1,4 @@
-// Implementação de verificação de JWT para o Edge runtime (middleware.ts), onde
+// Implementação de verificação de JWT para o Edge runtime (proxy.ts), onde
 // `node:crypto` não existe e é preciso usar WebCrypto.
 //
 // ⚠️ GÉMEA DE lib/auth.ts — os dois ficheiros têm de concordar. `getJwtSecrets`

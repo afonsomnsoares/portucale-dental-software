@@ -16,7 +16,7 @@ import { getClientIp, rateLimit } from '@/lib/rateLimit';
 //   2. A ASSINATURA É OBRIGATÓRIA. Verificada contra o segredo da conta de canal, em
 //      tempo constante. Uma conta sem segredo configurado é recusada — um webhook que
 //      aceita qualquer coisa é pior do que um que não existe, porque parece protegido.
-//   3. RATE LIMIT PRÓPRIO. O teto genérico do middleware conta por IP, e o IP aqui é o
+//   3. RATE LIMIT PRÓPRIO. O teto genérico do proxy conta por IP, e o IP aqui é o
 //      do fornecedor: todas as clínicas partilhariam o mesmo balde e uma inundação
 //      numa calaria as outras. A chave é o endereço de destino, ou seja, a clínica.
 //   4. RESPOSTA SEMPRE 200 QUANDO A MENSAGEM FOI ACEITE. Os fornecedores reenviam o

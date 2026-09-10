@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     // /dashboard/admin no primeiro render e "entrar na clínica" nunca chegava a funcionar.
     const insideClinic = role === 'super_admin' && !!user.actingTenantId;
     // 'admin' e 'super-admin' são árvores separadas, uma por papel — ver o
-    // DASHBOARD_ACCESS de middleware.ts, que isto espelha do lado do cliente para
+    // DASHBOARD_ACCESS de proxy.ts, que isto espelha do lado do cliente para
     // redirecionar sem esperar por uma navegação completa ao servidor.
     if (pathname.startsWith('/dashboard/admin') && role !== 'admin' && !insideClinic)
       router.replace(ROLE_HOME[role] || '/');

@@ -572,7 +572,7 @@ retry agendado, sem rebentar o pipeline.
 
 ## Papéis e permissões
 
-Quatro papéis, com árvores de dashboard separadas (`middleware.ts` → `DASHBOARD_ACCESS`):
+Quatro papéis, com árvores de dashboard separadas (`proxy.ts` → `DASHBOARD_ACCESS`):
 
 | Papel | Âmbito | Acesso |
 |-------|--------|--------|
@@ -611,7 +611,7 @@ estado local.
   no corpo nem no tempo de resposta (coberto por `test/integration/login-oracle.test.ts`).
 - **CSRF**: double-submit cookie com comparação em tempo constante + verificação de origem
   em todas as mutações.
-- **Rate limiting**: teto genérico sobre `/api/*` no middleware Edge (240 pedidos/min por
+- **Rate limiting**: teto genérico sobre `/api/*` no proxy Edge (240 pedidos/min por
   utilizador autenticado, 60/min por IP anónimo). O limite do **login** é diferente: vive em
   `rate_limit_counters` no Postgres (`lib/rateLimitShared.ts`), porque é um controlo de
   segurança e não pode depender de qual réplica atendeu o pedido.
@@ -874,7 +874,7 @@ portucale_dental/
 ├── hooks/                     ← useSpeechRecognition, useSSE
 ├── test/                      ← 36 ficheiros unitários
 │   └── integration/           ← 22 ficheiros contra PostgreSQL real
-├── middleware.ts              ← Rate limit de /api/* (1.ª linha) + guards de rota por papel
+├── proxy.ts              ← Rate limit de /api/* (1.ª linha) + guards de rota por papel
 └── docker-compose.yml         ← postgres, pgadmin, app, jobs
 ```
 
@@ -925,7 +925,7 @@ decisão, calibração e contas de terceiros.
 | Tempo real | **Ligado.** `LISTEN/NOTIFY` do Postgres (migração 051) → `lib/realtime.ts` → SSE → `hooks/useSSE.ts`, com a sala de espera como primeiro consumidor | Substituiu uma sondagem de 5 em 5 segundos por evento a evento; a sondagem fica como rede de segurança, a 60s quando há ligação |
 | Uploads | **Verificados.** Assinatura (*magic bytes*) confrontada com o tipo declarado | Fecha a diferença entre «o cliente disse que é um PNG» e «isto é um PNG» — importa sobretudo no portal do doente, a única superfície onde alguém sem sessão escreve um ficheiro |
 | Rate limit de escrita | **Partilhado.** As mutações passam por um teto em Postgres dentro de `lib/route.ts` | `lib/rateLimitGlobal.ts` existia e nenhuma rota o chamava — escrito e sem consumidores, como o SSE estava |
-| Rate limit genérico de `/api/*` | **Continua por instância.** Em memória, no middleware Edge | Sem solução sem Redis/Upstash. É hoje explicitamente a *primeira linha*, não o teto: as escritas já têm o teto partilhado acima |
+| Rate limit genérico de `/api/*` | **Continua por instância.** Em memória, no proxy Edge | Sem solução sem Redis/Upstash. É hoje explicitamente a *primeira linha*, não o teto: as escritas já têm o teto partilhado acima |
 | `seed.ts --reset` | **Corrigido.** Apaga o schema inteiro em vez de uma lista de tabelas escrita à mão | A lista tinha voltado a ficar desatualizada, e falhava mal: `DROP TABLE tenants CASCADE` levava as chaves estrangeiras das tabelas fora da lista, e os `CREATE TABLE IF NOT EXISTS` das migrações não as repunham. **Instalações novas ficavam sem `REFERENCES tenants(id)`** em `purchase_orders`, `inventory_batches`, `inventory_movements` e companhia — silenciosamente, e só em bases criadas de raiz |
 | Notas clínicas | Texto simples na BD | Cifra ao nível da coluna com KMS por clínica |
 | Auth | JWT próprio | Suficiente hoje; NextAuth/Clerk se houver necessidade de SSO |

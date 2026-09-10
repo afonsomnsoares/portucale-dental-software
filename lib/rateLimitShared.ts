@@ -5,7 +5,7 @@ import { queryOne, withSystemContext } from './db';
 // não apenas tetos anti-abuso. A diferença é onde vive a contagem:
 //
 //   lib/rateLimit.ts        em memória (globalThis) — rápido, por instância,
-//                           usado pelo travão genérico de /api/* no middleware
+//                           usado pelo travão genérico de /api/* no proxy
 //                           Edge, que não consegue falar com o Postgres.
 //   lib/rateLimitShared.ts  no Postgres — partilhado por todas as instâncias,
 //                           usado pelo login.

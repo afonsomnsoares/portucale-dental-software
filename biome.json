@@ -32,7 +32,7 @@
   },
   "files": {
     "includes": [
-      "**/middleware.ts",
+      "**/proxy.ts",
       "**/app/**/*.ts",
       "**/app/**/*.tsx",
       "**/components/**/*.tsx",

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
   if (!token) return corsJson({ error: 'Missing bearer token' }, 401);
 
-  // Rate limit by token AND by IP, on top of middleware.ts's blanket per-IP floor for
+  // Rate limit by token AND by IP, on top of proxy.ts's blanket per-IP floor for
   // every /api/* route — a per-token cap contains a leaked token abused from many IPs;
   // a per-IP cap contains someone trying to brute-force/guess a valid token.
   const ip = getClientIp(request);

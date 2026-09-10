@@ -15,7 +15,7 @@ export default function IntegrationsApi() {
         'Contagem de consumo por chave, para limites e para faturação',
       ]}
       note={
-        'O travão de tráfego já existe e funcionaria por chave sem grande mudança: middleware.ts limita por IP e lib/route.ts tem um teto de escrita partilhado em Postgres.'
+        'O travão de tráfego já existe e funcionaria por chave sem grande mudança: proxy.ts limita por IP e lib/route.ts tem um teto de escrita partilhado em Postgres.'
       }
     />
   );

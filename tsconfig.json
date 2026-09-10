@@ -36,7 +36,7 @@
   "include": [
     "hooks/**/*.ts",
     "next-env.d.ts",
-    "middleware.ts",
+    "proxy.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
     "lib/**/*.ts",

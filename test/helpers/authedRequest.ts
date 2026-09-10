@@ -2,7 +2,7 @@
 // browser: a `dent_token` cookie (signed with lib/auth.ts's real signToken, so verifyToken
 // accepts it) plus the dent_csrf cookie + x-csrf-token header pair that requireSameOrigin()
 // checks on every non-GET mutation. Handlers are invoked directly (no server, no
-// middleware.ts) — see test/integration/README for why that's fine here.
+// proxy.ts) — see test/integration/README for why that's fine here.
 import crypto from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { signToken } from '../../lib/auth.ts';

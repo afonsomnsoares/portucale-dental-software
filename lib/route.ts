@@ -32,7 +32,7 @@ interface RouteOptions {
 type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
 
 // ─── Teto de escrita partilhado entre instâncias ────────────────────────────
-// O travão genérico de /api/* vive no middleware, que corre no runtime Edge e por isso
+// O travão genérico de /api/* vive no proxy, que corre no runtime Edge e por isso
 // conta em memória, por instância (ver a nota em lib/rateLimit.ts). Com duas instâncias
 // atrás de um balanceador, o limite efetivo passa a ser N × o configurado.
 //

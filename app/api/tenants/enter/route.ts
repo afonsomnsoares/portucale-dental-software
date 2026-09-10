@@ -12,7 +12,7 @@ import { queryOne } from '@/lib/db';
 // árvores divergirem ao ponto de uma estar em português e a outra em inglês.
 //
 // Em vez disso, entra na clínica: grava-se aqui a clínica ativa e ele passa a usar as
-// páginas do próprio admin (/dashboard/admin/*, ver DASHBOARD_ACCESS em middleware.ts).
+// páginas do próprio admin (/dashboard/admin/*, ver DASHBOARD_ACCESS em proxy.ts).
 // lib/auth.ts:scopeTenant lê o cookie, e só para quem é super_admin.
 //
 // Entrar e sair ficam no audit_log: é o operador da plataforma a ir ver dados clínicos de

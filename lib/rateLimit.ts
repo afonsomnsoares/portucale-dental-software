@@ -33,14 +33,14 @@ declare global {
 
 // ─── Why this store needs sweeping ──────────────────────────────────────────
 // Keys are per-identity: `api:user:<id>` for signed-in callers, but `api:ip:<addr>`
-// for anonymous ones (see middleware.ts), plus per-token keys on the public routes.
+// for anonymous ones (see proxy.ts), plus per-token keys on the public routes.
 // The anonymous keys are the problem — their key space is chosen by whoever is
 // calling, so without eviction every distinct source address that ever touches the
 // API leaves a permanent entry. A window expiring reset the *count* but never
 // removed the record, so the Map only ever grew: a slow leak in normal use, and a
 // trivially cheap memory-exhaustion vector for anyone willing to rotate addresses.
 //
-// Swept lazily on call rather than on a timer: middleware.ts runs in the Edge
+// Swept lazily on call rather than on a timer: proxy.ts runs in the Edge
 // runtime, where a long-lived setInterval is not something to rely on, and where
 // there is no shutdown hook to clear one either.
 const SWEEP_INTERVAL_MS = 60 * 1000;

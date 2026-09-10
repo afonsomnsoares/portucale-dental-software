@@ -31,7 +31,7 @@ export type NavItem = { label: string; href: string; requires?: string; group?: 
 // Navegação do 'admin' (o admin da clínica, sempre confinado a um tenant), com hrefs sob
 // /dashboard/admin. O super_admin (âmbito de plataforma, sem clínica própria) tem o
 // SUPER_ADMIN_NAV espelhado abaixo, sob o prefixo separado /dashboard/super-admin. Os dois
-// papéis não partilham nem a árvore de URLs (ver DASHBOARD_ACCESS em middleware.ts) nem os
+// papéis não partilham nem a árvore de URLs (ver DASHBOARD_ACCESS em proxy.ts) nem os
 // componentes de página: /dashboard/admin/* renderiza components/clinic/pages/*,
 // /dashboard/super-admin/* renderiza components/super-admin/pages/*. As etiquetas coincidem
 // porque os dois papéis fazem o mesmo *tipo* de trabalho, mas as páginas de clínica estão

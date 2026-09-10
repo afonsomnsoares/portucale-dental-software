@@ -1,7 +1,7 @@
 // ─── Rate limit genérico via Postgres ──────────────────────────────────
 // Irmão de lib/rateLimitShared.ts. A diferença é que isto é usado por
 // route handlers do Next.js (runtime Node, com pool de ligações),
-// NÃO pelo middleware Edge — que por isso continua a usar a versão
+// NÃO pelo proxy Edge — que por isso continua a usar a versão
 // in-memory de lib/rateLimit.ts.
 //
 // Porquê: em deploy multi-instância, o rate limit in-memory por instância
@@ -11,7 +11,7 @@
 // tabela rate_limit_counters.
 //
 // Uso típico: app/api/* routes que necessitam de um teto estrito
-// entre instâncias, para além do rate limit in-memory do middleware.
+// entre instâncias, para além do rate limit in-memory do proxy.
 
 import { queryOne, withSystemContext } from './db';
 

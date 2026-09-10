@@ -36,7 +36,7 @@ nesse caso, em vez de tentar ligar a uma BD inexistente.
 
 Cada teste importa o handler exportado da rota (`GET`/`POST`/`PUT`/`DELETE`) e invoca-o
 diretamente com um `Request` construído por `test/helpers/authedRequest.ts` — não há
-`next dev`/`next start` a correr. Isto significa que `middleware.ts` (guardas de rota,
+`next dev`/`next start` a correr. Isto significa que `proxy.ts` (guardas de rota,
 rate limiting) nunca entra em jogo; cada rota faz a sua própria verificação de auth via
 `getAuth()`, e é essa lógica que estes testes exercitam.
 
