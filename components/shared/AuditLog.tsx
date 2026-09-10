@@ -16,7 +16,20 @@ const RM: Record<string, { bg: string; color: string }> = {
   admin: { bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
 };
 
-export default function AuditPage() {
+// ─── Um só registo de auditoria, dois âmbitos ───────────────────────────────
+// Existiam duas cópias deste ecrã — components/clinic/pages/Audit.tsx e
+// components/super-admin/pages/Audit.tsx — com 171 de 182 linhas iguais. O que
+// as separava eram três coisas, e nenhuma justificava um segundo ficheiro: o
+// subtítulo, uma coluna com o nome da clínica, e o facto de a versão de
+// plataforma nunca ter sido traduzida.
+//
+// Quem filtra é o servidor: app/api/audit/route.ts força o `clinic` de quem chama
+// quando essa pessoa tem tenantId, e só um super-admin vê várias clínicas. Aqui
+// `scope` decide apenas o que faz sentido MOSTRAR — numa clínica só, a coluna da
+// clínica seria a mesma palavra repetida em todas as linhas.
+export type AuditScope = 'clinic' | 'platform';
+
+export default function AuditLog({ scope }: { scope: AuditScope }) {
   const { api } = useAuth();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,23 +52,30 @@ export default function AuditPage() {
 
   return (
     <div>
-      <PageHeader title="Forensic Audit Vault" sub="Immutable, SHA-256 hashed activity log — all tenants" />
+      <PageHeader
+        title="Auditoria"
+        sub={
+          scope === 'platform'
+            ? 'Registo de atividade de todas as clínicas — imutável, com hash SHA-256'
+            : 'Registo de atividade desta clínica — imutável, com hash SHA-256'
+        }
+      />
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <input
           className="input"
           style={{ maxWidth: 280 }}
-          placeholder="Search users, resources…"
+          placeholder="Procurar utilizadores, recursos…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select className="select" style={{ maxWidth: 180 }} value={action} onChange={(e) => setAction(e.target.value)}>
-          <option value="">All Actions</option>
+          <option value="">Todas as ações</option>
           {['UPDATE', 'CREATE', 'DELETE', 'PROVISION'].map((a) => (
             <option key={a}>{a}</option>
           ))}
         </select>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-          {logs.length} entries
+          {logs.length} {logs.length === 1 ? 'entrada' : 'entradas'}
         </div>
       </div>
       <div className="card" style={{ padding: 0 }}>
@@ -98,7 +118,7 @@ export default function AuditPage() {
                       fontFamily: '"JetBrains Mono",monospace',
                     }}
                   >
-                    {new Date(l.created_at).toLocaleString()}
+                    {new Date(l.created_at).toLocaleString('pt-PT')}
                   </div>
                   <Badge label={l.action} bg={am.bg} color={am.color} />
                   <div
@@ -116,7 +136,9 @@ export default function AuditPage() {
                   </div>
                   <Badge label={l.user_role} bg={rm.bg} color={rm.color} />
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', minWidth: 100 }}>{l.user_name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 72 }}>{l.clinic}</div>
+                  {scope === 'platform' && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 72 }}>{l.clinic}</div>
+                  )}
                   <div
                     style={{
                       fontSize: 10,
@@ -142,8 +164,8 @@ export default function AuditPage() {
                   >
                     {(
                       [
-                        ['BEFORE', l.before_val, 'var(--urgency-critical)'],
-                        ['AFTER', l.after_val, 'var(--urgency-ok)'],
+                        ['ANTES', l.before_val, 'var(--urgency-critical)'],
+                        ['DEPOIS', l.after_val, 'var(--urgency-ok)'],
                       ] as Array<[string, string | null, string]>
                     ).map(([lbl, val, col]) => (
                       <div key={lbl}>

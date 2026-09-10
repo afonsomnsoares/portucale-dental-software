@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import SchemaFieldFormModal, { type SchemaFieldForm } from '@/components/schema/SchemaFieldFormModal';
 import SchemaFieldsTable, { type SchemaFieldRow } from '@/components/schema/SchemaFieldsTable';
-import { AlertBanner, GhostBtn, PageHeader } from '@/components/ui';
+import { AlertBanner, GhostBtn, PageHeader, Sel } from '@/components/ui';
 import { PT_PATIENT_FIELDS } from '@/lib/presets/patientFields';
+import type { Tenant } from '@/lib/types';
 
 const EMPTY_FORM: SchemaFieldForm = {
   fieldName: '',
@@ -15,18 +16,37 @@ const EMPTY_FORM: SchemaFieldForm = {
   required: false,
 };
 
-// Campos de schema da própria clínica. A versão de plataforma
-// (components/super-admin/pages/Schema.tsx) escolhe a clínica; aqui o tenant é sempre o de
-// quem está autenticado.
-export default function ClinicSchemaPage() {
+// ─── Um só ecrã de campos de registo, dois âmbitos ──────────────────────────
+// Eram duas cópias com 166 de 177 linhas iguais. Esta serve as duas porque já
+// distinguia os casos sozinha: `tenantId` arranca do tenant de quem está
+// autenticado, o seletor de clínica está guardado por `!user?.tenantId` (logo só
+// aparece a quem não tem clínica própria, isto é, ao super-admin) e o GET
+// /api/tenants só é feito para role === 'super_admin' — que é também o único que
+// o servidor aceita. A versão de clínica não fazia nada de diferente: fazia menos.
+export default function SchemaFields() {
   const { api, user } = useAuth();
-  const tenantId = user?.tenantId || '';
   const [fields, setFields] = useState<SchemaFieldRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<SchemaFieldForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [tenantId, setTenantId] = useState(user?.tenantId || '');
+
+  useEffect(() => {
+    if (user?.tenantId) setTenantId(user.tenantId);
+  }, [user?.tenantId]);
+
+  useEffect(() => {
+    // Só o super-admin não tem clínica própria e precisa do seletor abaixo (ver o
+    // guard `!user?.tenantId`) — um admin de clínica já sabe qual é a dele, e o
+    // servidor recusar-lhe-ia este GET de qualquer forma.
+    if (user?.role !== 'super_admin') return;
+    api('/tenants')
+      .then(setTenants)
+      .catch(() => {});
+  }, [api, user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,10 +168,20 @@ export default function ClinicSchemaPage() {
     <div>
       <PageHeader
         title="Campos de Registo"
-        sub="Campos adicionais que aparecem no registo de doentes desta clínica"
+        sub="Campos adicionais que aparecem no registo de doentes"
         action={tenantId ? '+ Novo Campo' : null}
         onAction={openAdd}
       >
+        {!user?.tenantId && (
+          <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ width: 260 }}>
+            <option value="">Escolher clínica…</option>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} · {t.city}
+              </option>
+            ))}
+          </Sel>
+        )}
         {tenantId && (
           <GhostBtn onClick={addPtPreset} style={{ padding: '8px 12px' }} disabled={saving}>
             {saving ? 'A adicionar…' : 'Adicionar Campos PT'}
@@ -159,7 +189,7 @@ export default function ClinicSchemaPage() {
         )}
       </PageHeader>
       <AlertBanner type="warning">
-        Um campo novo só passa a aparecer no registo de doentes depois de Publicar.
+        Os campos são por clínica. Um campo novo só passa a aparecer no registo de doentes depois de Publicar.
       </AlertBanner>
       <SchemaFieldsTable fields={fields} loading={loading} tenantId={tenantId} onEdit={openEdit} onDeploy={deploy} />
       {modal && (

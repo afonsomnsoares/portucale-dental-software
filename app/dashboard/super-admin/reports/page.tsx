@@ -1,4 +1,4 @@
-import Reports from '@/components/super-admin/pages/Reports';
+import Reports from '@/components/shared/Reports';
 
 export default function Page() {
   return <Reports />;

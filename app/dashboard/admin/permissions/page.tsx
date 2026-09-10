@@ -1,5 +1,5 @@
-import Permissions from '@/components/clinic/pages/Permissions';
+import PermissionsMatrix from '@/components/shared/PermissionsMatrix';
 
 export default function Page() {
-  return <Permissions />;
+  return <PermissionsMatrix />;
 }

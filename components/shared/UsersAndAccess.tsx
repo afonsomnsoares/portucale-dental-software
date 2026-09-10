@@ -28,7 +28,17 @@ interface UserForm {
   specialties: string;
 }
 
-export default function AdminUsersPage() {
+// ─── Um só ecrã de utilizadores, dois âmbitos ───────────────────────────────
+// Eram duas cópias com 311 de 349 linhas iguais. Esta serve as duas porque já
+// tinha, dentro dela, os dois casos: `isSuperAdmin` decide se há lista de
+// clínicas, se aparece o campo "Clínica" no formulário, e se o papel de admin
+// pode ser atribuído. A versão de clínica não fazia nada de diferente — fazia
+// menos, e repetia as outras 311 linhas para o dizer.
+//
+// O servidor impõe tudo isto de qualquer forma: app/api/users/route.ts força o
+// tenant de quem chama e só aceita role='admin' vindo de um super-admin. Isto
+// aqui é a interface a não prometer o que não pode cumprir.
+export default function UsersAndAccess() {
   const { api, user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin';
   const [users, setUsers] = useState<DbUser[]>([]);
@@ -58,9 +68,9 @@ export default function AdminUsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      // Only the super_admin may pick a tenant for the user being created/edited (see the
-      // Tenant field below) — GET /api/tenants is restricted to super_admin server-side
-      // too, so a clinic admin fetching it would just 403.
+      // Só o super-admin escolhe a clínica do utilizador (ver o campo mais abaixo) —
+      // e GET /api/tenants é restrito a super_admin do lado do servidor, por isso um
+      // admin de clínica a pedi-la levaria apenas um 403.
       const [u, t] = await Promise.all([api('/users'), isSuperAdmin ? api('/tenants') : Promise.resolve([])]);
       setUsers(u || []);
       setTenants(t || []);
@@ -168,9 +178,9 @@ export default function AdminUsersPage() {
   return (
     <div>
       <PageHeader
-        title="Users & Access"
-        sub="Manage platform users, roles, and clinic assignments"
-        action="+ Create User"
+        title="Utilizadores"
+        sub="Equipa — contas, funções e acesso"
+        action="+ Novo Utilizador"
         onAction={openCreate}
       />
 
@@ -178,12 +188,12 @@ export default function AdminUsersPage() {
         <Inp
           value={search}
           onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-          placeholder="Search users by name, email, role, clinic..."
+          placeholder="Procurar por nome, email, função, clínica…"
           style={{ maxWidth: 420 }}
         />
         {search && (
           <GhostBtn onClick={() => setSearch('')} style={{ padding: '8px 12px' }}>
-            Clear
+            Limpar
           </GhostBtn>
         )}
         <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
@@ -196,7 +206,7 @@ export default function AdminUsersPage() {
           <Spinner />
         ) : (
           <DataTable
-            cols={['Name', 'Email', 'Role', 'Clinic / Tenant', 'Status', '']}
+            cols={['Nome', 'Email', 'Função', 'Clínica', 'Estado', '']}
             rows={filtered.map((u) => (
               <tr key={u.id}>
                 <TD bold>{u.name}</TD>
@@ -223,7 +233,7 @@ export default function AdminUsersPage() {
                 </TD>
                 <TD right>
                   <GhostBtn onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 12 }}>
-                    Edit
+                    Editar
                   </GhostBtn>
                 </TD>
               </tr>
@@ -233,9 +243,9 @@ export default function AdminUsersPage() {
       </div>
 
       {modal && (
-        <Modal title={editingId ? 'Edit User' : 'Create New User'} onClose={() => setModal(false)} width={420}>
+        <Modal title={editingId ? 'Editar utilizador' : 'Novo utilizador'} onClose={() => setModal(false)} width={420}>
           <form onSubmit={save}>
-            <FormField label="Full Name *">
+            <FormField label="Nome completo *">
               <Inp
                 value={form.name}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -243,7 +253,7 @@ export default function AdminUsersPage() {
               />
             </FormField>
 
-            <FormField label="Email Address *">
+            <FormField label="Email *">
               <Inp
                 type="email"
                 value={form.email}
@@ -270,37 +280,37 @@ export default function AdminUsersPage() {
             </FormField>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FormField label="Role *">
+              <FormField label="Função *">
                 {form.role === 'super_admin' ? (
-                  // The one platform super_admin — never created/changed through this form
-                  // (see app/api/users/[id]/route.ts). Only reachable here at all when the
-                  // viewer is that same super_admin editing their own profile.
+                  // O único super-admin da plataforma — nunca criado nem alterado por este
+                  // formulário (ver app/api/users/[id]/route.ts). Só aqui chega quando é
+                  // ele próprio a editar o seu perfil.
                   <Sel value="super_admin" disabled>
                     <option value="super_admin">Super Admin</option>
                   </Sel>
                 ) : isSuperAdmin ? (
-                  // Only a super_admin may grant/revoke admin (clinic-admin) status — see
-                  // app/api/users/route.ts and app/api/users/[id]/route.ts.
+                  // Só um super-admin concede ou retira o estatuto de admin de clínica — ver
+                  // app/api/users/route.ts e app/api/users/[id]/route.ts.
                   <Sel value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-                    <option value="receptionist">Receptionist</option>
-                    <option value="dentist">Dentist</option>
+                    <option value="receptionist">Rececionista</option>
+                    <option value="dentist">Dentista</option>
                     <option value="admin">Admin</option>
                   </Sel>
                 ) : editingId && form.role === 'admin' ? (
-                  // A clinic admin can see a peer admin's role but not change it away —
-                  // only a super_admin can revoke admin status.
+                  // Um admin de clínica vê a função de um colega admin mas não a pode
+                  // retirar — só o super-admin revoga esse estatuto.
                   <Sel value="admin" disabled>
                     <option value="admin">Admin</option>
                   </Sel>
                 ) : (
                   <Sel value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}>
-                    <option value="receptionist">Receptionist</option>
-                    <option value="dentist">Dentist</option>
+                    <option value="receptionist">Rececionista</option>
+                    <option value="dentist">Dentista</option>
                   </Sel>
                 )}
               </FormField>
 
-              <FormField label="Clinic Name">
+              <FormField label="Nome da clínica">
                 <Inp
                   value={form.clinic}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, clinic: e.target.value }))}
@@ -314,7 +324,7 @@ export default function AdminUsersPage() {
               // matching. Comma-separated free text, same idiom as everything else in
               // this project that models a loose, clinic-defined vocabulary (appointment
               // types, treatment codes) rather than a fixed enum.
-              <FormField label="Specialties (comma-separated, e.g. Ortodontia, Implantologia)">
+              <FormField label="Especialidades (separadas por vírgula — ex.: Ortodontia, Implantologia)">
                 <Inp
                   value={form.specialties}
                   onChange={(e: ChangeEvent<HTMLInputElement>) =>
@@ -330,7 +340,7 @@ export default function AdminUsersPage() {
               // their own tenant, which the backend applies automatically regardless of what's
               // submitted (see app/api/users/route.ts). Only the super_admin, who has no
               // tenant of their own, needs to pick one.
-              <FormField label="Tenant *">
+              <FormField label="Clínica *">
                 <Sel
                   value={form.tenantId}
                   onChange={(e) => setForm((f) => ({ ...f, tenantId: e.target.value }))}
@@ -347,7 +357,7 @@ export default function AdminUsersPage() {
             )}
 
             {editingId && (
-              <FormField label="Status">
+              <FormField label="Estado">
                 <Sel
                   value={form.active ? 'true' : 'false'}
                   onChange={(e) => setForm((f) => ({ ...f, active: e.target.value === 'true' }))}

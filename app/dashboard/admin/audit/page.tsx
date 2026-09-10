@@ -1,5 +1,5 @@
-import Audit from '@/components/clinic/pages/Audit';
+import AuditLog from '@/components/shared/AuditLog';
 
 export default function Page() {
-  return <Audit />;
+  return <AuditLog scope="clinic" />;
 }

@@ -1,5 +1,5 @@
-import Users from '@/components/super-admin/pages/Users';
+import UsersAndAccess from '@/components/shared/UsersAndAccess';
 
 export default function Page() {
-  return <Users />;
+  return <UsersAndAccess />;
 }

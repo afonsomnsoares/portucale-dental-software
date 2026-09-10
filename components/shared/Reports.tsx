@@ -17,11 +17,21 @@ function trend(v: number | null | undefined) {
   return `${sign}${Math.round(v * 1000) / 10}% vs. período anterior`;
 }
 
-export default function ReportsPage() {
+// ─── Um só ecrã de relatórios, dois âmbitos ─────────────────────────────────
+// Eram duas cópias com 192 de 218 linhas iguais. A de plataforma é a de clínica
+// mais um bloco: a comparação entre clínicas, que só faz sentido para quem vê
+// mais do que uma. Esse bloco já estava guardado por `isGlobalAdmin` — o que
+// faltava era o resto do ecrã funcionar para quem tem clínica própria, e não
+// funcionava: pedia GET /api/tenants (403 para um admin de clínica) e ficava à
+// espera de um tenantId que nunca chegava.
+export default function Reports() {
   const { api, user } = useAuth();
-  const isGlobalAdmin = !user?.tenantId;
+  // Quem tem clínica própria vê a sua e não escolhe; o super-admin escolhe e, só
+  // ele, compara.
+  const ownTenantId = user?.tenantId || '';
+  const isGlobalAdmin = !ownTenantId;
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState('');
+  const [tenantId, setTenantId] = useState(ownTenantId);
   const [from, setFrom] = useState(() => new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(true);
@@ -33,6 +43,7 @@ export default function ReportsPage() {
   const [insightScope, setInsightScope] = useState<'clinic' | 'compare'>('clinic');
 
   useEffect(() => {
+    if (ownTenantId) return;
     api('/tenants')
       .then((t) => {
         setTenants(t || []);
@@ -40,13 +51,14 @@ export default function ReportsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [api]);
+  }, [api, ownTenantId]);
 
   const load = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId && !ownTenantId) return;
     setErr('');
     setInsight(null);
-    const params = new URLSearchParams({ tenantId, from, to });
+    // Quem tem clínica própria omite o tenantId e deixa o servidor forçá-lo.
+    const params = new URLSearchParams(tenantId ? { tenantId, from, to } : { from, to });
     const [summary, cmp] = await Promise.all([
       api(`/reports/summary?${params.toString()}`).catch((e) => {
         setErr(e instanceof Error ? e.message : 'Falha ao carregar');
@@ -56,11 +68,11 @@ export default function ReportsPage() {
     ]);
     setData(summary);
     setComparison(cmp);
-  }, [api, tenantId, from, to, isGlobalAdmin]);
+  }, [api, tenantId, ownTenantId, from, to, isGlobalAdmin]);
 
   useEffect(() => {
-    if (tenantId) load();
-  }, [tenantId, load]);
+    if (tenantId || ownTenantId) load();
+  }, [tenantId, ownTenantId, load]);
 
   async function generateInsight(scope: 'clinic' | 'compare') {
     setInsightScope(scope);
@@ -81,17 +93,18 @@ export default function ReportsPage() {
   return (
     <div>
       <PageHeader title="Relatórios" sub="Desempenho da clínica — receita, funil de conversão e eficiência">
-        {loading ? (
-          <Spinner />
-        ) : (
-          <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ maxWidth: 280 }}>
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Sel>
-        )}
+        {isGlobalAdmin &&
+          (loading ? (
+            <Spinner />
+          ) : (
+            <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ maxWidth: 280 }}>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Sel>
+          ))}
         <Inp
           type="date"
           value={from}
@@ -125,7 +138,7 @@ export default function ReportsPage() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Selecione uma clínica.</div>}
+          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Sem dados para o período.</div>}
         </div>
       ) : (
         <>
@@ -175,7 +188,11 @@ export default function ReportsPage() {
             <MetricCard
               label="Receita Potencial Perdida"
               value={formatEUR(data.metrics.recoveryPotential)}
-              sub={<Link href="/dashboard/super-admin/recovery">Ver detalhe em Recuperação →</Link>}
+              sub={
+                <Link href={isGlobalAdmin ? '/dashboard/super-admin/recovery' : '/dashboard/admin/recovery'}>
+                  Ver detalhe em Recuperação →
+                </Link>
+              }
               color="var(--urgency-critical)"
             />
           </div>

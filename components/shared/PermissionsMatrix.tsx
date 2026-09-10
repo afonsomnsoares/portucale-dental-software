@@ -23,10 +23,22 @@ interface ChangeEntry {
   allowed: boolean | null;
 }
 
-export default function PermissionsPage() {
-  const { api } = useAuth();
+// ─── Uma só matriz de permissões, dois âmbitos ──────────────────────────────
+// Eram duas cópias com 170 de 195 linhas iguais, separadas por uma diferença
+// real: quem tem clínica própria não pode pedir GET /api/tenants (o servidor
+// responde 403), por isso a versão de plataforma não servia para a clínica tal
+// como estava. Aqui a distinção está num sítio só — `ownTenantId` — em vez de
+// justificar um ficheiro inteiro.
+//
+// Quem manda continua a ser o servidor: app/api/permissions/route.ts força
+// user.tenantId a quem não é super-admin, e o PUT recusa um tenantId que não
+// corresponda. Isto aqui é a interface a não prometer o que não pode cumprir.
+export default function PermissionsMatrix() {
+  const { api, user } = useAuth();
+  // Um admin de clínica tem a sua; o super-admin não tem nenhuma e escolhe-a.
+  const ownTenantId = user?.tenantId || '';
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [tenantId, setTenantId] = useState('');
+  const [tenantId, setTenantId] = useState(ownTenantId);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<PermissionData | null>(null);
@@ -34,6 +46,12 @@ export default function PermissionsPage() {
   const [changes, setChanges] = useState<ChangeEntry[]>([]);
 
   useEffect(() => {
+    // Só quem não tem clínica própria precisa da lista — e é o único a quem o
+    // servidor a dá.
+    if (ownTenantId) {
+      setLoading(false);
+      return;
+    }
     api('/tenants')
       .then((t) => {
         setTenants(t || []);
@@ -41,17 +59,19 @@ export default function PermissionsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [api]);
+  }, [api, ownTenantId]);
 
   useEffect(() => {
-    if (!tenantId) return;
+    // Sem clínica escolhida não há matriz que faça sentido pedir — exceto para
+    // quem tem a sua, que a omite e deixa o servidor forçá-la.
+    if (!tenantId && !ownTenantId) return;
     setErr('');
-    api(`/permissions?tenantId=${tenantId}`)
+    api(tenantId ? `/permissions?tenantId=${tenantId}` : '/permissions')
       .then(setData)
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load'))
-      .finally(() => {});
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Falha ao carregar'))
+      .finally(() => setLoading(false));
     setChanges([]);
-  }, [api, tenantId]);
+  }, [api, tenantId, ownTenantId]);
 
   const actions = data?.actions || [];
   const roles = data?.roles || [];
@@ -70,15 +90,18 @@ export default function PermissionsPage() {
   }, [changes]);
 
   async function save() {
-    if (!tenantId || !pendingCount) return;
+    if (!pendingCount) return;
     setSaving(true);
     setErr('');
     try {
-      const res = await api('/permissions', { method: 'PUT', body: { tenantId, updates: changes } });
+      const res = await api('/permissions', {
+        method: 'PUT',
+        body: { tenantId: tenantId || undefined, updates: changes },
+      });
       setData(res);
       setChanges([]);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to save');
+      setErr(e instanceof Error ? e.message : 'Falha ao guardar');
     } finally {
       setSaving(false);
     }
@@ -89,31 +112,32 @@ export default function PermissionsPage() {
     const updates: ChangeEntry[] = [];
     for (const role of roles) for (const action of actions) updates.push({ role, action, allowed: null });
     setChanges(updates);
-    api('/permissions', { method: 'PUT', body: { tenantId, updates } })
+    api('/permissions', { method: 'PUT', body: { tenantId: tenantId || undefined, updates } })
       .then(setData)
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to reset'))
+      .catch((e) => setErr(e instanceof Error ? e.message : 'Falha ao repor'))
       .finally(() => setChanges([]));
   }
 
   return (
     <div>
-      <PageHeader title="Permissions Matrix" sub="Configure role actions per tenant">
-        {loading ? (
-          <Spinner />
-        ) : (
-          <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ maxWidth: 320 }}>
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </Sel>
-        )}
-        <GhostBtn onClick={resetAll} disabled={!tenantId || saving}>
-          Reset Overrides
+      <PageHeader title="Matriz de Permissões" sub="O que cada papel pode fazer, por clínica">
+        {!ownTenantId &&
+          (loading ? (
+            <Spinner />
+          ) : (
+            <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ maxWidth: 320 }}>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Sel>
+          ))}
+        <GhostBtn onClick={resetAll} disabled={saving}>
+          Repor omissões
         </GhostBtn>
         <PrimaryBtn onClick={save} disabled={!pendingCount || saving} style={{ justifyContent: 'center' }}>
-          {saving ? 'Saving…' : `Save (${pendingCount})`}
+          {saving ? 'A guardar…' : `Guardar (${pendingCount})`}
         </PrimaryBtn>
       </PageHeader>
 
@@ -133,7 +157,7 @@ export default function PermissionsPage() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Select a tenant.</div>}
+          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Sem matriz de permissões.</div>}
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
@@ -141,7 +165,7 @@ export default function PermissionsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th className="data-th">Action</th>
+                  <th className="data-th">Ação</th>
                   {roles.map((r) => (
                     <th key={r} className="data-th" style={{ textTransform: 'capitalize' }}>
                       {r}
@@ -181,7 +205,7 @@ export default function PermissionsPage() {
                               disabled={saving}
                               style={{ minWidth: 74, justifyContent: 'center' }}
                             >
-                              {isOn ? 'Allow' : 'Deny'}
+                              {isOn ? 'Permitir' : 'Negar'}
                             </button>
                             <button
                               type="button"
@@ -190,14 +214,14 @@ export default function PermissionsPage() {
                               disabled={saving || (!isOverride && pending === undefined)}
                               style={{ minWidth: 64, justifyContent: 'center', opacity: isOverride ? 1 : 0.35 }}
                             >
-                              Default
+                              Omissão
                             </button>
                             {isPending ? (
-                              <Badge label="Pending" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
+                              <Badge label="Por guardar" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
                             ) : isOverride ? (
-                              <Badge label="Override" bg="var(--accent-bg)" color="var(--accent)" />
+                              <Badge label="Alterado" bg="var(--accent-bg)" color="var(--accent)" />
                             ) : (
-                              <Badge label="Default" bg="var(--bg-page)" color="var(--text-secondary)" />
+                              <Badge label="Omissão" bg="var(--bg-page)" color="var(--text-secondary)" />
                             )}
                           </div>
                         </td>

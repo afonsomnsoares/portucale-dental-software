@@ -1,4 +1,4 @@
-import Reports from '@/components/clinic/pages/Reports';
+import Reports from '@/components/shared/Reports';
 
 export default function Page() {
   return <Reports />;

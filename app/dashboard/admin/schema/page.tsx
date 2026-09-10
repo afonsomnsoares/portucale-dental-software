@@ -1,5 +1,5 @@
-import Schema from '@/components/clinic/pages/Schema';
+import SchemaFields from '@/components/shared/SchemaFields';
 
 export default function Page() {
-  return <Schema />;
+  return <SchemaFields />;
 }
