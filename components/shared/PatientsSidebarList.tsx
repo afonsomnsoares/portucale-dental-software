@@ -28,7 +28,7 @@ export default function PatientsSidebarList({
       <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
         <input
           className="input"
-          placeholder="Search name or ID…"
+          placeholder="Procurar por nome ou nº…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />

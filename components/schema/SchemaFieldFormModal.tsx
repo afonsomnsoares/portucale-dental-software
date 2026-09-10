@@ -27,7 +27,7 @@ export default function SchemaFieldFormModal({
 }) {
   return (
     <Modal title={editingId ? 'Edit Field' : 'Add Field'} onClose={onClose}>
-      <FormField label="Field Name (snake_case)">
+      <FormField label="Nome do campo (snake_case)">
         <Inp
           placeholder="tobacco_use"
           value={form.fieldName}
@@ -35,21 +35,21 @@ export default function SchemaFieldFormModal({
           disabled={!!editingId}
         />
       </FormField>
-      <FormField label="Label">
+      <FormField label="Rótulo">
         <Inp
-          placeholder="Tobacco Use"
+          placeholder="Tabagismo"
           value={form.label}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, label: e.target.value })}
         />
       </FormField>
-      <FormField label="Description">
+      <FormField label="Descrição">
         <Inp
-          placeholder="Shows on patient registration"
+          placeholder="Aparece no registo de doentes"
           value={form.description}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, description: e.target.value })}
         />
       </FormField>
-      <FormField label="Type">
+      <FormField label="Tipo">
         <Sel
           value={form.fieldType}
           onChange={(e) =>
@@ -62,9 +62,9 @@ export default function SchemaFieldFormModal({
         </Sel>
       </FormField>
       {form.fieldType === 'enum' && (
-        <FormField label="Options (comma separated)">
+        <FormField label="Opções (separadas por vírgula)">
           <Inp
-            placeholder="Never, Sometimes, Daily"
+            placeholder="Nunca, Às vezes, Diariamente"
             value={form.enumText}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, enumText: e.target.value })}
           />
@@ -86,7 +86,7 @@ export default function SchemaFieldFormModal({
         <PrimaryBtn onClick={onSave} disabled={saving || !form.fieldName}>
           {saving ? 'Saving…' : editingId ? 'Save' : 'Add'}
         </PrimaryBtn>
-        <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+        <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
       </div>
     </Modal>
   );

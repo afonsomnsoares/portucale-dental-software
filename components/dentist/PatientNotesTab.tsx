@@ -141,18 +141,18 @@ export default function PatientNotesTab({
           {user?.name || 'Dentist'} · {new Date().toLocaleString()}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-          <FormField label="Tags (optional)">
+          <FormField label="Etiquetas (opcional)">
             <Inp
               value={noteTags}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setNoteTags(e.target.value)}
-              placeholder="e.g. post-op, follow-up"
+              placeholder="ex: pós-operatório, seguimento"
             />
           </FormField>
-          <FormField label="Links (optional)">
+          <FormField label="Ligações (opcional)">
             <Inp
               value={noteLinks}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setNoteLinks(e.target.value)}
-              placeholder="e.g. https://..."
+              placeholder="ex: https://…"
             />
           </FormField>
         </div>
@@ -217,7 +217,7 @@ export default function PatientNotesTab({
                       lineHeight: 1,
                       padding: '0 6px',
                     }}
-                    aria-label="Remove attachment"
+                    aria-label="Remover anexo"
                   >
                     ×
                   </button>

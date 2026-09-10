@@ -105,7 +105,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
       ) : (
         <div className="card mb-5" style={{ padding: 0 }}>
           <DataTable
-            cols={['Item', 'Stock atual', 'Consumo/dia', 'Dias até esgotar', 'Risco', 'Lotes']}
+            cols={['Artigo', 'Stock atual', 'Consumo/dia', 'Dias até esgotar', 'Risco', 'Lotes']}
             rows={rows.map((r) => (
               <tr key={r.item.id}>
                 <TD bold>
@@ -163,7 +163,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
           <Empty message="Sem necessidades previstas — configure o consumo por tipo de consulta abaixo." />
         ) : (
           <DataTable
-            cols={['Item', 'Stock atual', 'Necessidade prevista', 'Em falta']}
+            cols={['Artigo', 'Stock atual', 'Necessidade prevista', 'Em falta']}
             rows={data.procedureDemand.map((d) => (
               <tr key={d.itemId}>
                 <TD bold>
@@ -233,7 +233,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
       {usage.length > 0 && (
         <div className="card" style={{ padding: 0 }}>
           <DataTable
-            cols={['Tipo de consulta', 'Item', 'Quantidade', '']}
+            cols={['Tipo de consulta', 'Artigo', 'Quantidade', '']}
             rows={usage.map((u) => (
               <tr key={u.id}>
                 <TD>{u.appointment_type}</TD>

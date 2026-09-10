@@ -33,7 +33,7 @@ export default function PatientCreateModal({
   onClose: () => void;
 }) {
   return (
-    <Modal title="Register New Patient" onClose={onClose} width={520}>
+    <Modal title="Registar doente" onClose={onClose} width={520}>
       {error && (
         <div
           style={{
@@ -51,14 +51,14 @@ export default function PatientCreateModal({
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Full Name *">
+        <FormField label="Nome completo *">
           <Inp
             value={form.name}
-            placeholder="John Doe"
+            placeholder="Maria Silva"
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, name: e.target.value })}
           />
         </FormField>
-        <FormField label="Date of Birth">
+        <FormField label="Data de nascimento">
           <input
             type="date"
             className="input"
@@ -66,10 +66,10 @@ export default function PatientCreateModal({
             onChange={(e) => onChange({ ...form, dob: e.target.value })}
           />
         </FormField>
-        <FormField label="Phone">
+        <FormField label="Telefone">
           <Inp
             value={form.phone}
-            placeholder="(212) 555-0000"
+            placeholder="912 345 678"
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, phone: e.target.value })}
           />
         </FormField>
@@ -77,22 +77,22 @@ export default function PatientCreateModal({
           <Inp
             type="email"
             value={form.email}
-            placeholder="patient@email.com"
+            placeholder="doente@email.com"
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, email: e.target.value })}
           />
         </FormField>
       </div>
-      <FormField label="Insurance">
+      <FormField label="Seguro">
         <Inp
           value={form.insurance}
-          placeholder="BlueCross PPO"
+          placeholder="Multicare"
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, insurance: e.target.value })}
         />
       </FormField>
-      <FormField label="Medical Alerts" hint="Separate multiple alerts with commas">
+      <FormField label="Alertas clínicos" hint="Separate multiple alerts with commas">
         <Inp
           value={form.alerts}
-          placeholder="Penicillin Allergy, Diabetes T2"
+          placeholder="Alergia a penicilina, Diabetes tipo 2"
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, alerts: e.target.value })}
         />
       </FormField>
@@ -123,7 +123,7 @@ export default function PatientCreateModal({
         <PrimaryBtn onClick={onSave} disabled={saving || !form.name}>
           {saving ? 'Registering…' : 'Register Patient'}
         </PrimaryBtn>
-        <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+        <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
       </div>
     </Modal>
   );

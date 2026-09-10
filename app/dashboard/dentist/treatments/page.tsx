@@ -98,9 +98,9 @@ export default function DentistTreatmentsPage() {
   return (
     <div>
       <PageHeader
-        title="Treatments"
-        sub="Clinical treatment management — all patients"
-        action="+ New Treatment"
+        title="Tratamentos"
+        sub="Gestão de tratamentos — todos os doentes"
+        action="+ Novo tratamento"
         onAction={() => setModal(true)}
       >
         <div style={{ display: 'flex', gap: 6 }}>
@@ -130,22 +130,22 @@ export default function DentistTreatmentsPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         <MetricCard
-          label="TOTAL VALUE"
+          label="VALOR TOTAL"
           value={`$${visible.reduce((a, t) => a + Number(t.fee), 0).toLocaleString()}`}
           color="var(--accent)"
         />
         <MetricCard
-          label="PROPOSED"
+          label="PROPOSTOS"
           value={visible.filter((t) => t.status === 'proposed').length}
           color="var(--urgency-soon)"
         />
         <MetricCard
-          label="IN PROGRESS"
+          label="EM CURSO"
           value={visible.filter((t) => t.status === 'accepted').length}
           color="var(--cat-teal)"
         />
         <MetricCard
-          label="COMPLETED"
+          label="CONCLUÍDOS"
           value={visible.filter((t) => t.status === 'completed').length}
           color="var(--urgency-ok)"
         />
@@ -153,14 +153,14 @@ export default function DentistTreatmentsPage() {
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <Sel value={selPat} onChange={(e) => setSelPat(e.target.value)} style={{ maxWidth: 240 }}>
-          <option value="all">All Patients</option>
+          <option value="all">Todos os doentes</option>
           {ptOptions.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
         </Sel>
-        {selPat !== 'all' && <GhostBtn onClick={() => setSelPat('all')}>Clear</GhostBtn>}
+        {selPat !== 'all' && <GhostBtn onClick={() => setSelPat('all')}>Limpar</GhostBtn>}
       </div>
 
       {loading ? (
@@ -270,9 +270,9 @@ export default function DentistTreatmentsPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        <option value="proposed">Proposed</option>
-                        <option value="accepted">Accepted</option>
-                        <option value="completed">Completed</option>
+                        <option value="proposed">Propostos</option>
+                        <option value="accepted">Aceites</option>
+                        <option value="completed">Concluído</option>
                       </select>
                     </div>
                   ))}
@@ -303,8 +303,8 @@ export default function DentistTreatmentsPage() {
       )}
 
       {modal && (
-        <Modal title="New Treatment" onClose={() => setModal(false)} width={540}>
-          <FormField label="Patient *">
+        <Modal title="Novo tratamento" onClose={() => setModal(false)} width={540}>
+          <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
               <option value="">— Select patient —</option>
               {patients.map((p) => (
@@ -335,22 +335,22 @@ export default function DentistTreatmentsPage() {
               ))}
             </Sel>
           </FormField>
-          <FormField label="Description *">
+          <FormField label="Descrição *">
             <Inp
               value={form.description}
-              placeholder="Procedure description"
+              placeholder="Descrição do procedimento"
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             />
           </FormField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Phase">
+            <FormField label="Fase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: e.target.value }))}>
                 <option value="1">1 — Emergency</option>
                 <option value="2">2 — Restorative</option>
                 <option value="3">3 — Aesthetic</option>
               </Sel>
             </FormField>
-            <FormField label="Fee ($)">
+            <FormField label="Valor (€)">
               <Inp
                 type="number"
                 value={form.fee}
@@ -358,7 +358,7 @@ export default function DentistTreatmentsPage() {
               />
             </FormField>
           </div>
-          <FormField label="Notes">
+          <FormField label="Notas">
             <Inp
               value={form.notes}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, notes: e.target.value }))}
@@ -368,7 +368,7 @@ export default function DentistTreatmentsPage() {
             <PrimaryBtn onClick={create} disabled={saving || !form.patientId || !form.description}>
               {saving ? 'Creating…' : 'Create Treatment'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

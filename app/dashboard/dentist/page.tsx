@@ -59,10 +59,15 @@ export default function DentistDashboard() {
         />
       </PageHeader>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        <MetricCard label="TODAY'S APPOINTMENTS" value={appts.length} sub="scheduled" color="var(--accent)" />
-        <MetricCard label="IN CHAIR NOW" value={inChair} sub="in operatory" color="var(--urgency-ok)" />
-        <MetricCard label="PENDING TREATMENTS" value={pending} sub="awaiting decision" color="var(--urgency-soon)" />
-        <MetricCard label="HIGH-RISK APPTS" value={highRisk} sub="may not show" color="var(--urgency-critical)" />
+        <MetricCard label="CONSULTAS DE HOJE" value={appts.length} sub="marcadas" color="var(--accent)" />
+        <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
+        <MetricCard
+          label="TRATAMENTOS PENDENTES"
+          value={pending}
+          sub="à espera de decisão"
+          color="var(--urgency-soon)"
+        />
+        <MetricCard label="CONSULTAS DE RISCO" value={highRisk} sub="podem faltar" color="var(--urgency-critical)" />
       </div>
       {ready.length > 0 && (
         <div

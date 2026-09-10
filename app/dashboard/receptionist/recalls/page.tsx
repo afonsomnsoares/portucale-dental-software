@@ -114,7 +114,7 @@ export default function ReceptionistRecallsPage() {
 
   return (
     <div>
-      <PageHeader title="Patient Recalls" sub="Track and manage periodic exam and prophylaxis reminders">
+      <PageHeader title="Recalls de doentes" sub="Convocatórias periódicas de consulta e higiene">
         <PrimaryBtn onClick={() => setModal(true)}>+ New Recall</PrimaryBtn>
       </PageHeader>
 
@@ -141,11 +141,11 @@ export default function ReceptionistRecallsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <th className="data-th">Patient</th>
-                <th className="data-th">Type</th>
+                <th className="data-th">Doente</th>
+                <th className="data-th">Tipo</th>
                 <th className="data-th">Interval</th>
-                <th className="data-th">Last Done</th>
-                <th className="data-th">Next Due</th>
+                <th className="data-th">Última realização</th>
+                <th className="data-th">Próxima</th>
                 <th className="data-th">Status</th>
                 <th className="data-th">Reminder Sent</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
@@ -193,7 +193,7 @@ export default function ReceptionistRecallsPage() {
                           <GhostBtn onClick={() => window.open(`tel:${patientPhone(r.patient_id)}`)}>Call</GhostBtn>
                         )}
                         {r.active && <GhostBtn onClick={() => handleComplete(r.id)}>Complete</GhostBtn>}
-                        {r.active && <DangerBtn onClick={() => handleDeactivate(r.id)}>Stop</DangerBtn>}
+                        {r.active && <DangerBtn onClick={() => handleDeactivate(r.id)}>Terminar</DangerBtn>}
                       </div>
                     </td>
                   </tr>
@@ -205,9 +205,9 @@ export default function ReceptionistRecallsPage() {
       )}
 
       {modal && (
-        <Modal title="New Recall Schedule" onClose={() => setModal(false)}>
+        <Modal title="Novo recall" onClose={() => setModal(false)}>
           <form onSubmit={handleCreate}>
-            <FormField label="Patient">
+            <FormField label="Doente">
               <Sel
                 value={form.patientId}
                 onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}
@@ -222,7 +222,7 @@ export default function ReceptionistRecallsPage() {
               </Sel>
             </FormField>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FormField label="Recall Type">
+              <FormField label="Tipo de recall">
                 <Sel value={form.recallType} onChange={(e) => setForm((p) => ({ ...p, recallType: e.target.value }))}>
                   {RECALL_TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -231,7 +231,7 @@ export default function ReceptionistRecallsPage() {
                   ))}
                 </Sel>
               </FormField>
-              <FormField label="Interval (months)">
+              <FormField label="Intervalo (meses)">
                 <Inp
                   type="number"
                   min={1}
@@ -245,14 +245,14 @@ export default function ReceptionistRecallsPage() {
               </FormField>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FormField label="Last Done">
+              <FormField label="Última realização">
                 <Inp
                   type="date"
                   value={form.lastDone}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, lastDone: e.target.value }))}
                 />
               </FormField>
-              <FormField label="Next Due">
+              <FormField label="Próxima">
                 <Inp
                   type="date"
                   value={form.nextDue}
@@ -261,7 +261,7 @@ export default function ReceptionistRecallsPage() {
                 />
               </FormField>
             </div>
-            <FormField label="Notes">
+            <FormField label="Notas">
               <textarea
                 className="input"
                 style={{ resize: 'vertical', minHeight: 60, width: '100%' }}
@@ -270,7 +270,7 @@ export default function ReceptionistRecallsPage() {
               />
             </FormField>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-              <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+              <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
               <PrimaryBtn type="submit" disabled={saving}>
                 {saving ? 'Saving…' : 'Create Recall'}
               </PrimaryBtn>

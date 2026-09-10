@@ -90,22 +90,22 @@ export default function ReceptionTreatmentsPage() {
   return (
     <div>
       <PageHeader
-        title="Treatment Plans"
-        sub="Create, view, and manage all treatment plans"
-        action="+ New Treatment"
+        title="Planos de tratamento"
+        sub="Criar e acompanhar planos de tratamento"
+        action="+ Novo tratamento"
         onAction={() => setModal(true)}
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        <MetricCard label="TOTAL VALUE" value={`$${totalFee.toLocaleString()}`} color="var(--accent)" />
-        <MetricCard label="PROPOSED" value={proposed} sub="awaiting acceptance" color="var(--urgency-soon)" />
-        <MetricCard label="ACCEPTED" value={accepted} sub="scheduled" color="var(--cat-teal)" />
-        <MetricCard label="COMPLETED" value={completed} sub="completed treatments" color="var(--urgency-ok)" />
+        <MetricCard label="VALOR TOTAL" value={`$${totalFee.toLocaleString()}`} color="var(--accent)" />
+        <MetricCard label="PROPOSTOS" value={proposed} sub="à espera de aceitação" color="var(--urgency-soon)" />
+        <MetricCard label="ACEITES" value={accepted} sub="marcadas" color="var(--cat-teal)" />
+        <MetricCard label="CONCLUÍDOS" value={completed} sub="tratamentos concluídos" color="var(--urgency-ok)" />
       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
         <Sel value={selPat} onChange={(e) => setSelPat(e.target.value)} style={{ maxWidth: 220 }}>
-          <option value="all">All Patients</option>
+          <option value="all">Todos os doentes</option>
           {ptOptions.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} #{p.global_seq}
@@ -113,16 +113,16 @@ export default function ReceptionTreatmentsPage() {
           ))}
         </Sel>
         <Sel value={selPhase} onChange={(e) => setSelPhase(e.target.value)} style={{ maxWidth: 180 }}>
-          <option value="all">All Phases</option>
+          <option value="all">Todas as fases</option>
           <option value="1">Phase 1 — Emergency</option>
           <option value="2">Phase 2 — Restorative</option>
           <option value="3">Phase 3 — Aesthetic</option>
         </Sel>
         <Sel value={selStatus} onChange={(e) => setSelStatus(e.target.value)} style={{ maxWidth: 160 }}>
-          <option value="all">All Statuses</option>
-          <option value="proposed">Proposed</option>
-          <option value="accepted">Accepted</option>
-          <option value="completed">Completed</option>
+          <option value="all">Todos os estados</option>
+          <option value="proposed">Propostos</option>
+          <option value="accepted">Aceites</option>
+          <option value="completed">Concluído</option>
         </Sel>
         {(selPat !== 'all' || selPhase !== 'all' || selStatus !== 'all') && (
           <GhostBtn
@@ -143,8 +143,8 @@ export default function ReceptionTreatmentsPage() {
       </div>
 
       {modal && (
-        <Modal title="Create New Treatment" onClose={() => setModal(false)} width={540}>
-          <FormField label="Patient *">
+        <Modal title="Novo tratamento" onClose={() => setModal(false)} width={540}>
+          <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
               <option value="">— Select patient —</option>
               {patients.map((p) => (
@@ -175,22 +175,22 @@ export default function ReceptionTreatmentsPage() {
               ))}
             </Sel>
           </FormField>
-          <FormField label="Description *">
+          <FormField label="Descrição *">
             <Inp
               value={form.description}
-              placeholder="e.g. Composite Resin — Posterior"
+              placeholder="ex: Resina composta — posterior"
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             />
           </FormField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Phase">
+            <FormField label="Fase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: e.target.value }))}>
                 <option value="1">1 — Emergency</option>
                 <option value="2">2 — Restorative</option>
                 <option value="3">3 — Aesthetic</option>
               </Sel>
             </FormField>
-            <FormField label="Fee ($)">
+            <FormField label="Valor (€)">
               <Inp
                 type="number"
                 value={form.fee}
@@ -199,10 +199,10 @@ export default function ReceptionTreatmentsPage() {
               />
             </FormField>
           </div>
-          <FormField label="Notes">
+          <FormField label="Notas">
             <Inp
               value={form.notes}
-              placeholder="Optional"
+              placeholder="Opcional"
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, notes: e.target.value }))}
             />
           </FormField>
@@ -210,7 +210,7 @@ export default function ReceptionTreatmentsPage() {
             <PrimaryBtn onClick={create} disabled={saving || !form.patientId || !form.description}>
               {saving ? 'Creating…' : 'Create Treatment'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

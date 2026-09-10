@@ -106,7 +106,7 @@ export default function DentistPatientsPage() {
 
   return (
     <div>
-      <PageHeader title="Patients" sub="Clinical patient records — full history and chart data" />
+      <PageHeader title="Doentes" sub="Registos clínicos — historial completo" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <PatientsSidebarList
           patients={patients}

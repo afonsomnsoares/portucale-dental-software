@@ -180,9 +180,9 @@ export default function ReceptionPatientsPage() {
   return (
     <div>
       <PageHeader
-        title="Patient Registrar"
-        sub="Global Identity Registry — search and manage all patients"
-        action="+ Register Patient"
+        title="Registo de doentes"
+        sub="Registo global — procurar e gerir doentes de todas as clínicas"
+        action="+ Registar doente"
         onAction={() => setModal(true)}
       >
         <GhostBtn onClick={() => setImportOpen(true)} style={{ padding: '8px 12px' }}>

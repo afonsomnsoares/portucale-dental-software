@@ -124,7 +124,7 @@ export default function LiveFloorPage() {
   return (
     <div>
       <PageHeader
-        title="Live Floor"
+        title="Sala em tempo real"
         sub={`${active.length} appointment${active.length !== 1 ? 's' : ''} active · ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}${syncedLabel ? ` · sincronizado ${syncedLabel} (${liveLabel})` : ''}`}
       >
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>

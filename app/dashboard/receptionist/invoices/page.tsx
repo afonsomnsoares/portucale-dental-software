@@ -161,7 +161,7 @@ export default function InvoicesPage() {
   return (
     <div>
       <PageHeader
-        title="Invoices"
+        title="Faturas"
         sub={`${invoices.length} invoice${invoices.length !== 1 ? 's' : ''} · $${totals.amount.toLocaleString()} total · $${totals.paid.toLocaleString()} collected`}
       >
         <div className="flex gap-2 items-center">
@@ -204,9 +204,9 @@ export default function InvoicesPage() {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                 <th className="data-th">Invoice</th>
-                <th className="data-th">Patient</th>
-                <th className="data-th">Date</th>
-                <th className="data-th">Dentist</th>
+                <th className="data-th">Doente</th>
+                <th className="data-th">Data</th>
+                <th className="data-th">Dentista</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
                   Amount
                 </th>
@@ -295,8 +295,8 @@ export default function InvoicesPage() {
       )}
 
       {modal && (
-        <Modal title="New Invoice" onClose={() => setModal(false)} width={520}>
-          <FormField label="Patient *">
+        <Modal title="Nova fatura" onClose={() => setModal(false)} width={520}>
+          <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
               <option value="">— Select patient —</option>
               {patients.map((p) => (
@@ -306,7 +306,7 @@ export default function InvoicesPage() {
               ))}
             </Sel>
           </FormField>
-          <FormField label="Dentist">
+          <FormField label="Dentista">
             <Sel value={form.dentistId} onChange={(e) => setForm((p) => ({ ...p, dentistId: e.target.value }))}>
               <option value="">— Optional —</option>
               {dentists.map((d) => (
@@ -316,7 +316,7 @@ export default function InvoicesPage() {
               ))}
             </Sel>
           </FormField>
-          <FormField label="Amount *">
+          <FormField label="Valor *">
             <Inp
               type="number"
               step="0.01"
@@ -326,14 +326,14 @@ export default function InvoicesPage() {
             />
           </FormField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Invoice Date">
+            <FormField label="Data da fatura">
               <Inp
                 type="date"
                 value={form.invoiceDate}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, invoiceDate: e.target.value }))}
               />
             </FormField>
-            <FormField label="Due Date">
+            <FormField label="Data de vencimento">
               <Inp
                 type="date"
                 value={form.dueDate}
@@ -341,25 +341,25 @@ export default function InvoicesPage() {
               />
             </FormField>
           </div>
-          <FormField label="Payment Method">
+          <FormField label="Forma de pagamento">
             <Sel value={form.method} onChange={(e) => setForm((p) => ({ ...p, method: e.target.value }))}>
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="insurance">Insurance</option>
+              <option value="cash">Numerário</option>
+              <option value="card">Cartão</option>
+              <option value="insurance">Seguro</option>
               <option value="bank transfer">Bank Transfer</option>
-              <option value="other">Other</option>
+              <option value="other">Outro</option>
             </Sel>
           </FormField>
-          <FormField label="Line Items (one per line: Description - Amount)" hint="Optional — for invoice breakdown">
+          <FormField label="Linhas (uma por linha: Descrição - Valor)" hint="Optional — for invoice breakdown">
             <textarea
               className="input"
               value={form.items}
               onChange={(e) => setForm((p) => ({ ...p, items: e.target.value }))}
               style={{ resize: 'vertical', minHeight: 60, fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
-              placeholder="Crown #14 - 1800&#x0a;Scaling - 280"
+              placeholder="Coroa 14 - 1800&#x0a;Destartarização - 280"
             />
           </FormField>
-          <FormField label="Notes">
+          <FormField label="Notas">
             <Inp
               value={form.notes}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, notes: e.target.value }))}
@@ -369,7 +369,7 @@ export default function InvoicesPage() {
             <PrimaryBtn onClick={handleCreate} disabled={saving || !form.patientId || !form.amount}>
               {saving ? 'Creating…' : 'Create Invoice'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

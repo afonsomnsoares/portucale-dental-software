@@ -225,7 +225,7 @@ export default function ReceptionDashboard() {
 
   return (
     <div>
-      <PageHeader title="Reception Dashboard" sub={label} action="+ Book Appointment" onAction={openBookModal}>
+      <PageHeader title="Receção" sub={label} action="+ Marcar consulta" onAction={openBookModal}>
         <input
           type="date"
           value={date}
@@ -237,10 +237,15 @@ export default function ReceptionDashboard() {
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        <MetricCard label="SCHEDULED TODAY" value={appts.length} sub="total appointments" color="var(--accent)" />
-        <MetricCard label="WAITING ROOM" value={waiting} sub="checked in" color="var(--urgency-soon)" />
-        <MetricCard label="IN CHAIR NOW" value={inChair} sub="in operatory" color="var(--urgency-ok)" />
-        <MetricCard label="HIGH-RISK" value={highRisk.length} sub="call confirmation" color="var(--urgency-critical)" />
+        <MetricCard label="MARCADAS PARA HOJE" value={appts.length} sub="consultas no total" color="var(--accent)" />
+        <MetricCard label="SALA DE ESPERA" value={waiting} sub="com entrada registada" color="var(--urgency-soon)" />
+        <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
+        <MetricCard
+          label="RISCO ELEVADO"
+          value={highRisk.length}
+          sub="a confirmar por telefone"
+          color="var(--urgency-critical)"
+        />
       </div>
 
       {/* Banners */}
@@ -343,8 +348,8 @@ export default function ReceptionDashboard() {
 
       {/* Book modal */}
       {modal && (
-        <Modal title="Book New Appointment" onClose={() => setModal(false)} width={560}>
-          <FormField label="Patient *">
+        <Modal title="Marcar consulta" onClose={() => setModal(false)} width={560}>
+          <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
               <option value="">— Select patient —</option>
               {patients.map((p) => (
@@ -355,7 +360,7 @@ export default function ReceptionDashboard() {
               ))}
             </Sel>
           </FormField>
-          <FormField label="Appointment Type *">
+          <FormField label="Tipo de consulta *">
             <Sel value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
               <option value="">— Select type —</option>
               {APPOINTMENT_TYPES.map((t) => (
@@ -448,7 +453,7 @@ export default function ReceptionDashboard() {
             </div>
           ) : (
             <>
-              <FormField label="Dentist *">
+              <FormField label="Dentista *">
                 <Sel value={form.dentistId} onChange={(e) => setForm((p) => ({ ...p, dentistId: e.target.value }))}>
                   <option value="">— Select dentist —</option>
                   {dentists.map((d) => (
@@ -459,7 +464,7 @@ export default function ReceptionDashboard() {
                 </Sel>
               </FormField>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FormField label="Start Time">
+                <FormField label="Hora de início">
                   <input
                     type="time"
                     value={form.startTime}
@@ -467,7 +472,7 @@ export default function ReceptionDashboard() {
                     className="input"
                   />
                 </FormField>
-                <FormField label="Duration (min)">
+                <FormField label="Duração (min)">
                   <Sel value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))}>
                     {[15, 30, 45, 60, 90, 120].map((d) => (
                       <option key={d}>{d}</option>
@@ -482,11 +487,11 @@ export default function ReceptionDashboard() {
             </>
           )}
 
-          <FormField label="Notes">
+          <FormField label="Notas">
             <input
               className="input"
               value={form.notes}
-              placeholder="Optional notes…"
+              placeholder="Notas opcionais…"
               onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
             />
           </FormField>
@@ -506,7 +511,7 @@ export default function ReceptionDashboard() {
             >
               {saving ? 'Booking…' : 'Book Appointment'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

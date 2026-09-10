@@ -47,7 +47,7 @@ export default function FinanceDashboard() {
 
   return (
     <div>
-      <PageHeader title="Finance Dashboard" sub="Revenue, outstanding balances, and financial performance">
+      <PageHeader title="Financeiro" sub="Receita, saldos por cobrar e desempenho financeiro">
         <input
           type="date"
           value={from}
@@ -75,30 +75,30 @@ export default function FinanceDashboard() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 16 }}>
             <MetricCard
-              label="TOTAL REVENUE"
+              label="RECEITA TOTAL"
               value={fmt(data.totals?.total_paid)}
               sub={`${data.totals?.total_invoices || 0} invoices`}
               color="var(--urgency-ok)"
               icon={<TrendingUp />}
             />
             <MetricCard
-              label="OUTSTANDING"
+              label="POR COBRAR"
               value={fmt(data.totals?.total_outstanding)}
               sub={`${fmt(data.patientBalance)} patient balances`}
               color="var(--urgency-critical)"
               icon={<AlertTriangle />}
             />
             <MetricCard
-              label="TOTAL BILLED"
+              label="TOTAL FATURADO"
               value={fmt(data.totals?.total_amount)}
-              sub="Gross invoice value"
+              sub="Valor bruto faturado"
               color="var(--accent)"
               icon={<DollarSign />}
             />
             <MetricCard
-              label="PATIENT BALANCES"
+              label="SALDOS DE DOENTES"
               value={fmt(data.patientBalance)}
-              sub="Sum of all patient balances"
+              sub="Soma dos saldos por doente"
               color="var(--urgency-soon)"
               icon={<CreditCard />}
             />
@@ -256,12 +256,12 @@ export default function FinanceDashboard() {
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                     <th className="data-th">Invoice</th>
-                    <th className="data-th">Patient</th>
-                    <th className="data-th">Date</th>
+                    <th className="data-th">Doente</th>
+                    <th className="data-th">Data</th>
                     <th className="data-th" style={{ textAlign: 'right' }}>
                       Paid
                     </th>
-                    <th className="data-th">Method</th>
+                    <th className="data-th">Forma</th>
                     <th className="data-th">Status</th>
                   </tr>
                 </thead>

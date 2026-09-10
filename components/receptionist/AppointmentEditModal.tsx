@@ -52,7 +52,7 @@ export default function AppointmentEditModal({
 }: AppointmentEditModalProps) {
   if (!open) return null;
   return (
-    <Modal title="Edit appointment" onClose={onClose} width={560}>
+    <Modal title="Editar consulta" onClose={onClose} width={560}>
       {error && (
         <div
           style={{
@@ -70,21 +70,21 @@ export default function AppointmentEditModal({
         </div>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormRow label="Date">
+        <FormRow label="Data">
           <Inp
             type="date"
             value={value.date}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, date: e.target.value })}
           />
         </FormRow>
-        <FormRow label="Time">
+        <FormRow label="Hora">
           <Inp
             type="time"
             value={value.startTime}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, startTime: e.target.value })}
           />
         </FormRow>
-        <FormRow label="Duration (min)">
+        <FormRow label="Duração (min)">
           <Inp
             type="number"
             min={5}
@@ -93,7 +93,7 @@ export default function AppointmentEditModal({
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, duration: e.target.value })}
           />
         </FormRow>
-        <FormRow label="Chair">
+        <FormRow label="Cadeira">
           <Inp
             type="number"
             min={1}
@@ -103,7 +103,7 @@ export default function AppointmentEditModal({
         </FormRow>
       </div>
 
-      <FormRow label="Dentist">
+      <FormRow label="Dentista">
         <Sel value={value.dentistId || ''} onChange={(e) => onChange({ ...value, dentistId: e.target.value })}>
           <option value="">— Select —</option>
           {dentists.map((d) => (
@@ -114,14 +114,14 @@ export default function AppointmentEditModal({
         </Sel>
       </FormRow>
 
-      <FormRow label="Type">
+      <FormRow label="Tipo">
         <Inp
           value={value.type}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, type: e.target.value })}
         />
       </FormRow>
 
-      <FormRow label="Notes">
+      <FormRow label="Notas">
         <Textarea
           value={value.notes || ''}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ ...value, notes: e.target.value })}
@@ -132,7 +132,7 @@ export default function AppointmentEditModal({
         <PrimaryBtn onClick={onSave} disabled={saving} style={{ justifyContent: 'center' }}>
           {saving ? 'Saving…' : 'Save'}
         </PrimaryBtn>
-        <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+        <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
       </div>
     </Modal>
   );

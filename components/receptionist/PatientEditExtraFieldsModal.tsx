@@ -17,7 +17,7 @@ export default function PatientEditExtraFieldsModal({
   onClose: () => void;
 }) {
   return (
-    <Modal title="Edit Extra Fields" onClose={onClose} width={560}>
+    <Modal title="Editar campos adicionais" onClose={onClose} width={560}>
       {schemaFields.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No extra fields configured.</div>
       ) : (
@@ -37,7 +37,7 @@ export default function PatientEditExtraFieldsModal({
         <PrimaryBtn onClick={onSave} disabled={saving} style={{ justifyContent: 'center' }}>
           {saving ? 'Saving…' : 'Save'}
         </PrimaryBtn>
-        <GhostBtn onClick={onClose}>Cancel</GhostBtn>
+        <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
       </div>
     </Modal>
   );

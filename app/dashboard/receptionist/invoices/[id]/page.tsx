@@ -123,29 +123,29 @@ export default function InvoiceDetailPage() {
           <div className="section-label mb-4">Invoice Details</div>
           <div style={{ display: 'grid', gap: 12 }}>
             <Row label="Status" value={<Badge s={inv.status} />} />
-            <Row label="Amount" value={`$${Number(inv.amount).toLocaleString()}`} bold />
+            <Row label="Valor" value={`$${Number(inv.amount).toLocaleString()}`} bold />
             <Row label="Paid" value={`$${Number(inv.paid).toLocaleString()}`} color="var(--urgency-ok)" />
             <Row
-              label="Balance"
+              label="Saldo"
               value={`$${balance.toLocaleString()}`}
               color={balance > 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)'}
               bold
             />
-            <Row label="Method" value={inv.method || '—'} />
-            <Row label="Invoice Date" value={fmtDate(inv.invoice_date)} />
-            <Row label="Due Date" value={fmtDate(inv.due_date)} />
-            <Row label="Dentist" value={inv.dentist_name || '—'} />
+            <Row label="Forma" value={inv.method || '—'} />
+            <Row label="Data da fatura" value={fmtDate(inv.invoice_date)} />
+            <Row label="Data de vencimento" value={fmtDate(inv.due_date)} />
+            <Row label="Dentista" value={inv.dentist_name || '—'} />
           </div>
         </div>
 
         <div className="card p-5">
-          <div className="section-label mb-4">Patient</div>
+          <div className="section-label mb-4">Doente</div>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
             {inv.patient_name || '—'}
           </div>
           {inv.notes && (
             <>
-              <div className="section-label mt-4 mb-2">Notes</div>
+              <div className="section-label mt-4 mb-2">Notas</div>
               <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{inv.notes}</div>
             </>
           )}
@@ -158,7 +158,7 @@ export default function InvoiceDetailPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                <th className="data-th">Description</th>
+                <th className="data-th">Descrição</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
                   Amount
                 </th>
@@ -199,7 +199,7 @@ export default function InvoiceDetailPage() {
       )}
 
       {payModal && (
-        <Modal title="Record Payment" onClose={() => setPayModal(false)} width={400}>
+        <Modal title="Registar pagamento" onClose={() => setPayModal(false)} width={400}>
           <div style={{ marginBottom: 16 }}>
             <div className="section-label mb-1">Invoice Total</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -225,7 +225,7 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
 
-          <FormField label="Payment Amount *">
+          <FormField label="Valor pago *">
             <Inp
               type="number"
               step="0.01"
@@ -236,7 +236,7 @@ export default function InvoiceDetailPage() {
               placeholder={`Max: $${balance.toLocaleString()}`}
             />
           </FormField>
-          <FormField label="Payment Method">
+          <FormField label="Forma de pagamento">
             <Sel value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
               {PAY_METHODS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -249,7 +249,7 @@ export default function InvoiceDetailPage() {
             <PrimaryBtn onClick={handlePay} disabled={saving || !payAmount || Number(payAmount) <= 0}>
               {saving ? 'Processing…' : `Pay $${Number(payAmount || 0).toLocaleString()}`}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setPayModal(false)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setPayModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

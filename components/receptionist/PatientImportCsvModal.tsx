@@ -102,7 +102,7 @@ export default function PatientImportCsvModal({
   ];
 
   return (
-    <Modal title="Import Patients (CSV)" onClose={onClose} width={640}>
+    <Modal title="Importar doentes (CSV)" onClose={onClose} width={640}>
       {err && (
         <div
           style={{
@@ -120,7 +120,7 @@ export default function PatientImportCsvModal({
         </div>
       )}
 
-      <FormField label="CSV file" hint="Export from Excel as CSV (UTF-8). Semicolon-separated CSV is supported.">
+      <FormField label="Ficheiro CSV" hint="Export from Excel as CSV (UTF-8). Semicolon-separated CSV is supported.">
         <input type="file" accept=".csv,text/csv" onChange={(e) => onPickFile(e.target.files?.[0])} />
       </FormField>
 
@@ -174,7 +174,7 @@ export default function PatientImportCsvModal({
         <PrimaryBtn onClick={runImport} disabled={busy || !csv.trim()} style={{ justifyContent: 'center' }}>
           {busy ? 'Importing…' : 'Import'}
         </PrimaryBtn>
-        <GhostBtn onClick={onClose}>Close</GhostBtn>
+        <GhostBtn onClick={onClose}>Fechar</GhostBtn>
       </div>
     </Modal>
   );

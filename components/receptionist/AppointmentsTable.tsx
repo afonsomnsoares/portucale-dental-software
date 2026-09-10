@@ -27,12 +27,12 @@ export default function AppointmentsTable({
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
-            <TH>Date</TH>
-            <TH>Time</TH>
-            <TH>Patient</TH>
-            <TH>Dentist</TH>
-            <TH>Type</TH>
-            <TH right>Chair</TH>
+            <TH>Data</TH>
+            <TH>Hora</TH>
+            <TH>Doente</TH>
+            <TH>Dentista</TH>
+            <TH>Tipo</TH>
+            <TH right>Cadeira</TH>
             <TH>Status</TH>
             <TH right>Actions</TH>
           </tr>

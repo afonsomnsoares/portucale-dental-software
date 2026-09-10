@@ -38,8 +38,8 @@ export default function SchemaFieldInput({
   if (t === 'boolean') {
     return (
       <Sel value={String(!!value)} onChange={(e) => onChange(e.target.value === 'true')}>
-        <option value="false">No</option>
-        <option value="true">Yes</option>
+        <option value="false">Não</option>
+        <option value="true">Sim</option>
       </Sel>
     );
   }

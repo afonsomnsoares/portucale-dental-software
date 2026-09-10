@@ -192,7 +192,7 @@ export default function ReceptionAppointmentsPage() {
 
   return (
     <div>
-      <PageHeader title="Appointments" sub="List of all scheduled appointments">
+      <PageHeader title="Consultas" sub="Todas as consultas marcadas">
         <input
           type="date"
           value={from}
@@ -210,7 +210,7 @@ export default function ReceptionAppointmentsPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search patient, type, dentist…"
+          placeholder="Procurar doente, tipo, dentista…"
           className="input"
           style={{ width: 260, padding: '7px 12px', fontSize: 13 }}
         />
@@ -220,7 +220,7 @@ export default function ReceptionAppointmentsPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
         >
-          <option value="">All statuses</option>
+          <option value="">Todos os estados</option>
           {Object.keys(settings?.STATUS_META || {}).map((s) => (
             <option key={s} value={s}>
               {s}
@@ -252,7 +252,7 @@ export default function ReceptionAppointmentsPage() {
       </div>
 
       {confirm && (
-        <Modal title="Cancel appointment" onClose={() => setConfirm(null)} width={520}>
+        <Modal title="Cancelar consulta" onClose={() => setConfirm(null)} width={520}>
           <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 8, fontWeight: 700 }}>
             {confirm.patient_name || '—'} · {String(confirm.appt_date || '').slice(0, 10)}{' '}
             {String(confirm.start_time || '').slice(0, 5)}
@@ -264,7 +264,7 @@ export default function ReceptionAppointmentsPage() {
             <DangerBtn onClick={() => removeAppointment(confirm)} disabled={removing === confirm.id}>
               {removing === confirm.id ? 'Removing…' : 'Cancel appointment'}
             </DangerBtn>
-            <GhostBtn onClick={() => setConfirm(null)}>Cancel</GhostBtn>
+            <GhostBtn onClick={() => setConfirm(null)}>Cancelar</GhostBtn>
           </div>
         </Modal>
       )}

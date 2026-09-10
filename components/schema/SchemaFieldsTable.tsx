@@ -39,7 +39,7 @@ export default function SchemaFieldsTable({
           <thead>
             <tr>
               <th className="data-th">Field</th>
-              <th className="data-th">Type</th>
+              <th className="data-th">Tipo</th>
               <th className="data-th">Rollout</th>
               <th className="data-th">Required</th>
               <th className="data-th">Published</th>

@@ -4,7 +4,7 @@ import NotInstrumented from '@/components/super-admin/NotInstrumented';
 export default function FeatureFlags() {
   return (
     <NotInstrumented
-      title="Feature Flags"
+      title="Funcionalidades"
       sub="Funcionalidades por clínica"
       purpose={
         'Ligar e desligar funcionalidades por clínica, para lançar por fases sem publicar duas versões do produto.'

@@ -141,7 +141,7 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
       ) : (
         <div className="card" style={{ padding: 0 }}>
           <DataTable
-            cols={['Item', 'Unidade', 'Ponto de reposição', '']}
+            cols={['Artigo', 'Unidade', 'Ponto de reposição', '']}
             rows={items.map((it) => (
               <tr key={it.id}>
                 <TD bold>{it.item}</TD>
