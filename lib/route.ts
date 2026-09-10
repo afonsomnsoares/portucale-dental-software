@@ -1,32 +1,52 @@
 import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireSameOrigin, type SessionUser, unauthorized } from './auth';
-import { hasPermission } from './permissions';
+import { forbidden, getAuth, requireSameOrigin, type SessionUser, scopeTenant, unauthorized } from './auth';
+import { hasPermission, revalidateSession } from './permissions';
+import { requirePlatform } from './platform';
 import { rateLimitGlobal } from './rateLimitGlobal';
 
-// Política de tenant da rota. Os três casos que existem hoje em app/api/*:
-//   'required' — a rota precisa de uma clínica concreta (33 rotas).
+// Política de tenant da rota. Os três casos que existem em app/api/*:
+//   'required' — a rota precisa de uma clínica concreta (o caso por omissão).
 //   'optional' — o super-admin lê sem clínica (tenantId null = todas).
-//   'resolved' — o super-admin escolhe a clínica por ?tenantId= ou no body
-//                (substitui os 13 `resolveTenantId` locais copiados entre rotas).
+//   'resolved' — como 'required', mas o super-admin fora de uma clínica pode
+//                escolhê-la por ?tenantId= ou no body. Substitui os 11
+//                `resolveTenantId` locais que estavam copiados entre rotas.
 type TenantPolicy = 'required' | 'optional' | 'resolved';
 
 export interface RouteContext<P> {
   request: NextRequest;
   user: SessionUser;
-  // Já resolvido segundo a política. Com 'required' é sempre string — o handler
-  // não precisa de o voltar a verificar, e o tipo garante isso.
+  // Já resolvido segundo a política. Com 'required' e 'resolved' é sempre uma
+  // string — o handler não precisa de o voltar a verificar, e o tipo garante
+  // isso. Só 'optional' o pode entregar vazio, e aí significa "todas".
   tenantId: string;
   params: P;
 }
 
-interface RouteOptions {
-  permission?: string;
-  tenant?: TenantPolicy;
-  // Rotas públicas (login, /api/public/*) declaram-no explicitamente. É a única
-  // forma de saltar a autenticação, por isso "esquecer-se" deixa de ser possível:
-  // o default é fechado, e abrir exige escrever a palavra.
-  public?: true;
-}
+// ─── Porque é que isto é uma união, e não um objeto com tudo opcional ───────
+// A versão anterior declarava `{ permission?: string; public?: true }`, ou seja
+// TODOS os campos opcionais — e por isso `withRoute({}, handler)` compilava sem
+// uma queixa. A promessa escrita no comentário da função ("uma rota sem
+// `permission` nem `public` nem sequer é aceite pelo TypeScript") era
+// simplesmente falsa: o tipo não a impunha.
+//
+// Escrita como união discriminada, passa a ser verdade. Cada rota tem de dizer
+// em qual dos quatro mundos vive, e não há um quinto:
+//
+//   permission — o caso normal: uma ação de lib/permissions.ts.
+//   platform   — só super-admin (o que `requirePlatform` já fazia à mão).
+//   authOnly   — autenticado, sem ação própria. Existe porque há rotas assim
+//                (o meu próprio perfil, o catálogo da minha clínica), mas exige
+//                uma frase a dizer porquê: uma saída de emergência que não custa
+//                nada a usar é uma saída que se usa por preguiça.
+//   public     — sem autenticação de todo. Login, /api/public/*, webhooks.
+//
+// Os `never` são o que faz o TypeScript recusar misturas — `{ permission: 'x',
+// public: true }` deixa de compilar em vez de silenciosamente ignorar um dos dois.
+type RouteOptions =
+  | { permission: string; tenant?: TenantPolicy; platform?: never; authOnly?: never; public?: never }
+  | { platform: string | true; tenant?: TenantPolicy; permission?: never; authOnly?: never; public?: never }
+  | { authOnly: string; tenant?: TenantPolicy; permission?: never; platform?: never; public?: never }
+  | { public: true; permission?: never; platform?: never; authOnly?: never; tenant?: never };
 
 // Handler já autenticado, autorizado e com o tenant resolvido.
 type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
@@ -49,28 +69,76 @@ type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
 const WRITE_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-async function resolveTenantId(
+// ─── Resolução de clínica ───────────────────────────────────────────────────
+// Delega em scopeTenant (lib/auth.ts) em vez de reimplementar a regra, e isso
+// corrige um erro que a versão anterior tinha: scopeTenant honra o cookie
+// `acting_tenant` — o "entrar na clínica" do super-admin, POST /api/tenants/enter
+// — e a implementação local aqui não o lia. Uma rota migrada para withRoute
+// deixava portanto de funcionar para um super-admin dentro de uma clínica, ao
+// contrário das 36 rotas que chamavam scopeTenant diretamente. Os 11
+// `resolveTenantId` copiados por app/api/ tinham o mesmo buraco.
+//
+// A precedência é a de scopeTenant, e é a única segura: quem tem clínica própria
+// usa sempre a sua e o `?tenantId=` é ignorado — deixá-lo escolher outra seria um
+// IDOR entre clínicas.
+function resolveTenantId(
   request: NextRequest,
   user: SessionUser,
   policy: TenantPolicy,
   body: unknown,
-): Promise<string | null | Response> {
-  if (user.tenantId) return user.tenantId;
-  if (policy === 'required') return forbidden();
-  if (policy === 'optional') return null;
+): string | null | Response {
   const fromBody = (body as { tenantId?: unknown } | null)?.tenantId;
-  const fromQuery = new URL(request.url).searchParams.get('tenantId');
-  return (typeof fromBody === 'string' && fromBody) || fromQuery || null;
+  const requested =
+    policy === 'resolved'
+      ? (typeof fromBody === 'string' && fromBody) || new URL(request.url).searchParams.get('tenantId')
+      : null;
+  const tenantId = scopeTenant(user, request, requested);
+  // 'optional' é o único que aceita a ausência de clínica; nos outros dois, não
+  // saber de que clínica falamos não é um pedido que se possa servir.
+  if (!tenantId && policy !== 'optional') return forbidden();
+  return tenantId;
+}
+
+// Aplica o modo de autorização declarado nas opções. Devolve uma Response quando
+// bloqueia e null quando deixa passar.
+//
+// Os três modos autenticados revalidam a sessão contra a base de dados antes de
+// decidir: `hasPermission` e `requirePlatform` já o faziam lá dentro, e o
+// `authOnly` chama revalidateSession diretamente para não ser o único caminho por
+// onde um token de uma conta entretanto desativada, despromovida ou movida de
+// clínica ainda passaria. É também o que realinha `user.role`/`user.tenantId`
+// (escreve no próprio objeto, ver lib/permissions.ts) antes de resolvermos a
+// clínica logo a seguir — por isso corre sempre primeiro.
+async function authorize(options: RouteOptions, user: SessionUser): Promise<Response | null> {
+  if (options.platform !== undefined) {
+    return requirePlatform(user, options.platform === true ? undefined : options.platform);
+  }
+  if (options.permission !== undefined) {
+    return (await hasPermission(user, options.permission)) ? null : forbidden();
+  }
+  return (await revalidateSession(user)) ? null : unauthorized();
 }
 
 /**
- * Envolve um handler de rota com o preâmbulo que hoje está copiado em 92
- * ficheiros: CSRF/same-origin, autenticação, permissão e resolução de tenant.
+ * Envolve um handler de rota com o preâmbulo que estava copiado por app/api/:
+ * CSRF/same-origin, autenticação, revalidação de sessão, autorização, teto de
+ * escrita partilhado e resolução de clínica.
  *
- * O ponto não é poupar linhas — é que a omissão deixa de ser silenciosa. Hoje
- * uma rota sem `hasPermission` compila, passa nos testes e parece igual às
- * outras; a única defesa é alguém reparar na revisão. Com isto, uma rota sem
- * `permission` nem `public` nem sequer é aceite pelo TypeScript.
+ * O ponto não é poupar linhas — é que a omissão deixa de ser silenciosa. Uma
+ * rota escrita à mão sem `hasPermission` compila, passa nos testes e parece
+ * igual às outras; a única defesa é alguém reparar na revisão. Aqui, a união
+ * discriminada de `RouteOptions` obriga cada rota a declarar em que regime vive,
+ * e `withRoute({}, handler)` não compila.
+ *
+ * Ordem, e cada passo depende do anterior:
+ *
+ *   1. same-origin  — no-op em GET/HEAD/OPTIONS, por isso não precisa de condição;
+ *   2. getAuth      — e com ele o contexto de RLS do pedido (lib/db.ts);
+ *   3. authorize    — revalida a sessão contra a base e realinha papel/clínica;
+ *   4. teto de escrita — só em mutações, e só depois de sabermos que a pessoa
+ *      podia mesmo fazer aquilo: gastar-lhe a quota num 403 repetido seria deixar
+ *      um atacante esgotar o orçamento da própria vítima;
+ *   5. resolução da clínica — sobre o papel/clínica já realinhados no passo 3.
  */
 // P é a forma dos params da rota: `{ id: string }` num segmento dinâmico, `{}`
 // numa rota estática. O default tem de ser `{}` e o segundo parâmetro tem de ser
@@ -92,7 +160,8 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
     const user = getAuth(request);
     if (!user) return unauthorized();
 
-    if (options.permission && !(await hasPermission(user, options.permission))) return forbidden();
+    const blocked = await authorize(options, user);
+    if (blocked) return blocked;
 
     // Depois da autorização, de propósito: a chave é o utilizador autenticado, e gastar
     // orçamento de escrita de alguém antes de saber se ele sequer podia fazer aquilo
@@ -113,7 +182,7 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
     const needsBody = options.tenant === 'resolved' && request.method !== 'GET';
     if (needsBody) body = await request.json().catch(() => null);
 
-    const tenantId = await resolveTenantId(request, user, options.tenant ?? 'required', body);
+    const tenantId = resolveTenantId(request, user, options.tenant ?? 'required', body);
     if (tenantId instanceof Response) return tenantId;
 
     return handler({
