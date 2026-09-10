@@ -1,7 +1,5 @@
-import type { NextRequest } from 'next/server';
-import { getAuth } from '@/lib/auth';
 import { queryRead, warnSchemaGap } from '@/lib/db';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // Estado do sistema, medido — não declarado.
 //
@@ -9,11 +7,7 @@ import { requirePlatform } from '@/lib/platform';
 // próprio ida-e-volta ao Postgres, a frescura dos jobs sai de job_runs, as clínicas
 // por estado saem de tenants. O que NÃO existe (uptime de HTTP, saúde de
 // integrações, filas) não é estimado aqui — a página diz que não está instrumentado.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user);
-  if (blocked) return blocked;
-
+export const GET = withRoute({ platform: true, tenant: 'optional' }, async () => {
   const t0 = Date.now();
   let dbOk = true;
   try {
@@ -73,4 +67,4 @@ export async function GET(request: NextRequest) {
     // sinais que um "System Health" a sério teria e que este sistema não produz.
     notInstrumented: ['uptime HTTP', 'latência por endpoint', 'saúde de integrações', 'profundidade de filas'],
   });
-}
+});

@@ -1,99 +1,93 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
 // GET /api/treatments/[id]
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  // Mesma correção da rota de listagem: ler é 'treatments:read', não escrever.
-  if (!(await hasPermission(user, 'treatments:read'))) return forbidden();
-  const { id } = await params;
-  const tenantId = scopeTenant(user, request);
-  const t = await queryOne(
-    `SELECT t.*, p.name as patient_name FROM treatments t
+export const GET = withRoute<{ id: string }>(
+  { permission: 'treatments:read', tenant: 'optional' },
+  async ({ request, user, params }) => {
+    const { id } = params;
+    const tenantId = scopeTenant(user, request);
+    const t = await queryOne(
+      `SELECT t.*, p.name as patient_name FROM treatments t
      JOIN patients p ON p.id=t.patient_id
      WHERE t.id=$1 AND ($2::uuid IS NULL OR t.tenant_id=$2::uuid)`,
-    [id, tenantId],
-  );
-  if (!t) return Response.json({ error: 'Not found' }, { status: 404 });
-  return Response.json(t);
-}
+      [id, tenantId],
+    );
+    if (!t) return Response.json({ error: 'Not found' }, { status: 404 });
+    return Response.json(t);
+  },
+);
 
 // PUT /api/treatments/[id]  — full update (receptionist or dentist)
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'treatments:update'))) return forbidden();
-  const { id } = await params;
-  const body = await request.json();
-  const tenantId = scopeTenant(user, request);
-  const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
-    id,
-    tenantId,
-  ]);
-  if (!prev) return Response.json({ error: 'Not found' }, { status: 404 });
+export const PUT = withRoute<{ id: string }>(
+  { permission: 'treatments:update', tenant: 'optional' },
+  async ({ request, user, params }) => {
+    const { id } = params;
+    const body = await request.json();
+    const tenantId = scopeTenant(user, request);
+    const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
+      id,
+      tenantId,
+    ]);
+    if (!prev) return Response.json({ error: 'Not found' }, { status: 404 });
 
-  if (body.status !== undefined) {
-    const allowed = ['proposed', 'accepted', 'completed'];
-    if (!allowed.includes(body.status)) return Response.json({ error: 'Invalid status' }, { status: 400 });
-  }
+    if (body.status !== undefined) {
+      const allowed = ['proposed', 'accepted', 'completed'];
+      if (!allowed.includes(body.status)) return Response.json({ error: 'Invalid status' }, { status: 400 });
+    }
 
-  const [updated] = await query(
-    `UPDATE treatments
+    const [updated] = await query(
+      `UPDATE treatments
      SET treatment_code=$1, description=$2, phase=$3,
          status=$4, fee=$5, notes=$6, updated_at=NOW()
      WHERE id=$7 RETURNING *`,
-    [
-      body.treatmentCode ?? prev.treatment_code,
-      body.description ?? prev.description,
-      body.phase ?? prev.phase,
-      body.status ?? prev.status,
-      body.fee ?? prev.fee,
-      body.notes ?? prev.notes,
-      id,
-    ],
-  );
-
-  if (body.status && body.status !== prev.status) {
-    await appendTimeline(
-      prev.patient_id,
-      user,
-      'clinical',
-      `Tratamento "${updated.description}" estado: ${prev.status} → ${updated.status}`,
+      [
+        body.treatmentCode ?? prev.treatment_code,
+        body.description ?? prev.description,
+        body.phase ?? prev.phase,
+        body.status ?? prev.status,
+        body.fee ?? prev.fee,
+        body.notes ?? prev.notes,
+        id,
+      ],
     );
-  }
-  await appendAudit(
-    user,
-    'UPDATE',
-    `Treatment: ${updated.description}`,
-    `status:${prev.status} fee:${prev.fee}`,
-    `status:${updated.status} fee:${updated.fee}`,
-    user.clinic,
-  );
 
-  return Response.json(updated);
-}
+    if (body.status && body.status !== prev.status) {
+      await appendTimeline(
+        prev.patient_id,
+        user,
+        'clinical',
+        `Tratamento "${updated.description}" estado: ${prev.status} → ${updated.status}`,
+      );
+    }
+    await appendAudit(
+      user,
+      'UPDATE',
+      `Treatment: ${updated.description}`,
+      `status:${prev.status} fee:${prev.fee}`,
+      `status:${updated.status} fee:${updated.fee}`,
+      user.clinic,
+    );
+
+    return Response.json(updated);
+  },
+);
 
 // DELETE /api/treatments/[id]
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'treatments:delete'))) return forbidden();
-  const { id } = await params;
-  const tenantId = scopeTenant(user, request);
-  const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
-    id,
-    tenantId,
-  ]);
-  if (!prev) return Response.json({ error: 'Not found' }, { status: 404 });
-  await query(`DELETE FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [id, tenantId]);
-  await appendAudit(user, 'DELETE', `Treatment: ${prev.description}`, prev.status, null, user.clinic);
-  return Response.json({ deleted: true });
-}
+export const DELETE = withRoute<{ id: string }>(
+  { permission: 'treatments:delete', tenant: 'optional' },
+  async ({ request, user, params }) => {
+    const { id } = params;
+    const tenantId = scopeTenant(user, request);
+    const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
+      id,
+      tenantId,
+    ]);
+    if (!prev) return Response.json({ error: 'Not found' }, { status: 404 });
+    await query(`DELETE FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [id, tenantId]);
+    await appendAudit(user, 'DELETE', `Treatment: ${prev.description}`, prev.status, null, user.clinic);
+    return Response.json({ deleted: true });
+  },
+);

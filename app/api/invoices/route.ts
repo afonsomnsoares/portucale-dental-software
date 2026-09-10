@@ -1,17 +1,12 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { formatEUR } from '@/lib/constants';
 import { query, queryOne } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, asFee, asString, requireFields } from '@/lib/validate';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'invoices:read'))) return forbidden();
-
+export const GET = withRoute({ permission: 'invoices:read', tenant: 'optional' }, async ({ request, user }) => {
   const { searchParams } = new URL(request.url);
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
   // tenant via the query string; everyone else is confined to their own,
@@ -56,14 +51,9 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, params);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'invoices:create'))) return forbidden();
+export const POST = withRoute({ permission: 'invoices:create', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request);
   if (!tenantId) return forbidden();
 
@@ -111,7 +101,7 @@ export async function POST(request: NextRequest) {
   await appendTimeline(patient.id, user, 'financial', `Fatura ${formatId(inv.id)} criada — €${amount}`);
 
   return Response.json(inv, { status: 201 });
-}
+});
 
 function formatId(uuid: string) {
   return uuid ? uuid.slice(0, 8).toUpperCase() : '—';

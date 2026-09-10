@@ -1,13 +1,9 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireRoles, unauthorized } from '@/lib/auth';
+import { forbidden, requireRoles } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const GET = withRoute({ permission: 'audit:read', tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
-  if (!(await hasPermission(user, 'audit:read'))) return forbidden();
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
   // audit_log has no tenant_id, only a `clinic` name — a tenant-scoped admin
@@ -34,4 +30,4 @@ export async function GET(request: NextRequest) {
   sql += ` ORDER BY created_at DESC LIMIT 200`;
 
   return Response.json(await query(sql, vals));
-}
+});

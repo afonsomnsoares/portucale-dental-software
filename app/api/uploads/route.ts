@@ -1,18 +1,14 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest } from '@/lib/http';
 import { getTask } from '@/lib/patientTasks';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { saveUploadFile } from '@/lib/uploads';
 
 // GET /api/uploads?patientId= — documents panel (Fase C): lists what's already on
 // file for a patient, grouped by category in the UI.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'uploads:read'))) return forbidden();
+export const GET = withRoute({ permission: 'uploads:read', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);
@@ -27,17 +23,9 @@ export async function GET(request: NextRequest) {
     patientId,
   ]);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'uploads:create'))) return forbidden();
-  if (!user.tenantId) return forbidden();
-
+export const POST = withRoute({ permission: 'uploads:create' }, async ({ request, user, tenantId }) => {
   const form = await request.formData();
   const file = form.get('file') as File;
   const patientId = form.get('patientId') ? String(form.get('patientId')) : null;
@@ -52,13 +40,13 @@ export async function POST(request: NextRequest) {
   // A taskId must be a pending document_request task on the SAME patient this upload is
   // for — otherwise a caller could close an arbitrary tenant task by guessing/reusing an id.
   if (taskId) {
-    const task = await getTask(user.tenantId, taskId);
+    const task = await getTask(tenantId, taskId);
     if (task?.type !== 'document_request' || task.patient_id !== patientId) {
       return Response.json({ error: 'Invalid taskId' }, { status: 400 });
     }
   }
 
-  const saved = await saveUploadFile({ tenantId: user.tenantId, patientId, taskId, categoryRaw, file });
+  const saved = await saveUploadFile({ tenantId, patientId, taskId, categoryRaw, file });
   if (!saved.ok) return Response.json({ error: saved.error }, { status: saved.status });
 
   return Response.json(
@@ -72,4 +60,4 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 },
   );
-}
+});

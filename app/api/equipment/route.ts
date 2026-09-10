@@ -1,9 +1,8 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { asInt, sanitizeString } from '@/lib/validate';
 
 // Minimal equipment registry — just enough for lib/scheduling.ts's suggestAppointmentSlots
@@ -18,10 +17,7 @@ function normalizeTags(v: unknown): string[] {
     .slice(0, 20);
 }
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'equipment:manage'))) return forbidden();
+export const GET = withRoute({ permission: 'equipment:manage', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request);
   if (!tenantId) return forbidden();
 
@@ -29,14 +25,9 @@ export async function GET(request: NextRequest) {
     tenantId,
   ]);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'equipment:manage'))) return forbidden();
+export const POST = withRoute({ permission: 'equipment:manage', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request);
   if (!tenantId) return forbidden();
 
@@ -56,4 +47,4 @@ export async function POST(request: NextRequest) {
 
   await appendAudit(user, 'CREATE', `Equipamento: ${name}`, null, 'active', user.clinic);
   return created(row);
-}
+});

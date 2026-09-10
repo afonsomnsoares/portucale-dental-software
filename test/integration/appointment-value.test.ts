@@ -69,7 +69,7 @@ async function appointmentReadyToLeave() {
         type: TEST_TYPE,
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201, 'a consulta de teste tem de ser criada');
   const apt = await res.json();
 

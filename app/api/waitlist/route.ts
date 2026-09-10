@@ -1,15 +1,11 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { forbidden, scopeTenant } from '@/lib/auth';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asDate, asTime, requireFields } from '@/lib/validate';
 import { addToWaitlist, listPendingOffers, listWaitlist } from '@/lib/waitlist';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'waitlist:manage'))) return forbidden();
+export const GET = withRoute({ permission: 'waitlist:manage', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request);
   if (!tenantId) return forbidden();
 
@@ -17,14 +13,9 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const [entries, offers] = await Promise.all([listWaitlist(tenantId, status), listPendingOffers(tenantId)]);
   return Response.json({ entries, pendingOffers: offers });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'waitlist:manage'))) return forbidden();
+export const POST = withRoute({ permission: 'waitlist:manage', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request);
   if (!tenantId) return forbidden();
 
@@ -66,4 +57,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `Waitlist: ${body.treatmentType}`, null, `patient:${body.patientId}`, user.clinic);
 
   return Response.json(row, { status: 201 });
-}
+});

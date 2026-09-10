@@ -1,15 +1,11 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { unauthorized } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { sanitizeString } from '@/lib/validate';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'consent-forms:read'))) return forbidden();
+export const GET = withRoute({ permission: 'consent-forms:read', tenant: 'optional' }, async ({ request, user }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
 
@@ -30,14 +26,9 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'consent-forms:manage'))) return forbidden();
+export const POST = withRoute({ permission: 'consent-forms:manage', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return unauthorized();
   const body = await request.json();
   const { patientId, procedureName, description, signedBy, signatureUrl, storageKey, fileSize } = body;
@@ -87,4 +78,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `Consent form: ${procedureName}`, null, `patient:${patientId}`, user.clinic);
 
   return Response.json(row, { status: 201 });
-}
+});

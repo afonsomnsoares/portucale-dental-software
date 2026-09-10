@@ -1,9 +1,7 @@
-import type { NextRequest } from 'next/server';
-import { getAuth } from '@/lib/auth';
 import { ROLE_META } from '@/lib/constants';
 import { queryRead, warnSchemaGap } from '@/lib/db';
 import { defaultAllows, PERMISSION_ACTIONS } from '@/lib/permissions';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // Os papéis vistos de cima: quantas pessoas têm cada um em toda a rede, o que cada um
 // pode fazer por omissão, e em que clínicas é que essa omissão foi alterada.
@@ -11,11 +9,7 @@ import { requirePlatform } from '@/lib/platform';
 // O último número é o que só se vê daqui. Cada clínica pode reescrever as permissões
 // de um papel (role_permissions, UI de Permissões), e uma clínica que dê 'gdpr:manage'
 // à receção fica invisível de dentro — de fora, é uma linha nesta tabela.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user, 'users:manage');
-  if (blocked) return blocked;
-
+export const GET = withRoute({ platform: 'users:manage', tenant: 'optional' }, async () => {
   const safe = async (scope: string, sql: string) => {
     try {
       return await queryRead(sql);
@@ -65,4 +59,4 @@ export async function GET(request: NextRequest) {
   });
 
   return Response.json({ roles, totalActions: PERMISSION_ACTIONS.length });
-}
+});

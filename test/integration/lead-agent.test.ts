@@ -32,7 +32,7 @@ async function createLead(overrides: Record<string, unknown> = {}) {
       url: '/api/leads',
       body: { name: 'Lead do agente (teste)', phone: '912345678', ...overrides },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   return res.json();
 }

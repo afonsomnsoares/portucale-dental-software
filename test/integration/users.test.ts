@@ -38,12 +38,12 @@ test('caminho feliz: super-admin cria um novo utilizador', async () => {
         tenantId: tenantAId,
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
 });
 
 test('não-admin recebe 403 em GET e POST /api/users', async () => {
-  const getRes = await getUsers(authedRequest(receptionistA, { method: 'GET', url: '/api/users' }));
+  const getRes = await getUsers(authedRequest(receptionistA, { method: 'GET', url: '/api/users' }), { params: Promise.resolve({}) });
   assert.equal(getRes.status, 403);
 
   const postRes = await postUsers(
@@ -52,7 +52,7 @@ test('não-admin recebe 403 em GET e POST /api/users', async () => {
       url: '/api/users',
       body: { email: 'x@x.com', password: 'palavra-passe-longa', name: 'X', role: 'receptionist' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(postRes.status, 403);
 });
 
@@ -69,7 +69,7 @@ test('admin de clínica não consegue criar utilizador noutro tenant', async () 
         tenantId: tenantAId,
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 });
 
@@ -86,7 +86,7 @@ test('admin de clínica não consegue editar utilizador de outro tenant', async 
 });
 
 test('fix aplicado: admin de clínica só vê utilizadores do seu próprio tenant em GET /api/users', async () => {
-  const res = await getUsers(authedRequest(adminB, { method: 'GET', url: '/api/users' }));
+  const res = await getUsers(authedRequest(adminB, { method: 'GET', url: '/api/users' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
   const rows = await res.json();
   assert.ok(rows.length > 0, 'devia ver pelo menos o seu próprio admin');
@@ -96,7 +96,7 @@ test('fix aplicado: admin de clínica só vê utilizadores do seu próprio tenan
 });
 
 test('super-admin continua a ver utilizadores de todos os tenants em GET /api/users', async () => {
-  const res = await getUsers(authedRequest(superAdmin, { method: 'GET', url: '/api/users' }));
+  const res = await getUsers(authedRequest(superAdmin, { method: 'GET', url: '/api/users' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
   const rows = await res.json();
   const tenantIds = new Set(rows.map((r: { tenant_id: string | null }) => r.tenant_id));

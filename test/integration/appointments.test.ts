@@ -39,7 +39,7 @@ test('caminho feliz: receptionist marca uma consulta', async () => {
       url: '/api/appointments',
       body: { patientId: patientAId, dentistId: dentistAId, date: '2026-09-01', startTime: '09:00', type: 'Consulta' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   const created = await res.json();
   assert.equal(created.patient_id, patientAId);
@@ -58,7 +58,7 @@ test('POST com dentista inexistente/de outro tenant é rejeitado (400)', async (
         type: 'Consulta',
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
@@ -69,7 +69,7 @@ test('assimetria existente: super-admin é bloqueado no PUT mas consegue DELETE 
       url: '/api/appointments',
       body: { patientId: patientAId, dentistId: dentistAId, date: '2026-09-03', startTime: '11:00', type: 'Consulta' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(createRes.status, 201);
   const created = await createRes.json();
 

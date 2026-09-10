@@ -1,9 +1,8 @@
 import crypto from 'node:crypto';
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { badRequest } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
 import { getR2Config, presignPutObjectR2 } from '@/lib/r2';
+import { withRoute } from '@/lib/route';
 import { EXTENSION_FOR_TYPE, UPLOAD_ALLOWED_TYPES, UPLOAD_MAX_BYTES } from '@/lib/uploadsCalc';
 import { asInt } from '@/lib/validate';
 
@@ -22,10 +21,7 @@ import { asInt } from '@/lib/validate';
 // Both limits are enforced by the signature itself (see presignPutObjectR2), not just
 // checked here — rejecting early gives the caller a clear error, but the reason a
 // caller cannot simply ignore this route's opinion is that R2 refuses the PUT.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'uploads:create'))) return forbidden();
+export const GET = withRoute({ permission: 'uploads:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
 
   const cfg = getR2Config();
@@ -55,10 +51,8 @@ export async function GET(request: NextRequest) {
   if (!presigned) return Response.json({ error: 'R2 not configured' }, { status: 400 });
 
   return Response.json({ key, ...presigned });
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  return Response.json({ error: 'Use GET' }, { status: 405 });
-}
+export const POST = withRoute({ permission: 'uploads:create' }, async () =>
+  Response.json({ error: 'Use GET' }, { status: 405 }),
+);

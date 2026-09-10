@@ -1,8 +1,6 @@
-import type { NextRequest } from 'next/server';
 import { AGENT_MODEL } from '@/lib/agents/aiClient';
-import { getAuth } from '@/lib/auth';
 import { queryRead, warnSchemaGap } from '@/lib/db';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // Preço por milhão de tokens do modelo dos agentes. Vive aqui e não na base de dados
 // porque é um facto externo (tabela de preços da Anthropic), não estado da aplicação —
@@ -15,11 +13,7 @@ const PRICE_PER_MTOK: Record<string, { input: number; output: number }> = {
   'claude-sonnet-5': { input: 3, output: 15 },
 };
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user, 'agents:read');
-  if (blocked) return blocked;
-
+export const GET = withRoute({ platform: 'agents:read', tenant: 'optional' }, async ({ request }) => {
   const days = Math.min(365, Math.max(1, Number(new URL(request.url).searchParams.get('days') || 30)));
 
   const safe = async (scope: string, sql: string, params: unknown[] = []) => {
@@ -91,4 +85,4 @@ export async function GET(request: NextRequest) {
     byDay: byDay.map((r) => ({ ...r, costEur: cost(Number(r.input_tokens), Number(r.output_tokens)) })),
     byModel,
   });
-}
+});

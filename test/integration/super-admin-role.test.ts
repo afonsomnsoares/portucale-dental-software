@@ -41,7 +41,7 @@ test('caminho feliz: super-admin cria um admin de clínica', async () => {
         tenantId: tenantAId,
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   const created = await res.json();
   assert.equal(created.role, 'admin');
@@ -60,7 +60,7 @@ test('super-admin sem tenantId no corpo ao criar um admin recebe 400, não um er
         role: 'admin',
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
@@ -76,7 +76,7 @@ test('admin de clínica não consegue criar outro admin — só o super-admin po
         role: 'admin',
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 });
 
@@ -93,7 +93,7 @@ test('ninguém cria um super_admin via POST /api/users, nem o próprio super-adm
         tenantId: tenantAId,
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
@@ -113,7 +113,7 @@ test('admin de clínica não consegue promover uma rececionista a admin', async 
         tenantId: tenantBId,
       },
     }),
-  ).then((r) => r.json());
+   { params: Promise.resolve({}) }).then((r) => r.json());
 
   const res = await putUser(
     authedRequest(adminB, {
@@ -139,7 +139,7 @@ test('super-admin promove e depois despromove um admin de clínica com sucesso',
         tenantId: tenantBId,
       },
     }),
-  ).then((r) => r.json());
+   { params: Promise.resolve({}) }).then((r) => r.json());
 
   const promoted = await putUser(
     authedRequest(superAdmin, {
@@ -177,7 +177,7 @@ test('ninguém consegue mudar o role para super_admin via PUT /api/users/[id]', 
 });
 
 test('GET /api/users continua acessível a um admin de clínica (não só ao super-admin)', async () => {
-  const res = await getUsers(authedRequest(adminB, { method: 'GET', url: '/api/users' }));
+  const res = await getUsers(authedRequest(adminB, { method: 'GET', url: '/api/users' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
 });
 

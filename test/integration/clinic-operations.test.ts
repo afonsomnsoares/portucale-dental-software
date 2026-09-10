@@ -38,7 +38,7 @@ async function createTemplate(name: string, items: string[] = ['Item 1', 'Item 2
       url: '/api/checklist-templates',
       body: { name, type: 'opening', items, tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   return res.json();
 }
@@ -50,7 +50,7 @@ test('checklist templates: super_admin cria, rececionista (sem permissão) é bl
       url: '/api/checklist-templates',
       body: { name: 'Não devia criar', items: ['X'] },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 
   const template = await createTemplate('Abertura da manhã (teste)');
@@ -60,7 +60,7 @@ test('checklist templates: super_admin cria, rececionista (sem permissão) é bl
 
 test('checklist templates: GET é aberto a qualquer membro do tenant (sem permissão especial)', async () => {
   await createTemplate('Fecho da tarde (teste)');
-  const res = await getTemplates(authedRequest(receptionistA, { method: 'GET', url: '/api/checklist-templates' }));
+  const res = await getTemplates(authedRequest(receptionistA, { method: 'GET', url: '/api/checklist-templates' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
   const rows = await res.json();
   assert.ok(rows.some((t: { name: string }) => t.name === 'Fecho da tarde (teste)'));
@@ -73,7 +73,7 @@ test('checklist templates: item vazio é rejeitado com 400', async () => {
       url: '/api/checklist-templates',
       body: { name: 'Sem items', items: [], tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
@@ -85,7 +85,7 @@ test('checklist runs: rececionista pode iniciar (auto-serviço) e o snapshot fic
       url: '/api/checklist-runs',
       body: { templateId: template.id, runDate: '2026-08-31' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   const run = await res.json();
   assert.equal(run.items.length, 2);
@@ -101,7 +101,7 @@ test('checklist runs: iniciar duas vezes o mesmo template no mesmo dia devolve 4
       url: '/api/checklist-runs',
       body: { templateId: template.id, runDate: '2026-08-31' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(first.status, 201);
 
   const second = await postRun(
@@ -110,7 +110,7 @@ test('checklist runs: iniciar duas vezes o mesmo template no mesmo dia devolve 4
       url: '/api/checklist-runs',
       body: { templateId: template.id, runDate: '2026-08-31' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(second.status, 409);
 });
 
@@ -122,7 +122,7 @@ test('checklist runs: marcar todos os itens completa a run e regista quem marcou
       url: '/api/checklist-runs',
       body: { templateId: template.id, runDate: '2026-08-31' },
     }),
-  );
+   { params: Promise.resolve({}) });
   const run = await runRes.json();
 
   const afterFirst = await putRun(
@@ -158,17 +158,17 @@ test('checklist runs: GET filtra por data e por tenant', async () => {
       url: '/api/checklist-runs',
       body: { templateId: template.id, runDate: '2026-08-31' },
     }),
-  );
+   { params: Promise.resolve({}) });
 
   const sameDay = await getRuns(
     authedRequest(receptionistA, { method: 'GET', url: '/api/checklist-runs?date=2026-08-31' }),
-  );
+   { params: Promise.resolve({}) });
   const sameDayRows = await sameDay.json();
   assert.ok(sameDayRows.some((r: { template_id: string }) => r.template_id === template.id));
 
   const otherDay = await getRuns(
     authedRequest(receptionistA, { method: 'GET', url: '/api/checklist-runs?date=2026-01-01' }),
-  );
+   { params: Promise.resolve({}) });
   const otherDayRows = await otherDay.json();
   assert.ok(!otherDayRows.some((r: { template_id: string }) => r.template_id === template.id));
 });
@@ -180,7 +180,7 @@ test('incidentes: qualquer membro reporta (auto-serviço); só quem tem incident
       url: '/api/incidents',
       body: { title: 'Autoclave avariada (teste)', category: 'equipment', severity: 'high' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(reportRes.status, 201);
   const incident = await reportRes.json();
   assert.equal(incident.status, 'open');
@@ -218,10 +218,10 @@ test('incidentes: isolamento entre clínicas — um incidente da tenant A nunca 
       url: '/api/incidents',
       body: { title: 'Incidente isolado (teste)' },
     }),
-  );
+   { params: Promise.resolve({}) });
   const incident = await reportRes.json();
 
-  const listB = await getIncidents(authedRequest(adminB, { method: 'GET', url: '/api/incidents?status=all' }));
+  const listB = await getIncidents(authedRequest(adminB, { method: 'GET', url: '/api/incidents?status=all' }), { params: Promise.resolve({}) });
   const rowsB = await listB.json();
   assert.ok(!rowsB.some((i: { id: string }) => i.id === incident.id));
   assert.ok(tenantBId);
@@ -253,6 +253,6 @@ test('checklist templates: desativar (active:false) impede novas runs mas não a
       url: '/api/checklist-runs',
       body: { templateId: template.id, runDate: '2026-08-31' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(runRes.status, 404);
 });

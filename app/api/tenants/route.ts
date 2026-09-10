@@ -1,38 +1,24 @@
-import type { NextRequest } from 'next/server';
-import { appendAudit, logBlockedAccess } from '@/lib/audit';
-import { forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { appendAudit } from '@/lib/audit';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
-// Managing tenants is a platform-level action, not a per-clinic one — restricted to
-// role='super_admin' (see scripts/migrations/017_super_admin_role.sql). A clinic admin
-// passing role='admin' + hasPermission('tenants:manage') must not be able to list or
-// create other clinics, so 'admin' is deliberately not accepted here.
-async function requireSuperAdmin(user: Parameters<typeof requireRoles>[0]) {
-  if (!requireRoles(user, 'super_admin')) {
-    await logBlockedAccess(user, 'Tenant management blocked: caller is not a super-admin');
-    return false;
-  }
-  return hasPermission(user, 'tenants:manage');
-}
-
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await requireSuperAdmin(user))) return forbidden();
+// Gerir clínicas é ação de plataforma, não de clínica — só role='super_admin' (ver
+// scripts/migrations/017_super_admin_role.sql). Um admin de clínica com
+// hasPermission('tenants:manage') concedido não pode listar nem criar outras clínicas,
+// por isso 'admin' não é aceite aqui.
+//
+// Isto era um `requireSuperAdmin` local, byte a byte igual ao requirePlatform de
+// lib/platform.ts — cujo próprio comentário já dizia ser "a mesma forma do
+// requireSuperAdmin local de app/api/tenants/route.ts". Passou a ser o mesmo código.
+export const GET = withRoute({ platform: 'tenants:manage', tenant: 'optional' }, async () => {
   const rows = await query(
     `SELECT t.*, (SELECT COUNT(*) FROM patients p WHERE p.tenant_id=t.id)::int as patients
      FROM tenants t ORDER BY t.created_at`,
   );
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await requireSuperAdmin(user))) return forbidden();
+export const POST = withRoute({ platform: 'tenants:manage', tenant: 'optional' }, async ({ request, user }) => {
   const { name, city, operatories } = await request.json();
   const ops = Math.max(1, Math.min(20, Number(operatories || 3)));
   const [t] = await query(
@@ -41,4 +27,4 @@ export async function POST(request: NextRequest) {
   );
   await appendAudit(user, 'PROVISION', `Tenant: ${name}`, null, 'provisioning');
   return Response.json(t, { status: 201 });
-}
+});

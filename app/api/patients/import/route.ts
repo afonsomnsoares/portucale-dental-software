@@ -1,8 +1,7 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { normalizeCustomFields } from '@/lib/customFields';
 import { withTransaction } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
 function stripBom(s: string) {
   if (!s) return '';
@@ -93,12 +92,7 @@ function parseDate(val: unknown) {
   return null;
 }
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'patients:create'))) return forbidden();
+export const POST = withRoute({ permission: 'patients:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
 
   const body = await request.json();
@@ -312,4 +306,4 @@ export async function POST(request: NextRequest) {
   });
 
   return Response.json(result);
-}
+});

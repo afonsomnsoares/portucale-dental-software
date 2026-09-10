@@ -1,10 +1,9 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { normalizeCustomFields } from '@/lib/customFields';
 import { query, warnSchemaGap } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
-import { hasPermission, revalidateSession } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { validatePatientBody } from '@/lib/validate';
 
 async function safeSchemaQuery(sql: string, params: unknown[] = []) {
@@ -20,18 +19,18 @@ async function safeSchemaQuery(sql: string, params: unknown[] = []) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  // Ao contrário do POST abaixo, listar doentes não exige uma ação — os quatro papéis
-  // precisam da lista. Continua a exigir uma sessão que ainda seja válida: sem isto, uma
-  // conta desativada lia a lista de doentes da clínica com o token que já tinha.
-  if (!(await revalidateSession(user))) return unauthorized();
-  const { searchParams } = new URL(request.url);
-  const search = searchParams.get('q') || '';
-  const tenantId = scopeTenant(user, request);
-  const rows = await query(
-    `SELECT p.*,
+export const GET = withRoute(
+  {
+    authOnly:
+      'Lista de doentes da própria clínica: não há trabalho de clínica nenhum que não comece aqui. Escrever exige patients:create, que o POST verifica',
+    tenant: 'optional',
+  },
+  async ({ request, user }) => {
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('q') || '';
+    const tenantId = scopeTenant(user, request);
+    const rows = await query(
+      `SELECT p.*,
             ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100)::int AS no_show_score,
             COALESCE(json_agg(pa.alert) FILTER (WHERE pa.alert IS NOT NULL), '[]') AS alerts
      FROM patients p
@@ -45,17 +44,13 @@ export async function GET(request: NextRequest) {
        AND p.status <> 'anonymized'
      GROUP BY p.id
      ORDER BY p.name`,
-    [search, `%${search}%`, tenantId],
-  );
-  return Response.json(rows);
-}
+      [search, `%${search}%`, tenantId],
+    );
+    return Response.json(rows);
+  },
+);
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'patients:create'))) return forbidden();
+export const POST = withRoute({ permission: 'patients:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
   const body = await request.json();
   const patientErrors = validatePatientBody(body);
@@ -105,4 +100,4 @@ export async function POST(request: NextRequest) {
   );
   await appendAudit(user, 'CREATE', `Patient — ${patient.name}`, null, 'registered', user.clinic);
   return created(patient);
-}
+});

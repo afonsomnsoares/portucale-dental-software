@@ -1,33 +1,27 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query, withTransaction } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!user.tenantId) return forbidden();
-  const status = new URL(request.url).searchParams.get('status') || 'open';
-  if (!['open', 'converted', 'lost', 'all'].includes(status)) return badRequest('Invalid lead status');
+export const GET = withRoute(
+  { authOnly: 'Leads por tratar da própria clínica: trabalho de balcão, e responder exige leads:respond' },
+  async ({ request, tenantId }) => {
+    const status = new URL(request.url).searchParams.get('status') || 'open';
+    if (!['open', 'converted', 'lost', 'all'].includes(status)) return badRequest('Invalid lead status');
 
-  const rows = await query(
-    `SELECT l.*
+    const rows = await query(
+      `SELECT l.*
      FROM leads l
      WHERE l.tenant_id=$1 AND ($2='all' OR l.status=$2)
      ORDER BY l.created_at DESC`,
-    [user.tenantId, status],
-  );
-  return Response.json(rows);
-}
+      [tenantId, status],
+    );
+    return Response.json(rows);
+  },
+);
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'patients:create'))) return forbidden();
+export const POST = withRoute({ permission: 'patients:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
   const body = await request.json();
   const name = String(body.name || '').trim();
@@ -54,14 +48,9 @@ export async function POST(request: NextRequest) {
   );
   await appendAudit(user, 'CREATE', `Lead — ${lead.name}`, null, 'open', user.clinic);
   return created(lead);
-}
+});
 
-export async function PATCH(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'patients:update'))) return forbidden();
+export const PATCH = withRoute({ permission: 'patients:update', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
   const body = await request.json();
   const id = String(body.id || '');
@@ -119,4 +108,4 @@ export async function PATCH(request: NextRequest) {
     );
   }
   return Response.json(result.updated);
-}
+});

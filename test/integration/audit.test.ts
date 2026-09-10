@@ -34,7 +34,7 @@ before(async () => {
 after(closeTestDb);
 
 test('caminho feliz: super-admin lê o audit log e filtra por ação', async () => {
-  const res = await getAudit(authedRequest(superAdmin, { method: 'GET', url: '/api/audit?action=CREATE' }));
+  const res = await getAudit(authedRequest(superAdmin, { method: 'GET', url: '/api/audit?action=CREATE' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
   const rows = await res.json();
   assert.ok(rows.some((r: { resource: string; clinic: string }) => r.resource === MARKER && r.clinic === CLINIC_A));
@@ -47,7 +47,7 @@ test('admin de clínica não vê audit log de outra clínica mesmo pedindo ?clin
       method: 'GET',
       url: `/api/audit?q=${encodeURIComponent(MARKER)}&clinic=${encodeURIComponent(CLINIC_B)}`,
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
   const rows = await res.json();
   assert.ok(rows.length > 0, 'devia ver pelo menos a sua própria entrada');
@@ -57,6 +57,6 @@ test('admin de clínica não vê audit log de outra clínica mesmo pedindo ?clin
 });
 
 test('receptionist (role != admin) recebe 403', async () => {
-  const res = await getAudit(authedRequest(receptionistA, { method: 'GET', url: '/api/audit' }));
+  const res = await getAudit(authedRequest(receptionistA, { method: 'GET', url: '/api/audit' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 });

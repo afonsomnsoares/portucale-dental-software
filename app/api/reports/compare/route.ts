@@ -1,7 +1,6 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireRoles, unauthorized } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { forbidden, requireRoles } from '@/lib/auth';
 import { computeClinicComparison } from '@/lib/reports';
+import { withRoute } from '@/lib/route';
 
 function clampDate(s: unknown) {
   const v = String(s || '').slice(0, 10);
@@ -10,11 +9,8 @@ function clampDate(s: unknown) {
 
 // Cross-clinic comparison only makes sense for the super_admin, managing several
 // clinics — a single-clinic admin has nothing to compare against.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const GET = withRoute({ permission: 'reports:read', tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'super_admin')) return forbidden();
-  if (!(await hasPermission(user, 'reports:read'))) return forbidden();
 
   const { searchParams } = new URL(request.url);
   const from = clampDate(searchParams.get('from')) || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
@@ -22,4 +18,4 @@ export async function GET(request: NextRequest) {
 
   const result = await computeClinicComparison(from, to);
   return Response.json(result);
-}
+});

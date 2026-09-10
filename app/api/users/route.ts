@@ -1,10 +1,9 @@
 import bcrypt from 'bcryptjs';
-import type { NextRequest } from 'next/server';
 import { appendAudit, logBlockedAccess } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { asEmail } from '@/lib/validate';
 
 // 'admin' here means a clinic admin (always tenant-scoped from here on — see
@@ -12,11 +11,8 @@ import { asEmail } from '@/lib/validate';
 // this set: the platform has exactly one, created only via scripts/create-admin.ts.
 const ALLOWED_ROLES = new Set(['receptionist', 'dentist', 'admin']);
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const GET = withRoute({ permission: 'users:manage', tenant: 'optional' }, async ({ user }) => {
   if (user.role !== 'admin' && user.role !== 'super_admin') return forbidden();
-  if (!(await hasPermission(user, 'users:manage'))) return forbidden();
 
   // Tenant-scoped admins must only see their own clinic's staff — a null tenantId means
   // super-admin, which bypasses the filter and sees every tenant (same pattern as patients).
@@ -29,15 +25,10 @@ export async function GET(request: NextRequest) {
     [user.tenantId || null],
   );
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const POST = withRoute({ permission: 'users:manage', tenant: 'optional' }, async ({ request, user }) => {
   if (user.role !== 'admin' && user.role !== 'super_admin') return forbidden();
-  if (!(await hasPermission(user, 'users:manage'))) return forbidden();
 
   const { email, password, name, role, clinic, tenantId: bodyTenantId } = await request.json();
 
@@ -97,4 +88,4 @@ export async function POST(request: NextRequest) {
     }
     return Response.json({ error: 'Database error' }, { status: 500 });
   }
-}
+});

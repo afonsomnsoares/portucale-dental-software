@@ -3,6 +3,7 @@ import { isConversationChannel } from '@/lib/conversationCalc';
 import { enterTenantContext } from '@/lib/db';
 import { handleInbound, resolveChannelAccount } from '@/lib/inbound';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
+import { withRoute } from '@/lib/route';
 
 // ═══ A rota mais exposta da aplicação ═══════════════════════════════════════
 // Um endpoint público que aceita conteúdo de terceiros e escreve na base de dados de
@@ -68,8 +69,8 @@ function parsePayload(channel: string, body: Record<string, unknown>) {
   };
 }
 
-export async function POST(request: NextRequest, ctx: { params: Promise<{ channel: string }> }) {
-  const { channel } = await ctx.params;
+export const POST = withRoute<{ channel: string }>({ public: true, crossOrigin: true }, async ({ request, params }) => {
+  const { channel } = params;
   if (!isConversationChannel(channel)) {
     return Response.json({ error: 'Unknown channel' }, { status: 404 });
   }
@@ -126,4 +127,4 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ channe
   });
 
   return Response.json({ ok: true, conversationId: result.conversationId, duplicate: result.duplicate });
-}
+});

@@ -1,15 +1,11 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asDate, asFee, sanitizeString } from '@/lib/validate';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'lab-orders:read'))) return forbidden();
+export const GET = withRoute({ permission: 'lab-orders:read', tenant: 'optional' }, async ({ request, user }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const status = searchParams.get('status');
@@ -35,14 +31,9 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'lab-orders:manage'))) return forbidden();
+export const POST = withRoute({ permission: 'lab-orders:manage', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
   const body = await request.json();
   const { patientId, labName, caseType, description, instructions, dueDate, fee } = body;
@@ -82,4 +73,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `Lab order: ${labName} — ${caseType || 'N/A'}`, null, 'ordered', user.clinic);
 
   return Response.json(row, { status: 201 });
-}
+});

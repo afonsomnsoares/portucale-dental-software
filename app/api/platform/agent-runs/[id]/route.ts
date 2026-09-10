@@ -1,8 +1,6 @@
-import type { NextRequest } from 'next/server';
 import { agentForJob } from '@/lib/agents/registry';
-import { getAuth } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // O detalhe de UMA execução — o ecrã de observabilidade.
 //
@@ -12,12 +10,8 @@ import { requirePlatform } from '@/lib/platform';
 // por ninguém, e esta rota não as inventa: devolve os estágios que consegue provar e
 // declara os que faltam em `missingStages`, para a UI os mostrar como lacuna em vez
 // de os omitir em silêncio.
-export async function GET(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user, 'agents:read');
-  if (blocked) return blocked;
-
-  const { id } = await ctx.params;
+export const GET = withRoute<{ id: string }>({ platform: 'agents:read', tenant: 'optional' }, async ({ params }) => {
+  const { id } = params;
   if (!/^\d+$/.test(id)) return Response.json({ error: 'Id inválido' }, { status: 400 });
 
   const run = await queryOne(
@@ -93,4 +87,4 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     ],
     missingStages: ['context', 'decision', 'tools', 'evaluation'],
   });
-}
+});

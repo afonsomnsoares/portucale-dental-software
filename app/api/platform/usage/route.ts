@@ -1,7 +1,5 @@
-import type { NextRequest } from 'next/server';
-import { getAuth } from '@/lib/auth';
 import { queryRead, warnSchemaGap } from '@/lib/db';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // Utilização real por clínica — o que substitui "Usage" e "Retention" enquanto não
 // houver telemetria de produto (sessões, ecrãs vistos, DAU/MAU).
@@ -10,11 +8,7 @@ import { requirePlatform } from '@/lib/platform';
 // utilizadores ativos, quantas marcações nos últimos 30 dias e QUANDO foi a última
 // atividade da clínica. A última é a que interessa para retenção: uma clínica sem
 // marcações há semanas está a sair, quer o contrato diga o que disser.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user, 'reports:read');
-  if (blocked) return blocked;
-
+export const GET = withRoute({ platform: 'reports:read', tenant: 'optional' }, async () => {
   try {
     const rows = await queryRead(
       `SELECT t.id, t.name, t.city, t.status, t.created_at, t.operatories,
@@ -36,4 +30,4 @@ export async function GET(request: NextRequest) {
     warnSchemaGap('platform.usage', e);
     return Response.json([]);
   }
-}
+});

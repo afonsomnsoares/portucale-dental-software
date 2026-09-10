@@ -34,7 +34,7 @@ test('sem ANTHROPIC_API_KEY, cai para a regra determinística e ainda assim prop
       url: '/api/inventory/items',
       body: { item: 'Compressas (agente teste)', unit: 'un', reorderAt: 20 },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(itemRes.status, 201);
   const item = await itemRes.json();
 
@@ -44,7 +44,7 @@ test('sem ANTHROPIC_API_KEY, cai para a regra determinística e ainda assim prop
       url: '/api/inventory/movements',
       body: { itemId: item.id, delta: 5, reason: 'received', tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
 
   const result = await generateReorderSuggestionsAI(tenantAId);
   assert.equal(result.source, 'auto');
@@ -53,7 +53,7 @@ test('sem ANTHROPIC_API_KEY, cai para a regra determinística e ainda assim prop
 
   const listRes = await getPurchaseOrders(
     authedRequest(superAdmin, { method: 'GET', url: `/api/purchase-orders?tenantId=${tenantAId}` }),
-  );
+   { params: Promise.resolve({}) });
   const orders = await listRes.json();
   const draft = orders.find((o: { id: string }) => o.id === result.purchaseOrderId);
   assert.ok(draft, 'o rascunho tem de aparecer na listagem da clínica');

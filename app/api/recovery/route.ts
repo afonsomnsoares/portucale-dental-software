@@ -1,14 +1,9 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
 import { computeRecovery } from '@/lib/recovery';
+import { withRoute } from '@/lib/route';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'recovery:read'))) return forbidden();
-
+export const GET = withRoute({ permission: 'recovery:read', tenant: 'optional' }, async ({ request, user }) => {
   const requestedTenantId = new URL(request.url).searchParams.get('tenantId');
   const tenantId = scopeTenant(user, request, requestedTenantId);
   if (!tenantId) return forbidden();
@@ -33,4 +28,4 @@ export async function GET(request: NextRequest) {
     categories: recovery.categories,
     snapshots,
   });
-}
+});

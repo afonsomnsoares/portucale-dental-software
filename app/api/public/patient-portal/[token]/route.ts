@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
 import { normalizeCustomFields } from '@/lib/customFields';
 import { enterTenantContext, query, queryOne, withSystemContext } from '@/lib/db';
 import { findMissingFields, type RequiredSchemaField } from '@/lib/missingData';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
+import { withRoute } from '@/lib/route';
 import { saveUploadFile } from '@/lib/uploads';
 import { asDate, asEmail, sanitizeString } from '@/lib/validate';
 
@@ -57,8 +57,12 @@ async function createReviewTask(tenantId: string, patientId: string, title: stri
   );
 }
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
+// Sem cookie de sessão: o token que vem no URL É a credencial (guardado só em
+// hash, ver app/api/patient-portal-links/route.ts). Por isso `crossOrigin` — não
+// há credencial ambiente para um site terceiro aproveitar, e a página do portal
+// usa fetch cru, sem o par de CSRF que o resto da aplicação envia.
+export const GET = withRoute<{ token: string }>({ public: true, crossOrigin: true }, async ({ request, params }) => {
+  const { token } = params;
   const ip = getClientIp(request);
   const ipLimit = rateLimit(`patient-portal-ip:${ip}`, { limit: 30, windowMs: 60 * 1000 });
   if (!ipLimit.ok) return Response.json({ error: 'Too many requests' }, { status: 429 });
@@ -123,10 +127,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     tenantName: row.tenant_name,
     consentForm,
   });
-}
+});
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
+export const POST = withRoute<{ token: string }>({ public: true, crossOrigin: true }, async ({ request, params }) => {
+  const { token } = params;
   const ip = getClientIp(request);
   const tokenLimit = rateLimit(`patient-portal-token:${token}`, { limit: 10, windowMs: 60 * 1000 });
   if (!tokenLimit.ok) return Response.json({ error: 'Too many requests' }, { status: 429 });
@@ -233,4 +237,4 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     row.tenant_name,
   );
   return Response.json({ ok: true });
-}
+});

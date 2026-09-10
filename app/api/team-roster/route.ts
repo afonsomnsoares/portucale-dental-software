@@ -1,24 +1,23 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
-import { revalidateSession } from '@/lib/permissions';
+import { forbidden, scopeTenant } from '@/lib/auth';
+import { withRoute } from '@/lib/route';
 import { computeTeamRoster } from '@/lib/staffSchedule';
 import { asDate } from '@/lib/validate';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  // A sessão pode ter sido desativada, despromovida ou movida de clínica depois de o
-  // token ser assinado; revalidateSession() confirma-o contra `users` e realinha
-  // user.role/user.tenantId. Ver lib/permissions.ts.
-  if (!(await revalidateSession(user))) return unauthorized();
-  const { searchParams } = new URL(request.url);
-  // Same convention as the other admin-config routes: a super_admin (no tenantId of
-  // their own) must pick one via ?tenantId=.
-  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
-  if (!tenantId) return forbidden();
+export const GET = withRoute(
+  {
+    authOnly: 'Quem está de serviço hoje na própria clínica — informação de equipa, não de doente',
+    tenant: 'optional',
+  },
+  async ({ request, user }) => {
+    const { searchParams } = new URL(request.url);
+    // Same convention as the other admin-config routes: a super_admin (no tenantId of
+    // their own) must pick one via ?tenantId=.
+    const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
+    if (!tenantId) return forbidden();
 
-  const date = asDate(searchParams.get('date')) || new Date().toLocaleDateString('en-CA');
+    const date = asDate(searchParams.get('date')) || new Date().toLocaleDateString('en-CA');
 
-  const { rows, coverageWarnings } = await computeTeamRoster(tenantId, date);
-  return Response.json({ date, rows, coverageWarnings });
-}
+    const { rows, coverageWarnings } = await computeTeamRoster(tenantId, date);
+    return Response.json({ date, rows, coverageWarnings });
+  },
+);

@@ -1,8 +1,6 @@
-import type { NextRequest } from 'next/server';
 import { AGENTS, agentForJob } from '@/lib/agents/registry';
-import { getAuth } from '@/lib/auth';
 import { queryRead, warnSchemaGap } from '@/lib/db';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // Execuções de agentes em TODA a rede — a versão de plataforma do que
 // /api/agents dá por clínica.
@@ -11,11 +9,7 @@ import { requirePlatform } from '@/lib/platform';
 // escreve (lib/jobsRunner.ts). O mapa job→agente vem do registo estático
 // (lib/agents/registry.ts), por isso filtrar por agente é filtrar pelas suas
 // tarefas — sem coluna nova e sem migração.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user, 'agents:read');
-  if (blocked) return blocked;
-
+export const GET = withRoute({ platform: 'agents:read', tenant: 'optional' }, async ({ request }) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
   const agent = searchParams.get('agent');
@@ -100,4 +94,4 @@ export async function GET(request: NextRequest) {
       };
     }),
   });
-}
+});

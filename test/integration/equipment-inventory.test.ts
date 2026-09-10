@@ -38,7 +38,7 @@ async function createEquipment(overrides: Record<string, unknown> = {}) {
       url: '/api/equipment',
       body: { name: `Autoclave ${uniq()}`, chair: 1, tags: ['esterilizacao'], ...overrides },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201, 'equipamento de teste criado');
   return res.json();
 }
@@ -157,7 +157,7 @@ test('inventário: cada clínica tem o seu ponto de reposição sobre o catálog
       url: '/api/inventory/items',
       body: { item: `Luvas ${uniq()}`, unit: 'cx', reorderAt: 10 },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(itemRes.status, 201);
   const item = await itemRes.json();
 

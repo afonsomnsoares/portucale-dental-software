@@ -1,9 +1,8 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query, withTransaction } from '@/lib/db';
 import { conflict } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient, getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, requireFields, validateAppointmentBody } from '@/lib/validate';
 
@@ -12,17 +11,20 @@ import { asDate, requireFields, validateAppointmentBody } from '@/lib/validate';
 // other failure without stringly-typed error matching.
 class SlotTakenError extends Error {}
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  const { searchParams } = new URL(request.url);
-  const dateParam = searchParams.get('date');
-  const from = asDate(searchParams.get('from'));
-  const to = asDate(searchParams.get('to'));
-  const limitRaw = Number(searchParams.get('limit') || 500);
-  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.floor(limitRaw))) : 500;
+export const GET = withRoute(
+  {
+    authOnly: 'Agenda da própria clínica: é o ecrã de onde toda a gente trabalha, e o corpo filtra por user.tenantId',
+    tenant: 'optional',
+  },
+  async ({ request, user }) => {
+    const { searchParams } = new URL(request.url);
+    const dateParam = searchParams.get('date');
+    const from = asDate(searchParams.get('from'));
+    const to = asDate(searchParams.get('to'));
+    const limitRaw = Number(searchParams.get('limit') || 500);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(1000, Math.floor(limitRaw))) : 500;
 
-  const baseSql = `
+    const baseSql = `
     SELECT a.*, p.name as patient_name, d.name as dentist_name,
            ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100) as risk_score
     FROM appointments a
@@ -30,51 +32,47 @@ export async function GET(request: NextRequest) {
     LEFT JOIN users d ON d.id = a.dentist_id
   `;
 
-  let rows = [];
-  // Um paciente concreto, sem janela de datas — é o que a emissão de documentos
-  // administrativos precisa (escolher a consulta que a declaração refere, ver
-  // app/api/documents/route.ts). Ordenado do mais recente para o mais antigo,
-  // que é a ordem em que se procura "a consulta de que estamos a falar".
-  const patientId = searchParams.get('patientId');
-  if (patientId) {
-    rows = await query(
-      `${baseSql}
+    let rows = [];
+    // Um paciente concreto, sem janela de datas — é o que a emissão de documentos
+    // administrativos precisa (escolher a consulta que a declaração refere, ver
+    // app/api/documents/route.ts). Ordenado do mais recente para o mais antigo,
+    // que é a ordem em que se procura "a consulta de que estamos a falar".
+    const patientId = searchParams.get('patientId');
+    if (patientId) {
+      rows = await query(
+        `${baseSql}
        WHERE a.patient_id = $1 AND a.tenant_id = $2
        ORDER BY a.appt_date DESC, a.start_time DESC
        LIMIT $3`,
-      [patientId, user.tenantId, limit],
-    );
-  } else if (from || to) {
-    const today = new Date().toISOString().slice(0, 10);
-    const f = from || to || today;
-    const t = to || from || today;
-    rows = await query(
-      `${baseSql}
+        [patientId, user.tenantId, limit],
+      );
+    } else if (from || to) {
+      const today = new Date().toISOString().slice(0, 10);
+      const f = from || to || today;
+      const t = to || from || today;
+      rows = await query(
+        `${baseSql}
        WHERE a.appt_date BETWEEN $1::date AND $2::date
          AND a.tenant_id = $3
        ORDER BY a.appt_date, a.start_time, a.chair
        LIMIT $4`,
-      [f, t, user.tenantId, limit],
-    );
-  } else {
-    const d = dateParam && asDate(dateParam) ? dateParam : new Date().toISOString().slice(0, 10);
-    rows = await query(
-      `${baseSql}
+        [f, t, user.tenantId, limit],
+      );
+    } else {
+      const d = dateParam && asDate(dateParam) ? dateParam : new Date().toISOString().slice(0, 10);
+      rows = await query(
+        `${baseSql}
        WHERE a.appt_date = $1::date AND a.tenant_id = $2
        ORDER BY a.start_time, a.chair
        LIMIT $3`,
-      [d, user.tenantId, limit],
-    );
-  }
-  return Response.json(rows);
-}
+        [d, user.tenantId, limit],
+      );
+    }
+    return Response.json(rows);
+  },
+);
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'appointments:create'))) return forbidden();
+export const POST = withRoute({ permission: 'appointments:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
   const body = await request.json();
   const missing = requireFields(body, ['patientId', 'dentistId', 'date', 'startTime', 'type']);
@@ -160,4 +158,4 @@ export async function POST(request: NextRequest) {
     `Consulta marcada: ${body.type} em ${body.date} (Dentista: ${dentist.name})`,
   );
   return Response.json(apt, { status: 201 });
-}
+});

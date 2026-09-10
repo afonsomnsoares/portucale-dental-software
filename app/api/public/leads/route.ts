@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
 import { enterTenantContext, query, queryOne, withSystemContext } from '@/lib/db';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
+import { withRoute } from '@/lib/route';
 import { asEmail, sanitizeString } from '@/lib/validate';
 
 // ─── THE ONLY UNAUTHENTICATED, CROSS-ORIGIN ROUTE IN THIS PROJECT ────────────
@@ -33,7 +33,7 @@ export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ public: true, crossOrigin: true }, async ({ request }) => {
   const authHeader = request.headers.get('authorization') || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length).trim() : '';
   if (!token) return corsJson({ error: 'Missing bearer token' }, 401);
@@ -101,4 +101,4 @@ export async function POST(request: NextRequest) {
   );
 
   return corsJson({ ok: true, leadId: lead.id }, 201);
-}
+});

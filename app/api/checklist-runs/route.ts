@@ -1,19 +1,15 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { snapshotItems } from '@/lib/checklistCalc';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, conflict, created } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { asDate } from '@/lib/validate';
 
 // Both GET and POST are self-service (no 'checklists:manage' needed) — starting today's
 // opening checklist and ticking it off is something anyone on shift does, not a management
 // action. Only editing the *template* (app/api/checklist-templates) is gated.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
+export const GET = withRoute({ permission: 'checklists:run', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request, new URL(request.url).searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
@@ -40,18 +36,12 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});
 
 // Starting a run snapshots the template's items at this moment (labels + all unchecked) —
 // see lib/checklistCalc.ts's snapshotItems. Editing the template afterwards never changes
 // a run already in progress or completed.
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'checklists:run'))) return forbidden();
-
+export const POST = withRoute({ permission: 'checklists:run', tenant: 'optional' }, async ({ request, user }) => {
   const body = await request.json();
   const tenantId = scopeTenant(
     user,
@@ -87,4 +77,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `Checklist run: ${template.name}`, null, runDate, user.clinic);
 
   return created({ ...row, started_by_name: user.name });
-}
+});

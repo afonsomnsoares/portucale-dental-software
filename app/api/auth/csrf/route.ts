@@ -1,7 +1,11 @@
 import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
+import { withRoute } from '@/lib/route';
 
-export async function GET() {
+// Emite o cookie CSRF que requireSameOrigin() confere depois em cada mutação.
+// Público por obrigação: é preciso tê-lo ANTES de haver sessão, senão não havia
+// como submeter o formulário de login.
+export const GET = withRoute({ public: true }, async () => {
   const token = crypto.randomBytes(32).toString('base64url');
   const cookieStore = await cookies();
   cookieStore.set('dent_csrf', token, {
@@ -12,4 +16,4 @@ export async function GET() {
     maxAge: 60 * 60 * 24,
   });
   return Response.json({ ok: true });
-}
+});

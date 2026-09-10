@@ -1,8 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
-import { hasPermission } from '@/lib/permissions';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { computeClinicComparison, computeClinicSummary } from '@/lib/reports';
+import { withRoute } from '@/lib/route';
 
 function clampDate(s: unknown) {
   const v = String(s || '').slice(0, 10);
@@ -13,13 +12,7 @@ const SYSTEM_SINGLE = `És um analista de negócio para clínicas dentárias. Re
 
 const SYSTEM_COMPARE = `És um analista de negócio para grupos de clínicas dentárias. Recebes métricas já calculadas (em JSON) comparando várias clínicas do mesmo grupo — nunca as inventes nem recalcules. Escreve um diagnóstico curto em português europeu (máximo 3 frases, sem markdown) que identifique a clínica com pior desempenho e a causa provável (conversão, aquisição, agenda ou cobrança), citando os números e o valor em euros da diferença ("gap") fornecido.`;
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'reports:read'))) return forbidden();
-
+export const POST = withRoute({ permission: 'reports:read', tenant: 'optional' }, async ({ request, user }) => {
   const body = await request.json().catch(() => ({}));
   const from = clampDate(body.from) || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
   const to = clampDate(body.to) || new Date().toISOString().slice(0, 10);
@@ -87,4 +80,4 @@ export async function POST(request: NextRequest) {
     }
     return Response.json({ insight: null, configured: true, error: message }, { status: 502 });
   }
-}
+});

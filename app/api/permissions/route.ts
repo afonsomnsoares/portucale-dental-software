@@ -1,13 +1,10 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireRoles, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
-import { getPermissionMatrix, hasPermission, setPermissionOverrides } from '@/lib/permissions';
+import { forbidden, requireRoles, scopeTenant } from '@/lib/auth';
+import { getPermissionMatrix, setPermissionOverrides } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const GET = withRoute({ permission: 'permissions:manage', tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
-  if (!(await hasPermission(user, 'permissions:manage'))) return forbidden();
 
   const { searchParams } = new URL(request.url);
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
@@ -19,15 +16,10 @@ export async function GET(request: NextRequest) {
 
   const data = await getPermissionMatrix(tenantId);
   return Response.json({ tenantId, ...data });
-}
+});
 
-export async function PUT(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const PUT = withRoute({ permission: 'permissions:manage', tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
-  if (!(await hasPermission(user, 'permissions:manage'))) return forbidden();
 
   const { tenantId, updates } = await request.json();
   const tId = tenantId || user.tenantId;
@@ -39,4 +31,4 @@ export async function PUT(request: NextRequest) {
 
   const data = await getPermissionMatrix(tId);
   return Response.json({ tenantId: tId, ...data });
-}
+});

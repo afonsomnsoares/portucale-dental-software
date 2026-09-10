@@ -1,18 +1,12 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asFee, requireFields, validateTreatmentBody } from '@/lib/validate';
 
 // GET /api/treatments?patientId=&status=
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  // Ler exige 'treatments:read', não as três ações de escrita. Exigir escrita para
-  // ler mantinha a rececionista fora de uma página que o menu lhe oferece.
-  if (!(await hasPermission(user, 'treatments:read'))) return forbidden();
+export const GET = withRoute({ permission: 'treatments:read', tenant: 'optional' }, async ({ request, user }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const status = searchParams.get('status');
@@ -38,15 +32,10 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});
 
 // POST /api/treatments
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'treatments:create'))) return forbidden();
+export const POST = withRoute({ permission: 'treatments:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
   const body = await request.json();
   const missing = requireFields(body, ['patientId', 'description']);
@@ -81,4 +70,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `Tratamento: ${description}`, null, 'proposto', user.clinic);
 
   return Response.json(t, { status: 201 });
-}
+});

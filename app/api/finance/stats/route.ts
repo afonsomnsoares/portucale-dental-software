@@ -1,14 +1,9 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { asDate } from '@/lib/validate';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'finance:read'))) return forbidden();
-
+export const GET = withRoute({ permission: 'finance:read', tenant: 'optional' }, async ({ request, user }) => {
   const { searchParams } = new URL(request.url);
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
   // tenant via the query string; everyone else is confined to their own,
@@ -94,4 +89,4 @@ export async function GET(request: NextRequest) {
     patientBalance: Number(patientBalance?.total_balance || 0),
     recentPayments,
   });
-}
+});

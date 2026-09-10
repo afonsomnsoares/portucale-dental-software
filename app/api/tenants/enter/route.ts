@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
-import type { NextRequest } from 'next/server';
 import { appendAudit, logBlockedAccess } from '@/lib/audit';
-import { ACTING_TENANT_COOKIE, forbidden, getAuth, requireRoles, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { ACTING_TENANT_COOKIE, forbidden, requireRoles } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
+import { withRoute } from '@/lib/route';
 
 // Entrar numa clínica e sair dela.
 //
@@ -18,11 +18,7 @@ import { queryOne } from '@/lib/db';
 // Entrar e sair ficam no audit_log: é o operador da plataforma a ir ver dados clínicos de
 // um cliente, e isso tem de deixar rasto.
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const POST = withRoute({ platform: true, tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'super_admin')) {
     await logBlockedAccess(user, 'Clinic impersonation blocked: caller is not a super-admin');
     return forbidden();
@@ -47,17 +43,13 @@ export async function POST(request: NextRequest) {
 
   await appendAudit(user, 'IMPERSONATE', `Entrou na clínica — ${tenant.name}`, null, tenant.id, tenant.name);
   return Response.json({ tenantId: tenant.id, tenantName: tenant.name });
-}
+});
 
-export async function DELETE(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const DELETE = withRoute({ platform: true, tenant: 'optional' }, async ({ user }) => {
   if (!requireRoles(user, 'super_admin')) return forbidden();
 
   const cookieStore = await cookies();
   cookieStore.delete(ACTING_TENANT_COOKIE);
   await appendAudit(user, 'IMPERSONATE', 'Saiu da clínica', null, null, null);
   return Response.json({ ok: true });
-}
+});

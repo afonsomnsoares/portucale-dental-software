@@ -1,7 +1,6 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { query } from '@/lib/db';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
 // Read-only view over the queue lib/jobsRunner.ts writes to and drains —
 // lets the receptionist see what was actually sent (or failed) instead of it
@@ -18,11 +17,7 @@ const KINDS = new Set([
   'plan_followup',
 ]);
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'notifications:read'))) return forbidden();
-
+export const GET = withRoute({ permission: 'notifications:read', tenant: 'optional' }, async ({ request, user }) => {
   const { searchParams } = new URL(request.url);
   const requestedTenantId = searchParams.get('tenantId');
   const tenantId = scopeTenant(user, request, requestedTenantId);
@@ -58,4 +53,4 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});

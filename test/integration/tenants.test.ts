@@ -21,7 +21,7 @@ before(async () => {
 after(closeTestDb);
 
 test('caminho feliz: super-admin lista e cria clínicas', async () => {
-  const listRes = await getTenants(authedRequest(superAdmin, { method: 'GET', url: '/api/tenants' }));
+  const listRes = await getTenants(authedRequest(superAdmin, { method: 'GET', url: '/api/tenants' }), { params: Promise.resolve({}) });
   assert.equal(listRes.status, 200);
 
   const createRes = await postTenants(
@@ -30,21 +30,21 @@ test('caminho feliz: super-admin lista e cria clínicas', async () => {
       url: '/api/tenants',
       body: { name: `Clínica Teste ${Date.now()}`, city: 'Porto', operatories: 2 },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(createRes.status, 201);
 });
 
 test('admin de clínica (role=admin mas com tenantId) recebe 403 — só super-admin gere clínicas', async () => {
-  const listRes = await getTenants(authedRequest(adminB, { method: 'GET', url: '/api/tenants' }));
+  const listRes = await getTenants(authedRequest(adminB, { method: 'GET', url: '/api/tenants' }), { params: Promise.resolve({}) });
   assert.equal(listRes.status, 403);
 
   const createRes = await postTenants(
     authedRequest(adminB, { method: 'POST', url: '/api/tenants', body: { name: 'Não devia existir', city: 'X' } }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(createRes.status, 403);
 });
 
 test('receptionist recebe 403', async () => {
-  const res = await getTenants(authedRequest(receptionistA, { method: 'GET', url: '/api/tenants' }));
+  const res = await getTenants(authedRequest(receptionistA, { method: 'GET', url: '/api/tenants' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 });

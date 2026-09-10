@@ -30,8 +30,8 @@ function loginRequest(rawBody: string): NextRequest {
 }
 
 test('sem password: conta existente e inexistente respondem exatamente igual', async () => {
-  const existente = await login(loginRequest(JSON.stringify({ email: 'admin@portucale.dental' })));
-  const inexistente = await login(loginRequest(JSON.stringify({ email: 'nao-existe-de-todo@exemplo.pt' })));
+  const existente = await login(loginRequest(JSON.stringify({ email: 'admin@portucale.dental' })), { params: Promise.resolve({}) });
+  const inexistente = await login(loginRequest(JSON.stringify({ email: 'nao-existe-de-todo@exemplo.pt' })), { params: Promise.resolve({}) });
 
   assert.equal(existente.status, 401, 'conta existente sem password -> 401 (antes da correção: 500)');
   assert.equal(inexistente.status, 401, 'conta inexistente sem password -> 401');
@@ -39,11 +39,11 @@ test('sem password: conta existente e inexistente respondem exatamente igual', a
 });
 
 test('corpo malformado devolve 400, não 500', async () => {
-  const res = await login(loginRequest('{ isto não é json'));
+  const res = await login(loginRequest('{ isto não é json'), { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
 test('password errada continua a devolver 401', async () => {
-  const res = await login(loginRequest(JSON.stringify({ email: 'admin@portucale.dental', password: 'errada' })));
+  const res = await login(loginRequest(JSON.stringify({ email: 'admin@portucale.dental', password: 'errada' })), { params: Promise.resolve({}) });
   assert.equal(res.status, 401);
 });

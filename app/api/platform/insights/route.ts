@@ -1,16 +1,10 @@
-import type { NextRequest } from 'next/server';
-import { getAuth } from '@/lib/auth';
 import { queryRead, warnSchemaGap } from '@/lib/db';
-import { requirePlatform } from '@/lib/platform';
+import { withRoute } from '@/lib/route';
 
 // Alertas de toda a rede: agent_insights (migração 041) sem filtro de clínica.
 // A RLS deixa passar porque o contexto da sessão é super_admin — ver
 // enterTenantContext em lib/db.ts.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  const blocked = await requirePlatform(user, 'agents:read');
-  if (blocked) return blocked;
-
+export const GET = withRoute({ platform: 'agents:read', tenant: 'optional' }, async ({ request }) => {
   const { searchParams } = new URL(request.url);
   const severity = searchParams.get('severity');
   const openOnly = searchParams.get('open') !== '0';
@@ -41,4 +35,4 @@ export async function GET(request: NextRequest) {
     warnSchemaGap('platform.insights', e);
     return Response.json([]);
   }
-}
+});

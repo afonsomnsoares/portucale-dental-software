@@ -34,7 +34,7 @@ async function createSource(label: string) {
       url: '/api/lead-sources',
       body: { label, tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   return res.json();
 }
@@ -52,21 +52,21 @@ test('caminho feliz: token válido cria um lead e incrementa lead_count/last_use
       headers: { Authorization: `Bearer ${source.token}` },
       body: { name: 'Contacto de Teste', phone: '912000000', message: 'Olá, quero marcar uma consulta.' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(captureRes.status, 201);
   const created = await captureRes.json();
   assert.ok(created.leadId);
 
   const listRes = await getLeadSources(
     authedRequest(superAdmin, { method: 'GET', url: `/api/lead-sources?tenantId=${tenantAId}` }),
-  );
+   { params: Promise.resolve({}) });
   const sources = await listRes.json();
   const updated = sources.find((s: { id: string }) => s.id === source.id);
   assert.equal(updated.lead_count, 1);
   assert.ok(updated.last_used_at);
   assert.equal(updated.token_hash, undefined, 'token_hash must never be exposed by GET');
 
-  const leadsRes = await getLeads(authedRequest(receptionistA, { method: 'GET', url: '/api/leads' }));
+  const leadsRes = await getLeads(authedRequest(receptionistA, { method: 'GET', url: '/api/leads' }), { params: Promise.resolve({}) });
   const leads = await leadsRes.json();
   const captured = leads.find((l: { id: string }) => l.id === created.leadId);
   assert.equal(captured.name, 'Contacto de Teste');
@@ -82,14 +82,14 @@ test('token inexistente é rejeitado com 401, sem criar lead', async () => {
       headers: { Authorization: 'Bearer lc_does-not-exist' },
       body: { name: 'Não devia entrar', phone: '911111111' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 401);
 });
 
 test('sem header Authorization é rejeitado com 401', async () => {
   const res = await postPublicLead(
     anonRequest({ method: 'POST', url: '/api/public/leads', body: { name: 'X', phone: '911111111' } }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 401);
 });
 
@@ -107,7 +107,7 @@ test('fonte desativada deixa de aceitar leads', async () => {
       headers: { Authorization: `Bearer ${source.token}` },
       body: { name: 'Não devia entrar', phone: '911111111' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 401);
 });
 
@@ -120,7 +120,7 @@ test('name em falta é rejeitado com 400', async () => {
       headers: { Authorization: `Bearer ${source.token}` },
       body: { phone: '911111111' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
@@ -133,7 +133,7 @@ test('sem phone nem email é rejeitado com 400', async () => {
       headers: { Authorization: `Bearer ${source.token}` },
       body: { name: 'Sem contacto' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 400);
 });
 
@@ -146,11 +146,11 @@ test('isolamento entre clínicas: o lead criado por um token da tenant A nunca a
       headers: { Authorization: `Bearer ${source.token}` },
       body: { name: 'Lead da Tenant A', email: 'leadA@example.com' },
     }),
-  );
+   { params: Promise.resolve({}) });
   const created = await captureRes.json();
 
   const adminB = await getSeededUser('admin.b@tenantb.test');
-  const leadsBRes = await getLeads(authedRequest(adminB, { method: 'GET', url: '/api/leads?status=all' }));
+  const leadsBRes = await getLeads(authedRequest(adminB, { method: 'GET', url: '/api/leads?status=all' }), { params: Promise.resolve({}) });
   const leadsB = await leadsBRes.json();
   assert.ok(
     !leadsB.some((l: { id: string }) => l.id === created.leadId),
@@ -178,7 +178,7 @@ test('a resposta de sucesso também carrega o header CORS (não só o preflight)
       headers: { Authorization: `Bearer ${source.token}` },
       body: { name: 'CORS check', phone: '910000000' },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
 });
 
@@ -193,7 +193,7 @@ test('limite de taxa por token dispara ao fim de N pedidos', async () => {
         headers: { Authorization: `Bearer ${source.token}` },
         body: { name: `Lead ${i}`, phone: '919999999' },
       }),
-    );
+     { params: Promise.resolve({}) });
     if (res.status === 429) {
       sawRateLimit = true;
       break;

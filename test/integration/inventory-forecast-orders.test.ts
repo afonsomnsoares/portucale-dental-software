@@ -38,7 +38,7 @@ async function createItem(name: string, reorderAt = 10) {
       url: '/api/inventory/items',
       body: { item: name, unit: 'un', reorderAt },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 201);
   return res.json();
 }
@@ -46,14 +46,14 @@ async function createItem(name: string, reorderAt = 10) {
 test('inventory items: receptionist (sem inventory:manage) é bloqueada com 403 a criar', async () => {
   const res = await postInventoryItem(
     authedRequest(receptionistA, { method: 'POST', url: '/api/inventory/items', body: { item: 'Não devia' } }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 });
 
 test('inventory items: super_admin cria, GET lista-o', async () => {
   const item = await createItem('Luvas de nitrilo (teste)');
   assert.equal(item.reorder_at, 10);
-  const listRes = await getInventoryItems(authedRequest(superAdmin, { method: 'GET', url: '/api/inventory/items' }));
+  const listRes = await getInventoryItems(authedRequest(superAdmin, { method: 'GET', url: '/api/inventory/items' }), { params: Promise.resolve({}) });
   const rows = await listRes.json();
   assert.ok(rows.some((r: { id: number }) => r.id === item.id));
 });
@@ -67,7 +67,7 @@ test('movements: receber stock com validade cria um lote; consumir gasta primeir
       url: '/api/inventory/movements',
       body: { itemId: item.id, delta: 10, reason: 'received', batchNumber: 'LOTE-VELHO', expiryDate: '2026-09-05', tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(receiveOld.status, 201);
 
   const receiveNew = await postMovement(
@@ -76,7 +76,7 @@ test('movements: receber stock com validade cria um lote; consumir gasta primeir
       url: '/api/inventory/movements',
       body: { itemId: item.id, delta: 10, reason: 'received', batchNumber: 'LOTE-NOVO', expiryDate: '2027-01-01', tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(receiveNew.status, 201);
 
   // consome 12 — deve esvaziar o lote velho (10) e tirar 2 do novo
@@ -86,12 +86,12 @@ test('movements: receber stock com validade cria um lote; consumir gasta primeir
       url: '/api/inventory/movements',
       body: { itemId: item.id, delta: -12, reason: 'consumed', tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(consume.status, 201);
 
   const forecastRes = await getForecast(
     authedRequest(superAdmin, { method: 'GET', url: `/api/inventory/forecast?tenantId=${tenantAId}` }),
-  );
+   { params: Promise.resolve({}) });
   const forecast = await forecastRes.json();
   const row = forecast.overview.find((r: { item: { id: number } }) => r.item.id === item.id);
   assert.equal(row.currentQty, 8); // 20 recebidas - 12 consumidas
@@ -112,16 +112,16 @@ test('movements: GET lista o histórico, filtrável por item; isolamento entre t
       url: '/api/inventory/movements',
       body: { itemId: item.id, delta: 20, reason: 'received', tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
 
   const listA = await getMovements(
     authedRequest(superAdmin, { method: 'GET', url: `/api/inventory/movements?tenantId=${tenantAId}&itemId=${item.id}` }),
-  );
+   { params: Promise.resolve({}) });
   const rowsA = await listA.json();
   assert.ok(rowsA.length >= 1);
   assert.ok(rowsA.every((r: { item_id: number }) => r.item_id === item.id));
 
-  const listB = await getMovements(authedRequest(adminB, { method: 'GET', url: `/api/inventory/movements?itemId=${item.id}` }));
+  const listB = await getMovements(authedRequest(adminB, { method: 'GET', url: `/api/inventory/movements?itemId=${item.id}` }), { params: Promise.resolve({}) });
   const rowsB = await listB.json();
   assert.equal(rowsB.length, 0, 'movimentos da tenant A não podem aparecer para a tenant B');
   assert.ok(tenantBId);
@@ -135,11 +135,11 @@ test('previsão: item sem taxa de consumo mas abaixo do ponto de reposição fic
       url: '/api/inventory/movements',
       body: { itemId: item.id, delta: 5, reason: 'received', tenantId: tenantAId },
     }),
-  );
+   { params: Promise.resolve({}) });
 
   const forecastRes = await getForecast(
     authedRequest(superAdmin, { method: 'GET', url: `/api/inventory/forecast?tenantId=${tenantAId}` }),
-  );
+   { params: Promise.resolve({}) });
   const forecast = await forecastRes.json();
   const row = forecast.overview.find((r: { item: { id: number } }) => r.item.id === item.id);
   assert.equal(row.currentQty, 5);
@@ -155,7 +155,7 @@ test('purchase orders: criação manual, edição de itens em draft, e transiç�
       url: '/api/purchase-orders',
       body: { tenantId: tenantAId, items: [{ itemId: item.id, quantity: 3 }] },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(createRes.status, 201);
   const order = await createRes.json();
   assert.equal(order.status, 'draft');
@@ -202,12 +202,12 @@ test('purchase orders: marcar como recebido cria lotes + movimentos e incrementa
       url: '/api/purchase-orders',
       body: { tenantId: tenantAId, items: [{ itemId: item.id, quantity: 50, expiryDate: '2027-06-01' }] },
     }),
-  );
+   { params: Promise.resolve({}) });
   const order = await createRes.json();
 
   const beforeForecast = await getForecast(
     authedRequest(superAdmin, { method: 'GET', url: `/api/inventory/forecast?tenantId=${tenantAId}` }),
-  );
+   { params: Promise.resolve({}) });
   const before = (await beforeForecast.json()).overview.find((r: { item: { id: number } }) => r.item.id === item.id);
   const qtyBefore = before?.currentQty || 0;
 
@@ -222,7 +222,7 @@ test('purchase orders: marcar como recebido cria lotes + movimentos e incrementa
 
   const afterForecast = await getForecast(
     authedRequest(superAdmin, { method: 'GET', url: `/api/inventory/forecast?tenantId=${tenantAId}` }),
-  );
+   { params: Promise.resolve({}) });
   const after = (await afterForecast.json()).overview.find((r: { item: { id: number } }) => r.item.id === item.id);
   assert.equal(after.currentQty, qtyBefore + 50);
   assert.ok(after.batches.some((b: { expiry_date: string }) => b.expiry_date === '2027-06-01'));
@@ -243,10 +243,10 @@ test('purchase orders: isolamento entre tenants em GET e no PUT por id', async (
       url: '/api/purchase-orders',
       body: { tenantId: tenantAId, items: [{ itemId: item.id, quantity: 2 }] },
     }),
-  );
+   { params: Promise.resolve({}) });
   const order = await createRes.json();
 
-  const listB = await getPurchaseOrders(authedRequest(adminB, { method: 'GET', url: '/api/purchase-orders' }));
+  const listB = await getPurchaseOrders(authedRequest(adminB, { method: 'GET', url: '/api/purchase-orders' }), { params: Promise.resolve({}) });
   const rowsB = await listB.json();
   assert.ok(!rowsB.some((o: { id: string }) => o.id === order.id));
 

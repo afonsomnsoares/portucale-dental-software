@@ -1,15 +1,9 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, requireRoles, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, requireRoles, scopeTenant } from '@/lib/auth';
 import { type JobName, runJob } from '@/lib/jobsRunner';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const POST = withRoute({ permission: 'jobs:run', tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
-  if (!(await hasPermission(user, 'jobs:run'))) return forbidden();
 
   const { searchParams } = new URL(request.url);
   const job = (searchParams.get('job') || 'all') as JobName;
@@ -31,4 +25,4 @@ export async function POST(request: NextRequest) {
     );
   }
   return Response.json(result);
-}
+});

@@ -1,9 +1,8 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, scopeTenant, unauthorized } from '@/lib/auth';
+import { forbidden, scopeTenant } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { asEnum, sanitizeString } from '@/lib/validate';
 
 const CATEGORIES = ['equipment', 'patient_safety', 'complaint', 'security', 'other'] as const;
@@ -14,10 +13,7 @@ const STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 // transparency, same reasoning as app/api/staff-schedules. Reporting one (POST) is
 // self-service too; only assigning/resolving (app/api/incidents/[id]) requires
 // 'incidents:manage'.
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'incidents:read'))) return forbidden();
+export const GET = withRoute({ permission: 'incidents:read', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request, new URL(request.url).searchParams.get('tenantId'));
   if (!tenantId) return forbidden();
 
@@ -49,14 +45,9 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'incidents:report'))) return forbidden();
+export const POST = withRoute({ permission: 'incidents:report', tenant: 'optional' }, async ({ request, user }) => {
   const tenantId = scopeTenant(user, request);
   if (!tenantId) return forbidden();
 
@@ -80,4 +71,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `Incident: ${title}`, null, `severity:${row.severity}`, user.clinic);
 
   return created({ ...row, reported_by_name: user.name, assigned_to_name: null });
-}
+});

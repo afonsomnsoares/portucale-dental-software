@@ -1,9 +1,8 @@
-import type { NextRequest } from 'next/server';
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asEnum, sanitizeString } from '@/lib/validate';
 
@@ -14,10 +13,7 @@ import { asEnum, sanitizeString } from '@/lib/validate';
 const REQUEST_TYPES = ['access', 'rectification', 'erasure', 'portability', 'restriction', 'objection'] as const;
 const STATUSES = ['pending', 'in_progress', 'completed', 'rejected'] as const;
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'gdpr:read'))) return forbidden();
+export const GET = withRoute({ permission: 'gdpr:read', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);
@@ -40,14 +36,9 @@ export async function GET(request: NextRequest) {
 
   const rows = await query(sql, vals);
   return Response.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'gdpr:manage'))) return forbidden();
+export const POST = withRoute({ permission: 'gdpr:manage', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
 
   const body = await request.json().catch(() => null);
@@ -70,4 +61,4 @@ export async function POST(request: NextRequest) {
   await appendAudit(user, 'CREATE', `RGPD request: ${requestType}`, null, `patient:${patient.id}`, user.clinic);
 
   return created(row);
-}
+});

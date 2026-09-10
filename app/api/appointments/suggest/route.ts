@@ -1,7 +1,6 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { badRequest } from '@/lib/http';
-import { hasPermission } from '@/lib/permissions';
+import { withRoute } from '@/lib/route';
 import { DEFAULT_SUGGEST_DAYS, DEFAULT_SUGGEST_LIMIT, suggestAppointmentSlots } from '@/lib/scheduling';
 import { asDate, asInt } from '@/lib/validate';
 
@@ -10,10 +9,7 @@ import { asDate, asInt } from '@/lib/validate';
 // as a step toward booking it, not a capability of its own. Never writes
 // anything; the receptionist still confirms by calling POST /api/appointments,
 // which independently re-checks the slot is still free (see that route).
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
-  if (!(await hasPermission(user, 'appointments:create'))) return forbidden();
+export const GET = withRoute({ permission: 'appointments:create', tenant: 'optional' }, async ({ request, user }) => {
   if (!user.tenantId) return forbidden();
 
   const { searchParams } = new URL(request.url);
@@ -41,4 +37,4 @@ export async function GET(request: NextRequest) {
     limit,
   });
   return Response.json(result);
-}
+});

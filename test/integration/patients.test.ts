@@ -40,7 +40,7 @@ test('caminho feliz: receptionist cria um paciente e lê-o de volta', async () =
         customFields: { tobacco_use: 'nunca', allergy_penicillin: false },
       },
     }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(createRes.status, 201);
   const created = await createRes.json();
   assert.equal(created.name, 'Paciente Teste Integração');
@@ -55,7 +55,7 @@ test('caminho feliz: receptionist cria um paciente e lê-o de volta', async () =
 });
 
 test('isolamento de tenant: GET /api/patients (listagem) não devolve pacientes de outro tenant', async () => {
-  const res = await getPatients(authedRequest(receptionistA, { method: 'GET', url: '/api/patients' }));
+  const res = await getPatients(authedRequest(receptionistA, { method: 'GET', url: '/api/patients' }), { params: Promise.resolve({}) });
   assert.equal(res.status, 200);
   const rows = await res.json();
   assert.ok(rows.length > 0);
@@ -72,6 +72,6 @@ test('isolamento de tenant: GET /api/patients/[id] de outro tenant devolve 404',
 test('dentista sem patients:create recebe 403 ao tentar criar paciente', async () => {
   const res = await postPatients(
     authedRequest(dentistA, { method: 'POST', url: '/api/patients', body: { name: 'Não devia ser criado' } }),
-  );
+   { params: Promise.resolve({}) });
   assert.equal(res.status, 403);
 });

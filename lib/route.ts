@@ -43,10 +43,50 @@ export interface RouteContext<P> {
 // Os `never` são o que faz o TypeScript recusar misturas — `{ permission: 'x',
 // public: true }` deixa de compilar em vez de silenciosamente ignorar um dos dois.
 type RouteOptions =
-  | { permission: string; tenant?: TenantPolicy; platform?: never; authOnly?: never; public?: never }
-  | { platform: string | true; tenant?: TenantPolicy; permission?: never; authOnly?: never; public?: never }
-  | { authOnly: string; tenant?: TenantPolicy; permission?: never; platform?: never; public?: never }
-  | { public: true; permission?: never; platform?: never; authOnly?: never; tenant?: never };
+  | {
+      permission: string;
+      tenant?: TenantPolicy;
+      platform?: never;
+      authOnly?: never;
+      public?: never;
+      crossOrigin?: never;
+    }
+  | {
+      platform: string | true;
+      tenant?: TenantPolicy;
+      permission?: never;
+      authOnly?: never;
+      public?: never;
+      crossOrigin?: never;
+    }
+  | {
+      authOnly: string;
+      tenant?: TenantPolicy;
+      permission?: never;
+      platform?: never;
+      public?: never;
+      crossOrigin?: never;
+    }
+  | {
+      public: true;
+      // ─── A única forma de dispensar o same-origin/CSRF ──────────────────
+      // Três rotas só funcionam assim: a captação de leads (um formulário alojado
+      // noutro site), os webhooks de canal (o fornecedor de SMS/voz a chamar-nos) e
+      // o portal do doente (autenticado pelo token que vem no URL). Nenhuma delas
+      // se autentica por cookie ambiente — é isso, e não a origem do pedido, que
+      // torna o par same-origin/CSRF inaplicável: não há credencial ambiente para
+      // um site terceiro aproveitar. É também o que continua a fechar a porta a
+      // todas as outras rotas, que dependem mesmo do cookie de sessão.
+      //
+      // Ter isto como campo, em vez de simplesmente não usar o wrapper, é o ponto:
+      // a exceção fica declarada e encontra-se com um grep, em vez de ser uma
+      // ausência que ninguém repara que existe.
+      crossOrigin?: true;
+      permission?: never;
+      platform?: never;
+      authOnly?: never;
+      tenant?: never;
+    };
 
 // Handler já autenticado, autorizado e com o tenant resolvido.
 type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
@@ -148,10 +188,12 @@ async function authorize(options: RouteOptions, user: SessionUser): Promise<Resp
 // biome-ignore lint/complexity/noBannedTypes: `{}` é a forma que o validador do Next exige para rotas sem params
 export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
   return async (request: NextRequest, ctx: { params: Promise<P> }): Promise<Response> => {
-    // requireSameOrigin já é no-op em GET/HEAD/OPTIONS, por isso não precisa de
-    // condição aqui — uma condição a menos é uma condição a menos para errar.
-    const originCheck = requireSameOrigin(request);
-    if (originCheck) return originCheck;
+    // requireSameOrigin já é no-op em GET/HEAD/OPTIONS, por isso a única condição
+    // aqui é a exceção declarada — e essa tem de ser escrita à mão, rota a rota.
+    if (!options.crossOrigin) {
+      const originCheck = requireSameOrigin(request);
+      if (originCheck) return originCheck;
+    }
 
     if (options.public) {
       return handler({ request, user: null as never, tenantId: '', params: (await ctx?.params) as P });

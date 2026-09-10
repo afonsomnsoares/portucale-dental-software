@@ -1,7 +1,6 @@
-import type { NextRequest } from 'next/server';
-import { forbidden, getAuth, unauthorized } from '@/lib/auth';
 import { queryRead } from '@/lib/db';
 import { subscribeRealtime } from '@/lib/realtime';
+import { withRoute } from '@/lib/route';
 
 // ─── Server-Sent Events ─────────────────────────────────────────────────────
 // Eventos:
@@ -25,70 +24,72 @@ import { subscribeRealtime } from '@/lib/realtime';
 // passa por lá.
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
-  const user = getAuth(request);
-  if (!user) return unauthorized();
+export const GET = withRoute(
+  {
+    authOnly:
+      'Canal de tempo real da própria clínica. Não transporta dados de doente — só ' +
+      'tabela, id e estado novo (ver o cabeçalho acima) — por isso não há registo ' +
+      'concreto cuja permissão fizesse sentido exigir aqui',
+  },
+  async ({ request, tenantId }) => {
+    const encoder = new TextEncoder();
 
-  const tenantId = user.tenantId;
-  if (!tenantId) return forbidden();
+    const stream = new ReadableStream({
+      async start(controller) {
+        let closed = false;
+        const send = (event: string, data: unknown) => {
+          if (closed) return;
+          try {
+            controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          } catch {
+            // O cliente fechou entre a verificação e a escrita. Não é erro.
+            closed = true;
+          }
+        };
 
-  const encoder = new TextEncoder();
+        send('connected', { status: 'ok' });
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      let closed = false;
-      const send = (event: string, data: unknown) => {
-        if (closed) return;
         try {
-          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-        } catch {
-          // O cliente fechou entre a verificação e a escrita. Não é erro.
-          closed = true;
-        }
-      };
-
-      send('connected', { status: 'ok' });
-
-      try {
-        const rows = await queryRead(
-          `SELECT id, status FROM appointments
+          const rows = await queryRead(
+            `SELECT id, status FROM appointments
            WHERE tenant_id=$1 AND status IN ('confirmed','registered','waiting','in-operatory')
            ORDER BY updated_at DESC LIMIT 20`,
-          [tenantId],
-        );
-        send('snapshot', { appointments: rows });
-      } catch {
-        // Não fatal — o cliente continua a receber os eventos seguintes.
-      }
+            [tenantId],
+          );
+          send('snapshot', { appointments: rows });
+        } catch {
+          // Não fatal — o cliente continua a receber os eventos seguintes.
+        }
 
-      const unsubscribe = await subscribeRealtime(tenantId, (event) => {
-        send('change', { table: event.table, op: event.op, id: event.id, status: event.status });
-      });
+        const unsubscribe = await subscribeRealtime(tenantId, (event) => {
+          send('change', { table: event.table, op: event.op, id: event.id, status: event.status });
+        });
 
-      const heartbeat = setInterval(() => send('heartbeat', { ts: Date.now() }), 15000);
+        const heartbeat = setInterval(() => send('heartbeat', { ts: Date.now() }), 15000);
 
-      const cleanup = () => {
-        if (closed) return;
-        closed = true;
-        clearInterval(heartbeat);
-        // Cancelar a subscrição é obrigatório: sem isto, cada separador que alguém abriu
-        // e fechou deixa um subscritor para sempre.
-        unsubscribe();
-        try {
-          controller.close();
-        } catch {}
-      };
+        const cleanup = () => {
+          if (closed) return;
+          closed = true;
+          clearInterval(heartbeat);
+          // Cancelar a subscrição é obrigatório: sem isto, cada separador que alguém abriu
+          // e fechou deixa um subscritor para sempre.
+          unsubscribe();
+          try {
+            controller.close();
+          } catch {}
+        };
 
-      request.signal.addEventListener('abort', cleanup);
-    },
-  });
+        request.signal.addEventListener('abort', cleanup);
+      },
+    });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    },
-  });
-}
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      },
+    });
+  },
+);

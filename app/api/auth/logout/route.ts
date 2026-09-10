@@ -1,11 +1,12 @@
 import { cookies } from 'next/headers';
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { getAuth, requireSameOrigin } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
+import { withRoute } from '@/lib/route';
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
+// Público de propósito: terminar sessão tem de funcionar mesmo com um token já
+// inválido ou expirado — é precisamente aí que mais interessa apagar o cookie.
+// O same-origin continua a ser verificado pelo withRoute, que corre antes disto.
+export const POST = withRoute({ public: true }, async ({ request }) => {
   const user = getAuth(request);
   const cookieStore = await cookies();
   cookieStore.delete('dent_token');
@@ -20,4 +21,4 @@ export async function POST(request: NextRequest) {
     );
   }
   return Response.json({ success: true });
-}
+});

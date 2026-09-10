@@ -1,12 +1,12 @@
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
-import type { NextRequest } from 'next/server';
 import { appendAudit } from '@/lib/audit';
-import { getDummyPasswordHash, requireSameOrigin, signToken } from '@/lib/auth';
+import { getDummyPasswordHash, signToken } from '@/lib/auth';
 import { queryOne, withSystemContext } from '@/lib/db';
 import { effectiveActions } from '@/lib/permissions';
 import { getClientIp } from '@/lib/rateLimit';
 import { rateLimitShared } from '@/lib/rateLimitShared';
+import { withRoute } from '@/lib/route';
 
 // Compared against when no user matches the submitted email, so the unknown-email and
 // wrong-password paths both pay one full bcrypt verification. The response bodies were
@@ -23,9 +23,11 @@ import { rateLimitShared } from '@/lib/rateLimitShared';
 const PER_ACCOUNT_LIMIT = { limit: 10, windowMs: 10 * 60 * 1000 };
 const PER_IP_LIMIT = { limit: 50, windowMs: 60 * 60 * 1000 };
 
-export async function POST(request: NextRequest) {
-  const originCheck = requireSameOrigin(request);
-  if (originCheck) return originCheck;
+// Público por definição: é a rota que cria a sessão, logo não pode exigir uma.
+// O same-origin/CSRF continua a valer (withRoute aplica-o a tudo o que não declare
+// `crossOrigin`), e é por isso que existe GET /api/auth/csrf — para o formulário
+// de login ter o par de cookie+cabeçalho antes de haver sessão nenhuma.
+export const POST = withRoute({ public: true }, async ({ request }) => {
   // Corpo malformado é erro do cliente (400), não do servidor (500).
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== 'object') {
@@ -159,4 +161,4 @@ export async function POST(request: NextRequest) {
       permissions: await withSystemContext(() => effectiveActions(user.role, user.tenant_id)),
     },
   });
-}
+});
