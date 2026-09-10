@@ -114,6 +114,28 @@ export const PATIENT_TABLE_RULES: PatientTableRule[] = [
   { table: 'slot_offers', disposition: 'delete', why: 'Ofertas de vaga', tenantScoped: true },
   { table: 'appointment_cancellations', disposition: 'delete', why: 'Motivos de cancelamento', tenantScoped: true },
   { table: 'leads', disposition: 'delete', why: 'Contacto comercial anterior ao registo', tenantScoped: true },
+  {
+    // Mesma disposição que `notifications`, e pela mesma razão exata: a conversa contém
+    // o número de telefone (contact_address), o nome (contact_name) e o que a pessoa
+    // escreveu. Anonimizar só o patient_id deixaria o número lá — que é, sozinho, um
+    // identificador. O ON DELETE CASCADE de conversation_messages leva as mensagens
+    // atrás, que é o que se quer: uma conversa sem mensagens não é um registo, é lixo.
+    table: 'conversations',
+    disposition: 'delete',
+    why: 'Conversas com o doente — contêm número, nome e o texto que ele escreveu',
+    tenantScoped: true,
+  },
+  {
+    // Aqui a decisão é diferente e vale a pena a distinção. A linha diz «no dia X o
+    // agente Y pediu para contactar alguém e a decisão foi Z» — depois de o patient_id
+    // sair, não identifica ninguém, e é o único sítio onde fica registado porque é que
+    // uma mensagem saiu ou não saiu. Apagá-la destruiria a prova de que o consentimento
+    // foi respeitado, que é precisamente o que um titular pode querer verificar.
+    table: 'agent_contact_ledger',
+    disposition: 'anonymize',
+    why: 'Prova de que a política de contacto foi aplicada — conservada sem identidade',
+    tenantScoped: true,
+  },
 
   // ── Fora do âmbito ───────────────────────────────────────────────────────
   {

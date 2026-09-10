@@ -15,7 +15,6 @@ interface PatientInteractionsTabProps {
 const CHANNEL_LABELS: Record<InteractionChannel, string> = {
   phone: 'Chamada',
   email: 'Email',
-  whatsapp: 'WhatsApp',
   sms: 'SMS',
   in_person: 'Presencial',
   other: 'Outro',
@@ -80,7 +79,11 @@ export default function PatientInteractionsTab({
             style={{ minHeight: 80 }}
           />
         </FormField>
-        {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+        {error && (
+          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            {error}
+          </div>
+        )}
         <PrimaryBtn onClick={log} disabled={saving || !summary.trim()} style={{ justifyContent: 'center' }}>
           {saving ? 'A registar…' : 'Registar'}
         </PrimaryBtn>
@@ -93,20 +96,20 @@ export default function PatientInteractionsTab({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {interactions.map((i) => (
-              <div key={i.id} style={{ borderBottom: '1px solid #F4F7FA', paddingBottom: 12 }}>
+              <div key={i.id} style={{ borderBottom: '1px solid var(--bg-page)', paddingBottom: 12 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
-                  <Badge bg="#E0F2FE" color="#0284C7" label={CHANNEL_LABELS[i.channel]} />
-                  <span style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <Badge bg="var(--cat-teal-bg)" color="var(--cat-teal)" label={CHANNEL_LABELS[i.channel]} />
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {i.direction === 'inbound' ? 'Recebida' : 'Efetuada'}
                   </span>
-                  <span style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {new Date(i.occurred_at).toLocaleString('pt-PT')}
                   </span>
                   {i.created_by_name && (
-                    <span style={{ fontSize: 11, color: '#0052CC', fontWeight: 600 }}>{i.created_by_name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>{i.created_by_name}</span>
                   )}
                 </div>
-                <div style={{ fontSize: 13, color: '#172B4D' }}>{i.summary}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{i.summary}</div>
               </div>
             ))}
           </div>

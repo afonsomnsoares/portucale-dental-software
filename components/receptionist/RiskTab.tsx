@@ -20,12 +20,12 @@ export default function RiskTab({ appointments }: { appointments: RiskAppointmen
         </thead>
         <tbody>
           {appointments.map((a) => (
-            <tr key={a.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+            <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
               <td className="data-td" style={{ fontWeight: 600 }}>
                 {a.patient_name}
               </td>
               <td className="data-td">{a.phone ? <a href={`tel:${a.phone}`}>{formatPhonePT(a.phone)}</a> : '—'}</td>
-              <td className="data-td" style={{ color: 'var(--ink-2)' }}>
+              <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                 {String(a.appt_date).slice(0, 10)} · {String(a.start_time).slice(0, 5)} · {a.type}
               </td>
               <td className="data-td">

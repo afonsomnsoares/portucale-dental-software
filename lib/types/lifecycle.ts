@@ -14,7 +14,7 @@ export interface Lead {
   // que diz se já passou pelo agente; os restantes ficam null até lá.
   ai_qualification?: 'hot' | 'warm' | 'cold' | null;
   ai_intent?: string | null;
-  ai_draft_channel?: 'sms' | 'email' | null;
+  ai_draft_channel?: 'sms' | null;
   ai_draft_reply?: string | null;
   ai_triaged_at?: string | null;
   // Só uma pessoa preenche isto, via POST /api/leads/[id]/send-reply — nunca o agente.

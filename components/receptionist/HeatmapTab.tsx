@@ -16,7 +16,7 @@ export default function HeatmapTab({ heatmap }: { heatmap: RiskHeatmapData | nul
 
   return (
     <div className="card p-5">
-      <p className="text-sm mb-4" style={{ color: 'var(--ink-2)' }}>
+      <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
         Taxa de falta/cancelamento por dia da semana e período, com base nos últimos {heatmap.historyMonths} meses (
         {heatmap.sampleSize} registos).
       </p>
@@ -48,7 +48,7 @@ export default function HeatmapTab({ heatmap }: { heatmap: RiskHeatmapData | nul
                         style={{
                           background: cfg.bg,
                           color: cfg.color,
-                          borderRadius: 6,
+                          borderRadius: 'var(--radius-control)',
                           padding: '8px 4px',
                           fontWeight: 700,
                           fontSize: 13,
@@ -57,7 +57,7 @@ export default function HeatmapTab({ heatmap }: { heatmap: RiskHeatmapData | nul
                         {cell?.total ? `${Math.round(rate * 100)}%` : '—'}
                       </div>
                       {cell?.total ? (
-                        <div className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>
+                        <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                           {cell.total} marc.
                         </div>
                       ) : null}

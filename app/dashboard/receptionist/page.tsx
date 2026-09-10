@@ -237,19 +237,19 @@ export default function ReceptionDashboard() {
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        <MetricCard label="SCHEDULED TODAY" value={appts.length} sub="total appointments" color="#0052CC" />
-        <MetricCard label="WAITING ROOM" value={waiting} sub="checked in" color="#FF8B00" />
-        <MetricCard label="IN CHAIR NOW" value={inChair} sub="in operatory" color="#00875A" />
-        <MetricCard label="HIGH-RISK" value={highRisk.length} sub="call confirmation" color="#DE350B" />
+        <MetricCard label="SCHEDULED TODAY" value={appts.length} sub="total appointments" color="var(--accent)" />
+        <MetricCard label="WAITING ROOM" value={waiting} sub="checked in" color="var(--urgency-soon)" />
+        <MetricCard label="IN CHAIR NOW" value={inChair} sub="in operatory" color="var(--urgency-ok)" />
+        <MetricCard label="HIGH-RISK" value={highRisk.length} sub="call confirmation" color="var(--urgency-critical)" />
       </div>
 
       {/* Banners */}
       {highRisk.length > 0 && (
         <div
           style={{
-            background: '#FFEBE6',
-            border: '1px solid #FFBDAD',
-            borderRadius: 8,
+            background: 'var(--urgency-critical-bg)',
+            border: '1px solid var(--urgency-critical-border)',
+            borderRadius: 'var(--radius-control)',
             padding: '12px 18px',
             marginBottom: 16,
             display: 'flex',
@@ -259,7 +259,7 @@ export default function ReceptionDashboard() {
           }}
         >
           <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#DE350B' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-critical)' }}>
             {highRisk.length} high no-show risk appointment{highRisk.length > 1 ? 's' : ''} today
           </div>
           {highRisk.map((a) => (
@@ -270,13 +270,13 @@ export default function ReceptionDashboard() {
                 gap: 8,
                 alignItems: 'center',
                 background: 'white',
-                borderRadius: 6,
+                borderRadius: 'var(--radius-control)',
                 padding: '5px 12px',
                 fontSize: 12,
               }}
             >
-              <strong style={{ color: '#172B4D' }}>{a.patient_name}</strong>
-              <span style={{ color: '#97A0AF' }}>{String(a.start_time || '').slice(0, 5)}</span>
+              <strong style={{ color: 'var(--text-primary)' }}>{a.patient_name}</strong>
+              <span style={{ color: 'var(--text-muted)' }}>{String(a.start_time || '').slice(0, 5)}</span>
               <RiskBadge score={a.risk_score || 0} />
             </div>
           ))}
@@ -286,9 +286,9 @@ export default function ReceptionDashboard() {
       {ready > 0 && (
         <div
           style={{
-            background: '#E3FCEF',
-            border: '1px solid #57D9A3',
-            borderRadius: 8,
+            background: 'var(--urgency-ok-bg)',
+            border: '1px solid var(--urgency-ok-border)',
+            borderRadius: 'var(--radius-control)',
             padding: '12px 18px',
             marginBottom: 16,
             display: 'flex',
@@ -298,7 +298,7 @@ export default function ReceptionDashboard() {
           }}
         >
           <Check size={14} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#00875A' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
             {ready} patient{ready > 1 ? 's' : ''} ready for dismissal
           </div>
           {appts
@@ -311,20 +311,20 @@ export default function ReceptionDashboard() {
                   gap: 8,
                   alignItems: 'center',
                   background: 'white',
-                  borderRadius: 6,
+                  borderRadius: 'var(--radius-control)',
                   padding: '5px 12px',
                   fontSize: 12,
                 }}
               >
-                <strong style={{ color: '#172B4D' }}>{a.patient_name}</strong>
+                <strong style={{ color: 'var(--text-primary)' }}>{a.patient_name}</strong>
                 <button
                   type="button"
                   onClick={() => handleStatusChange(a.id, 'departed')}
                   style={{
-                    background: '#00875A',
+                    background: 'var(--urgency-ok)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: 4,
+                    borderRadius: 'var(--radius-control)',
                     padding: '3px 10px',
                     fontSize: 11,
                     fontWeight: 700,
@@ -390,13 +390,13 @@ export default function ReceptionDashboard() {
               </FormField>
 
               {!form.patientId || !form.type ? (
-                <div style={{ fontSize: 12, color: '#97A0AF', padding: '10px 0' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 0' }}>
                   Escolha o paciente e o tipo de consulta para ver horários disponíveis.
                 </div>
               ) : slotsLoading ? (
                 <Spinner />
               ) : !slots.length ? (
-                <div style={{ fontSize: 12, color: '#97A0AF', padding: '10px 0' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 0' }}>
                   Sem horários disponíveis nos próximos dias.
                 </div>
               ) : (
@@ -418,14 +418,14 @@ export default function ReceptionDashboard() {
                           alignItems: 'center',
                           textAlign: 'left',
                           padding: '10px 14px',
-                          borderRadius: 8,
-                          border: `1.5px solid ${isSelected ? '#0052CC' : '#DFE1E6'}`,
-                          background: isSelected ? '#DEEBFF' : 'white',
+                          borderRadius: 'var(--radius-control)',
+                          border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                          background: isSelected ? 'var(--accent-bg)' : 'white',
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                         }}
                       >
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
                           {new Date(`${s.date}T12:00:00`).toLocaleDateString('pt-PT', {
                             weekday: 'short',
                             day: '2-digit',
@@ -433,7 +433,7 @@ export default function ReceptionDashboard() {
                           })}{' '}
                           · {s.startTime}
                         </span>
-                        <span style={{ fontSize: 12, color: '#5E6C84' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {s.dentistName} · Gabinete {s.chair}
                         </span>
                       </button>
@@ -475,7 +475,7 @@ export default function ReceptionDashboard() {
                   </Sel>
                 </FormField>
               </div>
-              <div style={{ fontSize: 12, color: '#97A0AF', marginTop: 2, marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, marginBottom: 8 }}>
                 Cadeira atribuída automaticamente com base na disponibilidade. Marca para o dia atualmente aberto no
                 calendário ({date}).
               </div>
@@ -492,7 +492,9 @@ export default function ReceptionDashboard() {
           </FormField>
 
           {bookErr && (
-            <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{bookErr}</div>
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {bookErr}
+            </div>
           )}
 
           <div className="flex gap-3 mt-2">

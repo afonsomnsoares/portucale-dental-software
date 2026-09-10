@@ -125,3 +125,47 @@ test('mudar de clínica reposiciona o contexto de tenant do pedido', async () =>
   await query(`DELETE FROM suppliers WHERE tenant_id=$1 AND name=$2`, [tenantBId, marker]);
   await setUser({ tenantId: tenantAId });
 });
+
+// ─── Mudança de password ─────────────────────────────────────────────────────
+// A quarta coisa que revalidateSession passou a apanhar, além de conta apagada,
+// desativada e mudada de papel/clínica. Ver scripts/migrations/046_password_changed_at.sql.
+
+test('o trigger carimba password_changed_at só quando o hash muda', async () => {
+  await query(`UPDATE users SET password_changed_at = NULL WHERE email=$1`, [EMAIL]);
+
+  // Uma UPDATE que não toca na password não pode expulsar ninguém.
+  await query(`UPDATE users SET name = name || '' WHERE email=$1`, [EMAIL]);
+  const [semMudanca] = await query(`SELECT password_changed_at FROM users WHERE email=$1`, [EMAIL]);
+  assert.equal(semMudanca.password_changed_at, null, 'editar outro campo não devia carimbar nada');
+
+  await query(`UPDATE users SET password='outro-hash-qualquer' WHERE email=$1`, [EMAIL]);
+  const [comMudanca] = await query(`SELECT password_changed_at FROM users WHERE email=$1`, [EMAIL]);
+  assert.ok(comMudanca.password_changed_at, 'mudar o hash devia carimbar a coluna');
+});
+
+test('um token emitido antes da mudança de password deixa de autorizar', async () => {
+  // O `admin` foi assinado no before() e nunca é reassinado — é o mesmo cookie de sempre.
+  // O carimbo é posto explicitamente à frente do iat desse token por mais do que a
+  // tolerância de relógio de lib/permissions.ts (PASSWORD_CHANGE_SKEW_MS, 5s), para o
+  // teste fixar a regra e não correr contra essa margem.
+  await query(`UPDATE users SET password_changed_at = NOW() + interval '30 seconds' WHERE email=$1`, [EMAIL]);
+
+  const res = await readSuppliers(admin);
+  assert.equal(res.status, 403, 'o token é anterior à mudança de password e não devia valer mais nada');
+});
+
+test('a sessão volta a valer quando o token é posterior à mudança', async () => {
+  // Carimbo no passado: qualquer token assinado depois disso continua bom. É o caso
+  // normal — a pessoa mudou a password e entrou outra vez.
+  await query(`UPDATE users SET password_changed_at = NOW() - interval '1 hour' WHERE email=$1`, [EMAIL]);
+
+  const res = await readSuppliers(admin);
+  assert.equal(res.status, 200, 'um token emitido depois da mudança devia continuar a autorizar');
+});
+
+test('password nunca mudada não invalida nada (bases anteriores à migração 046)', async () => {
+  await query(`UPDATE users SET password_changed_at = NULL WHERE email=$1`, [EMAIL]);
+
+  const res = await readSuppliers(admin);
+  assert.equal(res.status, 200, 'NULL significa "nunca mudada" e não pode expulsar ninguém');
+});

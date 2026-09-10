@@ -253,11 +253,11 @@ export default function ReceptionAppointmentsPage() {
 
       {confirm && (
         <Modal title="Cancel appointment" onClose={() => setConfirm(null)} width={520}>
-          <div style={{ fontSize: 13, color: '#172B4D', marginBottom: 8, fontWeight: 700 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 8, fontWeight: 700 }}>
             {confirm.patient_name || '—'} · {String(confirm.appt_date || '').slice(0, 10)}{' '}
             {String(confirm.start_time || '').slice(0, 5)}
           </div>
-          <div style={{ fontSize: 12, color: '#5E6C84', marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
             This removes the appointment from the schedule.
           </div>
           <div className="flex gap-3">

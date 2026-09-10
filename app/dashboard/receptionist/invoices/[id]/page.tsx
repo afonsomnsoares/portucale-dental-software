@@ -93,7 +93,7 @@ export default function InvoiceDetailPage() {
   if (loading) return <Spinner />;
   if (!inv) {
     return (
-      <div className="card p-5" style={{ color: '#5E6C84' }}>
+      <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>
         <GhostBtn onClick={() => router.back()} style={{ marginBottom: 16 }}>
           <ArrowLeft size={16} style={{ marginRight: 6 }} /> Back
         </GhostBtn>
@@ -124,11 +124,11 @@ export default function InvoiceDetailPage() {
           <div style={{ display: 'grid', gap: 12 }}>
             <Row label="Status" value={<Badge s={inv.status} />} />
             <Row label="Amount" value={`$${Number(inv.amount).toLocaleString()}`} bold />
-            <Row label="Paid" value={`$${Number(inv.paid).toLocaleString()}`} color="#00875A" />
+            <Row label="Paid" value={`$${Number(inv.paid).toLocaleString()}`} color="var(--urgency-ok)" />
             <Row
               label="Balance"
               value={`$${balance.toLocaleString()}`}
-              color={balance > 0 ? '#DE350B' : '#00875A'}
+              color={balance > 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)'}
               bold
             />
             <Row label="Method" value={inv.method || '—'} />
@@ -140,13 +140,13 @@ export default function InvoiceDetailPage() {
 
         <div className="card p-5">
           <div className="section-label mb-4">Patient</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: '#172B4D', marginBottom: 8 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
             {inv.patient_name || '—'}
           </div>
           {inv.notes && (
             <>
               <div className="section-label mt-4 mb-2">Notes</div>
-              <div style={{ fontSize: 13, color: '#5E6C84', lineHeight: 1.5 }}>{inv.notes}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{inv.notes}</div>
             </>
           )}
         </div>
@@ -157,7 +157,7 @@ export default function InvoiceDetailPage() {
           <div className="section-label mb-3">Line Items</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #EBECF0' }}>
+              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                 <th className="data-th">Description</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
                   Amount
@@ -167,7 +167,7 @@ export default function InvoiceDetailPage() {
             <tbody>
               {items.map((item, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: invoice line items have no id and this list is static (never reordered)
-                <tr key={i} style={{ borderBottom: '1px solid #EBECF0' }}>
+                <tr key={i} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
                   <td className="data-td">{item.description || '—'}</td>
                   <td
                     className="data-td"
@@ -202,17 +202,25 @@ export default function InvoiceDetailPage() {
         <Modal title="Record Payment" onClose={() => setPayModal(false)} width={400}>
           <div style={{ marginBottom: 16 }}>
             <div className="section-label mb-1">Invoice Total</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: '#172B4D' }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
               ${Number(inv.amount).toLocaleString()}
             </div>
           </div>
           <div style={{ marginBottom: 16 }}>
             <div className="section-label mb-1">Already Paid</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#00875A' }}>${Number(inv.paid).toLocaleString()}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--urgency-ok)' }}>
+              ${Number(inv.paid).toLocaleString()}
+            </div>
           </div>
           <div style={{ marginBottom: 16 }}>
             <div className="section-label mb-1">Remaining Balance</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: balance > 0 ? '#DE350B' : '#00875A' }}>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: balance > 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
+              }}
+            >
               ${balance.toLocaleString()}
             </div>
           </div>
@@ -252,8 +260,8 @@ export default function InvoiceDetailPage() {
 function Row({ label, value, color, bold }: { label: string; value: ReactNode; color?: string; bold?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-      <span style={{ fontSize: 12, color: '#97A0AF', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || '#172B4D' }}>{value}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || 'var(--text-primary)' }}>{value}</span>
     </div>
   );
 }

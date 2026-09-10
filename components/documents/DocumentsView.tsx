@@ -241,13 +241,13 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                 {activeTemplate && (
                   <div
                     style={{
-                      border: '1px solid var(--border)',
-                      borderRadius: 8,
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-control)',
                       padding: 12,
                       marginBottom: 14,
                       fontSize: 12,
                       whiteSpace: 'pre-wrap',
-                      color: 'var(--ink-2)',
+                      color: 'var(--text-secondary)',
                       maxHeight: 260,
                       overflowY: 'auto',
                     }}
@@ -369,8 +369,8 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
           )}
           <div
             style={{
-              border: '1px solid var(--border)',
-              borderRadius: 8,
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-control)',
               padding: 20,
               whiteSpace: 'pre-wrap',
               fontFamily: 'Georgia, serif',
@@ -439,12 +439,12 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                 title={v.label}
                 onClick={() => setTemplateForm((f) => ({ ...f, body: `${f.body}{{${v.key}}}` }))}
                 style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 6,
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-control)',
                   padding: '3px 8px',
                   fontSize: 11,
                   fontFamily: 'ui-monospace, monospace',
-                  background: 'var(--surface-2)',
+                  background: 'var(--bg-sunken)',
                   cursor: 'pointer',
                 }}
               >

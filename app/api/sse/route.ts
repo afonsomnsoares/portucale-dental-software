@@ -1,24 +1,29 @@
 import type { NextRequest } from 'next/server';
 import { forbidden, getAuth, unauthorized } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { queryRead } from '@/lib/db';
+import { subscribeRealtime } from '@/lib/realtime';
 
-// ─── Server-Sent Events para atualizações em tempo real ────────
-// O cliente abre uma conexão e recebe eventos conforme acontecem:
+// ─── Server-Sent Events ─────────────────────────────────────────────────────
+// Eventos:
 //
-//   event: appointment-status
-//   data: {"appointmentId":"...","status":"in-operatory"}
+//   event: connected   {"status":"ok"}
+//   event: snapshot    {"appointments":[...]}          uma vez, ao ligar
+//   event: change      {"table":"appointments","op":"UPDATE","id":"...","status":"waiting"}
+//   event: heartbeat   {"ts":1234567890}
 //
-//   event: notification
-//   data: {"id":"...","text":"..."}
+// Antes desta versão o endpoint mandava o snapshot e depois passava a vida a mandar
+// heartbeats: uma página ligada a ele ficava tão desatualizada como uma página sem ele,
+// só que com uma ligação aberta a fingir o contrário. Hoje os eventos `change` vêm do
+// LISTEN/NOTIFY do Postgres (migração 051 + lib/realtime.ts), por isso chegam quando
+// alguma coisa acontece de facto e funcionam entre instâncias.
 //
-// O fluxo mantém a conexão aberta até o cliente fechar. Cada evento
-// é enviado quando é relevante para o tenant autenticado.
-//
-// Implementação atual: o endpoint aceita a conexão e responde com o
-// estado atual (snapshot). A extensão para push em tempo real
-// (via WebSockets/SSE server-side pub/sub) é uma adição trivial
-// porque o formato do stream já está definido e o mecanismo de
-// envio é um Array assíncrono que pode ser alimentado externamente.
+// ─── O que o evento NÃO traz ────────────────────────────────────────────────
+// Só a tabela, o id e o estado novo. Nenhum nome, nenhum dado do doente. Quem receber
+// um `change` e quiser saber mais vai buscá-lo pela API normal, com a sessão dele e com
+// a RLS a valer. Um canal de tempo real é a última coisa que deve transportar dados
+// clínicos: é fácil de esquecer aberto, difícil de auditar, e ninguém verifica o que
+// passa por lá.
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const user = getAuth(request);
@@ -31,30 +36,50 @@ export async function GET(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      // Send initial connection confirmation
-      controller.enqueue(encoder.encode(`event: connected\ndata: {"status":"ok"}\n\n`));
+      let closed = false;
+      const send = (event: string, data: unknown) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          // O cliente fechou entre a verificação e a escrita. Não é erro.
+          closed = true;
+        }
+      };
 
-      // Send current state snapshot
+      send('connected', { status: 'ok' });
+
       try {
-        const rows = await query(
-          `SELECT id, status FROM appointments WHERE tenant_id=$1 AND status IN ('confirmed','registered','waiting','in-operatory') ORDER BY updated_at DESC LIMIT 20`,
+        const rows = await queryRead(
+          `SELECT id, status FROM appointments
+           WHERE tenant_id=$1 AND status IN ('confirmed','registered','waiting','in-operatory')
+           ORDER BY updated_at DESC LIMIT 20`,
           [tenantId],
         );
-        controller.enqueue(encoder.encode(`event: snapshot\ndata: ${JSON.stringify({ appointments: rows })}\n\n`));
+        send('snapshot', { appointments: rows });
       } catch {
-        // Non-fatal — client still receives future events
+        // Não fatal — o cliente continua a receber os eventos seguintes.
       }
 
-      // Keep the connection alive with heartbeats
-      const heartbeat = setInterval(() => {
-        controller.enqueue(encoder.encode(`event: heartbeat\ndata: {"ts":${Date.now()}}\n\n`));
-      }, 15000);
-
-      // Cleanup on close
-      request.signal.addEventListener('abort', () => {
-        clearInterval(heartbeat);
-        controller.close();
+      const unsubscribe = await subscribeRealtime(tenantId, (event) => {
+        send('change', { table: event.table, op: event.op, id: event.id, status: event.status });
       });
+
+      const heartbeat = setInterval(() => send('heartbeat', { ts: Date.now() }), 15000);
+
+      const cleanup = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(heartbeat);
+        // Cancelar a subscrição é obrigatório: sem isto, cada separador que alguém abriu
+        // e fechou deixa um subscritor para sempre.
+        unsubscribe();
+        try {
+          controller.close();
+        } catch {}
+      };
+
+      request.signal.addEventListener('abort', cleanup);
     },
   });
 

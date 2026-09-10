@@ -4,19 +4,13 @@ import { forbidden, getAuth, requireSameOrigin, unauthorized } from '@/lib/auth'
 import { badRequest } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
 import { getR2Config, presignPutObjectR2 } from '@/lib/r2';
-import { UPLOAD_ALLOWED_TYPES, UPLOAD_MAX_BYTES } from '@/lib/uploads';
+import { EXTENSION_FOR_TYPE, UPLOAD_ALLOWED_TYPES, UPLOAD_MAX_BYTES } from '@/lib/uploadsCalc';
 import { asInt } from '@/lib/validate';
 
-// Extension is derived from the (already allowlisted) content type, never from the
-// caller's filename: the filename is attacker-controlled and the old code copied any
-// extension up to 8 characters straight into the stored key. Since the allowlist has
-// exactly four entries, a lookup is both simpler and impossible to get wrong.
-const EXTENSION_FOR_TYPE: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'application/pdf': 'pdf',
-};
+// A extensão deriva do content type (já na lista branca), nunca do nome do ficheiro:
+// o nome é controlado por quem envia. A tabela mudou-se para lib/uploadsCalc.ts, para
+// que o caminho multipart (lib/uploads.ts) use exatamente a mesma — era estar em dois
+// sítios que deixava o outro caminho por corrigir.
 
 // Direct-to-R2 upload, for files too large to round-trip through the server. It is the
 // sibling of the multipart path in app/api/uploads/route.ts (lib/uploads.ts's

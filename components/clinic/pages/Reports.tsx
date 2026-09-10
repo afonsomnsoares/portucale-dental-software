@@ -87,7 +87,12 @@ export default function ClinicReportsPage() {
       {err && (
         <div
           className="card p-4 mb-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -95,7 +100,7 @@ export default function ClinicReportsPage() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: '#97A0AF' }}>Sem dados para este período.</div>}
+          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Sem dados para este período.</div>}
         </div>
       ) : (
         <>
@@ -104,13 +109,13 @@ export default function ClinicReportsPage() {
               label="Receita"
               value={formatEUR(data.metrics.completedValue)}
               sub={trend(data.previous.revenueTrend) || `${data.range.from} → ${data.range.to}`}
-              color="var(--brand)"
+              color="var(--accent)"
             />
             <MetricCard
               label="Ocupação"
               value={pct(data.metrics.chairUtilization)}
               sub={`${data.tenant.operatories} cadeira(s) · ${data.metrics.chairMinutes} min`}
-              color="var(--green)"
+              color="var(--urgency-ok)"
             />
             <MetricCard
               label="No-show"
@@ -119,29 +124,34 @@ export default function ClinicReportsPage() {
                 trend(data.previous.noShowTrend) ||
                 `${data.metrics.noShows} / ${data.metrics.appointmentsTotal} consultas`
               }
-              color="var(--red)"
+              color="var(--urgency-critical)"
             />
-            <MetricCard label="Novos Pacientes" value={data.metrics.newPatients} sub="no período" color="var(--teal)" />
+            <MetricCard
+              label="Novos Pacientes"
+              value={data.metrics.newPatients}
+              sub="no período"
+              color="var(--cat-teal)"
+            />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
             <MetricCard
               label="Planos Apresentados"
               value={formatEUR(data.metrics.presentedValue)}
-              color="var(--amber)"
+              color="var(--urgency-soon)"
             />
-            <MetricCard label="Planos Aceites" value={formatEUR(data.metrics.acceptedValue)} color="var(--brand)" />
+            <MetricCard label="Planos Aceites" value={formatEUR(data.metrics.acceptedValue)} color="var(--accent)" />
             <MetricCard
               label="Taxa de Conversão de Planos"
               value={pct(data.metrics.planConversionRate)}
               sub={trend(data.previous.conversionTrend) || undefined}
-              color="var(--green)"
+              color="var(--urgency-ok)"
             />
             <MetricCard
               label="Receita Potencial Perdida"
               value={formatEUR(data.metrics.recoveryPotential)}
               sub={<Link href="/dashboard/admin/recovery">Ver detalhe em Recuperação →</Link>}
-              color="var(--red)"
+              color="var(--urgency-critical)"
             />
           </div>
 
@@ -150,16 +160,18 @@ export default function ClinicReportsPage() {
               <div className="section-label mb-3">Receita diária no período</div>
               {data.dailyRevenue.map((d) => (
                 <div key={d.day} className="flex items-center gap-3 mb-2">
-                  <span className="text-xs" style={{ width: 90, color: 'var(--ink-2)' }}>
+                  <span className="text-xs" style={{ width: 90, color: 'var(--text-secondary)' }}>
                     {d.day.slice(0, 10)}
                   </span>
-                  <div style={{ flex: 1, height: 10, background: 'var(--surface-2)', borderRadius: 5 }}>
+                  <div
+                    style={{ flex: 1, height: 10, background: 'var(--bg-sunken)', borderRadius: 'var(--radius-pill)' }}
+                  >
                     <div
                       style={{
                         width: `${(Number(d.revenue) / maxDailyRevenue) * 100}%`,
                         height: '100%',
-                        background: 'var(--brand)',
-                        borderRadius: 5,
+                        background: 'var(--accent)',
+                        borderRadius: 'var(--radius-control)',
                       }}
                     />
                   </div>
@@ -185,16 +197,16 @@ export default function ClinicReportsPage() {
             ) : !insight ? (
               <Empty message="Carrega em 'Gerar análise' para obter um diagnóstico do período." />
             ) : insight.configured === false ? (
-              <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 Análise por IA não configurada — defina <code>ANTHROPIC_API_KEY</code> no servidor para ativar esta
                 funcionalidade.
               </p>
             ) : insight.error ? (
-              <p className="text-sm" style={{ color: 'var(--red)' }}>
+              <p className="text-sm" style={{ color: 'var(--urgency-critical)' }}>
                 {insight.error}
               </p>
             ) : (
-              <p className="text-sm" style={{ color: 'var(--ink)', lineHeight: 1.6 }}>
+              <p className="text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.6 }}>
                 {insight.insight}
               </p>
             )}

@@ -98,10 +98,10 @@ export default function WaitlistCreateModal({
                 style={{
                   padding: '5px 10px',
                   fontSize: 12,
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border)',
-                  background: form.preferredDays.includes(d.key) ? 'var(--brand-bg)' : 'transparent',
-                  color: form.preferredDays.includes(d.key) ? 'var(--brand)' : 'var(--ink-2)',
+                  borderRadius: 'var(--radius-control)',
+                  border: '1px solid var(--border-subtle)',
+                  background: form.preferredDays.includes(d.key) ? 'var(--accent-bg)' : 'transparent',
+                  color: form.preferredDays.includes(d.key) ? 'var(--accent)' : 'var(--text-secondary)',
                 }}
               >
                 {d.label}

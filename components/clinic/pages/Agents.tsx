@@ -65,7 +65,12 @@ export default function ClinicAgentsPage() {
       {err && (
         <div
           className="card p-4 mb-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -79,7 +84,7 @@ export default function ClinicAgentsPage() {
         <Empty message="Sem agentes registados." />
       ) : (
         <>
-          <div className="text-xs mb-3" style={{ color: '#97A0AF' }}>
+          <div className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
             {comRegisto} de {agents.length} com execuções registadas nesta clínica
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
@@ -91,7 +96,7 @@ export default function ClinicAgentsPage() {
           <div className="card p-5 mt-4">
             <div className="section-label mb-3">🔎 O QUE OS AGENTES ENCONTRARAM</div>
             {insights.length === 0 ? (
-              <p className="text-sm" style={{ color: '#5E6C84', margin: 0 }}>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: 0 }}>
                 Nada por tratar. Os agentes de análise escrevem aqui quando a próxima corrida encontrar alguma coisa —
                 sem ANTHROPIC_API_KEY configurada, não correm de todo e esta lista fica sempre vazia.
               </p>
@@ -104,14 +109,14 @@ export default function ClinicAgentsPage() {
             )}
           </div>
 
-          <div className="card p-5 mt-4" style={{ borderLeft: '4px solid #5243AA' }}>
+          <div className="card p-5 mt-4" style={{ borderLeft: '4px solid var(--cat-purple)' }}>
             <div className="section-label mb-2">💬 COMUNICAÇÃO — CAMADA DE POLÍTICA</div>
-            <p className="text-sm" style={{ color: '#5E6C84', lineHeight: 1.6, margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
               Comunicar não é um agente, é o canal por onde todos passam. O consentimento do doente, o canal preferido,
               o limite de mensagens por semana, as horas de silêncio e a deduplicação entre agentes vivem num sítio só —
               senão os seis escrevem à mesma pessoa na mesma manhã.
             </p>
-            <p className="text-xs mt-3" style={{ color: '#97A0AF', margin: '12px 0 0' }}>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)', margin: '12px 0 0' }}>
               Hoje: a tarefa <code>send</code> despacha a fila e <code>lib/commPrefs.ts</code> guarda as preferências.
               Os limites e a deduplicação ainda não existem.
             </p>
@@ -127,27 +132,35 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
   const falhou = run?.status === 'failed';
 
   return (
-    <div className="card p-5" style={{ borderLeft: `4px solid ${falhou ? '#DE350B' : run ? '#00875A' : '#DFE1E6'}` }}>
+    <div
+      className="card p-5"
+      style={{
+        borderLeft: `4px solid ${falhou ? 'var(--urgency-critical)' : run ? 'var(--urgency-ok)' : 'var(--border-subtle)'}`,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
         <span style={{ fontSize: 20, lineHeight: 1 }}>{agent.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#172B4D' }}>{agent.name}</div>
-          <div className="text-xs" style={{ color: '#97A0AF' }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>{agent.name}</div>
+          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
             {agent.jobs.length} {agent.jobs.length === 1 ? 'tarefa' : 'tarefas'}
           </div>
         </div>
         <Badge
           label={agent.ai === 'none' ? 'IA por ligar' : agent.ai === 'partial' ? 'IA parcial' : 'IA ativa'}
-          bg={agent.ai === 'none' ? '#F4F7FA' : '#E3FCEF'}
-          color={agent.ai === 'none' ? '#5E6C84' : '#00875A'}
+          bg={agent.ai === 'none' ? 'var(--bg-page)' : 'var(--urgency-ok-bg)'}
+          color={agent.ai === 'none' ? 'var(--text-secondary)' : 'var(--urgency-ok)'}
         />
       </div>
 
-      <p className="text-sm" style={{ color: '#5E6C84', lineHeight: 1.5, margin: '0 0 10px' }}>
+      <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 10px' }}>
         {agent.summary}
       </p>
 
-      <p className="text-xs" style={{ color: '#97A0AF', lineHeight: 1.5, margin: '0 0 12px', fontStyle: 'italic' }}>
+      <p
+        className="text-xs"
+        style={{ color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 12px', fontStyle: 'italic' }}
+      >
         Fronteira: {agent.boundary}
       </p>
 
@@ -159,9 +172,9 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
             style={{
               fontFamily: '"JetBrains Mono",monospace',
               fontSize: 11,
-              background: '#F4F7FA',
-              color: '#5E6C84',
-              borderRadius: 4,
+              background: 'var(--bg-page)',
+              color: 'var(--text-secondary)',
+              borderRadius: 'var(--radius-control)',
               padding: '2px 7px',
             }}
           >
@@ -170,13 +183,13 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid #F4F7FA', paddingTop: 10 }}>
+      <div style={{ borderTop: '1px solid var(--bg-page)', paddingTop: 10 }}>
         {!run ? (
-          <div className="text-xs" style={{ color: '#97A0AF' }}>
+          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Sem execuções registadas nesta clínica.
           </div>
         ) : (
-          <div className="text-xs" style={{ color: falhou ? '#DE350B' : '#5E6C84' }}>
+          <div className="text-xs" style={{ color: falhou ? 'var(--urgency-critical)' : 'var(--text-secondary)' }}>
             Última execução: <strong>{run.jobName}</strong> · {falhou ? 'falhou' : 'concluída'} ·{' '}
             {new Date(run.startedAt).toLocaleString('pt-PT')}
           </div>
@@ -187,9 +200,19 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
 }
 
 const SEVERITY_STYLE: Record<string, { label: string; bg: string; color: string; border: string }> = {
-  critical: { label: 'Crítico', bg: '#FFEBE6', color: '#DE350B', border: '#DE350B' },
-  warning: { label: 'Atenção', bg: '#FFF7E6', color: '#B25000', border: '#FF8B00' },
-  info: { label: 'Nota', bg: '#F4F7FA', color: '#5E6C84', border: '#DFE1E6' },
+  critical: {
+    label: 'Crítico',
+    bg: 'var(--urgency-critical-bg)',
+    color: 'var(--urgency-critical)',
+    border: 'var(--urgency-critical)',
+  },
+  warning: {
+    label: 'Atenção',
+    bg: 'var(--urgency-soon-bg)',
+    color: 'var(--urgency-soon)',
+    border: 'var(--urgency-soon)',
+  },
+  info: { label: 'Nota', bg: 'var(--bg-page)', color: 'var(--text-secondary)', border: 'var(--border-subtle)' },
 };
 
 function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: () => void }) {
@@ -197,12 +220,19 @@ function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: 
   const impact = insight.impact_eur == null ? null : Number(insight.impact_eur);
 
   return (
-    <div style={{ border: `1px solid ${style.border}`, borderRadius: 8, padding: 12, background: style.bg }}>
+    <div
+      style={{
+        border: `1px solid ${style.border}`,
+        borderRadius: 'var(--radius-control)',
+        padding: 12,
+        background: style.bg,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Badge label={style.label} bg="#FFFFFF" color={style.color} />
-            <span className="text-xs" style={{ color: '#5E6C84', fontWeight: 700 }}>
+            <Badge label={style.label} bg="var(--bg-surface)" color={style.color} />
+            <span className="text-xs" style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>
               {insight.agent_id}
             </span>
             {impact != null && impact > 0 && (
@@ -211,9 +241,9 @@ function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: 
               </span>
             )}
           </div>
-          <div style={{ fontWeight: 700, color: '#172B4D', fontSize: 14 }}>{insight.title}</div>
+          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14 }}>{insight.title}</div>
           {insight.body && (
-            <p className="text-sm" style={{ color: '#5E6C84', margin: '4px 0 0', lineHeight: 1.5 }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.5 }}>
               {insight.body}
             </p>
           )}

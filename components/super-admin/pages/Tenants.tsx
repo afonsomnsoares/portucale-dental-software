@@ -85,19 +85,22 @@ export default function TenantsPage() {
                 <td className="data-td" style={{ fontWeight: 600 }}>
                   {t.name}
                 </td>
-                <td className="data-td" style={{ color: '#5E6C84' }}>
+                <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                   {t.city}
                 </td>
-                <td className="data-td" style={{ color: '#0052CC', fontWeight: 600 }}>
+                <td className="data-td" style={{ color: 'var(--accent)', fontWeight: 600 }}>
                   {Number(t.patients || 0).toLocaleString()}
                 </td>
                 <td className="data-td">
                   <Badge s={t.status} />
                 </td>
-                <td className="data-td" style={{ color: t.uptime === '—' ? '#97A0AF' : '#00875A', fontWeight: 600 }}>
+                <td
+                  className="data-td"
+                  style={{ color: t.uptime === '—' ? 'var(--text-muted)' : 'var(--urgency-ok)', fontWeight: 600 }}
+                >
                   {t.uptime}
                 </td>
-                <td className="data-td" style={{ color: '#97A0AF' }}>
+                <td className="data-td" style={{ color: 'var(--text-muted)' }}>
                   {t.created_at?.slice(0, 10)}
                 </td>
                 <td className="data-td">

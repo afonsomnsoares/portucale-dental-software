@@ -18,11 +18,19 @@ test('conta através de chamadas independentes — o que uma instância gasta, a
 
   // Cada await é uma chamada separada, tal como pedidos servidos por instâncias
   // diferentes: nada é partilhado em memória entre elas.
+  //
+  // As quatro chamadas estão aqui todas de propósito. A versão anterior deste teste
+  // fazia três e chamava "4ª tentativa" à terceira — com limite 3, a terceira ainda
+  // passa, por isso a asserção falhava. Nunca ninguém deu por isso porque as
+  // credenciais de .env.test não ligavam a nenhuma base de dados: a suite inteira
+  // rebentava na ligação, e um teste que nunca corre não pode falhar.
   const r1 = await rateLimitShared(key, limit);
+  const r2 = await rateLimitShared(key, limit);
   const r3 = await rateLimitShared(key, limit);
   const r4 = await rateLimitShared(key, limit);
 
   assert.equal(r1.ok, true, '1ª tentativa passa');
+  assert.equal(r2.ok, true, '2ª tentativa passa');
   assert.equal(r3.ok, true, '3ª tentativa ainda está dentro do limite');
   assert.equal(r4.ok, false, '4ª tentativa é bloqueada');
   assert.equal(r1.remaining, 2);

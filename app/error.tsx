@@ -6,7 +6,7 @@
 // depois da hidratação, o render é exatamente onde uma resposta inesperada da
 // API rebenta. Ver também app/dashboard/error.tsx, que mantém a navegação.
 import { useEffect } from 'react';
-import { C, FONTS } from '@/lib/constants';
+import { FONTS } from '@/lib/constants';
 
 export default function RootError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -21,31 +21,33 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
         minHeight: '100vh',
         display: 'grid',
         placeItems: 'center',
-        background: C.BG,
+        background: 'var(--bg-page)',
         fontFamily: FONTS.body,
         padding: 24,
       }}
     >
       <div
         style={{
-          background: C.W,
-          border: `1px solid ${C.BDR}`,
-          borderRadius: 12,
-          boxShadow: C.SH,
+          background: 'var(--bg-surface)',
+          border: `1px solid var(--border-subtle)`,
+          borderRadius: 'var(--radius-card)',
+          boxShadow: 'var(--elev-1)',
           padding: 32,
           maxWidth: 460,
           textAlign: 'center',
         }}
       >
         <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-        <h1 style={{ fontFamily: FONTS.display, fontSize: 20, color: C.T, margin: '0 0 8px' }}>Algo correu mal</h1>
-        <p style={{ color: C.TM, fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>
+        <h1 style={{ fontFamily: FONTS.display, fontSize: 20, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+          Algo correu mal
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>
           Ocorreu um erro inesperado. Os dados não foram perdidos — pode tentar novamente.
         </p>
         {error.digest && (
           <p
             style={{
-              color: C.TL,
+              color: 'var(--text-muted)',
               fontSize: 12,
               fontFamily: 'var(--font-jetbrains-mono), monospace',
               margin: '0 0 20px',
@@ -59,10 +61,10 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
             type="button"
             onClick={reset}
             style={{
-              background: C.P,
-              color: C.W,
+              background: 'var(--accent)',
+              color: 'var(--bg-surface)',
               border: 'none',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-control)',
               padding: '10px 18px',
               fontSize: 14,
               fontWeight: 600,
@@ -75,10 +77,10 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
           <a
             href="/"
             style={{
-              background: C.W,
-              color: C.T,
-              border: `1px solid ${C.BDR}`,
-              borderRadius: 8,
+              background: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              border: `1px solid var(--border-subtle)`,
+              borderRadius: 'var(--radius-control)',
               padding: '10px 18px',
               fontSize: 14,
               fontWeight: 600,

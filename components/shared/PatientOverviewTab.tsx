@@ -19,15 +19,19 @@ export default function PatientOverviewTab({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       {fields.map(([k, v]) => (
-        <div key={k} className="card" style={{ padding: '14px 18px', boxShadow: 'none', border: '1px solid #DFE1E6' }}>
+        <div key={k} className="card" style={{ padding: '14px 18px', border: '1px solid var(--border-subtle)' }}>
           <div className="section-label mb-1">{k}</div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: '#172B4D' }}>{v}</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{v}</div>
         </div>
       ))}
       {customFields && Object.keys(customFields).length > 0 && (
         <div
           className="card"
-          style={{ padding: '14px 18px', boxShadow: 'none', border: '1px solid #DFE1E6', gridColumn: '1 / -1' }}
+          style={{
+            padding: '14px 18px',
+            border: '1px solid var(--border-subtle)',
+            gridColumn: '1 / -1',
+          }}
         >
           <div
             style={{
@@ -49,11 +53,18 @@ export default function PatientOverviewTab({
             {Object.entries(customFields).map(([k, v]) => {
               const def = schemaFields.find((s) => s.field_name === k);
               return (
-                <div key={k} style={{ border: '1px solid #F4F7FA', borderRadius: 8, padding: '10px 12px' }}>
+                <div
+                  key={k}
+                  style={{
+                    border: '1px solid var(--bg-page)',
+                    borderRadius: 'var(--radius-control)',
+                    padding: '10px 12px',
+                  }}
+                >
                   <div
                     style={{
                       fontSize: 11,
-                      color: '#97A0AF',
+                      color: 'var(--text-muted)',
                       fontWeight: 800,
                       letterSpacing: '.06em',
                       textTransform: 'uppercase',
@@ -62,7 +73,7 @@ export default function PatientOverviewTab({
                   >
                     {def?.label || k}
                   </div>
-                  <div style={{ fontSize: 13, color: '#172B4D', fontWeight: 600 }}>{String(v)}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>{String(v)}</div>
                 </div>
               );
             })}

@@ -24,10 +24,10 @@ export default function AdminOverview() {
   }, [api]);
 
   const AM: Record<string, { bg: string; color: string }> = {
-    UPDATE: { bg: '#FFF7E6', color: '#FF8B00' },
-    CREATE: { bg: '#E3FCEF', color: '#00875A' },
-    DELETE: { bg: '#FFEBE6', color: '#DE350B' },
-    PROVISION: { bg: '#EAE6FF', color: '#5243AA' },
+    UPDATE: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+    CREATE: { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+    DELETE: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+    PROVISION: { bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
   };
 
   return (
@@ -47,28 +47,28 @@ export default function AdminOverview() {
           label="CLÍNICAS ATIVAS"
           value={stats?.activeClinics ?? '—'}
           sub={`de ${stats?.totalTenants ?? '—'} no total`}
-          color="#0052CC"
+          color="var(--accent)"
           icon={<Building2 size={22} />}
         />
         <MetricCard
           label="DOENTES NA REDE"
           value={stats ? Number(stats.totalPatients).toLocaleString('pt-PT') : '—'}
           sub="em todas as clínicas"
-          color="#00875A"
+          color="var(--urgency-ok)"
           icon={<Users size={22} />}
         />
         <MetricCard
           label="POR COBRAR"
           value={stats ? `${Number(stats.outstanding).toLocaleString('pt-PT')} €` : '—'}
           sub="soma de todas as clínicas"
-          color="#FF8B00"
+          color="var(--urgency-soon)"
           icon={<CreditCard size={22} />}
         />
         <MetricCard
           label="MARCAÇÕES DE RISCO"
           value={stats?.highRisk ?? '—'}
           sub="a confirmar"
-          color="#DE350B"
+          color="var(--urgency-critical)"
           icon={<AlertTriangle size={22} />}
         />
       </div>
@@ -89,7 +89,7 @@ export default function AdminOverview() {
                     gap: 12,
                     alignItems: 'center',
                     padding: '10px 0',
-                    borderBottom: '1px solid #F4F7FA',
+                    borderBottom: '1px solid var(--bg-page)',
                   }}
                 >
                   <Badge label={l.action} bg={m.bg} color={m.color} />
@@ -98,7 +98,7 @@ export default function AdminOverview() {
                       style={{
                         fontSize: 13,
                         fontWeight: 500,
-                        color: '#172B4D',
+                        color: 'var(--text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -106,12 +106,17 @@ export default function AdminOverview() {
                     >
                       {l.resource}
                     </div>
-                    <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                       {l.user_name} · {l.clinic} · {new Date(l.created_at).toLocaleTimeString('pt-PT')}
                     </div>
                   </div>
                   <div
-                    style={{ fontSize: 10, color: '#C1C7D0', fontFamily: '"JetBrains Mono",monospace', flexShrink: 0 }}
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--text-muted)',
+                      fontFamily: '"JetBrains Mono",monospace',
+                      flexShrink: 0,
+                    }}
                   >
                     #{l.hash}
                   </div>
@@ -130,12 +135,14 @@ export default function AdminOverview() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '9px 0',
-                borderBottom: '1px solid #F4F7FA',
+                borderBottom: '1px solid var(--bg-page)',
               }}
             >
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#172B4D' }}>{t.city?.split(',')[0]}</div>
-                <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                  {t.city?.split(',')[0]}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                   {Number(t.patients || 0).toLocaleString('pt-PT')} doentes
                 </div>
               </div>

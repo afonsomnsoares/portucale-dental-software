@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { forbidden, getAuth, requireSameOrigin, type SessionUser, unauthorized } from './auth';
 import { hasPermission } from './permissions';
+import { rateLimitGlobal } from './rateLimitGlobal';
 
 // Política de tenant da rota. Os três casos que existem hoje em app/api/*:
 //   'required' — a rota precisa de uma clínica concreta (33 rotas).
@@ -29,6 +30,24 @@ interface RouteOptions {
 
 // Handler já autenticado, autorizado e com o tenant resolvido.
 type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
+
+// ─── Teto de escrita partilhado entre instâncias ────────────────────────────
+// O travão genérico de /api/* vive no middleware, que corre no runtime Edge e por isso
+// conta em memória, por instância (ver a nota em lib/rateLimit.ts). Com duas instâncias
+// atrás de um balanceador, o limite efetivo passa a ser N × o configurado.
+//
+// Isto não resolve o caso Edge — não há como, sem Redis — mas fecha a metade que
+// importa mais e que já era resolúvel com o que o projeto tem: as ESCRITAS. Os route
+// handlers correm no runtime Node, com pool de ligações, por isso podem usar o contador
+// partilhado em Postgres que lib/rateLimitGlobal.ts já implementava e que, até agora,
+// nenhuma rota chamava — escrito e sem consumidores, exatamente como o canal SSE.
+//
+// Só mutações, por uma questão de custo: uma ida à base de dados por LEITURA duplicaria
+// o número de consultas da aplicação inteira para proteger o que já é idempotente e já
+// tem um travão por instância. As escritas são as que consomem, as que gravam e as que
+// disparam automatismos.
+const WRITE_LIMIT = { limit: 120, windowMs: 60 * 1000 };
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 async function resolveTenantId(
   request: NextRequest,
@@ -74,6 +93,19 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
     if (!user) return unauthorized();
 
     if (options.permission && !(await hasPermission(user, options.permission))) return forbidden();
+
+    // Depois da autorização, de propósito: a chave é o utilizador autenticado, e gastar
+    // orçamento de escrita de alguém antes de saber se ele sequer podia fazer aquilo
+    // deixaria um 403 repetido a esgotar a quota da própria vítima.
+    if (MUTATING_METHODS.has(request.method)) {
+      const rl = await rateLimitGlobal(`write:${user.id}`, WRITE_LIMIT);
+      if (!rl.ok) {
+        return Response.json(
+          { error: 'Demasiadas alterações seguidas. Aguarde um momento.', code: 'RATE_LIMIT' },
+          { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
+        );
+      }
+    }
 
     // O body é lido uma só vez e passado adiante: Request.json() só pode ser
     // consumido uma vez, e a política 'resolved' precisa de espreitar lá dentro.

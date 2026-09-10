@@ -1,42 +1,16 @@
-export const C = {
-  P: '#0052CC',
-  PD: '#0747A6',
-  PL: '#2684FF',
-  PBG: '#DEEBFF',
-  PBDR: '#4C9AFF',
-  BG: '#F4F7FA',
-  W: '#FFFFFF',
-  BDR: '#DFE1E6',
-  BDRL: '#EBECF0',
-  T: '#172B4D',
-  TM: '#5E6C84',
-  TL: '#97A0AF',
-  G: '#00875A',
-  GB: '#E3FCEF',
-  GBD: '#ABF5D1',
-  AM: '#FF8B00',
-  AMB: '#FFF7E6',
-  AMBD: '#FFE380',
-  R: '#DE350B',
-  RB: '#FFEBE6',
-  RBD: '#FFBDAD',
-  PU: '#5243AA',
-  PUB: '#EAE6FF',
-  TL2: '#00A3BF',
-  TLB: '#E6FCFF',
-  SH: '0 1px 3px rgba(23,43,77,.10),0 0 0 1px rgba(23,43,77,.08)',
-  SHM: '0 4px 12px rgba(23,43,77,.14),0 0 0 1px rgba(23,43,77,.08)',
-};
-
 // Mínimo de caracteres de uma password, partilhado pelo servidor (app/api/users/route.ts,
 // app/api/users/[id]/route.ts) e pelos formulários que lá escrevem. Estava escrito à mão
 // em cada um dos sítios: o formulário deixava submeter qualquer password não-vazia e só o
 // servidor recusava, pelo que a pessoa preenchia tudo e levava com um 400 no fim.
 export const MIN_PASSWORD_LENGTH = 10;
 
+// Apontam para as variáveis que o next/font define em app/layout.tsx. Antes
+// nomeavam 'DM Sans' e 'Bricolage Grotesque', que não são carregadas em lado
+// nenhum — as páginas de erro e a 404 renderizavam na sans-serif do browser,
+// com um aspeto diferente do resto do produto e sem que nada falhasse.
 export const FONTS = {
-  body: "'DM Sans', system-ui, sans-serif",
-  display: "'Bricolage Grotesque', 'DM Sans', sans-serif",
+  body: 'var(--font-plus-jakarta), system-ui, sans-serif',
+  display: 'var(--font-plus-jakarta), system-ui, sans-serif',
 };
 
 // Uma entrada de menu. `requires` nomeia a ação que a página exige para mostrar o que
@@ -47,7 +21,12 @@ export const FONTS = {
 // Fica indefinido de propósito nas páginas cuja lista principal só exige sessão válida
 // (Painel, Doentes, Leads, Equipa) — essas não têm ação que as possa esconder.
 export type Role = 'super_admin' | 'admin' | 'receptionist' | 'dentist';
-export type NavItem = { label: string; href: string; requires?: string };
+// `group` agrupa entradas sob um cabeçalho na sidebar. Os menus da clínica (admin,
+// receção, dentista) são listas planas e não o usam — cada entrada é uma área de
+// trabalho e cabe num ecrã. O do super_admin não cabe: são 41 entradas, e sem
+// cabeçalhos era uma lista impossível de varrer. Ver components/Sidebar.tsx, que
+// desenha o cabeçalho quando o grupo muda e desenha ícone só nas entradas sem grupo.
+export type NavItem = { label: string; href: string; requires?: string; group?: string };
 
 // Navegação do 'admin' (o admin da clínica, sempre confinado a um tenant), com hrefs sob
 // /dashboard/admin. O super_admin (âmbito de plataforma, sem clínica própria) tem o
@@ -85,20 +64,135 @@ const ADMIN_NAV: NavItem[] = [
 // 12 das 16 entradas serem, na prática, a página de uma clínica com um seletor por cima.
 //
 // As páginas de clínica (Faturas, Finanças, Inventário, Equipa, Operações, Recuperação,
-// Agenda Inteligente, Jornada do Paciente, Fontes de Leads) saíram: chega-se a elas
-// entrando na clínica (POST /api/tenants/enter), que leva às páginas do próprio admin.
-// Uma árvore em vez de duas a divergir — já divergiam ao ponto de uma estar em inglês.
+// Agenda Inteligente, Jornada do Paciente, Fontes de Leads) saíram e NÃO voltaram: chega-se
+// a elas entrando na clínica (POST /api/tenants/enter), que leva às páginas do próprio
+// admin. Uma árvore em vez de duas a divergir — já divergiram ao ponto de uma estar em
+// inglês, e é por isso que as entradas abaixo estão todas em português como o resto da UI.
+//
+// A lista cresceu para a estrutura de plataforma completa em 10 grupos. O que aqui está e
+// ainda não tem dados por baixo NÃO inventa números: a página existe, diz o que vai
+// mostrar e nomeia o que falta instrumentar (components/super-admin/NotInstrumented.tsx).
+// Uma entrada de menu que leva a um número falso é pior do que entrada nenhuma.
 const SUPER_ADMIN_NAV: NavItem[] = [
-  { label: 'Visão Geral da Rede', href: '/dashboard/super-admin' },
-  { label: 'Clínicas', href: '/dashboard/super-admin/tenants', requires: 'tenants:manage' },
-  { label: 'Utilizadores', href: '/dashboard/super-admin/users', requires: 'users:manage' },
-  // O que resta de 'Relatórios': a comparação entre clínicas do grupo. /api/reports/compare
-  // já exigia o papel super_admin — é a única parte de Relatórios que é de plataforma.
-  { label: 'Comparação de Clínicas', href: '/dashboard/super-admin/reports', requires: 'reports:read' },
-  { label: 'Auditoria', href: '/dashboard/super-admin/audit', requires: 'audit:read' },
-  // Configuração de uma clínica feita de fora: ambas mantêm o seletor de clínica.
-  { label: 'Permissões', href: '/dashboard/super-admin/permissions', requires: 'permissions:manage' },
-  { label: 'Campos Schema', href: '/dashboard/super-admin/schema', requires: 'schema:manage' },
+  // ── Visão geral ──
+  { label: 'Painel da Plataforma', href: '/dashboard/super-admin', group: 'VISÃO GERAL' },
+  { label: 'Estado do Sistema', href: '/dashboard/super-admin/health', group: 'VISÃO GERAL' },
+  { label: 'Alertas', href: '/dashboard/super-admin/alerts', group: 'VISÃO GERAL', requires: 'agents:read' },
+
+  // ── Organizações ──
+  {
+    label: 'Todas as Organizações',
+    href: '/dashboard/super-admin/organizations',
+    group: 'ORGANIZAÇÕES',
+    requires: 'tenants:manage',
+  },
+  { label: 'Clínicas', href: '/dashboard/super-admin/tenants', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
+  {
+    label: 'Localizações',
+    href: '/dashboard/super-admin/locations',
+    group: 'ORGANIZAÇÕES',
+    requires: 'tenants:manage',
+  },
+  { label: 'Onboarding', href: '/dashboard/super-admin/onboarding', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
+
+  // ── Utilizadores ──
+  {
+    label: 'Todos os Utilizadores',
+    href: '/dashboard/super-admin/users',
+    group: 'UTILIZADORES',
+    requires: 'users:manage',
+  },
+  { label: 'Papéis', href: '/dashboard/super-admin/roles', group: 'UTILIZADORES', requires: 'users:manage' },
+  {
+    label: 'Permissões',
+    href: '/dashboard/super-admin/permissions',
+    group: 'UTILIZADORES',
+    requires: 'permissions:manage',
+  },
+  {
+    label: 'Registos de Acesso',
+    href: '/dashboard/super-admin/access-logs',
+    group: 'UTILIZADORES',
+    requires: 'audit:read',
+  },
+
+  // ── Plataforma de agentes ──
+  { label: 'Agentes', href: '/dashboard/super-admin/ai/agents', group: 'AGENTES', requires: 'agents:read' },
+  { label: 'Modelos', href: '/dashboard/super-admin/ai/models', group: 'AGENTES', requires: 'agents:read' },
+  { label: 'Execuções', href: '/dashboard/super-admin/ai/runs', group: 'AGENTES', requires: 'agents:read' },
+  { label: 'Custos de IA', href: '/dashboard/super-admin/ai/costs', group: 'AGENTES', requires: 'agents:read' },
+  { label: 'Falhas', href: '/dashboard/super-admin/ai/failures', group: 'AGENTES', requires: 'agents:read' },
+  { label: 'Avaliações', href: '/dashboard/super-admin/ai/evaluations', group: 'AGENTES', requires: 'agents:read' },
+
+  // ── Integrações ──
+  { label: 'Integrações', href: '/dashboard/super-admin/integrations', group: 'INTEGRAÇÕES' },
+  { label: 'Ligações', href: '/dashboard/super-admin/integrations/connections', group: 'INTEGRAÇÕES' },
+  { label: 'Estado de Sincronização', href: '/dashboard/super-admin/integrations/sync', group: 'INTEGRAÇÕES' },
+  { label: 'API', href: '/dashboard/super-admin/integrations/api', group: 'INTEGRAÇÕES' },
+
+  // ── Operações ──
+  { label: 'Tarefas da Plataforma', href: '/dashboard/super-admin/ops/tasks', group: 'OPERAÇÕES' },
+  { label: 'Incidentes', href: '/dashboard/super-admin/ops/incidents', group: 'OPERAÇÕES' },
+  { label: 'Suporte', href: '/dashboard/super-admin/ops/support', group: 'OPERAÇÕES' },
+  {
+    label: 'Eventos de Sistema',
+    href: '/dashboard/super-admin/ops/events',
+    group: 'OPERAÇÕES',
+    requires: 'audit:read',
+  },
+
+  // ── Análise ──
+  // 'Análise da Plataforma' é a página que já existia como 'Comparação de Clínicas'
+  // (/reports): comparar clínicas do grupo É a análise de plataforma. Ficou o href para
+  // não órfãos a única página desta secção com dados reais desde sempre.
+  {
+    label: 'Análise da Plataforma',
+    href: '/dashboard/super-admin/reports',
+    group: 'ANÁLISE',
+    requires: 'reports:read',
+  },
+  { label: 'Utilização', href: '/dashboard/super-admin/analytics/usage', group: 'ANÁLISE', requires: 'reports:read' },
+  {
+    label: 'Retenção',
+    href: '/dashboard/super-admin/analytics/retention',
+    group: 'ANÁLISE',
+    requires: 'reports:read',
+  },
+  { label: 'Receita', href: '/dashboard/super-admin/analytics/revenue', group: 'ANÁLISE', requires: 'reports:read' },
+
+  // ── Faturação (da Portucale às clínicas, não da clínica aos doentes) ──
+  { label: 'Subscrições', href: '/dashboard/super-admin/billing/subscriptions', group: 'FATURAÇÃO' },
+  { label: 'Pagamentos', href: '/dashboard/super-admin/billing/payments', group: 'FATURAÇÃO' },
+  { label: 'Consumo', href: '/dashboard/super-admin/billing/usage', group: 'FATURAÇÃO' },
+  { label: 'Faturas', href: '/dashboard/super-admin/billing/invoices', group: 'FATURAÇÃO' },
+
+  // ── Segurança ──
+  { label: 'Registo de Auditoria', href: '/dashboard/super-admin/audit', group: 'SEGURANÇA', requires: 'audit:read' },
+  {
+    label: 'Eventos de Segurança',
+    href: '/dashboard/super-admin/security/events',
+    group: 'SEGURANÇA',
+    requires: 'audit:read',
+  },
+  { label: 'Sessões', href: '/dashboard/super-admin/security/sessions', group: 'SEGURANÇA', requires: 'users:manage' },
+  // Segunda entrada para a MESMA página que 'Permissões' em UTILIZADORES — pedida nos
+  // dois grupos. A chave de render em components/Sidebar.tsx é `group + href`, não o
+  // href, precisamente por isto.
+  {
+    label: 'Permissões',
+    href: '/dashboard/super-admin/permissions',
+    group: 'SEGURANÇA',
+    requires: 'permissions:manage',
+  },
+
+  // ── Definições ──
+  { label: 'Plataforma', href: '/dashboard/super-admin/settings', group: 'DEFINIÇÕES' },
+  { label: 'Políticas de IA', href: '/dashboard/super-admin/settings/ai-policies', group: 'DEFINIÇÕES' },
+  { label: 'Feature Flags', href: '/dashboard/super-admin/settings/feature-flags', group: 'DEFINIÇÕES' },
+  { label: 'Configuração do Sistema', href: '/dashboard/super-admin/settings/system', group: 'DEFINIÇÕES' },
+  // Não estava na lista pedida, mas a página existe e funciona (campos personalizados por
+  // clínica). Sem esta entrada ficava órfã, como o /dashboard/dentist/notes.
+  { label: 'Campos Schema', href: '/dashboard/super-admin/schema', group: 'DEFINIÇÕES', requires: 'schema:manage' },
 ];
 
 export const NAV: Record<Role, NavItem[]> = {

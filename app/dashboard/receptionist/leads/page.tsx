@@ -5,9 +5,9 @@ import { Badge, Empty, GhostBtn, Inp, PageHeader, PrimaryBtn, Spinner } from '@/
 import type { Lead } from '@/lib/types';
 
 const QUALIFICATION_BADGE: Record<string, { label: string; bg: string; color: string }> = {
-  hot: { label: 'Quente', bg: '#FFEBE6', color: '#DE350B' },
-  warm: { label: 'Morno', bg: '#FFF7E6', color: '#B25000' },
-  cold: { label: 'Frio', bg: '#F4F7FA', color: '#5E6C84' },
+  hot: { label: 'Quente', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  warm: { label: 'Morno', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  cold: { label: 'Frio', bg: 'var(--bg-page)', color: 'var(--text-secondary)' },
 };
 
 interface LeadForm {
@@ -122,7 +122,7 @@ export default function ReceptionLeadsPage() {
           </PrimaryBtn>
         </div>
         {error && (
-          <div className="text-sm mt-3" style={{ color: '#DE350B', fontWeight: 700 }}>
+          <div className="text-sm mt-3" style={{ color: 'var(--urgency-critical)', fontWeight: 700 }}>
             {error}
           </div>
         )}
@@ -164,7 +164,7 @@ export default function ReceptionLeadsPage() {
                         {qual ? (
                           <Badge label={qual.label} bg={qual.bg} color={qual.color} />
                         ) : (
-                          <span className="text-xs" style={{ color: '#97A0AF' }}>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                             Por triar
                           </span>
                         )}
@@ -183,28 +183,23 @@ export default function ReceptionLeadsPage() {
                     </tr>
                     {hasDraft && (
                       <tr>
-                        <td className="data-td" colSpan={6} style={{ background: '#F4F7FA' }}>
-                          <div className="text-xs" style={{ color: '#5E6C84', marginBottom: 6 }}>
-                            {lead.ai_intent ? `Intenção: ${lead.ai_intent} — ` : ''}Rascunho de resposta (
-                            {lead.ai_draft_channel === 'sms' ? 'SMS' : 'email'}):
+                        <td className="data-td" colSpan={6} style={{ background: 'var(--bg-page)' }}>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            {lead.ai_intent ? `Intenção: ${lead.ai_intent} — ` : ''}Rascunho de resposta (SMS):
                           </div>
                           <div className="text-sm" style={{ marginBottom: 8 }}>
                             "{lead.ai_draft_reply}"
                           </div>
-                          {lead.ai_draft_channel === 'sms' ? (
-                            <PrimaryBtn
-                              onClick={() => sendReply(lead)}
-                              disabled={sendingId === lead.id}
-                              style={{ padding: '5px 12px' }}
-                            >
-                              {sendingId === lead.id ? 'A enviar...' : 'Enviar por SMS'}
-                            </PrimaryBtn>
-                          ) : (
-                            <span className="text-xs" style={{ color: '#97A0AF' }}>
-                              Este lead só deixou email — envio automático ainda não existe por esse canal, copia o
-                              texto acima à mão.
-                            </span>
-                          )}
+                          {/* Só há rascunho quando há telefone: o agente Lead deixou de
+                              escrever para leads sem número, porque não havia por onde o
+                              expedir (ver lib/agents/leadAgentCalc.ts). */}
+                          <PrimaryBtn
+                            onClick={() => sendReply(lead)}
+                            disabled={sendingId === lead.id}
+                            style={{ padding: '5px 12px' }}
+                          >
+                            {sendingId === lead.id ? 'A enviar...' : 'Enviar por SMS'}
+                          </PrimaryBtn>
                         </td>
                       </tr>
                     )}

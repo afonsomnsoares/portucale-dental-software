@@ -30,10 +30,10 @@ export default function ClinicOverview() {
   }, [api]);
 
   const AM: Record<string, { bg: string; color: string }> = {
-    UPDATE: { bg: '#FFF7E6', color: '#FF8B00' },
-    CREATE: { bg: '#E3FCEF', color: '#00875A' },
-    DELETE: { bg: '#FFEBE6', color: '#DE350B' },
-    PROVISION: { bg: '#EAE6FF', color: '#5243AA' },
+    UPDATE: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+    CREATE: { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+    DELETE: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+    PROVISION: { bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
   };
 
   const hoje = new Date().toLocaleDateString('pt-PT', {
@@ -52,21 +52,21 @@ export default function ClinicOverview() {
           label="DOENTES"
           value={stats ? Number(stats.totalPatients).toLocaleString('pt-PT') : '—'}
           sub="registados na clínica"
-          color="#00875A"
+          color="var(--urgency-ok)"
           icon={<Users size={22} />}
         />
         <MetricCard
           label="SALDO POR COBRAR"
           value={stats ? formatEUR(Number(stats.outstanding)) : '—'}
           sub="total em dívida"
-          color="#FF8B00"
+          color="var(--urgency-soon)"
           icon={<CreditCard size={22} />}
         />
         <MetricCard
           label="MARCAÇÕES DE RISCO"
           value={stats?.highRisk ?? '—'}
           sub="hoje — confirmar presença"
-          color="#DE350B"
+          color="var(--urgency-critical)"
           icon={<AlertTriangle size={22} />}
         />
       </div>
@@ -76,7 +76,7 @@ export default function ClinicOverview() {
         {loading ? (
           <Spinner />
         ) : !audit.length ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#97A0AF', fontSize: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
             <CalendarCheck size={16} />
             Sem atividade registada.
           </div>
@@ -91,7 +91,7 @@ export default function ClinicOverview() {
                   gap: 12,
                   alignItems: 'center',
                   padding: '10px 0',
-                  borderBottom: '1px solid #F4F7FA',
+                  borderBottom: '1px solid var(--bg-page)',
                 }}
               >
                 <Badge label={l.action} bg={m.bg} color={m.color} />
@@ -100,7 +100,7 @@ export default function ClinicOverview() {
                     style={{
                       fontSize: 13,
                       fontWeight: 500,
-                      color: '#172B4D',
+                      color: 'var(--text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -108,12 +108,17 @@ export default function ClinicOverview() {
                   >
                     {l.resource}
                   </div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {l.user_name} · {new Date(l.created_at).toLocaleTimeString('pt-PT')}
                   </div>
                 </div>
                 <div
-                  style={{ fontSize: 10, color: '#C1C7D0', fontFamily: '"JetBrains Mono",monospace', flexShrink: 0 }}
+                  style={{
+                    fontSize: 10,
+                    color: 'var(--text-muted)',
+                    fontFamily: '"JetBrains Mono",monospace',
+                    flexShrink: 0,
+                  }}
                 >
                   #{l.hash}
                 </div>

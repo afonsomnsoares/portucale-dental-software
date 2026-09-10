@@ -2,13 +2,18 @@ import { APPOINTMENT_TYPES, getAppointmentTypeOption } from './constants';
 import { query, queryOne } from './db';
 import {
   type Booking,
+  buildConsolidateMoves,
   buildEquipmentBlockMoves,
   buildGapFillMoves,
+  buildGroupVisitMoves,
   buildPreferenceMismatchMoves,
+  buildPullForwardMoves,
   buildUnassignedDentistMoves,
   findOpenings,
   type OptimizerMove,
+  type PullForwardCandidate,
   rankMoves,
+  type SameDayPair,
   waitlistFitsOpening,
 } from './scheduleOptimizerCalc';
 import { addDays, minutesToTime, toMinutes, weekdayOf } from './scheduling';
@@ -35,12 +40,24 @@ const MIN_USEFUL_OPENING_MINUTES = 30;
 // horários da equipa, o que faria a funcionalidade parecer avariada. Sinalizado
 // em `warnings` para não passar por dado real.
 const FALLBACK_DAY_WINDOW = { openMinutes: 9 * 60, closeMinutes: 19 * 60 };
+// ─── Limites das regras que raciocinam sobre duas ou mais consultas ─────────
+// Janela dentro da qual duas consultas do mesmo doente ainda se podem juntar numa. Sete
+// dias: mais do que isso e já não é "aproveitar a vinda", é adiar tratamento.
+const GROUP_WINDOW_DAYS = 7;
+// Teto de uma sessão agrupada. Duas horas é o ponto em que a própria sessão passa a ser
+// um motivo para desmarcar — juntar mais do que isto troca um problema por outro.
+const MAX_GROUPED_SESSION_MINUTES = 120;
+// Antecipação mínima que justifica um telefonema. Abaixo disto é incomodar o doente por
+// nada.
+const MIN_ADVANCE_DAYS = 3;
+// Buraco mínimo entre duas consultas do mesmo dia para valer a pena encostá-las.
+const MIN_CONSOLIDATION_GAP_MINUTES = 20;
 
 export interface OptimizerResult {
   windowDays: number;
   generatedAt: string;
   moves: OptimizerMove[];
-  totals: { moves: number; recoverableMinutes: number };
+  totals: { moves: number; recoverableMinutes: number; advancedDays: number; consolidatedMinutes: number };
   warnings: string[];
 }
 
@@ -305,13 +322,105 @@ export async function computeScheduleOptimization(
     }).violations;
   });
 
+  // ─── Regras 5-7: raciocínio sobre duas ou mais consultas ────────────────
+  // As quatro regras acima olham para uma consulta de cada vez. Estas três olham para
+  // o conjunto — é a diferença entre uma lista de compromissos e um plano.
+
+  // Regra 5: agrupar consultas do mesmo doente em dias diferentes.
+  const byPatient = new Map<string, { patientName: string; appointments: Booking[] }>();
+  for (const b of bookings) {
+    if (!b.patientId) continue;
+    const entry = byPatient.get(b.patientId) || { patientName: b.patientName, appointments: [] };
+    entry.appointments.push(b);
+    byPatient.set(b.patientId, entry);
+  }
+  const groupVisits = buildGroupVisitMoves(
+    Array.from(byPatient.entries()).map(([patientId, v]) => ({
+      patientId,
+      patientName: v.patientName,
+      appointments: v.appointments,
+    })),
+    GROUP_WINDOW_DAYS,
+    MAX_GROUPED_SESSION_MINUTES,
+  );
+
+  // Regra 6: antecipar consultas para espaços mais cedo.
+  //
+  // Os espaços candidatos são os que a regra 1 NÃO conseguiu preencher com a lista de
+  // espera. Sem esta subtração, as duas regras prometeriam o mesmo espaço a duas
+  // pessoas diferentes no mesmo ecrã — e a lista de espera tem precedência, porque
+  // encaixar quem já está à espera não obriga a mexer em nada que já esteja marcado.
+  const takenByGapFill = new Set(gapFill.map((m) => m.key.replace('gap_fill:', '')));
+  const freeOpenings = openings.filter(
+    (o) =>
+      o.durationMinutes >= MIN_USEFUL_OPENING_MINUTES && !takenByGapFill.has(`${o.date}:${o.chair}:${o.startMinutes}`),
+  );
+
+  const pullForwardCandidates: PullForwardCandidate[] = [];
+  for (const b of bookings) {
+    for (const o of freeOpenings) {
+      if (o.date >= b.date) continue;
+      if (o.durationMinutes < b.durationMinutes) continue;
+      // Antecipar para um horário que o doente já disse que lhe dá jeito evitar seria
+      // trocar uma consulta boa por uma consulta em risco — a regra 4 existe
+      // precisamente para sinalizar essas.
+      if (b.patientId) {
+        const prefs = prefsByPatient.get(b.patientId);
+        if (
+          prefs &&
+          preferenceFit(prefs, {
+            date: o.date,
+            startMinutes: o.startMinutes,
+            durationMinutes: b.durationMinutes,
+            dentistId: b.dentistId,
+          }).violations.length
+        ) {
+          continue;
+        }
+      }
+      pullForwardCandidates.push({ booking: b, target: o });
+    }
+  }
+  const pullForward = buildPullForwardMoves(pullForwardCandidates, minutesToTime, MIN_ADVANCE_DAYS);
+
+  // Regra 7: encostar consultas do mesmo dia para o tempo morto ir para a ponta.
+  //
+  // Só para o mesmo doente. Encostar consultas de estranhos também recuperaria o
+  // buraco, mas é remarcar alguém sem lhe dar nada em troca — não é o que esta regra
+  // propõe.
+  const sameDayPairs: SameDayPair[] = [];
+  for (const [, v] of byPatient) {
+    const byDay = new Map<string, Booking[]>();
+    for (const b of v.appointments) {
+      const list = byDay.get(b.date) || [];
+      list.push(b);
+      byDay.set(b.date, list);
+    }
+    for (const [, list] of byDay) {
+      if (list.length < 2) continue;
+      const sorted = [...list].sort((a, b) => a.startMinutes - b.startMinutes);
+      for (let i = 1; i < sorted.length; i++) {
+        sameDayPairs.push({ first: sorted[i - 1], second: sorted[i], relation: 'patient' });
+      }
+    }
+  }
+  const consolidations = buildConsolidateMoves(sameDayPairs, minutesToTime, MIN_CONSOLIDATION_GAP_MINUTES);
+
   if (usedFallbackWindow) {
     warnings.push(
       'Alguns dias não têm turnos configurados — assumido 09:00–19:00. Definir horários da equipa torna estas propostas exatas.',
     );
   }
 
-  const moves = rankMoves([...gapFill, ...unassigned, ...equipmentBlocks, ...preferenceMismatches]);
+  const moves = rankMoves([
+    ...gapFill,
+    ...unassigned,
+    ...equipmentBlocks,
+    ...preferenceMismatches,
+    ...groupVisits,
+    ...pullForward,
+    ...consolidations,
+  ]);
 
   return {
     windowDays: days,
@@ -320,6 +429,11 @@ export async function computeScheduleOptimization(
     totals: {
       moves: moves.length,
       recoverableMinutes: moves.reduce((sum, m) => sum + m.gainMinutes, 0),
+      // Contados à parte de propósito: nem dias antecipados nem minutos deslocados são
+      // capacidade nova, e somá-los aos minutos recuperáveis inflacionaria o total do
+      // otimizador com tempo que a clínica não pode vender a mais ninguém.
+      advancedDays: moves.reduce((sum, m) => sum + (m.advanceDays || 0), 0),
+      consolidatedMinutes: moves.reduce((sum, m) => sum + (m.consolidatedMinutes || 0), 0),
     },
     warnings,
   };

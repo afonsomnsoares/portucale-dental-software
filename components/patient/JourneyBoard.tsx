@@ -5,34 +5,40 @@ import { formatPhonePT } from '@/lib/constants';
 import type { JourneyPatient, JourneyStageKey, Lead, LifecycleData } from '@/lib/types';
 
 const STAGE_COLOR: Record<JourneyStageKey, string> = {
-  booked: 'var(--brand)',
-  first_visit_done: 'var(--teal)',
-  plan_presented: 'var(--amber)',
-  plan_accepted: 'var(--purple)',
-  in_treatment: 'var(--brand)',
-  completed: 'var(--green)',
-  recall_due: 'var(--red)',
-  booked_again: 'var(--green)',
+  booked: 'var(--accent)',
+  first_visit_done: 'var(--cat-teal)',
+  plan_presented: 'var(--urgency-soon)',
+  plan_accepted: 'var(--cat-purple)',
+  in_treatment: 'var(--accent)',
+  completed: 'var(--urgency-ok)',
+  recall_due: 'var(--urgency-critical)',
+  booked_again: 'var(--urgency-ok)',
 };
 
 // Colors the "próxima ação" chip by urgency — matches the mapping in
 // components/patient/NextActionBanner.tsx (that one drives the banner on a single
 // patient's page; this drives a compact chip per card across a whole board).
 const ACTION_COLOR: Record<string, { bg: string; color: string }> = {
-  MISSING_DATA: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  OPEN_TASKS: { bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  PLAN_NOT_ACCEPTED: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  REACTIVATE: { bg: 'var(--red-bg)', color: 'var(--red)' },
-  NO_UPCOMING_VISIT: { bg: 'var(--brand-bg)', color: 'var(--brand)' },
+  MISSING_DATA: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  OPEN_TASKS: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  PLAN_NOT_ACCEPTED: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  REACTIVATE: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  NO_UPCOMING_VISIT: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
 };
 
 function ActionChip({ action }: { action: JourneyPatient['next_action'] }) {
   if (!action || action.code === 'UP_TO_DATE') return null;
-  const c = ACTION_COLOR[action.code] || { bg: 'var(--surface-2)', color: 'var(--ink-2)' };
+  const c = ACTION_COLOR[action.code] || { bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' };
   return (
     <div
       className="text-xs mt-1.5"
-      style={{ background: c.bg, color: c.color, borderRadius: 6, padding: '3px 7px', fontWeight: 600 }}
+      style={{
+        background: c.bg,
+        color: c.color,
+        borderRadius: 'var(--radius-control)',
+        padding: '3px 7px',
+        fontWeight: 600,
+      }}
     >
       {action.label}
     </div>
@@ -47,16 +53,16 @@ const DORMANCY_LABEL: Record<string, string> = {
 
 // Item 7's segmentação: a dormant patient who used to spend a lot gets a visibly
 // different (redder) badge than a low-value one-off — same colour vocabulary as
-// ACTION_COLOR above (var(--red)/var(--brand)).
+// ACTION_COLOR above (var(--urgency-critical)/var(--accent)).
 function SegmentBadge({ segment }: { segment: { dormancyBand: string; valueTier: string } }) {
   const isHighValue = segment.valueTier === 'high';
   return (
     <div
       className="text-xs mt-1.5"
       style={{
-        background: isHighValue ? 'var(--red-bg)' : 'var(--surface-2)',
-        color: isHighValue ? 'var(--red)' : 'var(--ink-2)',
-        borderRadius: 6,
+        background: isHighValue ? 'var(--urgency-critical-bg)' : 'var(--bg-sunken)',
+        color: isHighValue ? 'var(--urgency-critical)' : 'var(--text-secondary)',
+        borderRadius: 'var(--radius-control)',
         padding: '3px 7px',
         fontWeight: 600,
         display: 'inline-block',
@@ -73,12 +79,12 @@ function PatientCard({ p }: { p: JourneyPatient }) {
     ? `Última visita: ${String(p.last_visit).slice(0, 10)}`
     : `Registado: ${String(p.created_at).slice(0, 10)}`;
   return (
-    <div className="card p-3 mb-2" style={{ boxShadow: 'none', border: '1px solid var(--border)' }}>
+    <div className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
       <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
-      <div className="text-xs mt-1" style={{ color: 'var(--ink-2)' }}>
+      <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
         {p.phone ? formatPhonePT(p.phone) : p.email || '—'}
       </div>
-      <div className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
+      <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
         {meta}
       </div>
       <ActionChip action={p.next_action} />
@@ -109,11 +115,11 @@ function Column({
         style={{ borderTop: `3px solid ${color}`, marginTop: -12, paddingTop: 10 }}
       >
         <span className="section-label">{title}</span>
-        <span className="badge" style={{ background: 'var(--surface-2)', color: 'var(--ink-2)' }}>
+        <span className="badge" style={{ background: 'var(--bg-sunken)', color: 'var(--text-secondary)' }}>
           {count}
         </span>
       </div>
-      <p className="text-xs mb-2" style={{ color: 'var(--ink-3)' }}>
+      <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>
         {description}
       </p>
       <div style={{ overflowY: 'auto', maxHeight: 620 }}>{children}</div>
@@ -134,23 +140,19 @@ export default function JourneyBoard({ data, leadActions }: JourneyBoardProps) {
       <Column
         title="Leads"
         count={data.leads.length}
-        color="var(--amber)"
+        color="var(--urgency-soon)"
         description="Primeiro contacto, ainda sem consulta marcada."
       >
         {data.leads.length === 0 ? (
           <Empty message="Sem leads abertos." />
         ) : (
           data.leads.map((lead) => (
-            <div
-              key={lead.id}
-              className="card p-3 mb-2"
-              style={{ boxShadow: 'none', border: '1px solid var(--border)' }}
-            >
+            <div key={lead.id} className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontWeight: 600, fontSize: 13 }}>{lead.name}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--ink-2)' }}>
+              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 {lead.phone ? formatPhonePT(lead.phone) : lead.email || '—'}
               </div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--ink-3)' }}>
+              <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                 {lead.source ? `${lead.source} · ` : ''}
                 {String(lead.created_at).slice(0, 10)}
               </div>
@@ -168,7 +170,7 @@ export default function JourneyBoard({ data, leadActions }: JourneyBoardProps) {
             s.patients.map((p) => <PatientCard key={p.id} p={p} />)
           )}
           {s.count > s.patients.length && (
-            <div className="text-xs text-center mt-1" style={{ color: 'var(--ink-3)' }}>
+            <div className="text-xs text-center mt-1" style={{ color: 'var(--text-muted)' }}>
               +{s.count - s.patients.length} não mostrados
             </div>
           )}
@@ -178,20 +180,16 @@ export default function JourneyBoard({ data, leadActions }: JourneyBoardProps) {
       <Column
         title="Reativação"
         count={data.reactivationCandidates.length}
-        color="var(--red)"
+        color="var(--urgency-critical)"
         description="Desaparecidos, elegíveis para reativação — segmentados por tempo de ausência e valor histórico."
       >
         {data.reactivationCandidates.length === 0 ? (
           <Empty message="Sem candidatos a reativação." />
         ) : (
           data.reactivationCandidates.map((c) => (
-            <div
-              key={c.patientId}
-              className="card p-3 mb-2"
-              style={{ boxShadow: 'none', border: '1px solid var(--border)' }}
-            >
+            <div key={c.patientId} className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
               <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--ink-2)' }}>
+              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 {c.phone ? formatPhonePT(c.phone) : '—'}
               </div>
               <SegmentBadge segment={c.segment} />

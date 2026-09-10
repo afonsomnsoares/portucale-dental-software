@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { C } from '@/lib/constants';
 
 // Faixa permanente enquanto o super_admin está dentro de uma clínica. Sem ela não haveria
 // nada a distinguir "estou a ver a Clínica do Porto" de "esta é a minha clínica" — e as
@@ -32,9 +31,9 @@ export default function ActingClinicBanner() {
         justifyContent: 'space-between',
         gap: 12,
         padding: '10px 20px',
-        background: C.AMB,
-        borderBottom: `1px solid ${C.AMBD}`,
-        color: C.T,
+        background: 'var(--urgency-soon-bg)',
+        borderBottom: `1px solid var(--urgency-soon-border)`,
+        color: 'var(--text-primary)',
         fontSize: 13,
       }}
     >
@@ -47,9 +46,9 @@ export default function ActingClinicBanner() {
         onClick={leave}
         disabled={leaving}
         style={{
-          border: `1px solid ${C.AMBD}`,
-          background: C.W,
-          borderRadius: 6,
+          border: `1px solid var(--urgency-soon-border)`,
+          background: 'var(--bg-surface)',
+          borderRadius: 'var(--radius-control)',
           padding: '5px 12px',
           fontSize: 13,
           cursor: leaving ? 'default' : 'pointer',

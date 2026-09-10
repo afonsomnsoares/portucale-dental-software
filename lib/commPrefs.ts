@@ -17,7 +17,10 @@ export interface CommPrefsLike {
   doNotContact?: string[] | null;
 }
 
-export function canAutoContact(commPrefs: CommPrefsLike | null | undefined, channel: 'sms' | 'email' | 'phone') {
+// 'phone' é a chamada; 'sms' é a mensagem. O e-mail saiu com a decisão de o agente ser
+// só chamada e SMS (migração 052) — `patients.email` continua a existir como campo da
+// ficha, mas já não é uma via por onde o sistema fale com ninguém.
+export function canAutoContact(commPrefs: CommPrefsLike | null | undefined, channel: 'sms' | 'phone') {
   const list = commPrefs?.doNotContact;
   if (!Array.isArray(list)) return true;
   return !list.includes(channel);

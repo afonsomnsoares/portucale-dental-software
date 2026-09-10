@@ -97,14 +97,14 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
                 <TD bold>{t.title}</TD>
                 <TD>{t.patient_name || '—'}</TD>
                 <TD>{TYPE_LABELS[t.type]}</TD>
-                <TD color={overdue ? 'var(--red)' : undefined}>
+                <TD color={overdue ? 'var(--urgency-critical)' : undefined}>
                   {t.due_at ? new Date(t.due_at).toLocaleDateString('pt-PT') : '—'}
                 </TD>
                 <TD>
                   {t.assigned_to_name ? (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {t.assigned_to_name}
-                      {t.auto_assigned && <Badge label="auto" bg="var(--brand-bg)" color="var(--brand)" />}
+                      {t.auto_assigned && <Badge label="auto" bg="var(--accent-bg)" color="var(--accent)" />}
                     </span>
                   ) : (
                     'Fila da equipa'

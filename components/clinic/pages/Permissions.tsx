@@ -100,7 +100,12 @@ export default function ClinicPermissionsPage() {
       {err && (
         <div
           className="card p-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -108,7 +113,7 @@ export default function ClinicPermissionsPage() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: '#97A0AF' }}>Sem matriz de permissões.</div>}
+          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Sem matriz de permissões.</div>}
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
@@ -132,7 +137,7 @@ export default function ClinicPermissionsPage() {
                       style={{
                         fontFamily: '"JetBrains Mono",monospace',
                         fontSize: 12,
-                        color: '#172B4D',
+                        color: 'var(--text-primary)',
                         fontWeight: 700,
                       }}
                     >
@@ -168,11 +173,11 @@ export default function ClinicPermissionsPage() {
                               Omissão
                             </button>
                             {isPending ? (
-                              <Badge label="Por guardar" bg="#FFF7E6" color="#FF8B00" />
+                              <Badge label="Por guardar" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
                             ) : isOverride ? (
-                              <Badge label="Alterado" bg="#DEEBFF" color="#0052CC" />
+                              <Badge label="Alterado" bg="var(--accent-bg)" color="var(--accent)" />
                             ) : (
-                              <Badge label="Omissão" bg="#F4F7FA" color="#5E6C84" />
+                              <Badge label="Omissão" bg="var(--bg-page)" color="var(--text-secondary)" />
                             )}
                           </div>
                         </td>

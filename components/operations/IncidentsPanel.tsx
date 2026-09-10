@@ -33,16 +33,16 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: 'Outro',
 };
 const SEVERITY_META: Record<string, { label: string; bg: string; color: string }> = {
-  low: { label: 'Baixa', bg: 'var(--surface-2)', color: 'var(--ink-2)' },
-  medium: { label: 'Média', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  high: { label: 'Alta', bg: 'var(--red-bg)', color: 'var(--red)' },
-  critical: { label: 'Crítica', bg: 'var(--red-bg)', color: 'var(--red)' },
+  low: { label: 'Baixa', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
+  medium: { label: 'Média', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  high: { label: 'Alta', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  critical: { label: 'Crítica', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
 };
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  open: { label: 'Aberto', bg: 'var(--red-bg)', color: 'var(--red)' },
-  in_progress: { label: 'Em curso', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  resolved: { label: 'Resolvido', bg: 'var(--green-bg)', color: 'var(--green)' },
-  closed: { label: 'Fechado', bg: 'var(--surface-2)', color: 'var(--ink-2)' },
+  open: { label: 'Aberto', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  in_progress: { label: 'Em curso', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  resolved: { label: 'Resolvido', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  closed: { label: 'Fechado', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
 };
 
 const EMPTY_FORM = {
@@ -260,7 +260,11 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
               style={{ minHeight: 90 }}
             />
           </FormField>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setReportModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={reportIncident} disabled={saving || !form.title.trim()}>

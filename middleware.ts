@@ -24,8 +24,15 @@ const DASHBOARD_ACCESS: Array<[prefix: string, roles: string[]]> = [
 // this is just the generic ceiling for everything else.
 // Runs in the Edge runtime, so it can't write to Postgres (audit_log) — blocks
 // are logged with console.warn, which the hosting platform captures.
-// The Postgres-based general rate limiter (lib/rateLimitGlobal.ts) is for
-// route handlers in the Node runtime.
+//
+// ─── Isto é a PRIMEIRA linha, não o teto ────────────────────────────────────
+// A contagem é em memória, por instância: com N réplicas o limite efetivo é N × o
+// configurado. Não há como corrigir isso no Edge sem trazer Redis/Upstash para o
+// projeto. O que ficou corrigido é o que era corrigível com o que já cá está: as
+// mutações passam por um teto partilhado em Postgres dentro de lib/route.ts (runtime
+// Node, ver WRITE_LIMIT lá). Este continua a servir para o que serve bem — absorver
+// rajadas sem custo, incluindo em leituras e em pedidos anónimos, que nunca chegam a
+// um route handler.
 const AUTHENTICATED_LIMIT = { limit: 240, windowMs: 60 * 1000 }; // ~4 req/s per signed-in user
 const ANONYMOUS_LIMIT = { limit: 60, windowMs: 60 * 1000 }; // per IP — most /api routes require auth anyway
 

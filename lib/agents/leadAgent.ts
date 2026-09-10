@@ -58,6 +58,7 @@ export async function triageOpenLeads(tenantId: string) {
   );
   const result = await callAgentTool<{ leads?: unknown[] }>({
     agent: 'leadAgent.triage',
+    tenantId,
     system: SYSTEM_PROMPT,
     payload: leads.map((l) => ({
       leadId: l.id,
@@ -159,6 +160,7 @@ export async function followUpColdLeads(tenantId: string) {
 
   const result = await callAgentTool<{ leads?: unknown[] }>({
     agent: 'leadAgent.followUp',
+    tenantId,
     system: FOLLOWUP_SYSTEM_PROMPT,
     payload: leads.map((l) => ({
       leadId: l.id,
@@ -251,6 +253,7 @@ export async function reviewLeadSources(tenantId: string) {
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'leadAgent.sources',
+    tenantId,
     system: SOURCE_SYSTEM_PROMPT,
     payload: rows.map((r) => ({
       origem: r.origem,

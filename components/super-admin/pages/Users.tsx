@@ -138,10 +138,10 @@ export default function AdminUsersPage() {
   }
 
   const roleColors: Record<string, string> = {
-    super_admin: '#DE350B',
-    admin: '#5243AA',
-    receptionist: '#00875A',
-    dentist: '#0052CC',
+    super_admin: 'var(--urgency-critical)',
+    admin: 'var(--cat-purple)',
+    receptionist: 'var(--urgency-ok)',
+    dentist: 'var(--accent)',
   };
   const filtered = users.filter((u) => {
     const q = search.trim().toLowerCase();
@@ -186,7 +186,7 @@ export default function AdminUsersPage() {
             Clear
           </GhostBtn>
         )}
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: '#97A0AF', fontWeight: 700 }}>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
           {filtered.length} / {users.length}
         </div>
       </div>
@@ -207,7 +207,7 @@ export default function AdminUsersPage() {
                       fontSize: 11,
                       fontWeight: 700,
                       padding: '3px 8px',
-                      borderRadius: 12,
+                      borderRadius: 'var(--radius-card)',
                       background: `${roleColors[u.role]}15`,
                       color: roleColors[u.role],
                     }}
@@ -358,7 +358,11 @@ export default function AdminUsersPage() {
               </FormField>
             )}
 
-            {err && <div style={{ color: '#DE350B', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>{err}</div>}
+            {err && (
+              <div style={{ color: 'var(--urgency-critical)', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>
+                {err}
+              </div>
+            )}
 
             <div className="flex gap-3 mt-4">
               <PrimaryBtn

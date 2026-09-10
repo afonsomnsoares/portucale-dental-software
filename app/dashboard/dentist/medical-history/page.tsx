@@ -111,7 +111,7 @@ export default function MedicalHistoryPage() {
     return (
       <div
         className="card"
-        style={{ padding: '12px 16px', boxShadow: 'none', border: '1px solid #DFE1E6', marginBottom: 12 }}
+        style={{ padding: '12px 16px', border: '1px solid var(--border-subtle)', marginBottom: 12 }}
       >
         <div className="section-label mb-2">{label}</div>
         {(form[listKey] || []).map((it, i) => (
@@ -123,12 +123,14 @@ export default function MedicalHistoryPage() {
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '6px 0',
-              borderBottom: '1px solid #F4F7FA',
+              borderBottom: '1px solid var(--bg-page)',
             }}
           >
             <div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{it.name}</span>
-              {it.notes && <span style={{ fontSize: 11, color: '#97A0AF', marginLeft: 8 }}>— {it.notes}</span>}
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{it.name}</span>
+              {it.notes && (
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>— {it.notes}</span>
+              )}
             </div>
             <DangerBtn style={{ padding: '3px 10px', fontSize: 11 }} onClick={() => removeListItem(listKey, i)}>
               Retirar
@@ -183,7 +185,7 @@ export default function MedicalHistoryPage() {
       <PageHeader title="Histórico Clínico" sub="Anamnese do doente — alergias, medicação e condições" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -216,13 +218,13 @@ export default function MedicalHistoryPage() {
                     textAlign: 'left',
                     padding: '11px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #F4F7FA',
-                    background: selected?.id === p.id ? '#DEEBFF' : 'white',
-                    borderLeft: `3px solid ${selected?.id === p.id ? '#0052CC' : 'transparent'}`,
+                    borderBottom: '1px solid var(--bg-page)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>

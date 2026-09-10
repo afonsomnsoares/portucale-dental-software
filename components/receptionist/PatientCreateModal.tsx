@@ -37,10 +37,10 @@ export default function PatientCreateModal({
       {error && (
         <div
           style={{
-            background: '#FFEBE6',
-            border: '1px solid #FFBDAD',
-            color: '#DE350B',
-            borderRadius: 8,
+            background: 'var(--urgency-critical-bg)',
+            border: '1px solid var(--urgency-critical-border)',
+            color: 'var(--urgency-critical)',
+            borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
             fontSize: 12,
             marginBottom: 12,
@@ -98,8 +98,10 @@ export default function PatientCreateModal({
       </FormField>
 
       {schemaFields.length > 0 && (
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #EBECF0' }}>
-          <div style={{ fontSize: 12, fontWeight: 900, color: '#172B4D', marginBottom: 10 }}>Extra Fields</div>
+        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--bg-sunken)' }}>
+          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 10 }}>
+            Extra Fields
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {schemaFields.map((f) => (
               <FormField key={f.id} label={`${fieldLabel(f)}${f.required ? ' *' : ''}`}>
@@ -111,7 +113,9 @@ export default function PatientCreateModal({
               </FormField>
             ))}
           </div>
-          <div style={{ marginTop: 10, fontSize: 11, color: '#97A0AF' }}>Configured by Admin in Schema Fields.</div>
+          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+            Configured by Admin in Schema Fields.
+          </div>
         </div>
       )}
 

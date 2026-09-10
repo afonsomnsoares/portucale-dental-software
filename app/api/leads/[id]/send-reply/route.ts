@@ -39,9 +39,11 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     const lead = rows[0];
     if (!lead) return { error: 'not_found' as const };
     if (lead.ai_reply_sent_at) return { error: 'already_sent' as const };
-    if (lead.ai_draft_channel !== 'sms') {
-      return { error: lead.ai_draft_channel === 'email' ? 'email_not_supported' : 'not_triaged' } as const;
-    }
+    // Com o agente reduzido a chamada e SMS (migração 052), 'sms' é o único valor que
+    // ai_draft_channel pode ter. A guarda fica: linhas anteriores à migração podem
+    // trazer outra coisa, e um rascunho de e-mail que fosse expedido por SMS mandaria ao
+    // lead um texto escrito para outro meio.
+    if (lead.ai_draft_channel !== 'sms') return { error: 'not_triaged' as const };
     const text = overrideText || String(lead.ai_draft_reply || '');
     if (!text) return { error: 'not_triaged' as const };
     const phone = toE164(lead.phone);
@@ -60,9 +62,6 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
   if (result.error === 'not_found') return notFound('Lead not found');
   if (result.error === 'already_sent') return conflict('A resposta a este lead já foi enviada');
   if (result.error === 'not_triaged') return badRequest('Este lead ainda não tem um rascunho do agente Lead');
-  if (result.error === 'email_not_supported') {
-    return badRequest('Este lead só deixou email — o envio automático ainda só existe por SMS');
-  }
   if (result.error === 'invalid_phone') return badRequest('Número de telefone inválido para envio');
   if (result.error === 'send_failed') {
     // Mesmo padrão do resto do projeto: o detalhe do provedor fica só no log do

@@ -11,17 +11,18 @@ interface CommPrefsCardProps {
   onUpdated: (p: Patient) => void;
 }
 
+// Dois canais, que são os dois que o agente tem: SMS e chamada. O e-mail e o WhatsApp
+// saíram com a migração 052 — o campo `email` do doente continua na ficha, mas deixou de
+// ser uma via por onde a clínica fale com ele, e oferecer aqui uma preferência que o
+// sistema não consegue honrar é pior do que não a oferecer.
 const CHANNELS = [
   { value: '', label: '— Sem preferência —' },
   { value: 'sms', label: 'SMS' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Telefone' },
-  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'phone', label: 'Chamada' },
 ];
-const DO_NOT_CONTACT_OPTIONS: Array<{ value: 'sms' | 'email' | 'phone'; label: string }> = [
+const DO_NOT_CONTACT_OPTIONS: Array<{ value: 'sms' | 'phone'; label: string }> = [
   { value: 'sms', label: 'SMS' },
-  { value: 'email', label: 'Email' },
-  { value: 'phone', label: 'Telefone' },
+  { value: 'phone', label: 'Chamada' },
 ];
 
 export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCardProps) {
@@ -34,7 +35,7 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
     setEditing(false);
   }, [patient.comm_prefs]);
 
-  function toggleDoNotContact(channel: 'sms' | 'email' | 'phone') {
+  function toggleDoNotContact(channel: 'sms' | 'phone') {
     setPrefs((prev) => {
       const current = prev.doNotContact || [];
       const next = current.includes(channel) ? current.filter((c) => c !== channel) : [...current, channel];
@@ -56,7 +57,11 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
   return (
     <div
       className="card"
-      style={{ padding: '14px 18px', boxShadow: 'none', border: '1px solid #DFE1E6', gridColumn: '1 / -1' }}
+      style={{
+        padding: '14px 18px',
+        border: '1px solid var(--border-subtle)',
+        gridColumn: '1 / -1',
+      }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div className="section-label">Preferências de Comunicação</div>
@@ -68,7 +73,7 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
       </div>
 
       {!editing ? (
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: '#172B4D' }}>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: 'var(--text-primary)' }}>
           <div>
             Canal preferido:{' '}
             <strong>{CHANNELS.find((c) => c.value === (prefs.preferredChannel || ''))?.label || '—'}</strong>
@@ -86,7 +91,7 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
         <div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 12 }}>
             <div>
-              <div style={{ fontSize: 11, color: '#97A0AF', marginBottom: 4 }}>Canal preferido</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Canal preferido</div>
               <Sel
                 value={prefs.preferredChannel || ''}
                 onChange={(e) =>
@@ -104,7 +109,7 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
               </Sel>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: '#97A0AF', marginBottom: 4 }}>Não contactar por</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Não contactar por</div>
               <div style={{ display: 'flex', gap: 12 }}>
                 {DO_NOT_CONTACT_OPTIONS.map((o) => (
                   <label key={o.value} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>

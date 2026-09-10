@@ -175,10 +175,10 @@ export default function InvoicesPage() {
                 fontSize: 12,
                 fontWeight: status === s.value ? 700 : 500,
                 border: '1px solid',
-                borderColor: status === s.value ? '#0052CC' : '#DFE1E6',
-                borderRadius: 8,
-                background: status === s.value ? '#DEEBFF' : 'white',
-                color: status === s.value ? '#0052CC' : '#5E6C84',
+                borderColor: status === s.value ? 'var(--accent)' : 'var(--border-subtle)',
+                borderRadius: 'var(--radius-control)',
+                background: status === s.value ? 'var(--accent-bg)' : 'white',
+                color: status === s.value ? 'var(--accent)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -202,7 +202,7 @@ export default function InvoicesPage() {
         <div className="card overflow-x-auto">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #EBECF0' }}>
+              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                 <th className="data-th">Invoice</th>
                 <th className="data-th">Patient</th>
                 <th className="data-th">Date</th>
@@ -226,15 +226,15 @@ export default function InvoicesPage() {
               {invoices.map((inv) => (
                 <tr
                   key={inv.id}
-                  style={{ borderBottom: '1px solid #EBECF0', transition: 'background 0.1s' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = '#F8F9FC')}
+                  style={{ borderBottom: '1px solid var(--bg-sunken)', transition: 'background 0.1s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-page)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td className="data-td">
                     <Link
                       href={`/dashboard/receptionist/invoices/${inv.id}`}
                       style={{
-                        color: '#0052CC',
+                        color: 'var(--accent)',
                         fontWeight: 600,
                         textDecoration: 'none',
                         fontFamily: '"JetBrains Mono",monospace',
@@ -247,10 +247,10 @@ export default function InvoicesPage() {
                   <td className="data-td" style={{ fontWeight: 600 }}>
                     {inv.patient_name || '—'}
                   </td>
-                  <td className="data-td" style={{ color: '#5E6C84' }}>
+                  <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                     {fmtDate(inv.invoice_date)}
                   </td>
-                  <td className="data-td" style={{ color: '#5E6C84' }}>
+                  <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                     {inv.dentist_name || '—'}
                   </td>
                   <td
@@ -265,7 +265,7 @@ export default function InvoicesPage() {
                       textAlign: 'right',
                       fontFamily: '"JetBrains Mono",monospace',
                       fontSize: 12,
-                      color: Number(inv.paid) > 0 ? '#00875A' : '#97A0AF',
+                      color: Number(inv.paid) > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)',
                     }}
                   >
                     {invPaid(inv)}
@@ -276,7 +276,7 @@ export default function InvoicesPage() {
                       textAlign: 'right',
                       fontFamily: '"JetBrains Mono",monospace',
                       fontSize: 12,
-                      color: Number(inv.amount) > Number(inv.paid) ? '#DE350B' : '#00875A',
+                      color: Number(inv.amount) > Number(inv.paid) ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
                     }}
                   >
                     {invBal(inv)}
@@ -284,7 +284,7 @@ export default function InvoicesPage() {
                   <td className="data-td">
                     <Badge s={inv.status} />
                   </td>
-                  <td className="data-td" style={{ textAlign: 'right', color: '#5E6C84', fontSize: 12 }}>
+                  <td className="data-td" style={{ textAlign: 'right', color: 'var(--text-secondary)', fontSize: 12 }}>
                     {inv.method}
                   </td>
                 </tr>

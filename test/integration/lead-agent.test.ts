@@ -86,12 +86,20 @@ test('lead já triado (rascunho SMS): sem Twilio configurado, falha de forma lim
   assert.equal(row.ai_reply_sent_at, null, 'uma falha de envio não pode marcar como enviado');
 });
 
-test('lead só com email: send-reply diz explicitamente que este canal ainda não existe', async () => {
+// Com o agente reduzido a chamada e SMS (migração 052), um lead sem telefone deixa de ter
+// rascunho: não há por onde o expedir. O ramo do e-mail existiu e nunca chegou a enviar
+// nada — a rota devolvia 'email_not_supported' desde sempre.
+test('lead sem telefone: a base recusa um rascunho de e-mail e o envio dá 400', async () => {
   const lead = await createLead({ phone: '', email: 'so-email@teste.pt' });
-  await query(
-    `UPDATE leads SET ai_qualification='warm', ai_draft_channel='email', ai_draft_reply='Olá!', ai_triaged_at=NOW()
-     WHERE id=$1`,
-    [lead.id],
+
+  await assert.rejects(
+    () =>
+      query(
+        `UPDATE leads SET ai_qualification='warm', ai_draft_channel='email', ai_draft_reply='Olá!', ai_triaged_at=NOW()
+         WHERE id=$1`,
+        [lead.id],
+      ),
+    'o CHECK de leads_ai_draft_channel_check já não aceita e-mail',
   );
 
   const res = await sendReply(
@@ -100,5 +108,5 @@ test('lead só com email: send-reply diz explicitamente que este canal ainda nã
   );
   assert.equal(res.status, 400);
   const body = await res.json();
-  assert.match(body.message, /email/i);
+  assert.match(body.message, /rascunho/i);
 });

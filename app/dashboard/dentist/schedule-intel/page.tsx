@@ -41,17 +41,19 @@ export default function DentistScheduleIntelPage() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
-            <div className="card" style={{ borderLeft: '4px solid #0052CC' }}>
+            <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
               <div className="section-label">Consultas Agendadas</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#0052CC' }}>{upcomingAppts.length}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{upcomingAppts.length}</div>
             </div>
-            <div className="card" style={{ borderLeft: '4px solid #DE350B' }}>
+            <div className="card" style={{ borderLeft: '4px solid var(--urgency-critical)' }}>
               <div className="section-label">Risco Alto (≥60%)</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#DE350B' }}>{highRiskAppts.length}</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-critical)' }}>
+                {highRiskAppts.length}
+              </div>
             </div>
-            <div className="card" style={{ borderLeft: '4px solid #FF8B00' }}>
+            <div className="card" style={{ borderLeft: '4px solid var(--urgency-soon)' }}>
               <div className="section-label">Taxa de No-Show</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#FF8B00' }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-soon)' }}>
                 {noShowData.total > 0 ? Math.round((noShowData.noShow / noShowData.total) * 100) : 0}%
               </div>
             </div>
@@ -59,7 +61,7 @@ export default function DentistScheduleIntelPage() {
 
           {highRiskAppts.length > 0 && (
             <div className="mt-5">
-              <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--ink)', marginBottom: 10 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)', marginBottom: 10 }}>
                 Consultas de Risco Elevado — Próximos 14 dias
               </h3>
               <div style={{ overflowX: 'auto' }}>

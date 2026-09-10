@@ -20,6 +20,13 @@ export interface SessionUser {
   role: string;
   clinic?: string | null;
   tenantId?: string | null;
+  // Momento de emissão do token (segundos Unix), escrito por signToken e devolvido
+  // tal e qual por verifyToken. Declarado aqui porque deixou de ser detalhe interno
+  // do formato: lib/permissions.ts's revalidateSession compara-o com
+  // `users.password_changed_at` para recusar tokens anteriores à última mudança de
+  // password. Opcional porque signToken o preenche sempre — quem constrói um
+  // SessionUser para assinar não o fornece (e se o fornecer, é sobreposto).
+  iat?: number;
 }
 
 export type AuthRequest = Request & {

@@ -16,34 +16,36 @@ export default function PatientTreatmentsTab({ treatments }: { treatments: Treat
               gap: 12,
               alignItems: 'center',
               padding: '12px 0',
-              borderBottom: '1px solid #F4F7FA',
+              borderBottom: '1px solid var(--bg-page)',
             }}
           >
             <div
               style={{
                 width: 38,
                 height: 38,
-                borderRadius: 8,
-                background: '#DEEBFF',
+                borderRadius: 'var(--radius-control)',
+                background: 'var(--accent-bg)',
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 11,
                 fontWeight: 700,
-                color: '#0052CC',
+                color: 'var(--accent)',
               }}
             >
               {t.treatment_code || '—'}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{t.description}</div>
-              <div style={{ fontSize: 11, color: '#97A0AF' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t.description}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 {t.treatment_code || '—'} · Phase {t.phase}
               </div>
             </div>
             <Badge s={t.status} />
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#172B4D' }}>${Number(t.fee).toLocaleString()}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              ${Number(t.fee).toLocaleString()}
+            </div>
           </div>
         ))
       )}

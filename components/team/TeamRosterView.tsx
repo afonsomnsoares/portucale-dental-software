@@ -28,10 +28,10 @@ interface TeamRosterViewProps {
 
 const TYPE_LABEL: Record<string, string> = { vacation: 'Férias', sick: 'Baixa', other: 'Outro' };
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  pending: { label: 'Pendente', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  approved: { label: 'Aprovado', bg: 'var(--green-bg)', color: 'var(--green)' },
-  rejected: { label: 'Rejeitado', bg: 'var(--red-bg)', color: 'var(--red)' },
-  cancelled: { label: 'Cancelado', bg: 'var(--surface-2)', color: 'var(--ink-2)' },
+  pending: { label: 'Pendente', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  approved: { label: 'Aprovado', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  rejected: { label: 'Rejeitado', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  cancelled: { label: 'Cancelado', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
 };
 
 const EMPTY_FORM = { type: 'vacation' as StaffTimeOffType, startDate: '', endDate: '', notes: '' };
@@ -122,24 +122,32 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
                 <div
                   key={r.userId}
                   className="flex items-center justify-between"
-                  style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}
+                  style={{
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-control)',
+                    padding: '8px 12px',
+                  }}
                 >
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{r.userName}</span>
-                    <span className="text-xs ml-2" style={{ color: 'var(--ink-3)' }}>
+                    <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                       {r.role}
                     </span>
                     {r.todayShifts.length > 0 && (
-                      <span className="text-xs ml-2" style={{ color: 'var(--ink-2)' }}>
+                      <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>
                         {r.todayShifts.map((s) => `${s.startTime}-${s.endTime}`).join(', ')}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {r.onLeaveToday && <Badge label="Em férias" bg="var(--amber-bg)" color="var(--amber)" />}
-                    {r.workingNow && <Badge label="A trabalhar agora" bg="var(--green-bg)" color="var(--green)" />}
+                    {r.onLeaveToday && (
+                      <Badge label="Em férias" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
+                    )}
+                    {r.workingNow && (
+                      <Badge label="A trabalhar agora" bg="var(--urgency-ok-bg)" color="var(--urgency-ok)" />
+                    )}
                     {!r.onLeaveToday && !r.todayShifts.length && (
-                      <span className="text-xs" style={{ color: 'var(--ink-3)' }}>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         Sem turno hoje
                       </span>
                     )}
@@ -164,15 +172,19 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
                   <div
                     key={t.id}
                     className="flex items-center justify-between"
-                    style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px' }}
+                    style={{
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-control)',
+                      padding: '8px 12px',
+                    }}
                   >
                     <div>
                       <span style={{ fontWeight: 600, fontSize: 13 }}>{TYPE_LABEL[t.type]}</span>
-                      <span className="text-xs ml-2" style={{ color: 'var(--ink-2)' }}>
+                      <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>
                         {t.start_date.slice(0, 10)} → {t.end_date.slice(0, 10)}
                       </span>
                       {t.notes && (
-                        <span className="text-xs ml-2" style={{ color: 'var(--ink-3)' }}>
+                        <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                           {t.notes}
                         </span>
                       )}
@@ -234,7 +246,11 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
               style={{ minHeight: 60 }}
             />
           </FormField>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={requestTimeOff} disabled={saving || !form.startDate || !form.endDate}>

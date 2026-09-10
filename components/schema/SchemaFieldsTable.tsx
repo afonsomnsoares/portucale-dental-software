@@ -31,7 +31,9 @@ export default function SchemaFieldsTable({
       {loading ? (
         <Spinner />
       ) : !tenantId ? (
-        <div style={{ padding: 18, fontSize: 13, color: '#97A0AF' }}>Select a clinic to manage its schema fields.</div>
+        <div style={{ padding: 18, fontSize: 13, color: 'var(--text-muted)' }}>
+          Select a clinic to manage its schema fields.
+        </div>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -49,12 +51,14 @@ export default function SchemaFieldsTable({
               <tr key={f.id}>
                 <td className="data-td">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#172B4D' }}>{f.label || f.field_name}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {f.label || f.field_name}
+                    </div>
                     <code
                       style={{
-                        background: '#EAE6FF',
-                        color: '#5243AA',
-                        borderRadius: 4,
+                        background: 'var(--cat-purple-bg)',
+                        color: 'var(--cat-purple)',
+                        borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
                         fontSize: 11,
                         fontFamily: '"JetBrains Mono",monospace',
@@ -64,26 +68,30 @@ export default function SchemaFieldsTable({
                     >
                       {f.field_name}
                     </code>
-                    {f.description && <div style={{ fontSize: 11, color: '#97A0AF' }}>{f.description}</div>}
+                    {f.description && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.description}</div>}
                   </div>
                 </td>
-                <td className="data-td" style={{ color: '#5E6C84' }}>
+                <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                   {f.field_type}
                 </td>
                 <td className="data-td">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 80, height: 5, background: '#F4F7FA', borderRadius: 3 }}>
+                    <div
+                      style={{ width: 80, height: 5, background: 'var(--bg-page)', borderRadius: 'var(--radius-pill)' }}
+                    >
                       <div
                         style={{
                           width: `${f.rollout}%`,
                           height: '100%',
-                          borderRadius: 3,
-                          background: f.rollout === 100 ? '#00875A' : '#FF8B00',
+                          borderRadius: 'var(--radius-pill)',
+                          background: f.rollout === 100 ? 'var(--urgency-ok)' : 'var(--urgency-soon)',
                           transition: 'width 0.3s',
                         }}
                       />
                     </div>
-                    <span style={{ fontSize: 11, color: '#5E6C84', fontFamily: '"JetBrains Mono",monospace' }}>
+                    <span
+                      style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: '"JetBrains Mono",monospace' }}
+                    >
                       {f.rollout}%
                     </span>
                   </div>
@@ -91,7 +99,7 @@ export default function SchemaFieldsTable({
                 <td className="data-td">
                   <Badge s={f.required ? 'completed' : 'proposed'} label={f.required ? 'Required' : 'Optional'} />
                 </td>
-                <td className="data-td" style={{ color: '#97A0AF' }}>
+                <td className="data-td" style={{ color: 'var(--text-muted)' }}>
                   {f.pushed_at?.slice(0, 10) || '—'}
                 </td>
                 <td className="data-td">
@@ -104,7 +112,7 @@ export default function SchemaFieldsTable({
                         Publish
                       </button>
                     ) : (
-                      <span style={{ fontSize: 12, color: '#00875A', fontWeight: 700 }}>
+                      <span style={{ fontSize: 12, color: 'var(--urgency-ok)', fontWeight: 700 }}>
                         <Check size={12} style={{ display: 'inline' }} /> Live
                       </span>
                     )}

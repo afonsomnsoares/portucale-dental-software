@@ -33,7 +33,7 @@ export default function ClinicInvoiceDetailPage() {
   if (loading) return <Spinner />;
   if (!inv) {
     return (
-      <div className="card p-5" style={{ color: '#5E6C84' }}>
+      <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>
         <GhostBtn onClick={() => router.back()} style={{ marginBottom: 16 }}>
           <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
         </GhostBtn>
@@ -61,8 +61,13 @@ export default function ClinicInvoiceDetailPage() {
           <div style={{ display: 'grid', gap: 12 }}>
             <Row label="Estado" value={<Badge s={inv.status} />} />
             <Row label="Valor" value={formatEUR(Number(inv.amount))} bold />
-            <Row label="Pago" value={formatEUR(Number(inv.paid))} color="#00875A" />
-            <Row label="Saldo" value={formatEUR(balance)} color={balance > 0 ? '#DE350B' : '#00875A'} bold />
+            <Row label="Pago" value={formatEUR(Number(inv.paid))} color="var(--urgency-ok)" />
+            <Row
+              label="Saldo"
+              value={formatEUR(balance)}
+              color={balance > 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)'}
+              bold
+            />
             <Row label="Método" value={inv.method || '—'} />
             <Row label="Data de emissão" value={fmtDate(inv.invoice_date)} />
             <Row label="Data de vencimento" value={fmtDate(inv.due_date)} />
@@ -71,13 +76,13 @@ export default function ClinicInvoiceDetailPage() {
         </div>
         <div className="card p-5">
           <div className="section-label mb-4">DOENTE</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: '#172B4D', marginBottom: 8 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
             {inv.patient_name || '—'}
           </div>
           {inv.notes && (
             <>
               <div className="section-label mt-4 mb-2">NOTAS</div>
-              <div style={{ fontSize: 13, color: '#5E6C84', lineHeight: 1.5 }}>{inv.notes}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{inv.notes}</div>
             </>
           )}
         </div>
@@ -88,7 +93,7 @@ export default function ClinicInvoiceDetailPage() {
           <div className="section-label mb-3">LINHAS</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #EBECF0' }}>
+              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                 <th className="data-th">Descrição</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
                   Valor
@@ -98,7 +103,7 @@ export default function ClinicInvoiceDetailPage() {
             <tbody>
               {items.map((item, i) => (
                 // biome-ignore lint/suspicious/noArrayIndexKey: as linhas da fatura não têm id e a lista é estática (nunca reordenada)
-                <tr key={i} style={{ borderBottom: '1px solid #EBECF0' }}>
+                <tr key={i} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
                   <td className="data-td">{item.description || '—'}</td>
                   <td
                     className="data-td"
@@ -135,8 +140,8 @@ export default function ClinicInvoiceDetailPage() {
 function Row({ label, value, color, bold }: { label: string; value: ReactNode; color?: string; bold?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-      <span style={{ fontSize: 12, color: '#97A0AF', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || '#172B4D' }}>{value}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || 'var(--text-primary)' }}>{value}</span>
     </div>
   );
 }

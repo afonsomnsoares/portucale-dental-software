@@ -2,90 +2,182 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================================
+   TOKENS
+   Duas camadas, e a ordem importa.
+
+   1. PRIMITIVOS  — a escala bruta. Um valor só existe aqui uma vez.
+   2. SEMÂNTICOS  — o que a aplicação usa. Nomeados pelo que significam,
+                    não pela cor que são.
+
+   Regra: fora deste bloco ninguém escreve um hex nem toca num primitivo.
+   Um componente que precise de "cinzento claro" não o encontra — tem de
+   dizer se quer texto apagado, uma borda ou um fundo rebaixado, e é essa
+   pergunta que mantém o sistema coerente.
+   ========================================================================== */
+
 :root {
-  --brand:      #2563EB;
-  --brand-dark: #1D4ED8;
-  --brand-bg:   #E0ECFF;
-  --page-bg:    #F6F8FB;
+  /* ---------- 1. Primitivos ---------- */
   --white:      #FFFFFF;
-  --border:     #E2E8F0;
-  --ink:        #0F172A;
-  --ink-2:      #334155;
-  --ink-3:      #64748B;
-  --green:      #0F766E;
-  --green-bg:   #E7F7F4;
-  --amber:      #D97706;
-  --amber-bg:   #FFF7ED;
-  --red:        #DC2626;
-  --red-bg:     #FEE2E2;
-  --purple:     #6D28D9;
-  --purple-bg:  #F3E8FF;
-  --teal:       #0284C7;
-  --teal-bg:    #E0F2FE;
-  --surface:    #FFFFFF;
-  --surface-2:  #F1F5F9;
-  --shadow:     0 10px 30px rgba(2, 6, 23, 0.06);
-  --radius:     14px;
-  --radius-sm:  10px;
+
+  --slate-950:  #0F172A;
+  --slate-800:  #334155;
+  --slate-600:  #64748B;
+  --slate-400:  #94A3B8;
+  --slate-300:  #CBD5E1;
+  --slate-200:  #E2E8F0;
+  --slate-100:  #F1F5F9;
+  --slate-50:   #F6F8FB;
+
+  --blue-700:   #1D4ED8;
+  --blue-600:   #2563EB;
+  --blue-100:   #E0ECFF;
+
+  --red-700:    #B91C1C;
+  --red-300:    #FCA5A5;
+  --red-100:    #FEE2E2;
+
+  --amber-700:  #B45309;
+  --amber-200:  #FDE68A;
+  --amber-50:   #FFF7ED;
+
+  --green-700:  #0F766E;
+  --green-300:  #5EEAD4;
+  --green-50:   #E7F7F4;
+
+  --purple-700: #6D28D9;
+  --purple-50:  #F3E8FF;
+
+  --teal-700:   #0369A1;
+  --teal-50:    #E0F2FE;
+
+  /* ---------- 2. Semânticos ---------- */
+
+  /* Superfícies */
+  --bg-page:      var(--slate-50);
+  --bg-surface:   var(--white);
+  --bg-sunken:    var(--slate-100);   /* insets: cabeçalho de tabela, vazios */
+  --bg-raised:    var(--white);       /* o que flutua: modal, dropdown       */
+
+  /* Texto — todos os valores passam WCAG AA (4.5:1) sobre --bg-surface */
+  --text-primary:   var(--slate-950);  /* 17.9:1 */
+  --text-secondary: var(--slate-800);  /* 10.4:1 */
+  --text-muted:     var(--slate-600);  /*  4.8:1 */
+  --text-disabled:  var(--slate-400);  /* nunca para conteúdo que se leia    */
+  --text-onAccent:  var(--white);
+
+  /* Bordas */
+  --border-subtle: var(--slate-200);
+  --border-strong: var(--slate-300);
+  --border-focus:  var(--blue-600);
+
+  /* Acento — reservado à ação primária e ao foco. Se estiver em todo o lado,
+     deixa de apontar para nada. */
+  --accent:       var(--blue-600);
+  --accent-hover: var(--blue-700);
+  --accent-bg:    var(--blue-100);
+
+  /* Urgência — quando é que alguém tem de agir, não que categoria isto é.
+     É a única escala que a triagem deve usar. */
+  --urgency-critical:        var(--red-700);
+  --urgency-critical-bg:     var(--red-100);
+  --urgency-critical-border: var(--red-300);
+  --urgency-soon:            var(--amber-700);
+  --urgency-soon-bg:         var(--amber-50);
+  --urgency-soon-border:     var(--amber-200);
+  --urgency-ok:              var(--green-700);
+  --urgency-ok-bg:           var(--green-50);
+  --urgency-ok-border:       var(--green-300);
+
+  /* Categóricos — estados sem urgência associada (ex.: "Saiu", "Nota").
+     Não misturar com a escala acima: aqui a cor distingue, não hierarquiza. */
+  --cat-purple:    var(--purple-700);
+  --cat-purple-bg: var(--purple-50);
+  --cat-teal:      var(--teal-700);
+  --cat-teal-bg:   var(--teal-50);
+
+  /* Elevação — uma regra só, e vale para o produto inteiro:
+     A SOMBRA É PARA O QUE FLUTUA. O QUE ESTÁ ASSENTE NA PÁGINA USA BORDA.
+
+     Um cartão não paira sobre nada: é conteúdo pousado. Um modal paira, e a
+     sombra é o que diz ao olho que há uma camada por baixo. Quando tudo tem
+     sombra, ela deixa de significar profundidade e passa a ser textura. */
+  --elev-0: none;                                  /* assente: cartão, painel   */
+  --elev-1: 0 1px 2px rgba(15, 23, 42, 0.06);      /* hover, linha selecionada  */
+  --elev-2: 0 4px 12px rgba(15, 23, 42, 0.08);     /* dropdown, popover, tooltip*/
+  --elev-3: 0 16px 48px rgba(15, 23, 42, 0.18);    /* modal, drawer             */
+
+  --ring-focus: 0 0 0 3px rgba(37, 99, 235, 0.22); /* foco — nunca é elevação   */
+  --overlay:    rgba(15, 23, 42, 0.54);            /* fundo por trás do modal   */
+
+  /* Forma — três valores, e não há um quarto.
+     O rácio de 2:1 entre controlo e cartão é o que mantém um input dentro de
+     um cartão a parecer encaixado em vez de colado. */
+  --radius-control: 6px;    /* botão, input, select, chip, separador   */
+  --radius-card:    12px;   /* cartão, modal, painel                   */
+  --radius-pill:    999px;  /* badge, avatar, barra de progresso       */
 }
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-font-smoothing: antialiased; }
-  body { font-family: var(--font-plus-jakarta), system-ui, sans-serif; background: var(--page-bg); color: var(--ink); min-height: 100vh; }
+  body { font-family: var(--font-plus-jakarta), system-ui, sans-serif; background: var(--bg-page); color: var(--text-primary); min-height: 100vh; }
   ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: var(--page-bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }
+  ::-webkit-scrollbar-track { background: var(--bg-page); }
+  ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: var(--radius-pill); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
   button { font-family: inherit; cursor: pointer; }
   a { text-decoration: none; }
 }
 
 @layer components {
-  .btn         { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: 600; font-size: 13px; border-radius: var(--radius-sm); border: none; transition: transform 0.12s, background 0.12s, box-shadow 0.12s, border-color 0.12s; white-space: nowrap; cursor: pointer; }
-  .btn-primary { background: var(--brand); color: white; padding: 9px 16px; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.18); }
-  .btn-primary:hover { background: var(--brand-dark); }
-  .btn-primary:active { transform: translateY(1px); box-shadow: 0 3px 10px rgba(37, 99, 235, 0.16); }
-  .btn-secondary { background: var(--surface); color: var(--ink-2); padding: 9px 16px; border: 1px solid var(--border); }
-  .btn-secondary:hover { background: var(--surface-2); color: var(--ink); }
-  .btn-ghost { background: var(--surface); color: var(--brand); padding: 9px 16px; border: 1px solid var(--border); }
-  .btn-ghost:hover { background: var(--brand-bg); }
-  .btn-danger { background: var(--red-bg); color: var(--red); padding: 9px 16px; border: 1px solid rgba(220, 38, 38, 0.25); }
-  .btn-danger:hover { background: rgba(220, 38, 38, 0.10); }
+  .btn         { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: 600; font-size: 13px; border-radius: var(--radius-control); border: none; transition: transform 0.12s, background 0.12s, box-shadow 0.12s, border-color 0.12s; white-space: nowrap; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: var(--text-onAccent); padding: 9px 16px; box-shadow: var(--elev-0); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); padding: 9px 16px; border: 1px solid var(--border-subtle); }
+  .btn-secondary:hover { background: var(--bg-sunken); color: var(--text-primary); }
+  .btn-ghost { background: var(--bg-surface); color: var(--accent); padding: 9px 16px; border: 1px solid var(--border-subtle); }
+  .btn-ghost:hover { background: var(--accent-bg); }
+  .btn-danger { background: var(--urgency-critical-bg); color: var(--urgency-critical); padding: 9px 16px; border: 1px solid var(--urgency-critical-border); }
+  .btn-danger:hover { background: rgba(185, 28, 28, 0.10); }
   .btn-sm  { padding: 5px 12px; font-size: 11px; }
   .btn-lg  { padding: 10px 20px; font-size: 14px; }
-  .btn-icon { padding: 7px; border-radius: var(--radius-sm); }
+  .btn-icon { padding: 7px; border-radius: var(--radius-control); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--ink); background: var(--surface); outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
-  .input:focus { border-color: rgba(37,99,235,0.45); box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
-  .input::placeholder { color: var(--ink-3); }
+  .input { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+  .input:focus { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
+  .input::placeholder { color: var(--text-muted); }
 
-  .select { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--ink); background: var(--surface); outline: none; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
-  .select:focus { border-color: rgba(37,99,235,0.45); box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+  .select { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+  .select:focus { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
 
-  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid rgba(226,232,240,0.9); box-shadow: var(--shadow); }
+  .card { background: var(--bg-surface); border-radius: var(--radius-card); border: 1px solid var(--border-subtle); box-shadow: var(--elev-0); }
+  /* Só o cartão que responde ao rato é que se levanta — e só ao ser tocado. */
+  .card-interactive { transition: box-shadow 0.12s, border-color 0.12s; cursor: pointer; }
+  .card-interactive:hover { box-shadow: var(--elev-1); border-color: var(--border-strong); }
 
-  .data-th { padding: 12px 16px; font-size: 11px; font-weight: 700; color: var(--ink-3); text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; letter-spacing: 0.10em; text-transform: uppercase; background: var(--surface); }
-  .data-td { padding: 14px 16px; font-size: 13px; color: var(--ink); border-bottom: 1px solid rgba(226,232,240,0.6); }
-  tr:hover .data-td { background: rgba(241,245,249,0.7); }
+  .data-th { padding: 12px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: left; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; letter-spacing: 0.10em; text-transform: uppercase; background: var(--bg-surface); }
+  .data-td { padding: 14px 16px; font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); }
+  tr:hover .data-td { background: var(--bg-sunken); }
 
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 550; color: var(--ink-2); transition: background 0.12s, color 0.12s; cursor: pointer; text-decoration: none; border: none; background: transparent; width: 100%; }
-  .nav-item:hover { background: rgba(241,245,249,0.7); color: var(--ink); }
-  .nav-item-active { background: var(--brand-bg); color: var(--brand); font-weight: 650; border-left: none; border-radius: var(--radius-sm); padding-left: 12px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-control); font-size: 13px; font-weight: 550; color: var(--text-secondary); transition: background 0.12s, color 0.12s; cursor: pointer; text-decoration: none; border: none; background: transparent; width: 100%; }
+  .nav-item:hover { background: var(--bg-sunken); color: var(--text-primary); }
+  .nav-item-active { background: var(--accent-bg); color: var(--accent); font-weight: 650; border-left: none; border-radius: var(--radius-control); padding-left: 12px; }
 
-  .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; border: 1px solid rgba(226,232,240,0.6); }
+  .badge { display: inline-flex; align-items: center; border-radius: var(--radius-pill); padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; border: 1px solid var(--border-subtle); }
 
-  .section-label { font-size: 11px; font-weight: 700; color: var(--ink-3); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px; }
+  .section-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px; }
 }
 
 @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
-@keyframes pulseBrand { 0%,100% { box-shadow: 0 0 0 0 rgba(0,82,204,0.4); } 50% { box-shadow: 0 0 0 6px rgba(0,82,204,0); } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-.modal-overlay { animation: overlayIn 0.15s ease-out; }
-.modal-content { animation: modalIn 0.2s cubic-bezier(0.16,1,0.3,1); }
-.skeleton { background: linear-gradient(90deg, #F4F7FA 25%, #EBECF0 50%, #F4F7FA 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+.modal-overlay { animation: overlayIn 0.15s ease-out; background: var(--overlay); }
+.modal-content { animation: modalIn 0.2s cubic-bezier(0.16,1,0.3,1); box-shadow: var(--elev-3); }
+.skeleton { background: linear-gradient(90deg, var(--bg-sunken) 25%, var(--border-subtle) 50%, var(--bg-sunken) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-control); }

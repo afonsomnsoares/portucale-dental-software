@@ -164,7 +164,7 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
                 <div className="flex items-center justify-between mb-2">
                   <div>
                     <span style={{ fontWeight: 600, fontSize: 13 }}>{h.from_user_name}</span>
-                    <span className="text-xs ml-2" style={{ color: 'var(--ink-2)' }}>
+                    <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>
                       {String(h.handoff_date).slice(0, 10)} · {SHIFT_LABEL[h.shift_label]} →{' '}
                       {h.to_user_name || 'turno seguinte'}
                     </span>
@@ -173,11 +173,11 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
                     {h.status === 'acknowledged' ? (
                       <Badge
                         label={`Confirmado por ${h.acknowledged_by_name || '—'}`}
-                        bg="var(--green-bg)"
-                        color="var(--green)"
+                        bg="var(--urgency-ok-bg)"
+                        color="var(--urgency-ok)"
                       />
                     ) : (
-                      <Badge label="Por confirmar" bg="var(--amber-bg)" color="var(--amber)" />
+                      <Badge label="Por confirmar" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
                     )}
                     {canAcknowledge && (
                       <GhostBtn
@@ -191,14 +191,14 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
                   </div>
                 </div>
                 {h.items?.length > 0 && (
-                  <ul style={{ margin: '0 0 6px 16px', padding: 0, fontSize: 12, color: 'var(--ink-2)' }}>
+                  <ul style={{ margin: '0 0 6px 16px', padding: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
                     {h.items.map((it) => (
                       <li key={it}>{it}</li>
                     ))}
                   </ul>
                 )}
                 {h.notes && (
-                  <div style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'pre-wrap' }}>{h.notes}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>{h.notes}</div>
                 )}
               </div>
             );
@@ -233,7 +233,7 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
 
           <div className="section-label mb-2">PENDENTES DETETADOS AUTOMATICAMENTE</div>
           {!items.length ? (
-            <div style={{ fontSize: 12, color: 'var(--ink-3)', marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
               Nada pendente detetado — a clínica está limpa.
             </div>
           ) : (
@@ -270,7 +270,11 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
             />
           </FormField>
 
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setComposer(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={submit} disabled={busy}>

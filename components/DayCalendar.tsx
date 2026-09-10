@@ -69,14 +69,14 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
           style={{
             display: 'grid',
             gridTemplateColumns: '56px 1fr',
-            borderBottom: '2px solid #DFE1E6',
+            borderBottom: '2px solid var(--border-subtle)',
             background: 'white',
           }}
         >
-          <div className="px-3 py-3 text-xs font-bold text-ink-secondary">{date ? date.slice(5) : 'TODAY'}</div>
+          <div className="px-3 py-3 text-xs font-bold text-secondary">{date ? date.slice(5) : 'TODAY'}</div>
           <div
             className="py-3 px-3 text-xs font-bold"
-            style={{ color: '#0052CC', borderLeft: '1px solid #EBECF0', letterSpacing: '0.06em' }}
+            style={{ color: 'var(--accent)', borderLeft: '1px solid var(--bg-sunken)', letterSpacing: '0.06em' }}
           >
             LIVE AGENDA
           </div>
@@ -91,16 +91,16 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                   display: 'grid',
                   gridTemplateColumns: '56px 1fr',
                   height: PX_PER_HOUR,
-                  borderBottom: '1px solid #EBECF0',
+                  borderBottom: '1px solid var(--bg-sunken)',
                 }}
               >
                 <div
-                  className="text-xs font-mono text-ink-tertiary pt-2 pl-3"
-                  style={{ borderRight: '1px solid #EBECF0' }}
+                  className="text-xs font-mono text-muted pt-2 pl-3"
+                  style={{ borderRight: '1px solid var(--bg-sunken)' }}
                 >
                   {String(h).padStart(2, '0')}:00
                 </div>
-                <div style={{ borderLeft: '1px solid #EBECF0', position: 'relative' }} />
+                <div style={{ borderLeft: '1px solid var(--bg-sunken)', position: 'relative' }} />
               </div>
             ))}
 
@@ -111,7 +111,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                   position: 'absolute',
                   left: 56,
                   right: 0,
-                  borderBottom: '1px dashed #EBECF0',
+                  borderBottom: '1px dashed var(--bg-sunken)',
                   pointerEvents: 'none',
                   height: 0,
                   top: (h - 7) * PX_PER_HOUR + PX_PER_HOUR / 2,
@@ -121,7 +121,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
 
             {showNow && (
               <div style={{ position: 'absolute', left: 56, right: 0, top: nowTop, zIndex: 10, pointerEvents: 'none' }}>
-                <div style={{ height: 2, background: '#DE350B', position: 'relative' }}>
+                <div style={{ height: 2, background: 'var(--urgency-critical)', position: 'relative' }}>
                   <div
                     style={{
                       position: 'absolute',
@@ -130,7 +130,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                       width: 10,
                       height: 10,
                       borderRadius: '50%',
-                      background: '#DE350B',
+                      background: 'var(--urgency-critical)',
                     }}
                   />
                   <div
@@ -138,11 +138,11 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                       position: 'absolute',
                       right: 4,
                       top: -9,
-                      background: '#DE350B',
+                      background: 'var(--urgency-critical)',
                       color: 'white',
                       fontSize: 9,
                       fontWeight: 700,
-                      borderRadius: 3,
+                      borderRadius: 'var(--radius-control)',
                       padding: '1px 5px',
                       fontFamily: '"JetBrains Mono",monospace',
                     }}
@@ -158,7 +158,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                 const startMins = toMins(apt.start_time || apt.time || '09:00');
                 const top = minsToTop(startMins);
                 const height = Math.max((apt.duration || 30) * (PX_PER_HOUR / 60), 36);
-                const stColor = STATUS_COLOR[apt.status] || '#0052CC';
+                const stColor = STATUS_COLOR[apt.status] || 'var(--accent)';
                 const isSelected = selected?.id === apt.id;
                 const laneOffset = (idx % 2) * 8;
                 return (
@@ -181,7 +181,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                       font: 'inherit',
                       textAlign: 'left',
                       background: `${stColor}10`,
-                      borderRadius: '0 6px 6px 0',
+                      borderRadius: '0 var(--radius-control) var(--radius-control) 0',
                       borderStyle: 'solid',
                       borderLeftStyle: 'solid',
                       borderLeftColor: stColor,
@@ -197,15 +197,18 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                       overflow: 'hidden',
                       pointerEvents: 'all',
                       transition: 'all 0.12s',
-                      boxShadow: isSelected ? `0 2px 8px ${stColor}30` : 'none',
+                      boxShadow: isSelected ? 'var(--elev-1)' : 'var(--elev-0)',
                       zIndex: isSelected ? 3 : 2,
                     }}
                   >
-                    <div className="text-xs font-bold truncate" style={{ color: '#172B4D', lineHeight: 1.3 }}>
+                    <div
+                      className="text-xs font-bold truncate"
+                      style={{ color: 'var(--text-primary)', lineHeight: 1.3 }}
+                    >
                       {apt.patient_name || apt.patient}
                     </div>
                     {height > 44 && (
-                      <div className="text-xs truncate mt-0.5" style={{ color: '#5E6C84' }}>
+                      <div className="text-xs truncate mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                         {apt.type}
                       </div>
                     )}
@@ -234,18 +237,24 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
             width: 268,
             flexShrink: 0,
             padding: '20px',
-            borderTop: `3px solid ${STATUS_COLOR[selected.status] || '#0052CC'}`,
+            borderTop: `3px solid ${STATUS_COLOR[selected.status] || 'var(--accent)'}`,
             alignSelf: 'start',
           }}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-bold" style={{ color: '#172B4D' }}>
+            <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
               Appointment
             </div>
             <button
               type="button"
               onClick={() => setSelected(null)}
-              style={{ background: 'transparent', border: 'none', fontSize: 18, color: '#97A0AF', cursor: 'pointer' }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                fontSize: 18,
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+              }}
             >
               ×
             </button>
@@ -258,11 +267,11 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
             ['Time', String(selected.start_time || selected.time || '').slice(0, 5)],
             ['Duration', `${selected.duration || 30} min`],
           ].map(([k, v]) => (
-            <div key={k} className="flex justify-between py-2" style={{ borderBottom: '1px solid #F4F7FA' }}>
-              <span className="text-xs font-medium" style={{ color: '#5E6C84' }}>
+            <div key={k} className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--bg-page)' }}>
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
                 {k}
               </span>
-              <span className="text-xs font-semibold" style={{ color: '#172B4D' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {v}
               </span>
             </div>
@@ -276,7 +285,12 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
           {(selected.risk_score || 0) >= 60 && (
             <div
               className="mt-3 rounded p-3 text-xs"
-              style={{ background: '#FFEBE6', color: '#DE350B', border: '1px solid #FFBDAD', lineHeight: 1.6 }}
+              style={{
+                background: 'var(--urgency-critical-bg)',
+                color: 'var(--urgency-critical)',
+                border: '1px solid var(--urgency-critical-border)',
+                lineHeight: 1.6,
+              }}
             >
               <strong>Action required:</strong> High no-show risk. Call patient to confirm.
             </div>

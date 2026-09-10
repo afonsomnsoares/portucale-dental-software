@@ -30,10 +30,10 @@ const WEEKDAYS = [
 
 const TYPE_LABEL: Record<string, string> = { vacation: 'Férias', sick: 'Baixa', other: 'Outro' };
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  pending: { label: 'Pendente', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  approved: { label: 'Aprovado', bg: 'var(--green-bg)', color: 'var(--green)' },
-  rejected: { label: 'Rejeitado', bg: 'var(--red-bg)', color: 'var(--red)' },
-  cancelled: { label: 'Cancelado', bg: 'var(--surface-2)', color: 'var(--ink-2)' },
+  pending: { label: 'Pendente', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  approved: { label: 'Aprovado', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  rejected: { label: 'Rejeitado', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  cancelled: { label: 'Cancelado', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
 };
 
 // Equipa da própria clínica. A versão de plataforma
@@ -162,7 +162,7 @@ export default function ClinicTeamPage() {
                 <div key={wd.key} className="card p-3">
                   <div className="section-label mb-2">{wd.label}</div>
                   {!dayShifts.length ? (
-                    <div className="text-xs" style={{ color: 'var(--ink-3)' }}>
+                    <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       —
                     </div>
                   ) : (
@@ -171,9 +171,9 @@ export default function ClinicTeamPage() {
                         key={s.id}
                         className="flex items-center justify-between mb-2"
                         style={{
-                          background: 'var(--brand-bg)',
-                          color: 'var(--brand)',
-                          borderRadius: 6,
+                          background: 'var(--accent-bg)',
+                          color: 'var(--accent)',
+                          borderRadius: 'var(--radius-control)',
                           padding: '4px 8px',
                           fontSize: 12,
                           fontWeight: 600,
@@ -287,7 +287,11 @@ export default function ClinicTeamPage() {
               />
             </FormField>
           </div>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={createShift} disabled={saving}>

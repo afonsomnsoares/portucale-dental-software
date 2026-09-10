@@ -1,5 +1,7 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
+import { buildSharedContext, type QueuedContact, requestContacts } from './agents/coordination';
+import type { ContactRequest } from './agents/coordinationCalc';
 import { reviewFinance } from './agents/financeAgent';
 import { reviewGroup } from './agents/groupAgent';
 import { followUpColdLeads, reviewLeadSources, triageOpenLeads } from './agents/leadAgent';
@@ -10,9 +12,11 @@ import { reviewSchedule } from './agents/schedulingAgent';
 import { runAnomalyReview } from './anomaly';
 import { appendAudit, appendTimeline } from './audit';
 import type { SessionUser } from './auth';
+import { runCarePathways } from './carePathway';
 import { canAutoContact } from './commPrefs';
 import { query, queryOne } from './db';
 import { findEquipmentNeedingAttention } from './equipment';
+import { sweepStaleConversations } from './inbound';
 import { computeLifecycleTransitions, markLifecycleOutreachSent } from './lifecycle';
 import { createTask } from './patientTasks';
 import { sweepRateLimitCounters } from './rateLimitShared';
@@ -32,6 +36,21 @@ import { expireStaleOffers, findCandidates } from './waitlist';
 // route (app/api/jobs/run/route.ts, one tenant at a time, on demand) and the unattended
 // cron script (scripts/run-jobs.ts, all active tenants, on a timer) call runJob() below
 // so the logic itself only lives in one place.
+//
+// ─── Nenhuma tarefa escreve em notifications ────────────────────────────────
+// As funções queue*() abaixo já NÃO inserem mensagens: devolvem PEDIDOS, e no fim da
+// passagem o árbitro (lib/agents/coordination.ts) decide quais é que saem, com todos os
+// pedidos à vista de uma vez.
+//
+// A razão é concreta. Cada tarefa deduplicava por TIPO de mensagem — o que impede dois
+// lembretes para a mesma consulta e não impede nada entre tarefas diferentes. Um doente
+// com uma consulta amanhã, um plano por responder, um recall vencido e seis meses sem
+// vir recebia, na mesma passagem, cinco SMS da mesma clínica; dois deles
+// contradiziam-se, porque a reativação dizia que não o viam há muito a quem o lembrete
+// lembrava de vir amanhã. Cada tarefa estava certa isoladamente.
+//
+// Um árbitro que veja um pedido de cada vez não é um árbitro, é uma fila — por isso a
+// arbitragem acontece uma vez, depois de todas as tarefas de comunicação terem falado.
 
 const RISK_OUTREACH_LEAD_DAYS = 3;
 const RISK_OUTREACH_THRESHOLD = 60;
@@ -107,6 +126,13 @@ export const JOB_NAMES = [
   // Deteção de anomalias — determinística, sem IA (lib/anomaly.ts). Corre a par do
   // managementReview e escreve sob o mesmo agente, separada por tipo de conclusão.
   'anomalyReview',
+  // Encadeamento pré e pós-consulta (migração 048). Idempotente por construção — um
+  // passo é devido enquanto a prova de que está satisfeito não existir — por isso pode
+  // correr em todas as passagens sem duplicar nada.
+  'carePathways',
+  // Conversas esquecidas no canal de entrada (migração 049). Uma conversa sem resposta
+  // é pior do que uma chamada não atendida: o doente já sabe que a mensagem chegou.
+  'conversationSweep',
   // Transversal a todas as clínicas — ao contrário de todas as outras, NÃO corre no
   // 'all' de uma clínica (correria N vezes a mesma comparação). Ver runJob abaixo e a
   // chamada única em scripts/run-jobs.ts.
@@ -129,6 +155,11 @@ function computeNextRetry(attempts: number) {
 // tenantId nullable: o agente Grupo (runGroupReview abaixo) corre sobre todas as
 // clínicas e não pertence a nenhuma — a migração 038 deixou a coluna nullable
 // exatamente para este caso.
+// O que uma tarefa de comunicação devolve agora: o pedido (para o árbitro decidir) e a
+// mensagem já montada (para ser inserida só se ele autorizar). Montá-la aqui e não
+// depois mantém o texto junto da regra que o justifica.
+type PendingContact = ContactRequest & { queued: QueuedContact };
+
 async function logJobRun(tenantId: string | null, jobName: string, status: string, details: Record<string, unknown>) {
   const [row] = await query(
     `INSERT INTO job_runs (tenant_id, job_name, status, details) VALUES ($1,$2,$3,$4::jsonb) RETURNING *`,
@@ -137,7 +168,7 @@ async function logJobRun(tenantId: string | null, jobName: string, status: strin
   return row;
 }
 
-async function queueAppointmentReminders(tenantId: string) {
+async function queueAppointmentReminders(tenantId: string): Promise<{ requests: PendingContact[]; scanned: number }> {
   const rows = await query(
     `SELECT a.id as appointment_id, a.patient_id, a.appt_date, a.start_time, a.type,
             p.name as patient_name, p.phone as patient_phone, p.comm_prefs,
@@ -151,10 +182,11 @@ async function queueAppointmentReminders(tenantId: string) {
     [tenantId],
   );
 
-  let queued = 0;
+  const requests: PendingContact[] = [];
   for (const r of rows) {
-    // Respect an explicit "don't SMS me" (see lib/commPrefs.ts) — applies to every
-    // automated queue*() function below, not a one-off check here.
+    // O consentimento continua a ser verificado aqui e não só no árbitro: é mais barato
+    // não montar a mensagem do que montá-la para a deitar fora, e o árbitro verifica-o
+    // à mesma — defesa em profundidade, não duplicação por esquecimento.
     const phone = canAutoContact(r.comm_prefs, 'sms') ? toE164(r.patient_phone) : '';
     if (!phone) continue;
     const exists = await queryOne(
@@ -169,15 +201,21 @@ async function queueAppointmentReminders(tenantId: string) {
     const date = String(r.appt_date).slice(0, 10);
     const time = String(r.start_time).slice(0, 5);
     const body = `Olá ${r.patient_name}, lembramos da sua consulta em ${r.tenant_name} no dia ${date} às ${time} (${r.type}). Para remarcar, contacte-nos.`;
-    await query(
-      `INSERT INTO notifications
-         (tenant_id, patient_id, appointment_id, channel, to_addr, payload, status, next_retry_at)
-       VALUES ($1,$2,$3,'sms',$4,$5::jsonb,'queued',NOW())`,
-      [tenantId, r.patient_id, r.appointment_id, phone, JSON.stringify({ kind: 'appointment_reminder', body })],
-    );
-    queued += 1;
+    requests.push({
+      agentId: 'scheduling',
+      kind: 'appointment_reminder',
+      patientId: String(r.patient_id),
+      dedupeKey: String(r.appointment_id),
+      body,
+      queued: {
+        patientId: String(r.patient_id),
+        phone,
+        appointmentId: String(r.appointment_id),
+        payload: { kind: 'appointment_reminder', body },
+      },
+    });
   }
-  return { queued, scanned: rows.length };
+  return { requests, scanned: rows.length };
 }
 
 // Proactive side of schedule-intel: for appointments the risk engine flagged as high-risk
@@ -188,11 +226,11 @@ async function queueAppointmentReminders(tenantId: string) {
 // itself only ever fires for real once the slot is genuinely cancelled/no-shown (see
 // lib/waitlist.ts's notifyWaitlistOfFreedSlot), this is just so reception already knows
 // who to call the moment that happens.
-async function queueRiskOutreach(tenantId: string) {
+async function queueRiskOutreach(tenantId: string): Promise<{ requests: PendingContact[]; scanned: number }> {
   const { scored } = await computeUpcomingRisk(tenantId, RISK_OUTREACH_LEAD_DAYS);
   const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
   const candidates = scored.filter((s) => s.score >= RISK_OUTREACH_THRESHOLD);
-  if (!candidates.length) return { queued: 0, scanned: 0 };
+  if (!candidates.length) return { requests: [], scanned: 0 };
 
   const apptIds = candidates.map((a) => a.id);
   const [apptDetails, patients] = await Promise.all([
@@ -202,7 +240,7 @@ async function queueRiskOutreach(tenantId: string) {
   const apptById = new Map(apptDetails.map((d) => [String(d.id), d]));
   const commPrefsByPatient = new Map(patients.map((p) => [String(p.id), p.comm_prefs]));
 
-  let queued = 0;
+  const requests: PendingContact[] = [];
   for (const a of candidates) {
     const phone = canAutoContact(commPrefsByPatient.get(String(a.patient_id)), 'sms') ? toE164(a.phone) : '';
     if (!phone) continue;
@@ -247,15 +285,21 @@ async function queueRiskOutreach(tenantId: string) {
       }
     }
 
-    await query(
-      `INSERT INTO notifications
-         (tenant_id, patient_id, appointment_id, channel, to_addr, payload, status, next_retry_at)
-       VALUES ($1,$2,$3,'sms',$4,$5::jsonb,'queued',NOW())`,
-      [tenantId, a.patient_id, a.id, phone, JSON.stringify({ kind: 'risk_outreach', body, standbyCandidates })],
-    );
-    queued += 1;
+    requests.push({
+      agentId: 'scheduling',
+      kind: 'risk_outreach',
+      patientId: String(a.patient_id),
+      dedupeKey: String(a.id),
+      body,
+      queued: {
+        patientId: String(a.patient_id),
+        phone,
+        appointmentId: String(a.id),
+        payload: { kind: 'risk_outreach', body, standbyCandidates },
+      },
+    });
   }
-  return { queued, scanned: candidates.length };
+  return { requests, scanned: candidates.length };
 }
 
 // Proactive side of the Patient Lifecycle engine (lib/lifecycle.ts): finds patients who
@@ -264,25 +308,35 @@ async function queueRiskOutreach(tenantId: string) {
 // piece that turns lifecycle staging from a read-only classification into an actual
 // re-engagement loop. Booking the resulting appointment is still done by the
 // receptionist once the patient replies, same as waitlist offers.
-async function queueLifecycleOutreach(tenantId: string) {
+async function queueLifecycleOutreach(
+  tenantId: string,
+): Promise<{ requests: PendingContact[]; transitions: number; candidates: number }> {
   const { transitions, outreachCandidates } = await computeLifecycleTransitions(tenantId);
   const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
 
-  let queued = 0;
+  const requests: PendingContact[] = [];
   for (const c of outreachCandidates) {
     const phone = canAutoContact(c.commPrefs, 'sms') ? toE164(c.phone) : '';
     if (!phone) continue;
     const body = `Olá ${c.name}, já não o vemos em ${tenant?.name || ''} há algum tempo. Contacte-nos para remarcar a sua consulta.`;
-    await query(
-      `INSERT INTO notifications
-         (tenant_id, patient_id, channel, to_addr, payload, status, next_retry_at)
-       VALUES ($1,$2,'sms',$3,$4::jsonb,'queued',NOW())`,
-      [tenantId, c.patientId, phone, JSON.stringify({ kind: 'lifecycle_reactivation', body, segment: c.segment })],
-    );
-    await markLifecycleOutreachSent(tenantId, c.patientId);
-    queued += 1;
+    requests.push({
+      agentId: 'patient',
+      kind: 'lifecycle_reactivation',
+      patientId: String(c.patientId),
+      dedupeKey: `lifecycle:${c.patientId}`,
+      body,
+      queued: {
+        patientId: String(c.patientId),
+        phone,
+        payload: { kind: 'lifecycle_reactivation', body, segment: c.segment },
+      },
+    });
   }
-  return { transitions: transitions.length, candidates: outreachCandidates.length, queued };
+  // markLifecycleOutreachSent deixou de ser chamado aqui: marcar como enviado antes de
+  // o árbitro decidir punia o doente pelo contacto que NÃO recebeu — o cooldown de 30
+  // dias arrancava na tentativa em vez de no envio. Passa a ser feito em
+  // dispatchContacts, só para os que saíram mesmo.
+  return { requests, transitions: transitions.length, candidates: outreachCandidates.length };
 }
 
 // Turns an overdue `recalls` row into an actual SMS instead of just sitting in the
@@ -297,7 +351,7 @@ async function queueLifecycleOutreach(tenantId: string) {
 // candidate list on the very next run — satisfies "parar comunicação quando o paciente
 // marca" without any extra bookkeeping. `last_notified_at` + the cooldown keeps it from
 // re-sending every time the job runs for those who haven't answered yet.
-async function queueRecallOutreach(tenantId: string) {
+async function queueRecallOutreach(tenantId: string): Promise<{ requests: PendingContact[]; scanned: number }> {
   const rows = await query(
     `SELECT r.id, r.patient_id, r.recall_type, r.next_due, p.name AS patient_name, p.phone, p.comm_prefs
      FROM recalls r
@@ -312,21 +366,27 @@ async function queueRecallOutreach(tenantId: string) {
   );
   const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
 
-  let queued = 0;
+  const requests: PendingContact[] = [];
   for (const r of rows) {
     const phone = canAutoContact(r.comm_prefs, 'sms') ? toE164(r.phone) : '';
     if (!phone) continue;
     const body = `Olá ${r.patient_name}, está na altura de marcar a sua consulta de ${r.recall_type} em ${tenant?.name || ''}. Contacte-nos para agendar.`;
-    await query(
-      `INSERT INTO notifications
-         (tenant_id, patient_id, channel, to_addr, payload, status, next_retry_at)
-       VALUES ($1,$2,'sms',$3,$4::jsonb,'queued',NOW())`,
-      [tenantId, r.patient_id, phone, JSON.stringify({ kind: 'recall_reminder', body, recallId: r.id })],
-    );
-    await query(`UPDATE recalls SET last_notified_at=NOW() WHERE id=$1`, [r.id]);
-    queued += 1;
+    requests.push({
+      agentId: 'patient',
+      kind: 'recall_reminder',
+      patientId: String(r.patient_id),
+      dedupeKey: `recall:${r.id}`,
+      body,
+      // O id do recall viaja no payload para dispatchContacts poder marcar
+      // last_notified_at só nos que saíram, pela mesma razão da reativação.
+      queued: {
+        patientId: String(r.patient_id),
+        phone,
+        payload: { kind: 'recall_reminder', body, recallId: r.id },
+      },
+    });
   }
-  return { queued, scanned: rows.length };
+  return { requests, scanned: rows.length };
 }
 
 // Item 6 (Tratamentos e Conversão) / item 5's own example: "consulta há 14 dias + plano
@@ -337,7 +397,7 @@ async function queueRecallOutreach(tenantId: string) {
 // bookkeeping needed. Cooldown is checked against `notifications` directly (by
 // payload->>'planId') instead of a new last_notified_at column, since nothing else needs
 // one on treatment_plans.
-async function queuePlanFollowup(tenantId: string) {
+async function queuePlanFollowup(tenantId: string): Promise<{ requests: PendingContact[]; scanned: number }> {
   const rows = await query(
     `SELECT tp.id, tp.patient_id, tp.title, tp.total_fee, p.name AS patient_name, p.phone, p.comm_prefs
      FROM treatment_plans tp
@@ -353,25 +413,25 @@ async function queuePlanFollowup(tenantId: string) {
   );
   const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
 
-  let queued = 0;
+  const requests: PendingContact[] = [];
   for (const r of rows) {
     const phone = canAutoContact(r.comm_prefs, 'sms') ? toE164(r.phone) : '';
     if (!phone) continue;
     const body = `Olá ${r.patient_name}, ainda não recebemos a sua decisão sobre o plano de tratamento "${r.title}" em ${tenant?.name || ''}. Contacte-nos com qualquer dúvida ou para avançar.`;
-    await query(
-      `INSERT INTO notifications
-         (tenant_id, patient_id, channel, to_addr, payload, status, next_retry_at)
-       VALUES ($1,$2,'sms',$3,$4::jsonb,'queued',NOW())`,
-      [
-        tenantId,
-        r.patient_id,
+    requests.push({
+      agentId: 'patient',
+      kind: 'plan_followup',
+      patientId: String(r.patient_id),
+      dedupeKey: `plan:${r.id}`,
+      body,
+      queued: {
+        patientId: String(r.patient_id),
         phone,
-        JSON.stringify({ kind: 'plan_followup', body, planId: r.id, planValue: Number(r.total_fee || 0) }),
-      ],
-    );
-    queued += 1;
+        payload: { kind: 'plan_followup', body, planId: r.id, planValue: Number(r.total_fee || 0) },
+      },
+    });
   }
-  return { queued, scanned: rows.length };
+  return { requests, scanned: rows.length };
 }
 
 // Item 12 — "escalamento para responsáveis": a high/critical incident nobody has claimed
@@ -677,6 +737,40 @@ async function equipmentMaintenanceReminders(tenantId: string) {
   };
 }
 
+// ─── O árbitro ──────────────────────────────────────────────────────────────
+// Recebe todos os pedidos que as tarefas de comunicação produziram nesta passagem e
+// entrega-os de uma vez a lib/agents/coordination.ts. É aqui que a prioridade passa a
+// significar alguma coisa: com todos os pedidos à vista, o lembrete da consulta de
+// amanhã ganha ao SMS de reativação, e o de reativação é DIFERIDO — volta a pedir
+// amanhã, porque a razão que ele tinha não desapareceu.
+//
+// Os efeitos colaterais que antes aconteciam ao montar a mensagem acontecem agora só
+// para as que saíram mesmo: marcar a reativação como enviada e carimbar
+// recalls.last_notified_at. Fazê-lo antes da decisão punia o doente pelo contacto que
+// não recebeu — o cooldown arrancava na tentativa em vez de no envio, e um doente que
+// perdesse a vez três passagens seguidas ficava trinta dias sem ser contactado por
+// mensagens que nunca lhe chegaram.
+async function dispatchContacts(tenantId: string, requests: PendingContact[]) {
+  if (!requests.length) return { granted: 0, deferred: 0, rejected: 0, byAgent: {}, yields: [] };
+
+  const contexts = await buildSharedContext(tenantId);
+  const { grantedContacts, ...summary } = await requestContacts(tenantId, requests, contexts);
+
+  // A lista dos que saíram vem do árbitro, e não de uma releitura do livro de registo
+  // por janela de tempo: duas passagens do cron sobrepostas para a mesma clínica veriam
+  // os contactos uma da outra e marcariam cooldowns sobre mensagens que não pediram.
+  for (const g of grantedContacts) {
+    if (g.kind === 'lifecycle_reactivation') {
+      await markLifecycleOutreachSent(tenantId, g.patientId);
+    }
+    if (g.kind === 'recall_reminder' && g.payload.recallId) {
+      await query(`UPDATE recalls SET last_notified_at=NOW() WHERE id=$1`, [g.payload.recallId]);
+    }
+  }
+
+  return summary;
+}
+
 // Runs one job (or 'all' of them) for a single tenant and records it — used by both the
 // admin-triggered HTTP route and the unattended cron script. `actor` identifies who/what
 // triggered the run for the audit log; defaults to SYSTEM_ACTOR for unattended callers.
@@ -687,24 +781,44 @@ export async function runJob(
 ) {
   const details: Record<string, unknown> = {};
   try {
+    // ─── Tarefas de comunicação: pedem, não enviam ────────────────────────
+    // Todas correm primeiro e juntam os pedidos num sítio só; a arbitragem vem a
+    // seguir, com tudo à vista. Correr uma tarefa isolada (job !== 'all') continua a
+    // funcionar — arbitra-se só com os pedidos dela, que é o comportamento certo:
+    // o orçamento diário lido da base já contém o que as outras enviaram.
+    const contactRequests: PendingContact[] = [];
+
     if (job === 'all' || job === 'reminders') {
-      details.appointmentReminders = await queueAppointmentReminders(tenantId);
+      const { requests, scanned } = await queueAppointmentReminders(tenantId);
+      contactRequests.push(...requests);
+      details.appointmentReminders = { requested: requests.length, scanned };
     }
     if (job === 'all' || job === 'risk') {
       const { scored, highRisk } = await computeUpcomingRisk(tenantId);
       details.risk = { scored: scored.length, highRisk: highRisk.length };
     }
     if (job === 'all' || job === 'riskOutreach') {
-      details.riskOutreach = await queueRiskOutreach(tenantId);
+      const { requests, scanned } = await queueRiskOutreach(tenantId);
+      contactRequests.push(...requests);
+      details.riskOutreach = { requested: requests.length, scanned };
     }
     if (job === 'all' || job === 'lifecycleOutreach') {
-      details.lifecycleOutreach = await queueLifecycleOutreach(tenantId);
+      const { requests, transitions, candidates } = await queueLifecycleOutreach(tenantId);
+      contactRequests.push(...requests);
+      details.lifecycleOutreach = { requested: requests.length, transitions, candidates };
     }
     if (job === 'all' || job === 'recallOutreach') {
-      details.recallOutreach = await queueRecallOutreach(tenantId);
+      const { requests, scanned } = await queueRecallOutreach(tenantId);
+      contactRequests.push(...requests);
+      details.recallOutreach = { requested: requests.length, scanned };
     }
     if (job === 'all' || job === 'planFollowup') {
-      details.planFollowup = await queuePlanFollowup(tenantId);
+      const { requests, scanned } = await queuePlanFollowup(tenantId);
+      contactRequests.push(...requests);
+      details.planFollowup = { requested: requests.length, scanned };
+    }
+    if (contactRequests.length) {
+      details.coordination = await dispatchContacts(tenantId, contactRequests);
     }
     if (job === 'all' || job === 'escalateIncidents') {
       details.escalateIncidents = await escalateIncidents(tenantId);
@@ -782,6 +896,16 @@ export async function runJob(
     }
     if (job === 'all' || job === 'anomalyReview') {
       details.anomalyReview = await runAnomalyReview(tenantId);
+    }
+    if (job === 'all' || job === 'carePathways') {
+      // `steps` fica de fora do que se regista em job_runs: é a lista inteira dos
+      // passos devidos, que numa clínica grande são centenas de linhas por passagem, e
+      // job_runs é um registo de execuções e não um relatório.
+      const { steps: _steps, ...pathways } = await runCarePathways(tenantId);
+      details.carePathways = pathways;
+    }
+    if (job === 'all' || job === 'conversationSweep') {
+      details.conversationSweep = await sweepStaleConversations(tenantId);
     }
     // 'groupReview' não aparece aqui de propósito: é transversal às clínicas, não cabe
     // num runJob(tenantId), e tem o seu próprio ponto de entrada (runGroupReview).

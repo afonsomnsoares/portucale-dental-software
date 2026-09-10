@@ -26,9 +26,9 @@ interface NewTreatmentForm {
 }
 
 const PHASES = [
-  { n: 1, label: 'Emergency', color: '#DE350B', bg: '#FFEBE6' },
-  { n: 2, label: 'Restorative', color: '#0052CC', bg: '#DEEBFF' },
-  { n: 3, label: 'Aesthetic', color: '#5243AA', bg: '#EAE6FF' },
+  { n: 1, label: 'Emergency', color: 'var(--urgency-critical)', bg: 'var(--urgency-critical-bg)' },
+  { n: 2, label: 'Restorative', color: 'var(--accent)', bg: 'var(--accent-bg)' },
+  { n: 3, label: 'Aesthetic', color: 'var(--cat-purple)', bg: 'var(--cat-purple-bg)' },
 ];
 
 export default function DentistTreatmentsPage() {
@@ -113,13 +113,13 @@ export default function DentistTreatmentsPage() {
                 padding: '7px 14px',
                 fontSize: 12,
                 fontWeight: 600,
-                borderRadius: 6,
+                borderRadius: 'var(--radius-control)',
                 cursor: 'pointer',
                 border: 'none',
                 fontFamily: 'inherit',
-                background: viewMode === m ? '#0052CC' : 'white',
-                color: viewMode === m ? 'white' : '#5E6C84',
-                boxShadow: viewMode !== m ? '0 1px 3px rgba(23,43,77,0.10),0 0 0 1px rgba(23,43,77,0.06)' : 'none',
+                background: viewMode === m ? 'var(--accent)' : 'white',
+                color: viewMode === m ? 'white' : 'var(--text-secondary)',
+                boxShadow: viewMode !== m ? 'var(--elev-1)' : 'var(--elev-0)',
               }}
             >
               {m === 'roadmap' ? 'Phase View' : 'Table View'}
@@ -132,11 +132,23 @@ export default function DentistTreatmentsPage() {
         <MetricCard
           label="TOTAL VALUE"
           value={`$${visible.reduce((a, t) => a + Number(t.fee), 0).toLocaleString()}`}
-          color="#0052CC"
+          color="var(--accent)"
         />
-        <MetricCard label="PROPOSED" value={visible.filter((t) => t.status === 'proposed').length} color="#FF8B00" />
-        <MetricCard label="IN PROGRESS" value={visible.filter((t) => t.status === 'accepted').length} color="#00A3BF" />
-        <MetricCard label="COMPLETED" value={visible.filter((t) => t.status === 'completed').length} color="#00875A" />
+        <MetricCard
+          label="PROPOSED"
+          value={visible.filter((t) => t.status === 'proposed').length}
+          color="var(--urgency-soon)"
+        />
+        <MetricCard
+          label="IN PROGRESS"
+          value={visible.filter((t) => t.status === 'accepted').length}
+          color="var(--cat-teal)"
+        />
+        <MetricCard
+          label="COMPLETED"
+          value={visible.filter((t) => t.status === 'completed').length}
+          color="var(--urgency-ok)"
+        />
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
@@ -164,11 +176,10 @@ export default function DentistTreatmentsPage() {
                   style={{
                     padding: '14px 18px',
                     marginBottom: 0,
-                    borderRadius: '8px 8px 0 0',
+                    borderRadius: 'var(--radius-card) var(--radius-card) 0 0',
                     borderTop: `3px solid ${ph.color}`,
                     borderBottom: 'none',
-                    boxShadow: 'none',
-                    border: `1px solid #DFE1E6`,
+                    border: `1px solid var(--border-subtle)`,
                     borderTopWidth: 3,
                     borderTopColor: ph.color,
                   }}
@@ -190,7 +201,7 @@ export default function DentistTreatmentsPage() {
                         style={{
                           fontSize: 15,
                           fontWeight: 700,
-                          color: '#172B4D',
+                          color: 'var(--text-primary)',
                           fontFamily: '"Plus Jakarta Sans",sans-serif',
                         }}
                       >
@@ -198,7 +209,7 @@ export default function DentistTreatmentsPage() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: '#97A0AF' }}>{items.length} items</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{items.length} items</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: ph.color }}>
                         ${items.reduce((a, t) => a + Number(t.fee), 0).toLocaleString()}
                       </div>
@@ -207,10 +218,10 @@ export default function DentistTreatmentsPage() {
                 </div>
                 <div
                   style={{
-                    background: '#F4F7FA',
-                    border: '1px solid #DFE1E6',
+                    background: 'var(--bg-page)',
+                    border: '1px solid var(--border-subtle)',
                     borderTop: 'none',
-                    borderRadius: '0 0 8px 8px',
+                    borderRadius: '0 0 var(--radius-card) var(--radius-card)',
                     padding: 8,
                     minHeight: 100,
                   }}
@@ -219,14 +230,14 @@ export default function DentistTreatmentsPage() {
                     <div
                       key={t.id}
                       className="card mb-2"
-                      style={{ padding: '12px 14px', boxShadow: 'none', border: '1px solid #DFE1E6' }}
+                      style={{ padding: '12px 14px', border: '1px solid var(--border-subtle)' }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                         <span
                           style={{
                             background: ph.bg,
                             color: ph.color,
-                            borderRadius: 4,
+                            borderRadius: 'var(--radius-control)',
                             padding: '2px 8px',
                             fontSize: 11,
                             fontWeight: 700,
@@ -236,25 +247,25 @@ export default function DentistTreatmentsPage() {
                         </span>
                         <Badge s={t.status} />
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D', marginBottom: 3 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
                         {t.description}
                       </div>
-                      <div style={{ fontSize: 11, color: '#97A0AF', marginBottom: 8 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
                         {t.treatment_code || '—'} ·{' '}
-                        <strong style={{ color: '#172B4D' }}>${Number(t.fee).toLocaleString()}</strong>
-                        {t.patient_name && <span style={{ color: '#00A3BF' }}> · {t.patient_name}</span>}
+                        <strong style={{ color: 'var(--text-primary)' }}>${Number(t.fee).toLocaleString()}</strong>
+                        {t.patient_name && <span style={{ color: 'var(--cat-teal)' }}> · {t.patient_name}</span>}
                       </div>
                       <select
                         onChange={(e) => update(t.id, { status: e.target.value })}
                         defaultValue={t.status}
                         style={{
                           width: '100%',
-                          border: '1px solid #DFE1E6',
-                          borderRadius: 5,
+                          border: '1px solid var(--border-subtle)',
+                          borderRadius: 'var(--radius-control)',
                           padding: '5px 8px',
                           fontSize: 11,
                           fontFamily: 'inherit',
-                          color: '#172B4D',
+                          color: 'var(--text-primary)',
                           background: 'white',
                           cursor: 'pointer',
                         }}
@@ -268,12 +279,12 @@ export default function DentistTreatmentsPage() {
                   {!items.length && (
                     <div
                       style={{
-                        border: '2px dashed #DFE1E6',
-                        borderRadius: 6,
+                        border: '2px dashed var(--border-subtle)',
+                        borderRadius: 'var(--radius-control)',
                         padding: '24px 0',
                         textAlign: 'center',
                         fontSize: 12,
-                        color: '#C1C7D0',
+                        color: 'var(--text-muted)',
                         margin: 4,
                       }}
                     >

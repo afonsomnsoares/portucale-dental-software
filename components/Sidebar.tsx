@@ -20,7 +20,7 @@ function ToothIcon({ size = 18, color = 'currentColor' }) {
 }
 
 function Icon({ name, active }: { name: string; active: boolean }) {
-  const c = active ? '#0052CC' : '#97A0AF';
+  const c = active ? 'var(--accent)' : 'var(--text-muted)';
   const s = 18;
   const common = { size: s, color: c };
   if (name === 'Visão Geral' || name === 'Painel') {
@@ -282,18 +282,18 @@ function Icon({ name, active }: { name: string; active: boolean }) {
 }
 
 const ROLE_ICONS = {
-  super_admin: { icon: <ToothIcon size={18} color="#5243AA" />, color: '#5243AA' },
-  admin: { icon: <ToothIcon size={18} color="#5243AA" />, color: '#5243AA' },
+  super_admin: { icon: <ToothIcon size={18} color="var(--cat-purple)" />, color: 'var(--cat-purple)' },
+  admin: { icon: <ToothIcon size={18} color="var(--cat-purple)" />, color: 'var(--cat-purple)' },
   receptionist: {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M4 21V7l8-4 8 4v14" stroke="#00875A" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M9 21v-7h6v7" stroke="#00875A" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M4 21V7l8-4 8 4v14" stroke="var(--urgency-ok)" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 21v-7h6v7" stroke="var(--urgency-ok)" strokeWidth="1.8" strokeLinejoin="round" />
       </svg>
     ),
-    color: '#00875A',
+    color: 'var(--urgency-ok)',
   },
-  dentist: { icon: <ToothIcon size={18} color="#0052CC" />, color: '#0052CC' },
+  dentist: { icon: <ToothIcon size={18} color="var(--accent)" />, color: 'var(--accent)' },
 };
 
 export default function Sidebar() {
@@ -315,6 +315,7 @@ export default function Sidebar() {
   const nav = ((navRole && NAV[navRole]) || []).filter(
     (item) => !item.requires || !permissions || permissions.includes(item.requires),
   );
+  const grouped = nav.some((item) => item.group);
   const meta: { label?: string; sub?: string } = (role && ROLE_META[role]) || {};
   // Segue navRole: dentro de uma clínica a raiz é a Visão Geral do admin, para o logótipo
   // e para o realce da entrada de raiz não apontarem para fora da clínica.
@@ -328,7 +329,7 @@ export default function Sidebar() {
       style={{
         width: 240,
         background: 'white',
-        borderRight: '1px solid #EBECF0',
+        borderRight: '1px solid var(--bg-sunken)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -339,9 +340,11 @@ export default function Sidebar() {
       }}
     >
       {/* ── Brand ── */}
-      <div className="px-5 py-4" style={{ borderBottom: '1px solid #EBECF0' }}>
+      <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+          <div
+            style={{ width: 32, height: 32, borderRadius: 'var(--radius-control)', overflow: 'hidden', flexShrink: 0 }}
+          >
             <AppLogo size={32} />
           </div>
           <div>
@@ -349,7 +352,7 @@ export default function Sidebar() {
               style={{
                 fontSize: 16,
                 fontWeight: 800,
-                color: '#0052CC',
+                color: 'var(--accent)',
                 letterSpacing: '-0.5px',
                 fontFamily: '"Plus Jakarta Sans",sans-serif',
               }}
@@ -368,8 +371,8 @@ export default function Sidebar() {
             alignItems: 'center',
             gap: 8,
             padding: '8px 10px',
-            background: '#F4F7FA',
-            borderRadius: 8,
+            background: 'var(--bg-page)',
+            borderRadius: 'var(--radius-control)',
           }}
         >
           <span
@@ -378,10 +381,10 @@ export default function Sidebar() {
             {roleIcon.icon}
           </span>
           <div className="min-w-0">
-            <div className="text-xs font-semibold truncate" style={{ color: '#172B4D' }}>
+            <div className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
               {meta.label}
             </div>
-            <div className="text-xs truncate" style={{ color: '#97A0AF' }}>
+            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
               {tenantLabel || meta.sub}
             </div>
           </div>
@@ -390,8 +393,10 @@ export default function Sidebar() {
 
       {/* ── Navigation ── */}
       <nav className="flex-1 overflow-y-auto px-3 pb-2 pt-1">
-        <div className="section-label px-2 mb-2 mt-2">NAVEGAÇÃO</div>
-        {nav.map((item) => {
+        {/* Sem grupos (clínica) mantém-se o cabeçalho único de sempre; com grupos
+            (plataforma) cada grupo traz o seu, e este seria só ruído por cima deles. */}
+        {!grouped && <div className="section-label px-2 mb-2 mt-2">NAVEGAÇÃO</div>}
+        {nav.map((item, i) => {
           // A entrada de raiz de cada role (a "Visão Geral"/"Painel", cujo href é o
           // ROLE_HOME) é prefixo de todas as outras dessa árvore, por isso só acende em
           // correspondência exata; as restantes acendem também nas suas subpáginas
@@ -399,39 +404,51 @@ export default function Sidebar() {
           // no startsWith evita que /dashboard/admin/team apanhe /dashboard/admin/teams.
           const isRoleHome = item.href === roleHome;
           const active = pathname === item.href || (!isRoleHome && pathname.startsWith(`${item.href}/`));
+          // Cabeçalho sempre que o grupo muda — a lista já vem ordenada por grupo.
+          const header = item.group && item.group !== nav[i - 1]?.group ? item.group : null;
           return (
-            <Link key={item.href} href={item.href} className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}>
-              <span
-                style={{
-                  width: 18,
-                  height: 18,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Icon name={item.label} active={active} />
-              </span>
-              <span>{item.label}</span>
-              {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />}
-            </Link>
+            // 'Permissões' aparece em dois grupos com o MESMO href (pedido assim), por
+            // isso a chave é grupo+href: só o href colidia e o React descartava uma delas.
+            <div key={`${item.group || ''}:${item.href}`}>
+              {header && <div className="section-label px-2 mb-1.5 mt-4">{header}</div>}
+              <Link href={item.href} className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}>
+                {/* Com cabeçalho de grupo, o ícone por entrada deixa de informar: são 41
+                    entradas e nenhuma tem ícone próprio no Icon() acima, pelo que todas
+                    cairiam no mesmo "+" genérico. O grupo carrega o significado. */}
+                {!item.group && (
+                  <span
+                    style={{
+                      width: 18,
+                      height: 18,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon name={item.label} active={active} />
+                  </span>
+                )}
+                <span>{item.label}</span>
+                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
+              </Link>
+            </div>
           );
         })}
       </nav>
 
       {/* ── Divider ── */}
-      <div style={{ borderTop: '1px solid #EBECF0' }} />
+      <div style={{ borderTop: '1px solid var(--bg-sunken)' }} />
 
       {/* ── User ── */}
       <div className="p-4">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <Avatar name={user?.name || ''} size={34} color="#0052CC" />
+          <Avatar name={user?.name || ''} size={34} color="var(--accent)" />
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold truncate" style={{ color: '#172B4D' }}>
+            <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
               {user?.name}
             </div>
-            <div className="text-xs truncate" style={{ color: '#97A0AF' }}>
+            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
               {sidebarClinic}
             </div>
           </div>
@@ -445,25 +462,25 @@ export default function Sidebar() {
           style={{
             width: '100%',
             background: 'transparent',
-            border: '1.5px solid #DFE1E6',
-            borderRadius: 6,
+            border: '1.5px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-control)',
             padding: '6px 12px',
             fontSize: 12,
             fontWeight: 500,
-            color: '#DE350B',
+            color: 'var(--urgency-critical)',
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.15s',
           }}
           onMouseEnter={(e) => {
             const t = e.target as HTMLElement;
-            t.style.background = '#FFEBE6';
-            t.style.borderColor = '#FFBDAD';
+            t.style.background = 'var(--urgency-critical-bg)';
+            t.style.borderColor = 'var(--urgency-critical-border)';
           }}
           onMouseLeave={(e) => {
             const t = e.target as HTMLElement;
             t.style.background = 'transparent';
-            t.style.borderColor = '#DFE1E6';
+            t.style.borderColor = 'var(--border-subtle)';
           }}
         >
           Terminar sessão

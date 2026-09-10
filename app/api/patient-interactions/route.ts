@@ -7,7 +7,10 @@ import { hasPermission } from '@/lib/permissions';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asEnum, sanitizeString } from '@/lib/validate';
 
-const CHANNELS = ['phone', 'email', 'whatsapp', 'sms', 'in_person', 'other'] as const;
+// Registo MANUAL do que aconteceu no mundo real, escrito por uma pessoa — não é o canal
+// do agente. Por isso 'email' fica: um doente pode escrever à clínica quer o software o
+// leia quer não. 'whatsapp' sai porque essa via deixa de existir de todo (migração 052).
+const CHANNELS = ['phone', 'email', 'sms', 'in_person', 'other'] as const;
 const DIRECTIONS = ['inbound', 'outbound'] as const;
 
 export async function GET(request: NextRequest) {
@@ -68,7 +71,6 @@ function channelLabel(channel: string) {
   const LABELS: Record<string, string> = {
     phone: 'Chamada',
     email: 'Email',
-    whatsapp: 'WhatsApp',
     sms: 'SMS',
     in_person: 'Presencial',
     other: 'Outro',

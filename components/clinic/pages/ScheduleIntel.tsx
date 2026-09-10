@@ -30,10 +30,10 @@ const WAITLIST_STATUS_LABEL: Record<string, string> = {
 };
 
 function heatColor(rate: number) {
-  if (rate >= 0.4) return { bg: 'var(--red-bg)', color: 'var(--red)' };
-  if (rate >= 0.2) return { bg: 'var(--amber-bg)', color: 'var(--amber)' };
-  if (rate > 0) return { bg: 'var(--green-bg)', color: 'var(--green)' };
-  return { bg: 'var(--surface-2)', color: 'var(--ink-3)' };
+  if (rate >= 0.4) return { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' };
+  if (rate >= 0.2) return { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' };
+  if (rate > 0) return { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' };
+  return { bg: 'var(--bg-sunken)', color: 'var(--text-muted)' };
 }
 
 // Agenda inteligente da própria clínica. A versão de plataforma
@@ -97,7 +97,12 @@ export default function ClinicScheduleIntelPage() {
       {err && (
         <div
           className="card p-4 mb-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -137,12 +142,12 @@ export default function ClinicScheduleIntelPage() {
                   </thead>
                   <tbody>
                     {risk.appointments.map((a) => (
-                      <tr key={a.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                      <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
                         <td className="data-td" style={{ fontWeight: 600 }}>
                           {a.patient_name}
                         </td>
                         <td className="data-td">{a.phone ? formatPhonePT(a.phone) : '—'}</td>
-                        <td className="data-td" style={{ color: 'var(--ink-2)' }}>
+                        <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                           {String(a.appt_date).slice(0, 10)} · {String(a.start_time).slice(0, 5)} · {a.type}
                         </td>
                         <td className="data-td">
@@ -160,7 +165,7 @@ export default function ClinicScheduleIntelPage() {
               <Empty message="Ainda sem histórico suficiente (faltas/cancelamentos) para calcular o heatmap." />
             ) : (
               <div className="card p-5">
-                <p className="text-sm mb-4" style={{ color: 'var(--ink-2)' }}>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                   Taxa de falta/cancelamento por dia da semana e período, com base nos últimos {heatmap.historyMonths}{' '}
                   meses ({heatmap.sampleSize} registos).
                 </p>
@@ -192,7 +197,7 @@ export default function ClinicScheduleIntelPage() {
                                   style={{
                                     background: cfg.bg,
                                     color: cfg.color,
-                                    borderRadius: 6,
+                                    borderRadius: 'var(--radius-control)',
                                     padding: '8px 4px',
                                     fontWeight: 700,
                                     fontSize: 13,
@@ -201,7 +206,7 @@ export default function ClinicScheduleIntelPage() {
                                   {cell?.total ? `${Math.round(rate * 100)}%` : '—'}
                                 </div>
                                 {cell?.total ? (
-                                  <div className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>
+                                  <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                                     {cell.total} marc.
                                   </div>
                                 ) : null}
@@ -235,12 +240,12 @@ export default function ClinicScheduleIntelPage() {
                       </thead>
                       <tbody>
                         {(waitlist?.pendingOffers || []).map((o) => (
-                          <tr key={o.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                          <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
                             <td className="data-td" style={{ fontWeight: 600 }}>
                               {o.patient_name || '—'}
                             </td>
                             <td className="data-td">{o.treatment_type}</td>
-                            <td className="data-td" style={{ color: 'var(--ink-2)' }}>
+                            <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                               {String(o.offered_date).slice(0, 10)} · {String(o.offered_start_time).slice(0, 5)}
                             </td>
                           </tr>
@@ -266,7 +271,7 @@ export default function ClinicScheduleIntelPage() {
                     </thead>
                     <tbody>
                       {waitlist.entries.map((w) => (
-                        <tr key={w.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                        <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
                           <td className="data-td" style={{ fontWeight: 600 }}>
                             {w.patient_name}
                           </td>
@@ -274,8 +279,8 @@ export default function ClinicScheduleIntelPage() {
                           <td className="data-td">
                             <Badge
                               label={WAITLIST_STATUS_LABEL[w.status] || w.status}
-                              bg="var(--surface-2)"
-                              color="var(--ink-2)"
+                              bg="var(--bg-sunken)"
+                              color="var(--text-secondary)"
                             />
                           </td>
                         </tr>

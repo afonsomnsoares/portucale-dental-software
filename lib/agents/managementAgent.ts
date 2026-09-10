@@ -41,6 +41,7 @@ export async function reviewManagement(tenantId: string) {
   const m = summary.metrics;
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'managementAgent',
+    tenantId,
     system: SYSTEM_PROMPT,
     payload: {
       periodo: summary.range,

@@ -78,7 +78,7 @@ export default function SchemaFieldFormModal({
           onChange={(e) => onChange({ ...form, required: e.target.checked })}
           style={{ width: 16, height: 16 }}
         />
-        <label htmlFor="req" style={{ fontSize: 13, color: '#172B4D', cursor: 'pointer' }}>
+        <label htmlFor="req" style={{ fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
           Required
         </label>
       </div>

@@ -78,28 +78,28 @@ export default function FinanceDashboard() {
               label="TOTAL REVENUE"
               value={fmt(data.totals?.total_paid)}
               sub={`${data.totals?.total_invoices || 0} invoices`}
-              color="#00875A"
+              color="var(--urgency-ok)"
               icon={<TrendingUp />}
             />
             <MetricCard
               label="OUTSTANDING"
               value={fmt(data.totals?.total_outstanding)}
               sub={`${fmt(data.patientBalance)} patient balances`}
-              color="#DE350B"
+              color="var(--urgency-critical)"
               icon={<AlertTriangle />}
             />
             <MetricCard
               label="TOTAL BILLED"
               value={fmt(data.totals?.total_amount)}
               sub="Gross invoice value"
-              color="#0052CC"
+              color="var(--accent)"
               icon={<DollarSign />}
             />
             <MetricCard
               label="PATIENT BALANCES"
               value={fmt(data.patientBalance)}
               sub="Sum of all patient balances"
-              color="#FF8B00"
+              color="var(--urgency-soon)"
               icon={<CreditCard />}
             />
           </div>
@@ -108,7 +108,7 @@ export default function FinanceDashboard() {
             <div className="card p-5">
               <div className="section-label mb-3">Invoices by Status</div>
               {!outstandingByStatus.length ? (
-                <div style={{ color: '#97A0AF', fontSize: 13 }}>No data</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No data</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {outstandingByStatus.map((s) => (
@@ -119,13 +119,13 @@ export default function FinanceDashboard() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: '#F8F9FC',
-                        borderRadius: 8,
+                        background: 'var(--bg-page)',
+                        borderRadius: 'var(--radius-control)',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Badge s={s.status} />
-                        <span style={{ fontSize: 12, color: '#5E6C84' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {s.count} invoice{s.count !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -134,7 +134,7 @@ export default function FinanceDashboard() {
                           fontFamily: '"JetBrains Mono",monospace',
                           fontSize: 13,
                           fontWeight: 700,
-                          color: '#172B4D',
+                          color: 'var(--text-primary)',
                         }}
                       >
                         {fmt(s.amount)}
@@ -148,7 +148,7 @@ export default function FinanceDashboard() {
             <div className="card p-5">
               <div className="section-label mb-3">Revenue by Dentist</div>
               {!data.byDentist?.length ? (
-                <div style={{ color: '#97A0AF', fontSize: 13 }}>No data</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No data</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {data.byDentist.map((d) => (
@@ -159,13 +159,15 @@ export default function FinanceDashboard() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: '#F8F9FC',
-                        borderRadius: 8,
+                        background: 'var(--bg-page)',
+                        borderRadius: 'var(--radius-control)',
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{d.dentist_name}</div>
-                        <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {d.dentist_name}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {d.invoice_count} invoice{d.invoice_count !== 1 ? 's' : ''}
                         </div>
                       </div>
@@ -175,12 +177,14 @@ export default function FinanceDashboard() {
                             fontFamily: '"JetBrains Mono",monospace',
                             fontSize: 13,
                             fontWeight: 700,
-                            color: '#172B4D',
+                            color: 'var(--text-primary)',
                           }}
                         >
                           {fmt(d.total_amount)}
                         </div>
-                        <div style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: '#00875A' }}>
+                        <div
+                          style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: 'var(--urgency-ok)' }}
+                        >
                           {fmt(d.total_paid)} collected
                         </div>
                       </div>
@@ -194,7 +198,7 @@ export default function FinanceDashboard() {
           <div className="card mt-4 p-5">
             <div className="section-label mb-3">Daily Revenue</div>
             {!data.dailyRevenue?.length ? (
-              <div style={{ color: '#97A0AF', fontSize: 13 }}>No revenue data for this period</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No revenue data for this period</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <div style={{ display: 'flex', gap: 4, minWidth: data.dailyRevenue.length * 40 }}>
@@ -217,8 +221,8 @@ export default function FinanceDashboard() {
                           style={{
                             width: 28,
                             height: Math.max(4, height),
-                            background: '#0052CC',
-                            borderRadius: '4px 4px 0 0',
+                            background: 'var(--accent)',
+                            borderRadius: 'var(--radius-control) var(--radius-control) 0 0',
                             opacity: 0.7 + (height / 120) * 0.3,
                             transition: 'height 0.2s',
                           }}
@@ -227,7 +231,7 @@ export default function FinanceDashboard() {
                         <div
                           style={{
                             fontSize: 9,
-                            color: '#97A0AF',
+                            color: 'var(--text-muted)',
                             fontFamily: '"JetBrains Mono",monospace',
                             transform: 'rotate(-45deg)',
                             whiteSpace: 'nowrap',
@@ -246,11 +250,11 @@ export default function FinanceDashboard() {
           <div className="card mt-4 p-5">
             <div className="section-label mb-3">Recent Payments</div>
             {!data.recentPayments?.length ? (
-              <div style={{ color: '#97A0AF', fontSize: 13 }}>No payments yet</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No payments yet</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #EBECF0' }}>
+                  <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                     <th className="data-th">Invoice</th>
                     <th className="data-th">Patient</th>
                     <th className="data-th">Date</th>
@@ -263,11 +267,11 @@ export default function FinanceDashboard() {
                 </thead>
                 <tbody>
                   {data.recentPayments.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #EBECF0' }}>
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
                       <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
                         <Link
                           href={`/dashboard/receptionist/invoices/${p.id}`}
-                          style={{ color: '#0052CC', fontWeight: 600, textDecoration: 'none' }}
+                          style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
                         >
                           #{p.id.slice(0, 8).toUpperCase()}
                         </Link>
@@ -275,7 +279,7 @@ export default function FinanceDashboard() {
                       <td className="data-td" style={{ fontWeight: 600 }}>
                         {p.patient_name}
                       </td>
-                      <td className="data-td" style={{ color: '#5E6C84' }}>
+                      <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                         {fmtDate(p.invoice_date)}
                       </td>
                       <td
@@ -284,7 +288,7 @@ export default function FinanceDashboard() {
                           textAlign: 'right',
                           fontFamily: '"JetBrains Mono",monospace',
                           fontSize: 12,
-                          color: '#00875A',
+                          color: 'var(--urgency-ok)',
                         }}
                       >
                         ${Number(p.paid).toLocaleString()}

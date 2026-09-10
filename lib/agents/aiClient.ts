@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { query, warnSchemaGap } from '../db';
 
 // O preâmbulo que os agentes de lib/agents/*Agent.ts repetiam todos: ver se há chave,
 // abrir o cliente, forçar uma tool call, extrair o bloco e não deixar um erro do SDK
@@ -30,8 +31,48 @@ export interface AgentToolSpec {
   input_schema: Anthropic.Tool['input_schema'];
 }
 
+// ─── Contabilidade da IA ────────────────────────────────────────────────────
+// A resposta da Anthropic traz sempre `usage`, e até à migração 053 esse número era
+// lido pelo SDK e deitado fora — a plataforma não sabia dizer quanto custava a IA nem
+// que clínica a consumia. Regista-se aqui, no ponto por onde TODOS os agentes passam,
+// para nenhum agente novo se poder esquecer (a mesma razão de esta função existir).
+//
+// Nunca deixa rebentar a chamada que está a medir: se a tabela ainda não existe (base
+// de dados por migrar) ou a escrita falha, avisa uma vez e segue. Observabilidade que
+// derruba o que observa é pior do que observabilidade nenhuma.
+async function recordAiCall(row: {
+  tenantId: string | null;
+  agent: string;
+  model: string;
+  status: 'ok' | 'failed' | 'unconfigured';
+  inputTokens?: number;
+  outputTokens?: number;
+  durationMs?: number;
+  error?: string;
+}) {
+  try {
+    await query(
+      `INSERT INTO ai_calls (tenant_id, agent, model, status, input_tokens, output_tokens, duration_ms, error)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        row.tenantId,
+        row.agent,
+        row.model,
+        row.status,
+        row.inputTokens || 0,
+        row.outputTokens || 0,
+        row.durationMs ?? null,
+        row.error?.slice(0, 500) ?? null,
+      ],
+    );
+  } catch (e) {
+    warnSchemaGap('ai_calls', e);
+  }
+}
+
 export async function callAgentTool<T>({
   agent,
+  tenantId = null,
   system,
   payload,
   tool,
@@ -39,6 +80,8 @@ export async function callAgentTool<T>({
 }: {
   /** Só para o log: qual dos agentes é que falhou. */
   agent: string;
+  /** A clínica que paga esta chamada. NULL para agentes de plataforma (Grupo). */
+  tenantId?: string | null;
   system: string;
   /** Os factos já apurados. Serializado para JSON — o modelo nunca recalcula nada. */
   payload: unknown;
@@ -46,8 +89,15 @@ export async function callAgentTool<T>({
   maxTokens?: number;
 }): Promise<AgentToolResult<T>> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { status: 'unconfigured' };
+  if (!apiKey) {
+    // Registado, não silenciado: saber que uma clínica corre sem IA é informação de
+    // plataforma — é a diferença entre "o agente não encontrou nada" e "o agente
+    // nunca foi chamado".
+    await recordAiCall({ tenantId, agent, model: AGENT_MODEL, status: 'unconfigured' });
+    return { status: 'unconfigured' };
+  }
 
+  const startedAt = Date.now();
   try {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
@@ -64,13 +114,34 @@ export async function callAgentTool<T>({
     const toolUse = response.content.find(
       (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === tool.name,
     );
+    // Os tokens contam-se mesmo quando a resposta não serve: foram gastos na mesma.
+    const usage = {
+      tenantId,
+      agent,
+      model: AGENT_MODEL,
+      inputTokens: response.usage?.input_tokens || 0,
+      outputTokens: response.usage?.output_tokens || 0,
+      durationMs: Date.now() - startedAt,
+    };
+
     if (!toolUse) {
       console.error(`${agent}: resposta da IA sem bloco tool_use '${tool.name}'`);
+      await recordAiCall({ ...usage, status: 'failed', error: `sem bloco tool_use '${tool.name}'` });
       return { status: 'failed' };
     }
+    await recordAiCall({ ...usage, status: 'ok' });
     return { status: 'ok', input: (toolUse.input || {}) as T };
   } catch (e) {
-    console.error(`${agent}: chamada à Anthropic falhou:`, e instanceof Error ? e.message : e);
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`${agent}: chamada à Anthropic falhou:`, message);
+    await recordAiCall({
+      tenantId,
+      agent,
+      model: AGENT_MODEL,
+      status: 'failed',
+      durationMs: Date.now() - startedAt,
+      error: message,
+    });
     return { status: 'failed' };
   }
 }

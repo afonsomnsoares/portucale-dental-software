@@ -59,17 +59,17 @@ export default function DentistDashboard() {
         />
       </PageHeader>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        <MetricCard label="TODAY'S APPOINTMENTS" value={appts.length} sub="scheduled" color="#0052CC" />
-        <MetricCard label="IN CHAIR NOW" value={inChair} sub="in operatory" color="#00875A" />
-        <MetricCard label="PENDING TREATMENTS" value={pending} sub="awaiting decision" color="#FF8B00" />
-        <MetricCard label="HIGH-RISK APPTS" value={highRisk} sub="may not show" color="#DE350B" />
+        <MetricCard label="TODAY'S APPOINTMENTS" value={appts.length} sub="scheduled" color="var(--accent)" />
+        <MetricCard label="IN CHAIR NOW" value={inChair} sub="in operatory" color="var(--urgency-ok)" />
+        <MetricCard label="PENDING TREATMENTS" value={pending} sub="awaiting decision" color="var(--urgency-soon)" />
+        <MetricCard label="HIGH-RISK APPTS" value={highRisk} sub="may not show" color="var(--urgency-critical)" />
       </div>
       {ready.length > 0 && (
         <div
           style={{
-            background: '#E3FCEF',
-            border: '1px solid #57D9A3',
-            borderRadius: 8,
+            background: 'var(--urgency-ok-bg)',
+            border: '1px solid var(--urgency-ok-border)',
+            borderRadius: 'var(--radius-control)',
             padding: '12px 18px',
             marginBottom: 18,
             display: 'flex',
@@ -79,17 +79,19 @@ export default function DentistDashboard() {
           }}
         >
           <Check size={14} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#00875A' }}>Patients ready for dismissal:</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
+            Patients ready for dismissal:
+          </span>
           {ready.map((a) => (
             <span
               key={a.id}
               style={{
                 background: 'white',
-                borderRadius: 5,
+                borderRadius: 'var(--radius-control)',
                 padding: '4px 12px',
                 fontSize: 12,
                 fontWeight: 600,
-                color: '#172B4D',
+                color: 'var(--text-primary)',
               }}
             >
               {a.patient_name}

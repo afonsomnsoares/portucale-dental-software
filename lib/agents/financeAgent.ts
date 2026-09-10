@@ -57,6 +57,7 @@ export async function reviewFinance(tenantId: string) {
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'financeAgent',
+    tenantId,
     system: SYSTEM_PROMPT,
     payload: {
       emDividaEur: outstanding,

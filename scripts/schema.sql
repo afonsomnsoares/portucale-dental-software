@@ -34,6 +34,11 @@ CREATE TABLE IF NOT EXISTS users (
   role        TEXT NOT NULL CHECK (role IN ('super_admin','admin','receptionist','dentist')),
   clinic      TEXT NOT NULL DEFAULT 'Tower',
   active      BOOLEAN DEFAULT TRUE,
+  -- Quando a password foi mudada pela última vez. Mantida pelo trigger
+  -- trg_set_password_changed_at no fim deste ficheiro; lida por
+  -- lib/permissions.ts's revalidateSession para recusar tokens emitidos antes
+  -- disso. NULL = nunca mudada, e nesse caso não invalida nada.
+  password_changed_at TIMESTAMPTZ,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT users_role_tenant_consistency CHECK ((role = 'super_admin') = (tenant_id IS NULL))
 );
@@ -295,6 +300,29 @@ CREATE TABLE IF NOT EXISTS job_runs (
   details     JSONB NOT NULL DEFAULT '{}'::jsonb
 );
 CREATE INDEX IF NOT EXISTS idx_job_runs_tenant_job ON job_runs (tenant_id, job_name, started_at DESC);
+
+-- ─── ai_calls (migração 053) ────────────────────────────────────────────────
+-- A conta do que a IA gasta: uma linha por chamada ao modelo, escrita no único ponto
+-- por onde todos os agentes passam (lib/agents/aiClient.ts). Guarda quem, quando,
+-- quanto e se correu bem — NUNCA o prompt nem a resposta, que levam dados de doentes.
+-- A RLS vem do bloco genérico no fim deste ficheiro (tem coluna tenant_id).
+CREATE TABLE IF NOT EXISTS ai_calls (
+  id            BIGSERIAL PRIMARY KEY,
+  -- NULLABLE pela mesma razão que job_runs.tenant_id: o agente Grupo compara clínicas
+  -- e não pertence a nenhuma.
+  tenant_id     UUID REFERENCES tenants(id) ON DELETE CASCADE,
+  agent         TEXT NOT NULL,
+  model         TEXT NOT NULL,
+  status        TEXT NOT NULL CHECK (status IN ('ok', 'failed', 'unconfigured')),
+  input_tokens  INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  duration_ms   INTEGER,
+  error         TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_calls_tenant_created ON ai_calls(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_calls_agent_created ON ai_calls(agent, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_calls_failed ON ai_calls(created_at DESC) WHERE status = 'failed';
 
 CREATE TABLE IF NOT EXISTS uploads (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -793,3 +821,21 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- ─── password_changed_at: mudar a password invalida as sessões emitidas ──────
+-- Ver scripts/migrations/046_password_changed_at.sql para o raciocínio completo.
+-- A coluna já está declarada em `users` acima; aqui fica só o trigger, junto dos
+-- restantes, para que uma instalação de raiz não dependa de correr as migrações.
+CREATE OR REPLACE FUNCTION set_password_changed_at() RETURNS trigger AS $$
+BEGIN
+  IF NEW.password IS DISTINCT FROM OLD.password THEN
+    NEW.password_changed_at := NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_set_password_changed_at ON users;
+CREATE TRIGGER trg_set_password_changed_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION set_password_changed_at();

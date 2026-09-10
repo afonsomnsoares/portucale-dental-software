@@ -1,6 +1,6 @@
 export interface CommPrefs {
-  preferredChannel?: 'sms' | 'email' | 'phone' | 'whatsapp';
-  doNotContact?: ('sms' | 'email' | 'phone')[];
+  preferredChannel?: 'sms' | 'phone';
+  doNotContact?: ('sms' | 'phone')[];
   language?: string;
 }
 

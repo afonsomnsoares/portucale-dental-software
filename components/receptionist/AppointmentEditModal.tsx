@@ -56,10 +56,10 @@ export default function AppointmentEditModal({
       {error && (
         <div
           style={{
-            background: '#FFEBE6',
-            border: '1px solid #FFBDAD',
-            color: '#DE350B',
-            borderRadius: 8,
+            background: 'var(--urgency-critical-bg)',
+            border: '1px solid var(--urgency-critical-border)',
+            color: 'var(--urgency-critical)',
+            borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
             fontSize: 12,
             marginBottom: 12,

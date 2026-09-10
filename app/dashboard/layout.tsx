@@ -42,9 +42,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#F4F7FA',
+          background: 'var(--bg-page)',
           fontFamily: '"Plus Jakarta Sans",sans-serif',
-          color: '#5E6C84',
+          color: 'var(--text-secondary)',
           fontSize: 14,
         }}
       >
@@ -53,7 +53,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             style={{
               width: 36,
               height: 36,
-              borderRadius: 9,
+              borderRadius: 'var(--radius-control)',
               overflow: 'hidden',
               animation: 'pulseDot 2s ease-in-out infinite',
             }}
@@ -68,7 +68,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#F4F7FA' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg-page)' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <ActingClinicBanner />

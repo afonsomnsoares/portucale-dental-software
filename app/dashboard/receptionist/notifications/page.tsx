@@ -14,10 +14,22 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  queued: { label: 'Pendente', bg: 'var(--amber-bg, #FFF7E6)', color: 'var(--amber, #FF8B00)' },
-  retry: { label: 'A repetir', bg: 'var(--amber-bg, #FFF7E6)', color: 'var(--amber, #FF8B00)' },
-  sent: { label: 'Enviado', bg: 'var(--green-bg, #E3FCEF)', color: 'var(--green, #00875A)' },
-  failed: { label: 'Falhou', bg: 'var(--red-bg, #FFEBE6)', color: 'var(--red, #DE350B)' },
+  queued: {
+    label: 'Pendente',
+    bg: 'var(--amber-bg, var(--urgency-soon-bg))',
+    color: 'var(--amber, var(--urgency-soon))',
+  },
+  retry: {
+    label: 'A repetir',
+    bg: 'var(--amber-bg, var(--urgency-soon-bg))',
+    color: 'var(--amber, var(--urgency-soon))',
+  },
+  sent: { label: 'Enviado', bg: 'var(--green-bg, var(--urgency-ok-bg))', color: 'var(--green, var(--urgency-ok))' },
+  failed: {
+    label: 'Falhou',
+    bg: 'var(--red-bg, var(--urgency-critical-bg))',
+    color: 'var(--red, var(--urgency-critical))',
+  },
 };
 
 function fmtDateTime(v: string | null) {
@@ -89,7 +101,7 @@ export default function ReceptionistNotificationsPage() {
           onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           style={{ width: 260 }}
         />
-        <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           {filtered.length} mensagem{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -114,10 +126,14 @@ export default function ReceptionistNotificationsPage() {
             </thead>
             <tbody>
               {filtered.map((n) => {
-                const sm = STATUS_META[n.status] || { label: n.status, bg: 'var(--surface-2)', color: 'var(--ink-2)' };
+                const sm = STATUS_META[n.status] || {
+                  label: n.status,
+                  bg: 'var(--bg-sunken)',
+                  color: 'var(--text-secondary)',
+                };
                 const kind = n.payload?.kind || '';
                 return (
-                  <tr key={n.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                  <tr key={n.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
                     <td className="data-td" style={{ fontWeight: 600 }}>
                       {n.patient_name || n.patient_id?.slice(0, 8) || '—'}
                     </td>
@@ -133,7 +149,9 @@ export default function ReceptionistNotificationsPage() {
                     <td className="data-td">
                       <Badge label={sm.label} bg={sm.bg} color={sm.color} />
                       {n.status === 'failed' && n.last_error && (
-                        <div style={{ fontSize: 12, color: 'var(--red, #DE350B)', marginTop: 4 }}>{n.last_error}</div>
+                        <div style={{ fontSize: 12, color: 'var(--red, var(--urgency-critical))', marginTop: 4 }}>
+                          {n.last_error}
+                        </div>
                       )}
                     </td>
                     <td className="data-td">{n.sent_at ? fmtDateTime(n.sent_at) : fmtDateTime(n.created_at)}</td>

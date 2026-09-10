@@ -8,10 +8,10 @@ import type { OptimizerMoveKind, ScheduleOptimization } from '@/lib/types';
 // mover uma consulta implica falar com o doente.
 
 const KIND_META: Record<OptimizerMoveKind, { label: string; bg: string; color: string }> = {
-  gap_fill: { label: 'Encaixe', bg: 'var(--green-bg)', color: 'var(--green)' },
-  unassigned_dentist: { label: 'Sem dentista', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  equipment_block: { label: 'Equipamento', bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  preference_mismatch: { label: 'Preferência', bg: 'var(--red-bg)', color: 'var(--red)' },
+  gap_fill: { label: 'Encaixe', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  unassigned_dentist: { label: 'Sem dentista', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  equipment_block: { label: 'Equipamento', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  preference_mismatch: { label: 'Preferência', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
 };
 
 function formatHours(minutes: number) {
@@ -53,7 +53,7 @@ export default function OptimizerTab({
           label="CAPACIDADE RECUPERÁVEL"
           value={formatHours(totals.recoverableMinutes)}
           sub={`nos próximos ${windowDays} dias, se as propostas de encaixe forem aceites`}
-          color={totals.recoverableMinutes > 0 ? 'var(--green)' : 'var(--ink-3)'}
+          color={totals.recoverableMinutes > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)'}
         />
         <MetricCard
           label="PROPOSTAS"
@@ -63,7 +63,7 @@ export default function OptimizerTab({
               .map(([k, n]) => `${n} ${KIND_META[k as OptimizerMoveKind]?.label.toLowerCase() || k}`)
               .join(' · ') || 'nada a otimizar'
           }
-          color="var(--brand)"
+          color="var(--accent)"
         />
       </div>
 
@@ -77,20 +77,20 @@ export default function OptimizerTab({
               <div
                 key={m.key}
                 className="card"
-                style={{ padding: '12px 14px', boxShadow: 'none', border: '1px solid var(--border)' }}
+                style={{ padding: '12px 14px', border: '1px solid var(--border-subtle)' }}
               >
                 <div className="flex items-center justify-between mb-1" style={{ gap: 10 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{m.title}</span>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{m.title}</span>
                   <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                     {m.gainMinutes > 0 && (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
                         +{formatHours(m.gainMinutes)}
                       </span>
                     )}
                     <Badge label={meta.label} bg={meta.bg} color={meta.color} />
                   </div>
                 </div>
-                <div className="text-xs" style={{ color: 'var(--ink-2)', lineHeight: 1.5 }}>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   {m.detail}
                 </div>
               </div>

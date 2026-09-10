@@ -112,8 +112,8 @@ export default function ClinicLeadSourcesPage() {
                 <TD>
                   <Badge
                     label={s.active ? 'Ativo' : 'Inativo'}
-                    bg={s.active ? 'var(--green-bg)' : 'var(--surface-2)'}
-                    color={s.active ? 'var(--green)' : 'var(--ink-2)'}
+                    bg={s.active ? 'var(--urgency-ok-bg)' : 'var(--bg-sunken)'}
+                    color={s.active ? 'var(--urgency-ok)' : 'var(--text-secondary)'}
                   />
                 </TD>
                 <TD right>{s.lead_count}</TD>
@@ -142,7 +142,11 @@ export default function ClinicLeadSourcesPage() {
               placeholder="Site"
             />
           </FormField>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setCreateOpen(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={create} disabled={saving || !label.trim()}>
@@ -156,7 +160,11 @@ export default function ClinicLeadSourcesPage() {
         <Modal title={`Fonte "${revealed.label}" criada`} onClose={() => setRevealed(null)} width={640}>
           <div
             className="rounded px-4 py-3 mb-4 text-sm"
-            style={{ background: 'var(--amber-bg)', color: 'var(--amber)', border: '1px solid rgba(217,119,6,0.22)' }}
+            style={{
+              background: 'var(--urgency-soon-bg)',
+              color: 'var(--urgency-soon)',
+              border: '1px solid var(--urgency-soon-border)',
+            }}
           >
             <strong>Este token só é mostrado uma vez.</strong> Copia-o agora — não é possível voltar a vê-lo depois de
             fechares esta janela.
@@ -168,9 +176,9 @@ export default function ClinicLeadSourcesPage() {
               display: 'flex',
               gap: 8,
               alignItems: 'center',
-              background: '#F4F7FA',
-              border: '1px solid #DFE1E6',
-              borderRadius: 8,
+              background: 'var(--bg-page)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-control)',
               padding: '10px 12px',
               marginBottom: 16,
             }}
@@ -185,10 +193,10 @@ export default function ClinicLeadSourcesPage() {
           <pre
             style={{
               fontSize: 11,
-              background: '#172B4D',
-              color: '#EBECF0',
+              background: 'var(--text-primary)',
+              color: 'var(--bg-sunken)',
               padding: '12px 14px',
-              borderRadius: 8,
+              borderRadius: 'var(--radius-control)',
               overflowX: 'auto',
               whiteSpace: 'pre',
               lineHeight: 1.6,

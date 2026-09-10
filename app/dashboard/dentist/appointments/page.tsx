@@ -51,17 +51,17 @@ export default function DentistAppointmentsPage() {
         />
       </PageHeader>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
-        <div className="card" style={{ borderLeft: '4px solid #0052CC' }}>
+        <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
           <div className="section-label">Consultas Hoje</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#0052CC' }}>{appts.length}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{appts.length}</div>
         </div>
-        <div className="card" style={{ borderLeft: '4px solid #00875A' }}>
+        <div className="card" style={{ borderLeft: '4px solid var(--urgency-ok)' }}>
           <div className="section-label">Em Consultório</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#00875A' }}>{inChair}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-ok)' }}>{inChair}</div>
         </div>
-        <div className="card" style={{ borderLeft: '4px solid #DE350B' }}>
+        <div className="card" style={{ borderLeft: '4px solid var(--urgency-critical)' }}>
           <div className="section-label">Risco Alto</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: '#DE350B' }}>{highRisk}</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-critical)' }}>{highRisk}</div>
         </div>
       </div>
       {loading ? (
@@ -71,7 +71,7 @@ export default function DentistAppointmentsPage() {
           <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />
           {appts.filter((a) => a.status === 'confirmed' || a.status === 'registered').length > 0 && (
             <div className="mt-5">
-              <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--ink)', marginBottom: 10 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)', marginBottom: 10 }}>
                 Próximas Consultas
               </h3>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

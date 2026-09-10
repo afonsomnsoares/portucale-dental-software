@@ -133,7 +133,12 @@ export default function ScheduleIntelReceptionistPage() {
       {err && (
         <div
           className="card p-4 mb-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -163,7 +168,7 @@ export default function ScheduleIntelReceptionistPage() {
           {tab === 'waitlist' && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {waitlist?.entries?.length || 0} na lista · {waitlist?.pendingOffers?.length || 0} ofertas pendentes
                 </span>
                 <PrimaryBtn onClick={() => setModal(true)}>+ Adicionar à lista de espera</PrimaryBtn>

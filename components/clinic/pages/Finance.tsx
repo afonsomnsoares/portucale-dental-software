@@ -78,28 +78,28 @@ export default function ClinicFinanceDashboard() {
               label="RECEITA COBRADA"
               value={fmt(data.totals?.total_paid)}
               sub={`${data.totals?.total_invoices || 0} faturas`}
-              color="#00875A"
+              color="var(--urgency-ok)"
               icon={<TrendingUp />}
             />
             <MetricCard
               label="POR COBRAR"
               value={fmt(data.totals?.total_outstanding)}
               sub="Saldo de faturas por liquidar"
-              color="#DE350B"
+              color="var(--urgency-critical)"
               icon={<AlertTriangle />}
             />
             <MetricCard
               label="TOTAL FATURADO"
               value={fmt(data.totals?.total_amount)}
               sub="Valor bruto faturado"
-              color="#0052CC"
+              color="var(--accent)"
               icon={<DollarSign />}
             />
             <MetricCard
               label="SALDOS DE DOENTES"
               value={fmt(data.patientBalance)}
               sub="Soma dos saldos por doente"
-              color="#FF8B00"
+              color="var(--urgency-soon)"
               icon={<CreditCard />}
             />
           </div>
@@ -108,7 +108,7 @@ export default function ClinicFinanceDashboard() {
             <div className="card p-5">
               <div className="section-label mb-3">FATURAS POR ESTADO</div>
               {!data.statusCounts?.length ? (
-                <div style={{ color: '#97A0AF', fontSize: 13 }}>Sem dados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {data.statusCounts.map((s: { status: string; count: number; amount: number }) => (
@@ -119,13 +119,13 @@ export default function ClinicFinanceDashboard() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: '#F8F9FC',
-                        borderRadius: 8,
+                        background: 'var(--bg-page)',
+                        borderRadius: 'var(--radius-control)',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Badge s={s.status} />
-                        <span style={{ fontSize: 12, color: '#5E6C84' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                           {s.count} {s.count === 1 ? 'fatura' : 'faturas'}
                         </span>
                       </div>
@@ -134,7 +134,7 @@ export default function ClinicFinanceDashboard() {
                           fontFamily: '"JetBrains Mono",monospace',
                           fontSize: 13,
                           fontWeight: 700,
-                          color: '#172B4D',
+                          color: 'var(--text-primary)',
                         }}
                       >
                         {fmt(s.amount)}
@@ -148,7 +148,7 @@ export default function ClinicFinanceDashboard() {
             <div className="card p-5">
               <div className="section-label mb-3">RECEITA POR MÉDICO DENTISTA</div>
               {!data.byDentist?.length ? (
-                <div style={{ color: '#97A0AF', fontSize: 13 }}>Sem dados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {data.byDentist.map((d) => (
@@ -159,13 +159,15 @@ export default function ClinicFinanceDashboard() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: '#F8F9FC',
-                        borderRadius: 8,
+                        background: 'var(--bg-page)',
+                        borderRadius: 'var(--radius-control)',
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{d.dentist_name}</div>
-                        <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {d.dentist_name}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {d.invoice_count} {d.invoice_count === 1 ? 'fatura' : 'faturas'}
                         </div>
                       </div>
@@ -175,12 +177,14 @@ export default function ClinicFinanceDashboard() {
                             fontFamily: '"JetBrains Mono",monospace',
                             fontSize: 13,
                             fontWeight: 700,
-                            color: '#172B4D',
+                            color: 'var(--text-primary)',
                           }}
                         >
                           {fmt(d.total_amount)}
                         </div>
-                        <div style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: '#00875A' }}>
+                        <div
+                          style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: 'var(--urgency-ok)' }}
+                        >
                           {fmt(d.total_paid)} cobrado
                         </div>
                       </div>
@@ -194,7 +198,7 @@ export default function ClinicFinanceDashboard() {
           <div className="card mt-4 p-5">
             <div className="section-label mb-3">RECEITA DIÁRIA</div>
             {!data.dailyRevenue?.length ? (
-              <div style={{ color: '#97A0AF', fontSize: 13 }}>Sem receita registada neste período</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem receita registada neste período</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <div style={{ display: 'flex', gap: 4, minWidth: data.dailyRevenue.length * 40 }}>
@@ -217,8 +221,8 @@ export default function ClinicFinanceDashboard() {
                           style={{
                             width: 28,
                             height: Math.max(4, height),
-                            background: '#0052CC',
-                            borderRadius: '4px 4px 0 0',
+                            background: 'var(--accent)',
+                            borderRadius: 'var(--radius-control) var(--radius-control) 0 0',
                             opacity: 0.7 + (height / 120) * 0.3,
                             transition: 'height 0.2s',
                           }}
@@ -227,7 +231,7 @@ export default function ClinicFinanceDashboard() {
                         <div
                           style={{
                             fontSize: 9,
-                            color: '#97A0AF',
+                            color: 'var(--text-muted)',
                             fontFamily: '"JetBrains Mono",monospace',
                             transform: 'rotate(-45deg)',
                             whiteSpace: 'nowrap',
@@ -246,11 +250,11 @@ export default function ClinicFinanceDashboard() {
           <div className="card mt-4 p-5">
             <div className="section-label mb-3">PAGAMENTOS RECENTES</div>
             {!data.recentPayments?.length ? (
-              <div style={{ color: '#97A0AF', fontSize: 13 }}>Sem pagamentos registados</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem pagamentos registados</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #EBECF0' }}>
+                  <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                     <th className="data-th">Fatura</th>
                     <th className="data-th">Doente</th>
                     <th className="data-th">Data</th>
@@ -263,14 +267,14 @@ export default function ClinicFinanceDashboard() {
                 </thead>
                 <tbody>
                   {data.recentPayments.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #EBECF0' }}>
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
                       <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
                         #{p.id.slice(0, 8).toUpperCase()}
                       </td>
                       <td className="data-td" style={{ fontWeight: 600 }}>
                         {p.patient_name}
                       </td>
-                      <td className="data-td" style={{ color: '#5E6C84' }}>
+                      <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                         {fmtDate(p.invoice_date)}
                       </td>
                       <td
@@ -279,7 +283,7 @@ export default function ClinicFinanceDashboard() {
                           textAlign: 'right',
                           fontFamily: '"JetBrains Mono",monospace',
                           fontSize: 12,
-                          color: '#00875A',
+                          color: 'var(--urgency-ok)',
                         }}
                       >
                         {fmt(p.paid)}

@@ -104,6 +104,23 @@ export const PERMISSION_ACTIONS = [
   // escrita, por isso não vai à boleia do 'agents:read' — quem lê o diagnóstico não é
   // necessariamente quem decide que está resolvido.
   'agents:resolve',
+  // ─── Custos e margem (migração 047) ───────────────────────────────────────
+  // Ler a margem vai à boleia de 'finance:read' — quem já vê receita e saldos vê
+  // margem. ESCREVER a base de imputação é outra coisa: muda o número que toda a
+  // gente lê, em todos os relatórios, retroativamente. Fica com a direção.
+  'costs:manage',
+  // ─── Percursos de consulta (migração 048) ─────────────────────────────────
+  // Configurar um percurso é escrever política da clínica: o que tem de estar feito
+  // antes de um implante. Quem corre os passos são as tarefas de sempre
+  // ('patient-tasks:*'), que a receção e o clínico já têm.
+  'care-pathways:manage',
+  // ─── Canal de entrada (migração 049) ──────────────────────────────────────
+  // A caixa de entrada é trabalho de balcão, por isso a receção lê e responde por
+  // omissão. Mudar o nível de autonomia — decidir se a IA fala sozinha com um doente —
+  // não é: é a decisão de produto mais consequente que uma clínica toma aqui.
+  'conversations:read',
+  'conversations:reply',
+  'conversations:configure',
 ];
 
 // Ações que só fazem sentido ao nível da plataforma. Até aqui 'admin' e 'super_admin'
@@ -156,6 +173,8 @@ const DEFAULT: Record<string, Set<string>> = {
     'incidents:report',
     'checklists:run',
     'leads:respond',
+    'conversations:read',
+    'conversations:reply',
   ]),
   dentist: new Set([
     'appointments:status',
@@ -195,6 +214,10 @@ const DEFAULT: Record<string, Set<string>> = {
     'incidents:read',
     'incidents:report',
     'checklists:run',
+    // Só leitura: as mensagens clínicas escalam para uma pessoa e é frequentemente o
+    // clínico quem tem de as ver. Responder ao doente continua a ser da receção, que é
+    // quem tem o contexto administrativo todo.
+    'conversations:read',
   ]),
 };
 
@@ -258,6 +281,8 @@ export interface LiveUser {
   id: string;
   role: string;
   tenantId: string | null;
+  /** `users.password_changed_at`, em milissegundos, ou null se nunca foi mudada. */
+  passwordChangedAt: number | null;
 }
 
 // Memo pelo tempo de vida do pedido. Uma rota pode verificar várias ações
@@ -269,12 +294,20 @@ const liveUserByRequest = new WeakMap<object, Promise<LiveUser | null>>();
 
 async function fetchLiveUser(userId: string): Promise<LiveUser | null> {
   const row = await withSystemContext(() =>
-    safeQueryOne(`SELECT id, role, tenant_id, active FROM users WHERE id=$1`, [userId]),
+    safeQueryOne(`SELECT id, role, tenant_id, active, password_changed_at FROM users WHERE id=$1`, [userId]),
   );
   // Apagado, desativado, ou a tabela nem existe (safeQueryOne devolve null num schema
   // por migrar): em qualquer dos casos não há autorização a conceder. Fail-closed.
   if (row?.active !== true) return null;
-  return { id: String(row.id), role: String(row.role || ''), tenantId: (row.tenant_id as string) ?? null };
+  // A coluna só existe a partir da migração 046; numa base por migrar vem undefined e
+  // o resultado é null — ou seja, "nunca mudada", que é o mesmo comportamento de antes.
+  const changedAt = row.password_changed_at ? new Date(row.password_changed_at as string).getTime() : null;
+  return {
+    id: String(row.id),
+    role: String(row.role || ''),
+    tenantId: (row.tenant_id as string) ?? null,
+    passwordChangedAt: Number.isFinite(changedAt) ? changedAt : null,
+  };
 }
 
 function liveUser(userId: string): Promise<LiveUser | null> {
@@ -287,10 +320,37 @@ function liveUser(userId: string): Promise<LiveUser | null> {
   return pending;
 }
 
+// Tolerância de relógio entre o processo que assinou o token e o Postgres que carimbou
+// a mudança de password. Sem ela, um par de segundos de desvio entre as duas máquinas
+// invalidaria tokens acabados de emitir — e o sintoma seria alguém não conseguir entrar
+// logo a seguir a mudar a password, que é o pior momento possível para duvidar do
+// sistema. Cinco segundos chegam para desvio normal de NTP e são curtos demais para
+// servirem de janela a quem tenha um token roubado.
+const PASSWORD_CHANGE_SKEW_MS = 5000;
+
+/**
+ * O token foi emitido ANTES da última mudança de password? Se sim, não vale mais nada,
+ * mesmo que a assinatura esteja boa e ainda não tenha expirado.
+ *
+ * É esta a diferença entre "mudei a password" e "expulsei quem estava lá dentro". Sem
+ * isto, trocar uma password comprometida não fazia nada a quem já tinha o token — ele
+ * continuava válido até JWT_TTL_SECONDS (7 dias por omissão).
+ *
+ * Um token sem `iat` (formato antigo, ou construído à mão) conta como anterior a
+ * qualquer mudança: se não se consegue provar que foi emitido depois, a leitura segura
+ * é recusar. Tokens assinados por signToken trazem sempre `iat`.
+ */
+function isTokenOlderThanPasswordChange(user: SessionUser, live: LiveUser): boolean {
+  if (live.passwordChangedAt === null) return false;
+  const issuedAtMs = Number(user.iat) * 1000;
+  if (!Number.isFinite(issuedAtMs)) return true;
+  return issuedAtMs + PASSWORD_CHANGE_SKEW_MS < live.passwordChangedAt;
+}
+
 /**
  * Reconcilia a sessão que o token afirma com o que a base de dados diz agora.
- * Devolve null se a conta já não existe ou está desativada — e aí não há autorização
- * nenhuma a conceder.
+ * Devolve null se a conta já não existe, está desativada, ou se a password foi mudada
+ * depois de o token ter sido emitido — e aí não há autorização nenhuma a conceder.
  *
  * **Escreve por cima do `user` que recebe**, de propósito, e isso é o mais importante a
  * saber sobre esta função. As 108 rotas leem `user.tenantId` e `user.role` diretamente
@@ -309,6 +369,7 @@ export async function revalidateSession(user: SessionUser | null | undefined): P
   if (!user?.id) return null;
   const live = await liveUser(user.id);
   if (!live) return null;
+  if (isTokenOlderThanPasswordChange(user, live)) return null;
 
   if (live.role !== user.role || (live.tenantId ?? null) !== (user.tenantId ?? null)) {
     user.role = live.role;

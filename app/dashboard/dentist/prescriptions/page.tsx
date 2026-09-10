@@ -110,7 +110,7 @@ export default function PrescriptionsPage() {
       <PageHeader title="Prescrições" sub="Prescrições do doente — emitir e acompanhar" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -143,13 +143,13 @@ export default function PrescriptionsPage() {
                     textAlign: 'left',
                     padding: '11px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #F4F7FA',
-                    background: selected?.id === p.id ? '#DEEBFF' : 'white',
-                    borderLeft: `3px solid ${selected?.id === p.id ? '#0052CC' : 'transparent'}`,
+                    borderBottom: '1px solid var(--bg-page)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>

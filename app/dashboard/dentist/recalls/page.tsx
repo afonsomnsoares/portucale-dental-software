@@ -93,10 +93,11 @@ export default function RecallsPage() {
   }
 
   function recallStatus(r: Recall) {
-    if (!r.active) return { label: 'Inativo', bg: '#F4F7FA', color: '#97A0AF' };
+    if (!r.active) return { label: 'Inativo', bg: 'var(--bg-page)', color: 'var(--text-muted)' };
     const due = r.next_due ? new Date(r.next_due) : null;
-    if (due && due < new Date()) return { label: 'Em atraso', bg: '#FFEBE6', color: '#DE350B' };
-    return { label: 'Ativo', bg: '#DEEBFF', color: '#0052CC' };
+    if (due && due < new Date())
+      return { label: 'Em atraso', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' };
+    return { label: 'Ativo', bg: 'var(--accent-bg)', color: 'var(--accent)' };
   }
 
   const cols = ['Tipo', 'Intervalo', 'Última vez', 'Próximo', 'Estado', 'Lembrete enviado', 'Ações'];
@@ -106,7 +107,7 @@ export default function RecallsPage() {
       <PageHeader title="Recalls" sub="Chamadas de retorno do doente, com lembrete automático" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -139,13 +140,13 @@ export default function RecallsPage() {
                     textAlign: 'left',
                     padding: '11px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #F4F7FA',
-                    background: selected?.id === p.id ? '#DEEBFF' : 'white',
-                    borderLeft: `3px solid ${selected?.id === p.id ? '#0052CC' : 'transparent'}`,
+                    borderBottom: '1px solid var(--bg-page)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -178,7 +179,7 @@ export default function RecallsPage() {
                         <td className="data-td">
                           <Badge label={s.label} bg={s.bg} color={s.color} />
                         </td>
-                        <td className="data-td" style={{ color: '#97A0AF', fontSize: 12 }}>
+                        <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                           {r.last_notified_at ? r.last_notified_at.slice(0, 10) : '—'}
                         </td>
                         <td className="data-td">

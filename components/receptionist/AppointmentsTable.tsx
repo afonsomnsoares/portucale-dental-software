@@ -40,7 +40,7 @@ export default function AppointmentsTable({
         <tbody>
           {!rows.length ? (
             <tr>
-              <td className="data-td" colSpan={8} style={{ color: '#5E6C84' }}>
+              <td className="data-td" colSpan={8} style={{ color: 'var(--text-secondary)' }}>
                 No appointments in this range.
               </td>
             </tr>

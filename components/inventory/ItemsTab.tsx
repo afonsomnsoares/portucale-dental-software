@@ -199,7 +199,11 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
               />
             </FormField>
           </div>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setItemModal(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveItem} disabled={saving}>
@@ -258,7 +262,11 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
               style={{ minHeight: 60 }}
             />
           </FormField>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setMoveTarget(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveMove} disabled={saving}>

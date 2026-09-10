@@ -1,0 +1,112 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/app/providers';
+import { Badge, Empty, PageHeader, Spinner } from '@/components/ui';
+
+interface RoleRow {
+  role: string;
+  label: string;
+  sub: string;
+  users: number;
+  activeUsers: number;
+  clinics: number;
+  defaultActions: number;
+  overrides: Array<{ action: string; allowed: boolean; tenantName: string | null; deviates: boolean }>;
+}
+
+export default function Roles() {
+  const { api } = useAuth();
+  const [data, setData] = useState<{ roles: RoleRow[]; totalActions: number } | null>(null);
+
+  useEffect(() => {
+    api('/platform/roles')
+      .then(setData)
+      .catch(() => setData(null));
+  }, [api]);
+
+  if (!data) return <Spinner />;
+
+  return (
+    <div>
+      <PageHeader
+        title="Papéis"
+        sub={`${data.roles.length} papéis · ${data.totalActions} ações declaradas no sistema`}
+      />
+
+      {data.roles.map((r) => {
+        // Só os desvios interessam: uma clínica que gravou uma linha igual à omissão
+        // não mudou nada, e listá-la enterrava as que mudaram mesmo.
+        const deviations = r.overrides.filter((o) => o.deviates);
+        const byClinic = new Map<string, typeof deviations>();
+        for (const d of deviations) {
+          const k = d.tenantName || 'Clínica removida';
+          byClinic.set(k, [...(byClinic.get(k) || []), d]);
+        }
+
+        return (
+          <div key={r.role} className="card p-5" style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{r.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: '"JetBrains Mono",monospace' }}>
+                  {r.role} · {r.sub}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{r.activeUsers}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  {r.users === r.activeUsers ? 'pessoas' : `ativas de ${r.users}`}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', minWidth: 90 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{r.defaultActions}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>ações por omissão</div>
+              </div>
+              <div style={{ textAlign: 'right', minWidth: 80 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--cat-purple)' }}>{r.clinics}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>clínicas</div>
+              </div>
+            </div>
+
+            {!byClinic.size ? (
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Nenhuma clínica alterou as permissões deste papel — todas correm com a omissão.
+              </div>
+            ) : (
+              <>
+                <div className="section-label mb-2">
+                  DESVIOS À OMISSÃO ({deviations.length} em {byClinic.size} clínicas)
+                </div>
+                {[...byClinic.entries()].map(([clinic, items]) => (
+                  <div key={clinic} style={{ padding: '8px 0', borderBottom: '1px solid var(--bg-page)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>
+                      {clinic}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {items.map((d) => (
+                        <Badge
+                          key={d.action}
+                          label={`${d.allowed ? '+' : '−'} ${d.action}`}
+                          bg={d.allowed ? 'var(--urgency-ok-bg)' : 'var(--urgency-critical-bg)'}
+                          color={d.allowed ? 'var(--urgency-ok)' : 'var(--urgency-critical)'}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        );
+      })}
+
+      {!data.roles.length && <Empty message="Sem papéis" />}
+
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+        Os quatro papéis são fixos: estão no tipo (lib/constants.ts), na restrição CHECK da base de dados e no
+        middleware, e os três têm de concordar. O que cada clínica pode mudar é o que cada papel FAZ — é isso que está
+        acima como desvio, e edita-se em Permissões.
+      </p>
+    </div>
+  );
+}

@@ -85,7 +85,16 @@ export function findOpenings(bookings: Booking[], window: ChairDayWindow, minDur
   return openings.filter((o) => o.durationMinutes >= minDurationMinutes);
 }
 
-export type OptimizerMoveKind = 'gap_fill' | 'unassigned_dentist' | 'equipment_block' | 'preference_mismatch';
+export type OptimizerMoveKind =
+  | 'gap_fill'
+  | 'unassigned_dentist'
+  | 'equipment_block'
+  | 'preference_mismatch'
+  // As três seguintes raciocinam sobre duas ou mais consultas em conjunto — ver o
+  // bloco "Raciocínio sobre DUAS OU MAIS consultas" no fim deste ficheiro.
+  | 'group_visit'
+  | 'pull_forward'
+  | 'consolidate';
 
 export interface OptimizerMove {
   kind: OptimizerMoveKind;
@@ -99,6 +108,16 @@ export interface OptimizerMove {
   // violada) — a UI só soma os que têm ganho real.
   gainMinutes: number;
   appointmentId?: string;
+  // Propostas que envolvem mais do que uma consulta (agrupar, consolidar) listam-nas
+  // todas aqui; `appointmentId` continua a apontar para a que teria de ser mexida.
+  appointmentIds?: string[];
+  // Dias que a consulta se antecipa (regra 6). Não é capacidade recuperada — é tempo
+  // até ao tratamento, e por isso vive num campo próprio em vez de inflacionar
+  // gainMinutes.
+  advanceDays?: number;
+  // Minutos mortos que deixam de estar no meio do dia (regra 7). Também não são
+  // capacidade nova: são capacidade mudada para um sítio onde se consegue usar.
+  consolidatedMinutes?: number;
   patientName?: string;
   date?: string;
 }
@@ -303,7 +322,271 @@ export function buildPreferenceMismatchMoves(
 export function rankMoves(moves: OptimizerMove[]): OptimizerMove[] {
   return [...moves].sort((a, b) => {
     if (a.gainMinutes !== b.gainMinutes) return b.gainMinutes - a.gainMinutes;
+    // Entre propostas sem ganho de capacidade, as que mexem em tempo (antecipar,
+    // consolidar) vêm à frente das que só corrigem a qualidade da marcação — senão
+    // as regras 6 e 7 ficariam para sempre no fundo da lista, atrás de quatro
+    // avisos de preferência, e ninguém as veria.
+    const secondaryA = (a.advanceDays || 0) + (a.consolidatedMinutes || 0);
+    const secondaryB = (b.advanceDays || 0) + (b.consolidatedMinutes || 0);
+    if (secondaryA !== secondaryB) return secondaryB - secondaryA;
     if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
     return a.key < b.key ? -1 : 1;
   });
+}
+
+// ═══ Raciocínio sobre DUAS OU MAIS consultas ════════════════════════════════
+// As quatro regras acima olham para uma consulta de cada vez: este buraco, esta
+// consulta sem dentista, esta cadeira bloqueada, esta preferência violada. Faltava
+// o passo seguinte — agrupar, antecipar e combinar — que é onde uma agenda deixa de
+// ser uma lista de compromissos e passa a ser um plano.
+//
+// As três regras abaixo continuam a propor e nunca a aplicar, pela mesma razão de
+// sempre: cada uma delas implica ligar ao doente.
+
+// Minutos que se perdem em cada visita além do tratamento em si — receber, sentar,
+// preparar a cadeira, desinfetar no fim. É o que se poupa de facto ao juntar duas
+// consultas numa, e é por isso a unidade de ganho da regra 5.
+//
+// Dez minutos é uma estimativa conservadora e explícita, não uma medição: o projeto
+// não regista tempos de rotação (a agenda guarda `duration`, não o que aconteceu
+// dentro dela). Preferiu-se um número redondo que se possa discutir a uma média
+// falsamente precisa calculada a partir de dados que não existem.
+export const TURNAROUND_MINUTES = 10;
+
+export interface PatientAppointments {
+  patientId: string;
+  patientName: string;
+  appointments: Booking[];
+}
+
+// ─── Regra 5: agrupar consultas do mesmo doente ─────────────────────────────
+// Duas ou mais consultas do mesmo doente em dias diferentes, dentro de uma janela
+// curta, e cuja soma cabe numa sessão só. Vale a pena juntar por três motivos, e o
+// terceiro é o que costuma esquecer-se: poupa tempo de cadeira à clínica, poupa uma
+// deslocação ao doente, e REMOVE UMA OPORTUNIDADE DE FALTAR. Duas consultas são duas
+// hipóteses de não aparecer; uma é uma.
+//
+// `maxSessionMinutes` existe porque a regra tem um limite óbvio: ninguém quer três
+// horas seguidas na cadeira, e uma sessão longa demais é ela própria um motivo para
+// desmarcar. O chamador decide o limite (ver lib/scheduleOptimizer.ts).
+//
+// Não junta consultas com dentistas diferentes: seriam duas sessões coladas e não uma,
+// e a poupança de rotação desaparece. Junta as que estão por atribuir com as que já
+// têm dentista, porque essas ainda podem ser atribuídas ao mesmo.
+export function buildGroupVisitMoves(
+  patients: PatientAppointments[],
+  windowDays: number,
+  maxSessionMinutes: number,
+): OptimizerMove[] {
+  const moves: OptimizerMove[] = [];
+
+  for (const p of patients) {
+    const sorted = [...p.appointments].sort((a, b) =>
+      a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.startMinutes - b.startMinutes,
+    );
+    // Só consultas em DIAS diferentes: duas no mesmo dia não são um agrupamento, são
+    // uma questão de adjacência, e essa é a regra 7.
+    const byDay = new Map<string, Booking[]>();
+    for (const b of sorted) {
+      const day = byDay.get(b.date) || [];
+      day.push(b);
+      byDay.set(b.date, day);
+    }
+    const days = Array.from(byDay.keys()).sort();
+    if (days.length < 2) continue;
+
+    // Janela deslizante sobre os dias, gulosa a partir do primeiro: o agrupamento
+    // ancora-se sempre na consulta mais próxima, porque antecipar é preferível a
+    // adiar — juntar no dia de trás obriga a adiar o que já estava marcado.
+    let i = 0;
+    while (i < days.length) {
+      const anchorDay = days[i];
+      const group: Booking[] = [...(byDay.get(anchorDay) as Booking[])];
+      let j = i + 1;
+      while (j < days.length) {
+        const gapDays = Math.round(
+          (Date.parse(`${days[j]}T00:00:00Z`) - Date.parse(`${anchorDay}T00:00:00Z`)) / 86_400_000,
+        );
+        if (gapDays > windowDays) break;
+        const extra = byDay.get(days[j]) as Booking[];
+        const total = [...group, ...extra].reduce((sum, b) => sum + b.durationMinutes, 0);
+        if (total > maxSessionMinutes) break;
+        // Dentistas diferentes não se juntam — ver o cabeçalho.
+        const dentists = new Set([...group, ...extra].map((b) => b.dentistId).filter(Boolean));
+        if (dentists.size > 1) break;
+        group.push(...extra);
+        j += 1;
+      }
+
+      const visitsMerged = new Set(group.map((b) => b.date)).size;
+      if (visitsMerged >= 2) {
+        const totalMinutes = group.reduce((sum, b) => sum + b.durationMinutes, 0);
+        const types = Array.from(new Set(group.map((b) => b.type)));
+        moves.push({
+          kind: 'group_visit',
+          key: `group_visit:${p.patientId}:${anchorDay}`,
+          title: `${p.patientName} · ${visitsMerged} consultas em ${visitsMerged} dias`,
+          detail: `${types.join(' + ')} — ${group
+            .map((b) => `${b.date} (${b.durationMinutes} min)`)
+            .join(', ')}. Cabem numa sessão de ${totalMinutes} min a partir de ${anchorDay}: poupa ${
+            (visitsMerged - 1) * TURNAROUND_MINUTES
+          } min de rotação, uma deslocação ao doente e ${visitsMerged - 1} ${
+            visitsMerged - 1 === 1 ? 'oportunidade' : 'oportunidades'
+          } de faltar.`,
+          gainMinutes: (visitsMerged - 1) * TURNAROUND_MINUTES,
+          patientName: p.patientName,
+          date: anchorDay,
+          appointmentIds: group.map((b) => b.appointmentId),
+        });
+      }
+      i = Math.max(j, i + 1);
+    }
+  }
+  return moves;
+}
+
+// ─── Regra 6: antecipar consultas ───────────────────────────────────────────
+// Uma consulta marcada para daqui a muito tempo, e um espaço livre mais cedo onde ela
+// cabe. Antecipar não muda a ocupação total — troca um lugar por outro — por isso
+// gainMinutes é 0 e o ganho declara-se em DIAS. Vale por três razões concretas, todas
+// já medidas noutro sítio deste projeto:
+//
+//   • o prazo de marcação é ele próprio um fator de risco de falta
+//     (leadTimeFactor em lib/noShowRisk.ts sobe até aos 21 dias) — antecipar
+//     reduz o risco da consulta que se antecipa;
+//   • receita mais cedo é receita mais provável: entre hoje e daqui a seis semanas
+//     cabe uma mudança de ideias, uma mudança de clínica e um plano esquecido;
+//   • o lugar que se liberta no fim fica disponível para procura que ainda nem
+//     entrou — que é sempre mais fácil de preencher do que um buraco para amanhã.
+//
+// Só propõe antecipações com ganho material (`minAdvanceDays`): mover uma consulta um
+// dia para trás é incomodar o doente por nada.
+export interface PullForwardCandidate {
+  booking: Booking;
+  // Espaço mais cedo onde a consulta cabe inteira, já filtrado pelo chamador contra
+  // as preferências do doente e a disponibilidade do dentista.
+  target: Opening;
+}
+
+export function buildPullForwardMoves(
+  candidates: PullForwardCandidate[],
+  formatTime: (minutes: number) => string,
+  minAdvanceDays = 3,
+): OptimizerMove[] {
+  const moves: OptimizerMove[] = [];
+  const seen = new Set<string>();
+
+  // Maior antecipação primeiro, e cada consulta e cada espaço usados uma só vez: sem
+  // isto a mesma consulta apareceria proposta para cinco espaços diferentes e o mesmo
+  // espaço prometido a cinco consultas — a mesma armadilha de contagem dupla que o
+  // comentário de buildGapFillMoves descreve.
+  const usedOpenings = new Set<string>();
+  const ordered = [...candidates].sort((a, b) => {
+    const da = advanceDays(a);
+    const db = advanceDays(b);
+    return db !== da ? db - da : a.booking.appointmentId < b.booking.appointmentId ? -1 : 1;
+  });
+
+  for (const c of ordered) {
+    const days = advanceDays(c);
+    if (days < minAdvanceDays) continue;
+    if (seen.has(c.booking.appointmentId)) continue;
+    const openingKey = `${c.target.date}:${c.target.chair}:${c.target.startMinutes}`;
+    if (usedOpenings.has(openingKey)) continue;
+    if (c.target.durationMinutes < c.booking.durationMinutes) continue;
+
+    seen.add(c.booking.appointmentId);
+    usedOpenings.add(openingKey);
+    moves.push({
+      kind: 'pull_forward',
+      key: `pull_forward:${c.booking.appointmentId}`,
+      title: `${c.booking.patientName} · ${c.booking.type}`,
+      detail: `Marcada para ${c.booking.date}; há espaço a ${c.target.date} às ${formatTime(
+        c.target.startMinutes,
+      )} na cadeira ${c.target.chair}. Antecipar ${days} dias reduz o risco de falta (o prazo de marcação é um dos fatores) e liberta o lugar de ${c.booking.date}.`,
+      gainMinutes: 0,
+      advanceDays: days,
+      appointmentId: c.booking.appointmentId,
+      patientName: c.booking.patientName,
+      date: c.booking.date,
+    });
+  }
+  return moves;
+}
+
+function advanceDays(c: PullForwardCandidate): number {
+  return Math.round(
+    (Date.parse(`${c.booking.date}T00:00:00Z`) - Date.parse(`${c.target.date}T00:00:00Z`)) / 86_400_000,
+  );
+}
+
+// ─── Regra 7: combinar consultas do mesmo dia ───────────────────────────────
+// Duas consultas no mesmo dia com um buraco entre elas. Colá-las não muda quanto
+// tempo de cadeira se usa — muda ONDE fica o tempo livre: em vez de trinta minutos
+// mortos no meio da manhã, fica um bloco contíguo na ponta, que é o único tipo de
+// espaço que se consegue vender a uma consulta inteira.
+//
+// É a operação inversa de buildGapFillMoves: aquela procura quem meter no buraco,
+// esta faz o buraco desaparecer quando não há ninguém para lá meter. Por isso o
+// chamador só deve aplicar esta regra aos espaços que a regra 1 não conseguiu
+// preencher — caso contrário as duas propõem coisas contraditórias sobre o mesmo
+// espaço no mesmo ecrã.
+//
+// Aplica-se a consultas do mesmo doente OU do mesmo agregado (o chamador decide o
+// que é "mesmo agregado" — hoje, mesmo apelido e mesmo telefone; ver
+// lib/scheduleOptimizer.ts). Duas consultas de estranhos também se podem colar, mas
+// isso é remarcar alguém sem lhe dar nada em troca, e não é o que esta regra propõe.
+export interface SameDayPair {
+  first: Booking;
+  second: Booking;
+  // 'patient' quando é a mesma pessoa, 'household' quando são pessoas diferentes do
+  // mesmo agregado — muda o texto da proposta, porque um telefonema a uma família é
+  // uma conversa diferente de um telefonema a uma pessoa.
+  relation: 'patient' | 'household';
+}
+
+export function buildConsolidateMoves(
+  pairs: SameDayPair[],
+  formatTime: (minutes: number) => string,
+  minGapMinutes = 20,
+): OptimizerMove[] {
+  const moves: OptimizerMove[] = [];
+  const seen = new Set<string>();
+
+  for (const { first, second, relation } of pairs) {
+    if (first.date !== second.date) continue;
+    const [a, b] = first.startMinutes <= second.startMinutes ? [first, second] : [second, first];
+    const gap = b.startMinutes - (a.startMinutes + a.durationMinutes);
+    if (gap < minGapMinutes) continue;
+
+    // Uma consulta só participa numa proposta de consolidação — encadear várias
+    // mudanças no mesmo dia é uma remarcação em cascata, não uma sugestão.
+    if (seen.has(a.appointmentId) || seen.has(b.appointmentId)) continue;
+    seen.add(a.appointmentId);
+    seen.add(b.appointmentId);
+
+    const quem =
+      relation === 'patient'
+        ? `${a.patientName} tem duas consultas`
+        : `${a.patientName} e ${b.patientName} têm consultas`;
+    moves.push({
+      kind: 'consolidate',
+      key: `consolidate:${a.appointmentId}:${b.appointmentId}`,
+      title: `${a.patientName} · ${a.date}`,
+      detail: `${quem} no mesmo dia com ${gap} min mortos entre elas (${formatTime(
+        a.startMinutes + a.durationMinutes,
+      )}–${formatTime(b.startMinutes)}). Encostar a segunda à primeira junta esse tempo ao bloco livre do fim do dia, onde cabe uma consulta inteira.`,
+      // O tempo não é criado — é mudado de sítio. Contá-lo como ganho de capacidade
+      // faria a soma do otimizador crescer sem que a clínica pudesse marcar mais
+      // nada, que é exatamente a inflação que buildGapFillMoves evita ao alocar cada
+      // doente uma só vez.
+      gainMinutes: 0,
+      consolidatedMinutes: gap,
+      appointmentId: b.appointmentId,
+      patientName: a.patientName,
+      date: a.date,
+      appointmentIds: [a.appointmentId, b.appointmentId],
+    });
+  }
+  return moves;
 }

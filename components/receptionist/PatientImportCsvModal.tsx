@@ -106,10 +106,10 @@ export default function PatientImportCsvModal({
       {err && (
         <div
           style={{
-            background: '#FFEBE6',
-            border: '1px solid #FFBDAD',
-            color: '#DE350B',
-            borderRadius: 8,
+            background: 'var(--urgency-critical-bg)',
+            border: '1px solid var(--urgency-critical-border)',
+            color: 'var(--urgency-critical)',
+            borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
             fontSize: 12,
             marginBottom: 12,
@@ -142,11 +142,11 @@ export default function PatientImportCsvModal({
       )}
 
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#172B4D' }}>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-primary)' }}>
           <input type="checkbox" checked={createExtraFields} onChange={(e) => setCreateExtraFields(e.target.checked)} />
           Auto-create extra fields for this clinic
         </label>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#172B4D' }}>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-primary)' }}>
           <input type="checkbox" checked={unmappedAsExtra} onChange={(e) => setUnmappedAsExtra(e.target.checked)} />
           Import unmapped columns as extra fields
         </label>
@@ -156,10 +156,10 @@ export default function PatientImportCsvModal({
         <div
           style={{
             marginTop: 12,
-            background: '#E3FCEF',
-            border: '1px solid #ABF5D1',
-            color: '#00875A',
-            borderRadius: 8,
+            background: 'var(--urgency-ok-bg)',
+            border: '1px solid var(--urgency-ok-border)',
+            color: 'var(--urgency-ok)',
+            borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
             fontSize: 12,
             fontWeight: 800,

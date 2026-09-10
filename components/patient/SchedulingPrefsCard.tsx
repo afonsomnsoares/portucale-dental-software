@@ -117,12 +117,16 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
   return (
     <div
       className="card"
-      style={{ padding: '14px 18px', boxShadow: 'none', border: '1px solid #DFE1E6', gridColumn: '1 / -1' }}
+      style={{
+        padding: '14px 18px',
+        border: '1px solid var(--border-subtle)',
+        gridColumn: '1 / -1',
+      }}
     >
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="section-label">PREFERÊNCIAS DE MARCAÇÃO</div>
-          <div className="text-xs" style={{ color: 'var(--ink-3)', marginTop: 2 }}>
+          <div className="text-xs" style={{ color: 'var(--text-muted)', marginTop: 2 }}>
             Usadas para ordenar os horários sugeridos. Nunca impedem uma marcação.
           </div>
         </div>
@@ -134,10 +138,10 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
       </div>
 
       {!editing ? (
-        <div className="text-sm" style={{ color: summary ? 'var(--ink)' : 'var(--ink-3)' }}>
+        <div className="text-sm" style={{ color: summary ? 'var(--text-primary)' : 'var(--text-muted)' }}>
           {summary || 'Sem preferências definidas — qualquer horário serve.'}
           {saved?.notes && (
-            <div className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>
+            <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
               {saved.notes}
             </div>
           )}
@@ -154,10 +158,10 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
                   key={d}
                   onClick={() => toggleDay(d)}
                   style={{
-                    border: `1px solid ${on ? 'var(--brand)' : 'var(--border)'}`,
-                    background: on ? 'var(--brand-bg)' : 'var(--surface)',
-                    color: on ? 'var(--brand)' : 'var(--ink-2)',
-                    borderRadius: 6,
+                    border: `1px solid ${on ? 'var(--accent)' : 'var(--border-subtle)'}`,
+                    background: on ? 'var(--accent-bg)' : 'var(--bg-surface)',
+                    color: on ? 'var(--accent)' : 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-control)',
                     padding: '4px 10px',
                     fontSize: 12,
                     fontWeight: on ? 700 : 500,
@@ -214,7 +218,11 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
             style={{ marginBottom: 12 }}
           />
 
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={load} disabled={saving}>
               Cancelar

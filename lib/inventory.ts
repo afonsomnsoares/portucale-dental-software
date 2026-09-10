@@ -1,12 +1,19 @@
-import { query, withTransaction } from './db';
+import { stockValue } from './costingCalc';
+import { query, queryRead, withTransaction } from './db';
 import {
   batchExpiryStatus,
+  classifyStagnant,
   computeConsumptionRate,
   daysUntilStockout,
   isAtRisk,
+  type OrderedLine,
   planFefoConsumption,
   procedureDemand,
+  type ReceivedLine,
+  rankStagnant,
+  type StagnantItem,
   suggestReorderQuantity,
+  summarizeReconciliation,
 } from './inventoryCalc';
 
 // Tunable knobs for the forecast — not per-tenant configurable yet (a natural follow-up,
@@ -17,6 +24,11 @@ const LEAD_TIME_DAYS = 7;
 const TARGET_DAYS_OF_STOCK = 30;
 const EXPIRY_WARN_DAYS = 30;
 // Matches the spec's own example ("...nos próximos 14 dias").
+// Janela de observação do ritmo de consumo para a classificação de "rotação lenta".
+// Mais larga do que CONSUMPTION_WINDOW_DAYS (30) de propósito: um item que sai devagar
+// pode não ter tido um único movimento nos últimos 30 dias sem estar parado, e uma
+// janela curta transformaria sazonalidade normal em alarme.
+const STAGNANT_WINDOW_DAYS = 180;
 const PROCEDURE_FORECAST_DAYS = 14;
 
 export type InventoryMovementReason = 'received' | 'consumed' | 'adjusted' | 'wastage' | 'expired';
@@ -348,4 +360,148 @@ export async function receivePurchaseOrder(tenantId: string, poId: string, userI
     );
     return { po: updated[0] };
   });
+}
+
+// ─── Produtos parados ───────────────────────────────────────────────────────
+// O contrário da rutura, e o mais fácil de ignorar: material que está lá, custou
+// dinheiro, e não sai. `inventory_movements` tem a informação desde a migração 026 —
+// o que não existia era a pergunta. A classificação em quatro casos vive em
+// lib/inventoryCalc.ts:classifyStagnant; aqui só se juntam as linhas.
+export async function computeStagnantInventory(tenantId: string): Promise<StagnantItem[]> {
+  const rows = await queryRead(
+    `SELECT i.id,
+            i.item,
+            COALESCE(st.quantity, 0)::numeric AS quantity,
+            -- O preço da clínica manda sobre o do catálogo (migração 047), mesma regra
+            -- do ponto de reposição. Resolvido em SQL para não trazer duas colunas e
+            -- decidir em JavaScript o que a base já sabe decidir.
+            COALESCE(s.unit_cost, i.unit_cost) AS unit_cost,
+            (SELECT MAX(m.created_at) FROM inventory_movements m
+              WHERE m.tenant_id=$1 AND m.item_id=i.id AND m.reason='consumed') AS last_consumed_at,
+            COALESCE((SELECT SUM(ABS(m.delta)) FROM inventory_movements m
+              WHERE m.tenant_id=$1 AND m.item_id=i.id AND m.reason='consumed'
+                AND m.created_at >= NOW() - ($2::int * INTERVAL '1 day')), 0)::numeric AS consumed_in_window,
+            (SELECT MIN(b.expiry_date) FROM inventory_batches b
+              WHERE b.tenant_id=$1 AND b.item_id=i.id AND b.quantity > 0 AND b.expiry_date IS NOT NULL) AS nearest_expiry
+     FROM inventory_items i
+     LEFT JOIN inventory_stock st ON st.item_id = i.id AND st.tenant_id = $1
+     LEFT JOIN inventory_item_settings s ON s.item_id = i.id AND s.tenant_id = $1
+     -- Um item que a clínica desativou (migração 044) não é stock parado dela — saiu
+     -- das listas dela por decisão, não por esquecimento.
+     WHERE COALESCE(s.active, TRUE)`,
+    [tenantId, STAGNANT_WINDOW_DAYS],
+  );
+
+  const today = new Date();
+  const items: StagnantItem[] = rows.map((r) => {
+    const currentQty = Number(r.quantity) || 0;
+    const unitCost = r.unit_cost == null ? null : Number(r.unit_cost);
+    const status = classifyStagnant(
+      {
+        currentQty,
+        lastConsumedAt: r.last_consumed_at || null,
+        consumedInWindow: Number(r.consumed_in_window) || 0,
+        windowDays: STAGNANT_WINDOW_DAYS,
+        nearestExpiry: r.nearest_expiry ? String(r.nearest_expiry).slice(0, 10) : null,
+      },
+      today,
+    );
+    return {
+      itemId: Number(r.id),
+      item: String(r.item),
+      status,
+      currentQty,
+      // null e não 0 quando não há preço: 0 € ler-se-ia como «não vale nada», que é
+      // uma conclusão diferente de «não sabemos quanto vale».
+      tiedUpValue: unitCost == null ? null : stockValue(currentQty, unitCost),
+      daysSinceConsumed: r.last_consumed_at
+        ? Math.floor((today.getTime() - new Date(r.last_consumed_at).getTime()) / 86_400_000)
+        : null,
+      nearestExpiry: r.nearest_expiry ? String(r.nearest_expiry).slice(0, 10) : null,
+    };
+  });
+
+  return rankStagnant(items);
+}
+
+// ─── Reconciliação de encomendas ────────────────────────────────────────────
+// Compara as três versões de uma encomenda: o que se pediu, o que chegou e o que se
+// pagou. Só leitura — quem decide se a diferença é aceitável é uma pessoa.
+export async function computeOrderReconciliation(tenantId: string, poId: string) {
+  const [po] = await queryRead(
+    `SELECT id, status, invoiced_total, supplier_invoice_ref, reconciled_at, reconciliation
+     FROM purchase_orders WHERE id=$1 AND tenant_id=$2`,
+    [poId, tenantId],
+  );
+  if (!po) return null;
+
+  // Uma reconciliação já feita devolve-se congelada, tal como foi concluída. Recalcular
+  // seria mostrar uma conclusão diferente da que alguém assinou — mesma escolha da
+  // passagem de turno (lib/shiftHandoff.ts).
+  if (po.reconciled_at && po.reconciliation) {
+    return { poId: String(po.id), frozen: true as const, reconciledAt: po.reconciled_at, ...po.reconciliation };
+  }
+
+  const lines = await queryRead(
+    `SELECT poi.item_id, i.item, poi.quantity, poi.unit_cost, poi.received_quantity, poi.received_unit_cost
+     FROM purchase_order_items poi
+     JOIN inventory_items i ON i.id = poi.item_id
+     WHERE poi.purchase_order_id=$1 AND poi.tenant_id=$2
+     ORDER BY i.item`,
+    [poId, tenantId],
+  );
+
+  const ordered: OrderedLine[] = lines.map((l) => ({
+    itemId: Number(l.item_id),
+    item: String(l.item),
+    quantity: Number(l.quantity) || 0,
+    unitCost: l.unit_cost == null ? null : Number(l.unit_cost),
+  }));
+
+  // Enquanto ninguém registar o que chegou de facto, o recebido é o encomendado — que é
+  // a suposição que o sistema fazia em silêncio antes desta migração. A diferença é que
+  // agora está escrita e é editável, em vez de ser invisível.
+  const received: ReceivedLine[] = lines
+    .filter((l) => l.received_quantity !== null || po.status === 'received')
+    .map((l) => ({
+      itemId: Number(l.item_id),
+      item: String(l.item),
+      quantity: l.received_quantity == null ? Number(l.quantity) || 0 : Number(l.received_quantity),
+      unitCost:
+        l.received_unit_cost == null
+          ? l.unit_cost == null
+            ? null
+            : Number(l.unit_cost)
+          : Number(l.received_unit_cost),
+    }));
+
+  const summary = summarizeReconciliation(
+    ordered,
+    received,
+    po.invoiced_total == null ? null : Number(po.invoiced_total),
+  );
+  return {
+    poId: String(po.id),
+    frozen: false as const,
+    status: String(po.status),
+    supplierInvoiceRef: po.supplier_invoice_ref,
+    ...summary,
+  };
+}
+
+// Congela a reconciliação. A partir daqui a encomenda deixa de ser recalculada — o que
+// se concluiu fica como foi concluído, mesmo que o stock seja corrigido depois.
+export async function freezeOrderReconciliation(tenantId: string, poId: string, userId: string) {
+  const current = await computeOrderReconciliation(tenantId, poId);
+  if (!current) return null;
+  if (current.frozen) return current;
+  const { poId: _id, frozen: _f, ...payload } = current;
+  const [row] = await query(
+    `UPDATE purchase_orders
+     SET reconciled_at=NOW(), reconciled_by=$3, reconciliation=$4::jsonb, updated_at=NOW()
+     WHERE id=$1 AND tenant_id=$2
+     RETURNING id, reconciled_at`,
+    [poId, tenantId, userId || null, JSON.stringify(payload)],
+  );
+  return row ? { poId: String(row.id), frozen: true as const, reconciledAt: row.reconciled_at, ...payload } : null;
 }

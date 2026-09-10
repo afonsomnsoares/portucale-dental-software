@@ -30,13 +30,13 @@ export default function WaitlistEntriesTable({
         </thead>
         <tbody>
           {entries.map((w) => (
-            <tr key={w.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+            <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
               <td className="data-td" style={{ fontWeight: 600 }}>
                 {w.patient_name}
               </td>
               <td className="data-td">{w.phone ? <a href={`tel:${w.phone}`}>{formatPhonePT(w.phone)}</a> : '—'}</td>
               <td className="data-td">{w.treatment_type}</td>
-              <td className="data-td text-xs" style={{ color: 'var(--ink-2)' }}>
+              <td className="data-td text-xs" style={{ color: 'var(--text-secondary)' }}>
                 {w.preferred_days?.length
                   ? w.preferred_days.map((d) => WEEKDAYS.find((x) => x.key === d)?.label || d).join(', ')
                   : 'Qualquer dia'}
@@ -45,7 +45,11 @@ export default function WaitlistEntriesTable({
                   : ''}
               </td>
               <td className="data-td">
-                <Badge label={WAITLIST_STATUS_LABEL[w.status] || w.status} bg="var(--surface-2)" color="var(--ink-2)" />
+                <Badge
+                  label={WAITLIST_STATUS_LABEL[w.status] || w.status}
+                  bg="var(--bg-sunken)"
+                  color="var(--text-secondary)"
+                />
               </td>
               <td className="data-td" style={{ textAlign: 'right' }}>
                 {(w.status === 'active' || w.status === 'offered') && (

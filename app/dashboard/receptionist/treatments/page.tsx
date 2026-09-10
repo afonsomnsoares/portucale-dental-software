@@ -96,10 +96,10 @@ export default function ReceptionTreatmentsPage() {
         onAction={() => setModal(true)}
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        <MetricCard label="TOTAL VALUE" value={`$${totalFee.toLocaleString()}`} color="#0052CC" />
-        <MetricCard label="PROPOSED" value={proposed} sub="awaiting acceptance" color="#FF8B00" />
-        <MetricCard label="ACCEPTED" value={accepted} sub="scheduled" color="#00A3BF" />
-        <MetricCard label="COMPLETED" value={completed} sub="completed treatments" color="#00875A" />
+        <MetricCard label="TOTAL VALUE" value={`$${totalFee.toLocaleString()}`} color="var(--accent)" />
+        <MetricCard label="PROPOSED" value={proposed} sub="awaiting acceptance" color="var(--urgency-soon)" />
+        <MetricCard label="ACCEPTED" value={accepted} sub="scheduled" color="var(--cat-teal)" />
+        <MetricCard label="COMPLETED" value={completed} sub="completed treatments" color="var(--urgency-ok)" />
       </div>
 
       {/* Filters */}
@@ -135,7 +135,7 @@ export default function ReceptionTreatmentsPage() {
             Clear Filters
           </GhostBtn>
         )}
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: '#97A0AF' }}>{visible.length} treatments</div>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>{visible.length} treatments</div>
       </div>
 
       <div className="card" style={{ padding: 0 }}>

@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers';
 import OperatoryPanel from '@/components/receptionist/OperatoryPanel';
 import WaitingRoomPanel from '@/components/receptionist/WaitingRoomPanel';
 import { FormField, GhostBtn, Inp, Modal, PageHeader, PrimaryBtn, SecondaryBtn, Spinner } from '@/components/ui';
+import { useSSE } from '@/hooks/useSSE';
 import type { Appointment } from '@/lib/types';
 
 function toMins(t = '00:00') {
@@ -31,12 +32,30 @@ export default function LiveFloorPage() {
   useEffect(() => {
     load();
   }, [load]);
-  useEffect(() => {
-    const id = setInterval(() => {
-      load();
-    }, 5000);
-    return () => clearInterval(id);
+
+  // ─── Tempo real ─────────────────────────────────────────────────────────
+  // Esta página recarregava a agenda inteira de 5 em 5 segundos. Numa receção com
+  // quatro ecrãs abertos são 2 880 pedidos por hora para descobrir, quase sempre, que
+  // nada mudou — e mesmo assim com até 5 segundos de atraso quando alguma coisa muda
+  // mesmo. O canal SSE existia desde há muito e não tinha um único consumidor.
+  //
+  // Agora recarrega quando o Postgres avisa que uma consulta mudou (migração 051 →
+  // lib/realtime.ts → app/api/sse/route.ts). O evento traz só a tabela e o id, de
+  // propósito: quem quer os dados vai buscá-los pela API normal, com a sessão e a RLS
+  // a valer.
+  const onRealtimeChange = useCallback(() => {
+    load();
   }, [load]);
+  const { isConnected } = useSSE({ url: '/api/sse', tables: ['appointments'], onChange: onRealtimeChange });
+
+  // A sondagem não desaparece — passa a rede de segurança. Sem ligação de tempo real
+  // (proxy que corta streams, portátil que adormeceu, endpoint em baixo) a página tem
+  // de continuar a funcionar, só que menos depressa. Com ligação, um minuto chega para
+  // apanhar um evento que se tenha perdido entre reconexões.
+  useEffect(() => {
+    const id = setInterval(() => load(), isConnected ? 60000 : 10000);
+    return () => clearInterval(id);
+  }, [load, isConnected]);
 
   // Fechar a consulta é o momento em que a receção sabe quanto se cobrou — por isso o
   // valor pede-se aqui, e não numa secção de faturas à parte onde alguém se teria de
@@ -79,6 +98,9 @@ export default function LiveFloorPage() {
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
   const syncedLabel = syncedAt ? syncedAt.toTimeString().slice(0, 5) : '';
+  // Dizer à pessoa se está a ver dados vivos ou dados de há um minuto. Sem isto, uma
+  // ligação em baixo é indistinguível de uma clínica parada.
+  const liveLabel = isConnected ? 'em direto' : 'a atualizar de 10 em 10s';
 
   const todays = useMemo(() => {
     return (appts || []).slice().sort((a, b) => toMins(a.start_time) - toMins(b.start_time));
@@ -103,7 +125,7 @@ export default function LiveFloorPage() {
     <div>
       <PageHeader
         title="Live Floor"
-        sub={`${active.length} appointment${active.length !== 1 ? 's' : ''} active · ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}${syncedLabel ? ` · synced ${syncedLabel}` : ''}`}
+        sub={`${active.length} appointment${active.length !== 1 ? 's' : ''} active · ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}${syncedLabel ? ` · sincronizado ${syncedLabel} (${liveLabel})` : ''}`}
       >
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Refresh
@@ -145,7 +167,7 @@ export default function LiveFloorPage() {
           </FormField>
 
           {closing.error && (
-            <div className="text-sm" style={{ color: '#DE350B', fontWeight: 700, marginTop: 10 }}>
+            <div className="text-sm" style={{ color: 'var(--urgency-critical)', fontWeight: 700, marginTop: 10 }}>
               {closing.error}
             </div>
           )}

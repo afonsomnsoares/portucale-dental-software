@@ -37,10 +37,10 @@ const STATUS_LABELS: Record<string, string> = {
   received: 'Recebido',
 };
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  ordered: { bg: '#FFEBE6', color: '#DE350B' },
-  sent: { bg: '#DEEBFF', color: '#0052CC' },
-  'in-progress': { bg: '#EAE6FF', color: '#5243AA' },
-  received: { bg: '#E3FCEF', color: '#00875A' },
+  ordered: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  sent: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  'in-progress': { bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
+  received: { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
 };
 
 interface NewLabOrderForm {
@@ -126,7 +126,7 @@ export default function LabOrdersPage() {
   }
 
   function renderStatusBadge(s: string) {
-    const cfg = STATUS_COLORS[s] || { bg: '#F4F7FA', color: '#5E6C84' };
+    const cfg = STATUS_COLORS[s] || { bg: 'var(--bg-page)', color: 'var(--text-secondary)' };
     return <Badge label={STATUS_LABELS[s] || s} bg={cfg.bg} color={cfg.color} />;
   }
 
@@ -137,7 +137,7 @@ export default function LabOrdersPage() {
       <PageHeader title="Encomendas de Laboratório" sub="Trabalhos protéticos, do envio à receção" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -170,13 +170,13 @@ export default function LabOrdersPage() {
                     textAlign: 'left',
                     padding: '11px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #F4F7FA',
-                    background: selected?.id === p.id ? '#DEEBFF' : 'white',
-                    borderLeft: `3px solid ${selected?.id === p.id ? '#0052CC' : 'transparent'}`,
+                    borderBottom: '1px solid var(--bg-page)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>

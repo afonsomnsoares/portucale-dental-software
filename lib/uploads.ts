@@ -4,6 +4,7 @@ import path from 'node:path';
 import { query } from './db';
 import { completeTask } from './patientTasks';
 import { deleteObjectR2, getR2Config, putObjectR2 } from './r2';
+import { checkUploadType, MAGIC_BYTES_TO_READ, UPLOAD_CATEGORIES, UPLOAD_MAX_BYTES } from './uploadsCalc';
 import { asEnum } from './validate';
 
 // Shared by the authenticated upload route (app/api/uploads/route.ts) and the
@@ -11,9 +12,10 @@ import { asEnum } from './validate';
 // so the R2-or-local-storage logic, size/type limits and the uploads row shape only live
 // in one place.
 
-export const UPLOAD_MAX_BYTES = 6 * 1024 * 1024;
-export const UPLOAD_ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'application/pdf']);
-export const UPLOAD_CATEGORIES = ['id_document', 'xray', 'consent', 'insurance', 'lab_result', 'other'] as const;
+// Os limites e a lista branca vivem em lib/uploadsCalc.ts, partilhados com o caminho
+// do presign — ver o cabeçalho desse ficheiro. Re-exportados aqui para não partir
+// quem já os importava daqui.
+export { EXTENSION_FOR_TYPE, UPLOAD_ALLOWED_TYPES, UPLOAD_CATEGORIES, UPLOAD_MAX_BYTES } from './uploadsCalc';
 
 export interface SaveUploadInput {
   tenantId: string;
@@ -42,19 +44,30 @@ export async function saveUploadFile({
     return { ok: false, status: 400, error: `category must be one of: ${UPLOAD_CATEGORIES.join(', ')}` };
   }
 
-  const type = String(file.type || '');
-  if (type && !UPLOAD_ALLOWED_TYPES.has(type)) {
-    return { ok: false, status: 400, error: 'Unsupported file type' };
-  }
-
   const buf = Buffer.from(await file.arrayBuffer());
+  // O tamanho é verificado ANTES do tipo: ler os bytes de um ficheiro de 4 GB para
+  // depois o recusar por ser um .exe é fazer o trabalho pela ordem errada.
   if (buf.length > UPLOAD_MAX_BYTES) {
     return { ok: false, status: 413, error: 'File too large' };
   }
 
-  const original = String(file.name || 'upload');
-  const extRaw = path.extname(original).slice(1).toLowerCase();
-  const safeExt = extRaw && extRaw.length <= 8 ? extRaw : type === 'application/pdf' ? 'pdf' : 'bin';
+  // Duas verificações, não uma. `canonicalUploadType` sozinho valida o tipo DECLARADO —
+  // declarado por quem envia, ou seja, escolhido pelo atacante. checkUploadType confronta
+  // essa declaração com os primeiros bytes do ficheiro: é a diferença entre "o cliente
+  // disse que é um PNG" e "isto é um PNG". Importa sobretudo aqui, porque este é o
+  // caminho que o portal do doente usa — a única superfície onde alguém sem sessão
+  // nenhuma consegue escrever um ficheiro no armazenamento da clínica.
+  const checked = checkUploadType(file.type, buf.subarray(0, MAGIC_BYTES_TO_READ));
+  if (!checked.ok) {
+    return { ok: false, status: 400, error: checked.error };
+  }
+  const type = checked.type;
+  const safeExt = checked.extension;
+
+  // O nome que o cliente enviou NÃO participa no nome gravado — nem sequer na
+  // extensão. `safeExt` vem da tabela de tipos aceites, exatamente como no caminho
+  // do presign. É isto que impede que um ficheiro chamado `x.html` seja servido
+  // como HTML a partir de /uploads/ na nossa própria origem.
   const filename = `${crypto.randomUUID()}.${safeExt}`;
 
   let out: { url: string; storage: string; storageKey: string } | null = null;

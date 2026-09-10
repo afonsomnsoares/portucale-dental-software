@@ -40,7 +40,7 @@ export const AGENTS: readonly AgentDefinition[] = [
     icon: '👤',
     summary: 'O contexto de cada doente e qual é a próxima ação: planos por aceitar, recall e reativação.',
     boundary: 'Coordena; não pratica atos clínicos nem decide tratamento. Antes de virar paciente, é do Lead.',
-    jobs: ['assignTasks', 'planFollowup', 'recallOutreach', 'lifecycleOutreach', 'patientReview'],
+    jobs: ['assignTasks', 'planFollowup', 'recallOutreach', 'lifecycleOutreach', 'patientReview', 'carePathways'],
     reads: [
       'lib/nextAction.ts',
       'lib/patientJourney.ts',
@@ -48,6 +48,8 @@ export const AGENTS: readonly AgentDefinition[] = [
       'lib/taskRouting.ts',
       'lib/lifecycle.ts',
       'lib/agents/patientAgent.ts',
+      'lib/carePathway.ts',
+      'lib/patientScoring.ts',
     ],
     ai: 'wired',
   },
@@ -58,7 +60,13 @@ export const AGENTS: readonly AgentDefinition[] = [
     summary: 'Encaixa procura nos recursos: cadeiras, especialidade do dentista, lista de espera e risco de falta.',
     boundary: 'Agenda de doentes. Turnos e férias do pessoal são de Operações.',
     jobs: ['reminders', 'risk', 'riskOutreach', 'waitlistExpire', 'scheduleReview'],
-    reads: ['lib/scheduleOptimizer.ts', 'lib/waitlistMatch.ts', 'lib/noShowRisk.ts', 'lib/agents/schedulingAgent.ts'],
+    reads: [
+      'lib/scheduleOptimizer.ts',
+      'lib/waitlistMatch.ts',
+      'lib/noShowRisk.ts',
+      'lib/slotRisk.ts',
+      'lib/agents/schedulingAgent.ts',
+    ],
     ai: 'wired',
   },
   {
@@ -79,13 +87,21 @@ export const AGENTS: readonly AgentDefinition[] = [
       'A clínica a funcionar: checklists, incidentes, passagem de turno, stock, reposição e manutenção de equipamento. A reposição já é decidida por IA.',
     boundary:
       'Coordena a casa e a equipa; não fala com doentes. A IA decide o rascunho de encomenda sozinha, mas nunca sai de "draft" — avançar para o fornecedor continua a exigir uma pessoa.',
-    jobs: ['escalateIncidents', 'checklistReminders', 'handoffReminders', 'reorderSuggestions', 'equipmentMaintenance'],
+    jobs: [
+      'escalateIncidents',
+      'checklistReminders',
+      'handoffReminders',
+      'reorderSuggestions',
+      'equipmentMaintenance',
+      'conversationSweep',
+    ],
     reads: [
       'lib/shiftHandoff.ts',
       'lib/inventoryCalc.ts',
       'lib/staffAvailabilityCalc.ts',
       'lib/agents/reorderAgent.ts',
       'lib/equipment.ts',
+      'lib/inbound.ts',
     ],
     ai: 'wired',
   },
@@ -128,6 +144,16 @@ export const AGENTS: readonly AgentDefinition[] = [
 // política vive num sítio só: consentimento, canal preferido, limite por semana,
 // horas de silêncio e deduplicação entre agentes. O job 'send' é a saída de todos.
 export const COMMS_JOB = 'send' as const;
+
+// E, desde a migração 050, a política tem um ÁRBITRO. Antes cada agente deduplicava por
+// tipo de mensagem — o que impede dois lembretes para a mesma consulta e não impede
+// nada entre agentes: um doente podia receber cinco SMS da mesma clínica no mesmo dia,
+// dois deles a contradizerem-se. Hoje nenhum agente escreve em notifications; todos
+// pedem, e lib/agents/coordinationCalc.ts decide, uma vez por passagem, com todos os
+// pedidos à vista. Quem perde é diferido e volta a pedir amanhã, e cada cedência fica
+// escrita em agent_contact_ledger — um árbitro em que ninguém vê quem cedeu a quem é um
+// árbitro em que ninguém confia.
+export const COORDINATION_MODULE = 'lib/agents/coordinationCalc.ts' as const;
 
 export function agentById(id: string): AgentDefinition | undefined {
   return AGENTS.find((a) => a.id === id);

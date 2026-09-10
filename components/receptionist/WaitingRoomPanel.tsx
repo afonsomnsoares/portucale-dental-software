@@ -9,8 +9,8 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
     <div className="card" style={{ padding: '18px 18px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: '#172B4D' }}>Waiting Room</div>
-          <div style={{ fontSize: 12, color: '#97A0AF' }}>
+          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Waiting Room</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {waiting.length} patient{waiting.length !== 1 ? 's' : ''} waiting
           </div>
         </div>
@@ -26,8 +26,8 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
               // biome-ignore lint/suspicious/noArrayIndexKey: fixed waiting-room seat slots, not tied to a specific appointment's identity
               key={i}
               style={{
-                border: '1px solid #EBECF0',
-                borderRadius: 14,
+                border: '1px solid var(--bg-sunken)',
+                borderRadius: 'var(--radius-card)',
                 padding: '12px 12px 10px',
                 background: 'white',
                 display: 'flex',
@@ -41,7 +41,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                   style={{
                     fontSize: 12,
                     fontWeight: 900,
-                    color: occupied ? '#172B4D' : '#97A0AF',
+                    color: occupied ? 'var(--text-primary)' : 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -52,7 +52,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                 <div
                   style={{
                     fontSize: 11,
-                    color: '#97A0AF',
+                    color: 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -64,7 +64,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                   <div
                     style={{
                       fontSize: 11,
-                      color: '#97A0AF',
+                      color: 'var(--text-muted)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -84,7 +84,15 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                     }}
                   >
                     <Badge s={apt.status} />
-                    <span style={{ width: 8, height: 8, borderRadius: 999, background: color, flexShrink: 0 }} />
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 'var(--radius-pill)',
+                        background: color,
+                        flexShrink: 0,
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -94,7 +102,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
       </div>
 
       {waiting.length > WAITING_SEATS && (
-        <div style={{ marginTop: 10, fontSize: 12, color: '#97A0AF', fontWeight: 700 }}>
+        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
           +{waiting.length - WAITING_SEATS} waiting (not shown)
         </div>
       )}

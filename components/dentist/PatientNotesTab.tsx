@@ -137,7 +137,7 @@ export default function PatientNotesTab({
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
       <div className="card p-5">
         <div className="section-label mb-3">NEW NOTE</div>
-        <div style={{ fontSize: 12, color: '#97A0AF', marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
           {user?.name || 'Dentist'} · {new Date().toLocaleString()}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -167,10 +167,12 @@ export default function PatientNotesTab({
               style={{ width: 280, padding: '7px 12px', fontSize: 13 }}
               accept="image/png,image/jpeg,image/webp,application/pdf"
             />
-            {uploading && <span style={{ fontSize: 12, color: '#97A0AF', fontWeight: 700 }}>Uploading…</span>}
+            {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>Uploading…</span>}
           </div>
           {uploadErr && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#DE350B', fontWeight: 700 }}>{uploadErr}</div>
+            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700 }}>
+              {uploadErr}
+            </div>
           )}
           {attachments.length > 0 && (
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -182,9 +184,9 @@ export default function PatientNotesTab({
                     justifyContent: 'space-between',
                     gap: 12,
                     alignItems: 'center',
-                    background: '#F4F7FA',
-                    border: '1px solid #EBECF0',
-                    borderRadius: 8,
+                    background: 'var(--bg-page)',
+                    border: '1px solid var(--bg-sunken)',
+                    borderRadius: 'var(--radius-control)',
                     padding: '8px 10px',
                   }}
                 >
@@ -194,7 +196,7 @@ export default function PatientNotesTab({
                     rel="noreferrer"
                     style={{
                       fontSize: 12,
-                      color: '#0052CC',
+                      color: 'var(--accent)',
                       fontWeight: 700,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -209,7 +211,7 @@ export default function PatientNotesTab({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#97A0AF',
+                      color: 'var(--text-muted)',
                       cursor: 'pointer',
                       fontSize: 18,
                       lineHeight: 1,
@@ -248,13 +250,17 @@ export default function PatientNotesTab({
               alignItems: 'center',
               gap: 6,
               padding: '6px 14px',
-              borderRadius: 6,
+              borderRadius: 'var(--radius-control)',
               border: 'none',
               fontSize: 12,
               fontWeight: 700,
               cursor: !isSupported ? 'not-allowed' : 'pointer',
-              background: isRecording ? '#FF5630' : speechError ? '#FFEBE6' : '#F4F7FA',
-              color: isRecording ? '#FFF' : speechError ? '#DE350B' : '#172B4D',
+              background: isRecording
+                ? 'var(--urgency-critical)'
+                : speechError
+                  ? 'var(--urgency-critical-bg)'
+                  : 'var(--bg-page)',
+              color: isRecording ? '#FFF' : speechError ? 'var(--urgency-critical)' : 'var(--text-primary)',
               opacity: !isSupported ? 0.5 : 1,
             }}
           >
@@ -263,14 +269,21 @@ export default function PatientNotesTab({
           </button>
           {isRecording && (
             <span
-              style={{ fontSize: 11, color: '#FF5630', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}
+              style={{
+                fontSize: 11,
+                color: 'var(--urgency-critical)',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
             >
               <span
                 style={{
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: '#FF5630',
+                  background: 'var(--urgency-critical)',
                   display: 'inline-block',
                   animation: 'pulse 1.2s ease-in-out infinite',
                 }}
@@ -279,9 +292,11 @@ export default function PatientNotesTab({
             </span>
           )}
           {speechError && !isRecording && (
-            <span style={{ fontSize: 11, color: '#DE350B', fontWeight: 600 }}>{speechError}</span>
+            <span style={{ fontSize: 11, color: 'var(--urgency-critical)', fontWeight: 600 }}>{speechError}</span>
           )}
-          {!isSupported && <span style={{ fontSize: 11, color: '#97A0AF' }}>Use Chrome or Edge to dictate</span>}
+          {!isSupported && (
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Use Chrome or Edge to dictate</span>
+          )}
         </div>
         <Textarea
           value={noteText}
@@ -309,7 +324,9 @@ export default function PatientNotesTab({
           </GhostBtn>
         </div>
         {saved && (
-          <div style={{ marginTop: 10, fontSize: 12, color: '#00875A', fontWeight: 600 }}>Note saved to history.</div>
+          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--urgency-ok)', fontWeight: 600 }}>
+            Note saved to history.
+          </div>
         )}
       </div>
 
@@ -322,23 +339,25 @@ export default function PatientNotesTab({
             <div key={n.id} style={{ marginBottom: 22 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Badge bg="#EAE6FF" color="#5243AA" label="NOTE" />
-                  <span style={{ fontSize: 12, color: '#97A0AF' }}>{new Date(n.created_at).toLocaleString()}</span>
-                  <span style={{ fontSize: 12, color: '#0052CC', fontWeight: 600 }}>{n.user_name}</span>
+                  <Badge bg="var(--cat-purple-bg)" color="var(--cat-purple)" label="NOTE" />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {new Date(n.created_at).toLocaleString()}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{n.user_name}</span>
                 </div>
-                <div style={{ fontSize: 10, color: '#C1C7D0', fontFamily: '"JetBrains Mono",monospace' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: '"JetBrains Mono",monospace' }}>
                   #{n.hash}
                 </div>
               </div>
               <pre
                 style={{
                   fontSize: 11,
-                  color: '#5E6C84',
+                  color: 'var(--text-secondary)',
                   fontFamily: '"JetBrains Mono",monospace',
-                  background: '#F4F7FA',
+                  background: 'var(--bg-page)',
                   padding: '12px 14px',
-                  borderRadius: 6,
-                  border: '1px solid #DFE1E6',
+                  borderRadius: 'var(--radius-control)',
+                  border: '1px solid var(--border-subtle)',
                   whiteSpace: 'pre-wrap',
                   maxHeight: 260,
                   overflowY: 'auto',
@@ -347,7 +366,7 @@ export default function PatientNotesTab({
               >
                 {n.event}
               </pre>
-              {i < notes.length - 1 && <div style={{ borderBottom: '1px solid #F4F7FA', marginTop: 18 }} />}
+              {i < notes.length - 1 && <div style={{ borderBottom: '1px solid var(--bg-page)', marginTop: 18 }} />}
             </div>
           ))
         )}

@@ -76,11 +76,11 @@ export default function ReceptionistRecallsPage() {
   }
 
   function statusMeta(r: Recall) {
-    if (!r.active) return { label: 'Inactive', bg: '#FFEBE6', color: '#DE350B' };
+    if (!r.active) return { label: 'Inactive', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' };
     if (r.next_due && r.next_due < new Date().toISOString().slice(0, 10))
-      return { label: 'Overdue', bg: '#FFF7E6', color: '#FF8B00' };
-    if (r.last_done) return { label: 'Active', bg: '#E3FCEF', color: '#00875A' };
-    return { label: 'Active', bg: '#E3FCEF', color: '#00875A' };
+      return { label: 'Overdue', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' };
+    if (r.last_done) return { label: 'Active', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' };
+    return { label: 'Active', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' };
   }
 
   async function handleCreate(e: FormEvent) {
@@ -127,7 +127,7 @@ export default function ReceptionistRecallsPage() {
           <option value="60">60 days</option>
           <option value="90">90 days</option>
         </Sel>
-        <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           {recalls.length} recall{recalls.length !== 1 ? 's' : ''} due
         </span>
       </div>
@@ -157,7 +157,7 @@ export default function ReceptionistRecallsPage() {
               {recalls.map((r) => {
                 const sm = statusMeta(r);
                 return (
-                  <tr key={r.id} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                  <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
                     <td className="data-td" style={{ fontWeight: 600 }}>
                       {patientName(r.patient_id)}
                     </td>
@@ -184,7 +184,7 @@ export default function ReceptionistRecallsPage() {
                         {sm.label}
                       </span>
                     </td>
-                    <td className="data-td" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+                    <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                       {r.last_notified_at ? new Date(r.last_notified_at).toLocaleDateString('pt-PT') : '—'}
                     </td>
                     <td className="data-td" style={{ textAlign: 'right' }}>

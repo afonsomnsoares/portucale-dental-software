@@ -105,19 +105,19 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
               key={t.id}
               className="flex items-center justify-between"
               style={{
-                border: '1px solid var(--border)',
-                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-control)',
                 padding: '10px 12px',
                 opacity: t.active ? 1 : 0.55,
               }}
             >
               <div>
                 <span style={{ fontWeight: 600, fontSize: 13 }}>{t.name}</span>
-                <Badge label={TYPE_LABEL[t.type]} bg="var(--surface-2)" color="var(--ink-2)" />
-                <span className="text-xs ml-2" style={{ color: 'var(--ink-3)' }}>
+                <Badge label={TYPE_LABEL[t.type]} bg="var(--bg-sunken)" color="var(--text-secondary)" />
+                <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                   {t.items.length} itens
                 </span>
-                {!t.active && <Badge label="Inativa" bg="var(--red-bg)" color="var(--red)" />}
+                {!t.active && <Badge label="Inativa" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />}
               </div>
               <div className="flex items-center gap-2">
                 <GhostBtn onClick={() => openEdit(t)} style={{ padding: '5px 10px', fontSize: 12 }}>
@@ -161,7 +161,11 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
               placeholder={'Ligar compressor\nVerificar stock de luvas\n...'}
             />
           </FormField>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setModal(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={save} disabled={saving}>

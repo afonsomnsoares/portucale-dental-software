@@ -116,7 +116,12 @@ export default function RecoveryReceptionistPage() {
       {err && (
         <div
           className="card p-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -133,26 +138,26 @@ export default function RecoveryReceptionistPage() {
               label="Pendentes de decisão"
               value={formatEUR(sumCategories(data.categories, ['proposed_treatments', 'plans_pending_decision']))}
               sub="Orçamentos e planos apresentados, sem resposta do doente"
-              color="var(--amber)"
+              color="var(--urgency-soon)"
             />
             <MetricCard
               label="Abandonados"
               value={formatEUR(sumCategories(data.categories, ['accepted_open']))}
               sub="Aceites, sem próxima consulta marcada"
-              color="var(--red)"
+              color="var(--urgency-critical)"
             />
             <MetricCard
               label="Por iniciar"
               value={formatEUR(sumCategories(data.categories, ['plans_not_started']))}
               sub="Planos aceites, tratamento ainda não começou"
-              color="var(--brand)"
+              color="var(--accent)"
             />
           </div>
 
           <div className="card p-4 mb-4 flex items-center gap-4 flex-wrap">
             <span className="section-label">Receita potencial total</span>
-            <strong style={{ fontSize: 20, color: 'var(--green)' }}>{formatEUR(data.total)}</strong>
-            <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+            <strong style={{ fontSize: 20, color: 'var(--urgency-ok)' }}>{formatEUR(data.total)}</strong>
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {rows.length} contactos na lista
             </span>
             <div style={{ marginLeft: 'auto' }}>
@@ -188,31 +193,35 @@ export default function RecoveryReceptionistPage() {
                 </thead>
                 <tbody>
                   {filtered.map((r) => (
-                    <tr key={rowKey(r)} style={{ borderBottom: '1px solid #F4F7FA' }}>
+                    <tr key={rowKey(r)} style={{ borderBottom: '1px solid var(--bg-page)' }}>
                       <td className="data-td" style={{ fontWeight: 600 }}>
                         {r.patient_name}
                       </td>
                       <td className="data-td">
                         <div>{r.phone ? <a href={`tel:${r.phone}`}>{formatPhonePT(r.phone)}</a> : '—'}</div>
                         {r.email && (
-                          <a href={`mailto:${r.email}`} className="text-xs" style={{ color: 'var(--brand)' }}>
+                          <a href={`mailto:${r.email}`} className="text-xs" style={{ color: 'var(--accent)' }}>
                             {r.email}
                           </a>
                         )}
                       </td>
-                      <td className="data-td" style={{ color: 'var(--ink-2)' }}>
+                      <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                         {r.detail}
                         {r.daysSince != null && r.daysSince >= 14 && (
                           <span
                             className="badge ml-2"
-                            style={{ background: 'var(--red-bg)', color: 'var(--red)', fontSize: 10 }}
+                            style={{
+                              background: 'var(--urgency-critical-bg)',
+                              color: 'var(--urgency-critical)',
+                              fontSize: 10,
+                            }}
                           >
                             atrasado
                           </span>
                         )}
                       </td>
                       <td className="data-td">
-                        <span className="badge" style={{ background: 'var(--brand-bg)', color: 'var(--brand)' }}>
+                        <span className="badge" style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}>
                           {r.categoryLabel}
                         </span>
                       </td>
@@ -232,7 +241,7 @@ export default function RecoveryReceptionistPage() {
                           <div className="flex items-center justify-end gap-2">
                             {r.patient_id &&
                               (tasksCreated.has(rowKey(r)) ? (
-                                <span className="text-xs" style={{ color: 'var(--green)', fontWeight: 700 }}>
+                                <span className="text-xs" style={{ color: 'var(--urgency-ok)', fontWeight: 700 }}>
                                   Tarefa criada
                                 </span>
                               ) : (

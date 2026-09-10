@@ -141,7 +141,11 @@ export default function PatientTasksTab({ api, user, patientId, tasks, setTasks 
           <input type="checkbox" checked={assignToMe} onChange={(e) => setAssignToMe(e.target.checked)} />
           Atribuir a mim
         </label>
-        {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+        {error && (
+          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            {error}
+          </div>
+        )}
         <PrimaryBtn onClick={create} disabled={saving || !title.trim()} style={{ justifyContent: 'center' }}>
           {saving ? 'A criar…' : 'Criar tarefa'}
         </PrimaryBtn>
@@ -154,24 +158,33 @@ export default function PatientTasksTab({ api, user, patientId, tasks, setTasks 
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: closed.length ? 24 : 0 }}>
             {open.map((t) => (
-              <div key={t.id} style={{ border: '1px solid #DFE1E6', borderRadius: 8, padding: '10px 12px' }}>
+              <div
+                key={t.id}
+                style={{
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-control)',
+                  padding: '10px 12px',
+                }}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-                      <Badge bg="#DEEBFF" color="#0052CC" label={TYPE_LABELS[t.type]} />
+                      <Badge bg="var(--accent-bg)" color="var(--accent)" label={TYPE_LABELS[t.type]} />
                       {t.due_at && (
-                        <span style={{ fontSize: 11, color: '#97A0AF' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           Prazo: {new Date(t.due_at).toLocaleDateString('pt-PT')}
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{t.title}</div>
-                    {t.notes && <div style={{ fontSize: 12, color: '#5E6C84', marginTop: 4 }}>{t.notes}</div>}
-                    <div style={{ fontSize: 11, color: '#97A0AF', marginTop: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t.title}</div>
+                    {t.notes && (
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{t.notes}</div>
+                    )}
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
                       {t.assigned_to_name ? `Atribuído a ${t.assigned_to_name}` : 'Fila da equipa'}
                     </div>
                     {linkByTask[t.id] && (
-                      <div style={{ fontSize: 11, color: '#0052CC', marginTop: 6, wordBreak: 'break-all' }}>
+                      <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6, wordBreak: 'break-all' }}>
                         Link copiado: {linkByTask[t.id]}
                       </div>
                     )}
@@ -212,10 +225,10 @@ export default function PatientTasksTab({ api, user, patientId, tasks, setTasks 
                 <div key={t.id} style={{ display: 'flex', gap: 8, alignItems: 'center', opacity: 0.6 }}>
                   <Badge
                     label={t.status === 'done' ? 'Concluída' : 'Cancelada'}
-                    bg={t.status === 'done' ? 'var(--green-bg)' : 'var(--surface-2)'}
-                    color={t.status === 'done' ? 'var(--green)' : 'var(--ink-2)'}
+                    bg={t.status === 'done' ? 'var(--urgency-ok-bg)' : 'var(--bg-sunken)'}
+                    color={t.status === 'done' ? 'var(--urgency-ok)' : 'var(--text-secondary)'}
                   />
-                  <span style={{ fontSize: 12, color: '#5E6C84' }}>{t.title}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t.title}</span>
                 </div>
               ))}
             </div>

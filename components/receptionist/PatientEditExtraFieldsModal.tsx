@@ -19,7 +19,7 @@ export default function PatientEditExtraFieldsModal({
   return (
     <Modal title="Edit Extra Fields" onClose={onClose} width={560}>
       {schemaFields.length === 0 ? (
-        <div style={{ fontSize: 13, color: '#97A0AF' }}>No extra fields configured.</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No extra fields configured.</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {schemaFields.map((f) => (

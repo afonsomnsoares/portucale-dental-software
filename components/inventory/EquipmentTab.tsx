@@ -143,7 +143,11 @@ export default function EquipmentTab({ api }: EquipmentTabProps) {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, tags: e.target.value }))}
             />
           </FormField>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div className="flex gap-3 mt-4">
             <PrimaryBtn onClick={save} disabled={saving} style={{ flex: 1, justifyContent: 'center' }}>
               {saving ? 'A guardar…' : 'Guardar'}

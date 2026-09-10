@@ -120,7 +120,12 @@ export default function PermissionsPage() {
       {err && (
         <div
           className="card p-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -128,7 +133,7 @@ export default function PermissionsPage() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: '#97A0AF' }}>Select a tenant.</div>}
+          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Select a tenant.</div>}
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
@@ -152,7 +157,7 @@ export default function PermissionsPage() {
                       style={{
                         fontFamily: '"JetBrains Mono",monospace',
                         fontSize: 12,
-                        color: '#172B4D',
+                        color: 'var(--text-primary)',
                         fontWeight: 700,
                       }}
                     >
@@ -188,11 +193,11 @@ export default function PermissionsPage() {
                               Default
                             </button>
                             {isPending ? (
-                              <Badge label="Pending" bg="#FFF7E6" color="#FF8B00" />
+                              <Badge label="Pending" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
                             ) : isOverride ? (
-                              <Badge label="Override" bg="#DEEBFF" color="#0052CC" />
+                              <Badge label="Override" bg="var(--accent-bg)" color="var(--accent)" />
                             ) : (
-                              <Badge label="Default" bg="#F4F7FA" color="#5E6C84" />
+                              <Badge label="Default" bg="var(--bg-page)" color="var(--text-secondary)" />
                             )}
                           </div>
                         </td>

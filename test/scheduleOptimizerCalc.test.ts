@@ -2,13 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   type Booking,
+  buildConsolidateMoves,
   buildEquipmentBlockMoves,
   buildGapFillMoves,
+  buildGroupVisitMoves,
   buildPreferenceMismatchMoves,
+  buildPullForwardMoves,
   buildUnassignedDentistMoves,
   findOpenings,
   type Opening,
   rankMoves,
+  TURNAROUND_MINUTES,
   waitlistFitsOpening,
 } from '../lib/scheduleOptimizerCalc.ts';
 
@@ -356,4 +360,266 @@ test('rankMoves: does not mutate its input', () => {
   ];
   rankMoves(input);
   assert.equal(input[0].key, 'a');
+});
+
+// ═══ Regras 5-7: raciocínio sobre duas ou mais consultas ════════════════════
+
+test('buildGroupVisitMoves: duas consultas do mesmo doente em dias próximos juntam-se', () => {
+  const moves = buildGroupVisitMoves(
+    [
+      {
+        patientId: 'p1',
+        patientName: 'Ana',
+        appointments: [
+          booking({ appointmentId: 'a1', date: '2026-03-02', durationMinutes: 30 }),
+          booking({ appointmentId: 'a2', date: '2026-03-05', durationMinutes: 30 }),
+        ],
+      },
+    ],
+    7,
+    120,
+  );
+  assert.equal(moves.length, 1);
+  assert.equal(moves[0].kind, 'group_visit');
+  assert.equal(moves[0].gainMinutes, TURNAROUND_MINUTES);
+  assert.deepEqual(moves[0].appointmentIds, ['a1', 'a2']);
+  // Ancora-se na consulta mais próxima: antecipar é preferível a adiar.
+  assert.equal(moves[0].date, '2026-03-02');
+});
+
+test('buildGroupVisitMoves: consultas fora da janela não se juntam', () => {
+  const moves = buildGroupVisitMoves(
+    [
+      {
+        patientId: 'p1',
+        patientName: 'Ana',
+        appointments: [
+          booking({ appointmentId: 'a1', date: '2026-03-02' }),
+          booking({ appointmentId: 'a2', date: '2026-04-20' }),
+        ],
+      },
+    ],
+    7,
+    120,
+  );
+  assert.deepEqual(moves, []);
+});
+
+test('buildGroupVisitMoves: uma sessão demasiado longa não se propõe', () => {
+  const moves = buildGroupVisitMoves(
+    [
+      {
+        patientId: 'p1',
+        patientName: 'Ana',
+        appointments: [
+          booking({ appointmentId: 'a1', date: '2026-03-02', durationMinutes: 90 }),
+          booking({ appointmentId: 'a2', date: '2026-03-03', durationMinutes: 90 }),
+        ],
+      },
+    ],
+    7,
+    120,
+  );
+  assert.deepEqual(moves, [], 'três horas na cadeira são elas próprias um motivo para desmarcar');
+});
+
+test('buildGroupVisitMoves: dentistas diferentes não se juntam', () => {
+  const moves = buildGroupVisitMoves(
+    [
+      {
+        patientId: 'p1',
+        patientName: 'Ana',
+        appointments: [
+          booking({ appointmentId: 'a1', date: '2026-03-02', dentistId: 'd1' }),
+          booking({ appointmentId: 'a2', date: '2026-03-03', dentistId: 'd2' }),
+        ],
+      },
+    ],
+    7,
+    240,
+  );
+  assert.deepEqual(moves, [], 'seriam duas sessões coladas, e a poupança de rotação desaparecia');
+});
+
+test('buildGroupVisitMoves: duas consultas no mesmo dia não são um agrupamento', () => {
+  const moves = buildGroupVisitMoves(
+    [
+      {
+        patientId: 'p1',
+        patientName: 'Ana',
+        appointments: [
+          booking({ appointmentId: 'a1', date: '2026-03-02', startMinutes: 600 }),
+          booking({ appointmentId: 'a2', date: '2026-03-02', startMinutes: 700 }),
+        ],
+      },
+    ],
+    7,
+    240,
+  );
+  assert.deepEqual(moves, [], 'isso é adjacência — regra 7');
+});
+
+test('buildGroupVisitMoves: três dias seguidos contam três visitas fundidas', () => {
+  const moves = buildGroupVisitMoves(
+    [
+      {
+        patientId: 'p1',
+        patientName: 'Ana',
+        appointments: [
+          booking({ appointmentId: 'a1', date: '2026-03-02', durationMinutes: 30 }),
+          booking({ appointmentId: 'a2', date: '2026-03-03', durationMinutes: 30 }),
+          booking({ appointmentId: 'a3', date: '2026-03-04', durationMinutes: 30 }),
+        ],
+      },
+    ],
+    7,
+    120,
+  );
+  assert.equal(moves.length, 1);
+  assert.equal(moves[0].gainMinutes, 2 * TURNAROUND_MINUTES);
+  assert.equal(moves[0].appointmentIds?.length, 3);
+});
+
+const LATER: Booking = booking({ appointmentId: 'x1', date: '2026-04-10', durationMinutes: 30 });
+const EARLIER: Opening = {
+  chair: 2,
+  date: '2026-03-20',
+  startMinutes: 660,
+  endMinutes: 720,
+  durationMinutes: 60,
+  kind: 'gap',
+};
+
+test('buildPullForwardMoves: antecipar declara os dias, não minutos de capacidade', () => {
+  const moves = buildPullForwardMoves([{ booking: LATER, target: EARLIER }], hhmm);
+  assert.equal(moves.length, 1);
+  assert.equal(moves[0].kind, 'pull_forward');
+  assert.equal(moves[0].gainMinutes, 0, 'antecipar troca um lugar por outro, não cria capacidade');
+  assert.equal(moves[0].advanceDays, 21);
+});
+
+test('buildPullForwardMoves: antecipações insignificantes não se propõem', () => {
+  const moves = buildPullForwardMoves(
+    [{ booking: booking({ appointmentId: 'x1', date: '2026-03-22' }), target: EARLIER }],
+    hhmm,
+    3,
+  );
+  assert.deepEqual(moves, [], 'mover dois dias é incomodar o doente por nada');
+});
+
+test('buildPullForwardMoves: um espaço não é prometido a duas consultas', () => {
+  const moves = buildPullForwardMoves(
+    [
+      { booking: booking({ appointmentId: 'x1', date: '2026-04-10' }), target: EARLIER },
+      { booking: booking({ appointmentId: 'x2', date: '2026-04-05' }), target: EARLIER },
+    ],
+    hhmm,
+  );
+  assert.equal(moves.length, 1);
+  assert.equal(moves[0].appointmentId, 'x1', 'a maior antecipação ganha o espaço');
+});
+
+test('buildPullForwardMoves: a mesma consulta não é proposta para dois espaços', () => {
+  const moves = buildPullForwardMoves(
+    [
+      { booking: LATER, target: EARLIER },
+      { booking: LATER, target: { ...EARLIER, chair: 3, startMinutes: 800, endMinutes: 860 } },
+    ],
+    hhmm,
+  );
+  assert.equal(moves.length, 1);
+});
+
+test('buildPullForwardMoves: um espaço mais curto do que a consulta é ignorado', () => {
+  const moves = buildPullForwardMoves(
+    [{ booking: booking({ appointmentId: 'x1', date: '2026-04-10', durationMinutes: 90 }), target: EARLIER }],
+    hhmm,
+  );
+  assert.deepEqual(moves, []);
+});
+
+test('buildConsolidateMoves: um buraco entre duas consultas do mesmo doente encosta-se', () => {
+  const moves = buildConsolidateMoves(
+    [
+      {
+        first: booking({ appointmentId: 'c1', startMinutes: 540, durationMinutes: 30 }),
+        second: booking({ appointmentId: 'c2', startMinutes: 660, durationMinutes: 30 }),
+        relation: 'patient',
+      },
+    ],
+    hhmm,
+  );
+  assert.equal(moves.length, 1);
+  assert.equal(moves[0].kind, 'consolidate');
+  assert.equal(moves[0].consolidatedMinutes, 90);
+  assert.equal(moves[0].gainMinutes, 0, 'o tempo é mudado de sítio, não criado');
+});
+
+test('buildConsolidateMoves: buracos pequenos não valem uma remarcação', () => {
+  const moves = buildConsolidateMoves(
+    [
+      {
+        first: booking({ appointmentId: 'c1', startMinutes: 540, durationMinutes: 30 }),
+        second: booking({ appointmentId: 'c2', startMinutes: 580, durationMinutes: 30 }),
+        relation: 'patient',
+      },
+    ],
+    hhmm,
+    20,
+  );
+  assert.deepEqual(moves, []);
+});
+
+test('buildConsolidateMoves: a ordem de chegada do par é indiferente', () => {
+  const [primeiro] = buildConsolidateMoves(
+    [
+      {
+        first: booking({ appointmentId: 'c2', startMinutes: 660 }),
+        second: booking({ appointmentId: 'c1', startMinutes: 540 }),
+        relation: 'patient',
+      },
+    ],
+    hhmm,
+  );
+  assert.equal(primeiro.appointmentId, 'c2', 'move-se sempre a segunda consulta do dia');
+});
+
+test('buildConsolidateMoves: uma consulta só entra numa proposta', () => {
+  const a = booking({ appointmentId: 'c1', startMinutes: 540, durationMinutes: 30 });
+  const b = booking({ appointmentId: 'c2', startMinutes: 660, durationMinutes: 30 });
+  const c = booking({ appointmentId: 'c3', startMinutes: 780, durationMinutes: 30 });
+  const moves = buildConsolidateMoves(
+    [
+      { first: a, second: b, relation: 'patient' },
+      { first: b, second: c, relation: 'patient' },
+    ],
+    hhmm,
+  );
+  assert.equal(moves.length, 1, 'encadear mudanças no mesmo dia é uma cascata, não uma sugestão');
+});
+
+test('buildConsolidateMoves: consultas em dias diferentes não são consolidação', () => {
+  const moves = buildConsolidateMoves(
+    [
+      {
+        first: booking({ appointmentId: 'c1', date: '2026-03-02' }),
+        second: booking({ appointmentId: 'c2', date: '2026-03-03' }),
+        relation: 'household',
+      },
+    ],
+    hhmm,
+  );
+  assert.deepEqual(moves, []);
+});
+
+test('rankMoves: as propostas sem capacidade não ficam todas no fundo por empate', () => {
+  const ranked = rankMoves([
+    { kind: 'preference_mismatch', key: 'pm', title: '', detail: '', gainMinutes: 0, date: '2026-03-02' },
+    { kind: 'pull_forward', key: 'pf', title: '', detail: '', gainMinutes: 0, advanceDays: 21, date: '2026-03-02' },
+    { kind: 'gap_fill', key: 'gf', title: '', detail: '', gainMinutes: 60, date: '2026-03-02' },
+  ]);
+  assert.deepEqual(
+    ranked.map((m) => m.key),
+    ['gf', 'pf', 'pm'],
+  );
 });

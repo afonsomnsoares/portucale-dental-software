@@ -16,10 +16,10 @@ interface PurchaseOrdersTabProps {
 }
 
 const STATUS_META: Record<string, { label: string; bg: string; color: string }> = {
-  draft: { label: 'Rascunho', bg: 'var(--surface-2)', color: 'var(--ink-2)' },
-  ordered: { label: 'Encomendado', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  received: { label: 'Recebido', bg: 'var(--green-bg)', color: 'var(--green)' },
-  cancelled: { label: 'Cancelado', bg: 'var(--red-bg)', color: 'var(--red)' },
+  draft: { label: 'Rascunho', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
+  ordered: { label: 'Encomendado', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  received: { label: 'Recebido', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  cancelled: { label: 'Cancelado', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
 };
 
 type DraftLine = { key: string; itemId: string; quantity: string };
@@ -129,10 +129,10 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                     <Badge label={meta.label} bg={meta.bg} color={meta.color} />
                     <Badge
                       label={o.source === 'auto' ? 'Sugestão automática' : 'Manual'}
-                      bg="var(--surface-2)"
-                      color="var(--ink-2)"
+                      bg="var(--bg-sunken)"
+                      color="var(--text-secondary)"
                     />
-                    <span className="text-xs" style={{ color: 'var(--ink-3)' }}>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       {new Date(o.created_at).toLocaleDateString('pt-PT')}
                     </span>
                   </div>
@@ -240,7 +240,11 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
           <GhostBtn onClick={() => setLines((ls) => [...ls, newLine()])} style={{ marginBottom: 14 }}>
             + Adicionar item
           </GhostBtn>
-          {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+          {error && (
+            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+              {error}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setCreateModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveOrder} disabled={saving}>

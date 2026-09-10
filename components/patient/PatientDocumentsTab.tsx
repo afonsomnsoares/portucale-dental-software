@@ -134,7 +134,11 @@ export default function PatientDocumentsTab({
             + Pedir documento
           </GhostBtn>
         </div>
-        {error && <div style={{ fontSize: 12, color: '#DE350B', fontWeight: 700, marginBottom: 10 }}>{error}</div>}
+        {error && (
+          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            {error}
+          </div>
+        )}
         {!pendingRequests.length ? (
           <Empty message="Sem pedidos pendentes." />
         ) : (
@@ -147,14 +151,16 @@ export default function PatientDocumentsTab({
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   gap: 12,
-                  border: '1px solid #DFE1E6',
-                  borderRadius: 8,
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 'var(--radius-control)',
                   padding: '10px 12px',
                 }}
               >
                 <div>
-                  <Badge label="Pendente" bg="var(--amber-bg)" color="var(--amber)" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#172B4D', marginLeft: 8 }}>{t.title}</span>
+                  <Badge label="Pendente" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginLeft: 8 }}>
+                    {t.title}
+                  </span>
                 </div>
                 <input
                   type="file"
@@ -175,7 +181,7 @@ export default function PatientDocumentsTab({
           <label
             style={{
               fontSize: 12,
-              color: 'var(--brand)',
+              color: 'var(--accent)',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
@@ -207,9 +213,9 @@ export default function PatientDocumentsTab({
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: '#F4F7FA',
-                      border: '1px solid #EBECF0',
-                      borderRadius: 8,
+                      background: 'var(--bg-page)',
+                      border: '1px solid var(--bg-sunken)',
+                      borderRadius: 'var(--radius-control)',
                       padding: '8px 12px',
                     }}
                   >
@@ -217,11 +223,11 @@ export default function PatientDocumentsTab({
                       href={u.url}
                       target="_blank"
                       rel="noreferrer"
-                      style={{ fontSize: 12, color: '#0052CC', fontWeight: 700 }}
+                      style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}
                     >
                       {u.url.split('/').pop()}
                     </a>
-                    <span style={{ fontSize: 11, color: '#97A0AF' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                       {new Date(u.created_at).toLocaleDateString('pt-PT')} · Recebido
                     </span>
                   </div>

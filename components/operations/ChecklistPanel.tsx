@@ -73,14 +73,16 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</span>
-                <Badge label={TYPE_LABEL[t.type]} bg="var(--surface-2)" color="var(--ink-2)" />
+                <Badge label={TYPE_LABEL[t.type]} bg="var(--bg-sunken)" color="var(--text-secondary)" />
               </div>
               {run ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: 'var(--ink-3)' }}>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     {checkedCount}/{run.items.length}
                   </span>
-                  {run.status === 'completed' && <Badge label="Concluída" bg="var(--green-bg)" color="var(--green)" />}
+                  {run.status === 'completed' && (
+                    <Badge label="Concluída" bg="var(--urgency-ok-bg)" color="var(--urgency-ok)" />
+                  )}
                 </div>
               ) : (
                 <PrimaryBtn
@@ -109,13 +111,13 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
                     <span
                       style={{
                         textDecoration: item.checked ? 'line-through' : 'none',
-                        color: item.checked ? 'var(--ink-3)' : 'var(--ink)',
+                        color: item.checked ? 'var(--text-muted)' : 'var(--text-primary)',
                       }}
                     >
                       {item.label}
                     </span>
                     {item.checked && item.checkedByName && (
-                      <span className="text-xs" style={{ color: 'var(--ink-3)' }}>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         — {item.checkedByName}
                       </span>
                     )}

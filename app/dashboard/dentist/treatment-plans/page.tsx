@@ -122,7 +122,7 @@ export default function TreatmentPlansPage() {
       <PageHeader title="Planos de Tratamento" sub="Planos por fases, com valor apresentado ao doente" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -155,13 +155,13 @@ export default function TreatmentPlansPage() {
                     textAlign: 'left',
                     padding: '11px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #F4F7FA',
-                    background: selected?.id === p.id ? '#DEEBFF' : 'white',
-                    borderLeft: `3px solid ${selected?.id === p.id ? '#0052CC' : 'transparent'}`,
+                    borderBottom: '1px solid var(--bg-page)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -239,7 +239,9 @@ export default function TreatmentPlansPage() {
           {form.phases.map((ph, i) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: phases have no id; index matches updatePhase/removePhase's own indexing
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
-              <div style={{ width: 60, fontSize: 12, fontWeight: 600, color: '#5E6C84', paddingBottom: 10 }}>
+              <div
+                style={{ width: 60, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', paddingBottom: 10 }}
+              >
                 Fase {ph.phase}
               </div>
               <Inp
@@ -265,7 +267,7 @@ export default function TreatmentPlansPage() {
           <GhostBtn onClick={addPhase} style={{ fontSize: 12, marginBottom: 12 }}>
             + Acrescentar fase
           </GhostBtn>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#172B4D', marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
             Valor total: {formatEUR(totalFee)}
           </div>
           <div className="flex gap-3 mt-2">
@@ -280,7 +282,7 @@ export default function TreatmentPlansPage() {
       {detailModal && (
         <Modal title={detailModal.title} onClose={() => setDetailModal(null)} width={560}>
           {detailModal.description && (
-            <p style={{ fontSize: 13, color: '#5E6C84', marginBottom: 16 }}>{detailModal.description}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{detailModal.description}</p>
           )}
           <div className="section-label mb-2">Fases</div>
           {(detailModal.phases || []).map((ph, i) => (
@@ -291,14 +293,18 @@ export default function TreatmentPlansPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '8px 0',
-                borderBottom: '1px solid #F4F7FA',
+                borderBottom: '1px solid var(--bg-page)',
               }}
             >
               <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#97A0AF', marginRight: 8 }}>FASE {ph.phase}</span>
-                <span style={{ fontSize: 13, color: '#172B4D' }}>{ph.description}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginRight: 8 }}>
+                  FASE {ph.phase}
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ph.description}</span>
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#172B4D' }}>{formatEUR(Number(ph.fee || 0))}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {formatEUR(Number(ph.fee || 0))}
+              </span>
             </div>
           ))}
           <div
@@ -308,8 +314,8 @@ export default function TreatmentPlansPage() {
               padding: '12px 0',
               fontSize: 15,
               fontWeight: 800,
-              color: '#172B4D',
-              borderTop: '2px solid #DFE1E6',
+              color: 'var(--text-primary)',
+              borderTop: '2px solid var(--border-subtle)',
               marginTop: 8,
             }}
           >

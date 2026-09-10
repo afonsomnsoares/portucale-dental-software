@@ -47,7 +47,12 @@ export default function ClinicRecoveryPage() {
       {err && (
         <div
           className="card p-4"
-          style={{ border: '1px solid #FFBDAD', background: '#FFEBE6', color: '#DE350B', fontWeight: 700 }}
+          style={{
+            border: '1px solid var(--urgency-critical-border)',
+            background: 'var(--urgency-critical-bg)',
+            color: 'var(--urgency-critical)',
+            fontWeight: 700,
+          }}
         >
           {err}
         </div>
@@ -55,7 +60,7 @@ export default function ClinicRecoveryPage() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: '#97A0AF' }}>Sem dados de recuperação.</div>}
+          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Sem dados de recuperação.</div>}
         </div>
       ) : (
         <>
@@ -64,36 +69,36 @@ export default function ClinicRecoveryPage() {
               label="Pendentes de decisão"
               value={formatEUR(sumCategories(data.categories, ['proposed_treatments', 'plans_pending_decision']))}
               sub="Orçamentos e planos apresentados, sem resposta do doente"
-              color="var(--amber)"
+              color="var(--urgency-soon)"
             />
             <MetricCard
               label="Abandonados"
               value={formatEUR(sumCategories(data.categories, ['accepted_open']))}
               sub="Aceites, sem próxima consulta marcada"
-              color="var(--red)"
+              color="var(--urgency-critical)"
             />
             <MetricCard
               label="Por iniciar"
               value={formatEUR(sumCategories(data.categories, ['plans_not_started']))}
               sub="Planos aceites, tratamento ainda não começou"
-              color="var(--brand)"
+              color="var(--accent)"
             />
           </div>
 
           <div
             className="card p-6 mb-4 flex items-center justify-between flex-wrap gap-4"
-            style={{ borderLeft: '4px solid var(--green)' }}
+            style={{ borderLeft: '4px solid var(--urgency-ok)' }}
           >
             <div>
               <div className="section-label mb-2">Receita potencial identificada</div>
-              <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--green)', lineHeight: 1 }}>
+              <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--urgency-ok)', lineHeight: 1 }}>
                 {formatEUR(data.total)}
               </div>
-              <div className="text-sm mt-2" style={{ color: 'var(--ink-2)' }}>
+              <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
                 {data.categories.reduce((a, c) => a + c.count, 0)} oportunidades em {data.categories.length} categorias
               </div>
             </div>
-            <div className="text-xs text-right" style={{ color: 'var(--ink-3)' }}>
+            <div className="text-xs text-right" style={{ color: 'var(--text-muted)' }}>
               Calculado a {new Date(data.generatedAt).toLocaleString('pt-PT')}
             </div>
           </div>
@@ -103,16 +108,18 @@ export default function ClinicRecoveryPage() {
               <div className="section-label mb-3">Evolução mensal (snapshots)</div>
               {[...data.snapshots].reverse().map((s) => (
                 <div key={s.snapshot_month} className="flex items-center gap-3 mb-2">
-                  <span className="text-xs" style={{ width: 80, color: 'var(--ink-2)' }}>
+                  <span className="text-xs" style={{ width: 80, color: 'var(--text-secondary)' }}>
                     {String(s.snapshot_month).slice(0, 7)}
                   </span>
-                  <div style={{ flex: 1, height: 10, background: 'var(--surface-2)', borderRadius: 5 }}>
+                  <div
+                    style={{ flex: 1, height: 10, background: 'var(--bg-sunken)', borderRadius: 'var(--radius-pill)' }}
+                  >
                     <div
                       style={{
                         width: `${(Number(s.total_estimated) / maxSnap) * 100}%`,
                         height: '100%',
-                        background: 'var(--brand)',
-                        borderRadius: 5,
+                        background: 'var(--accent)',
+                        borderRadius: 'var(--radius-control)',
                       }}
                     />
                   </div>
@@ -132,7 +139,7 @@ export default function ClinicRecoveryPage() {
                 className="card p-5 cursor-pointer"
                 onClick={() => setOpenCat(c)}
                 style={{
-                  borderLeft: `4px solid ${c.count > 0 ? 'var(--amber)' : 'var(--border)'}`,
+                  borderLeft: `4px solid ${c.count > 0 ? 'var(--urgency-soon)' : 'var(--border-subtle)'}`,
                   textAlign: 'left',
                   width: '100%',
                   display: 'block',
@@ -142,18 +149,18 @@ export default function ClinicRecoveryPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="section-label mb-1">{c.label}</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>
                       {formatEUR(c.estimatedValue)}
                     </div>
-                    <div className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>
+                    <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                       {c.description}
                     </div>
                   </div>
                   <span
                     className="badge flex-shrink-0"
                     style={{
-                      background: c.count > 0 ? 'var(--brand-bg)' : 'var(--surface-2)',
-                      color: c.count > 0 ? 'var(--brand)' : 'var(--ink-3)',
+                      background: c.count > 0 ? 'var(--accent-bg)' : 'var(--bg-sunken)',
+                      color: c.count > 0 ? 'var(--accent)' : 'var(--text-muted)',
                     }}
                   >
                     {c.count}
@@ -169,7 +176,7 @@ export default function ClinicRecoveryPage() {
               onClose={() => setOpenCat(null)}
               width={720}
             >
-              <p className="text-sm mb-4" style={{ color: 'var(--ink-2)' }}>
+              <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                 {openCat.description} <strong>Ação sugerida:</strong> {openCat.action}
               </p>
               {openCat.items.length === 0 ? (
@@ -194,7 +201,7 @@ export default function ClinicRecoveryPage() {
                             {i.patient_name}
                           </td>
                           <td className="data-td">{i.phone || '—'}</td>
-                          <td className="data-td" style={{ color: 'var(--ink-2)' }}>
+                          <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                             {i.detail}
                           </td>
                           <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>

@@ -37,6 +37,7 @@ export async function reviewSchedule(tenantId: string) {
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'schedulingAgent',
+    tenantId,
     system: SYSTEM_PROMPT,
     payload: {
       janelaDias: optimization.windowDays,

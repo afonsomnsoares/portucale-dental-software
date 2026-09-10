@@ -22,34 +22,35 @@ async function seed() {
   const client = await pool.connect();
   try {
     if (RESET) {
-      console.log('🗑  A eliminar todas as tabelas...');
-      // Was missing every table added after the original baseline (consent_forms,
-      // medical_history, prescriptions, lab_orders, treatment_plans, recalls, leads,
-      // notifications, job_runs, uploads, role_permissions, and everything that only
-      // ever existed via scripts/migrations/* — recovery_snapshots,
-      // appointment_cancellations, waitlist_entries, slot_offers, patient_lifecycle_state)
-      // — those tables (and their RLS policies) silently survived a "reset", so
-      // re-running scripts/schema.sql against them failed on
-      // `CREATE POLICY tenant_isolation` already existing. schema_migrations is
-      // included too, so the migrate.ts run right after this script (see
-      // test/helpers/testDb.ts) re-applies every migration from scratch instead of
-      // skipping ones it thinks already ran against a database that, from this point,
-      // no longer has their tables.
-      await client.query(`
-        DROP TABLE IF EXISTS
-          patient_data_consents, data_subject_requests, processing_activities,
-          data_retention_policies, dpo_contacts, privacy_notices,
-          audit_log, patient_timeline, inventory_stock, inventory_items, schema_fields,
-          invoices, treatments, appointments,
-          patient_alerts, patients, users, tenants,
-          treatment_codes, statuses,
-          leads, notifications, job_runs, uploads, role_permissions,
-          medical_history, prescriptions, lab_orders, treatment_plans, recalls, consent_forms,
-          recall_schedule, recovery_snapshots, appointment_cancellations,
-          waitlist_entries, slot_offers, patient_lifecycle_state,
-          schema_migrations
-        CASCADE
-      `);
+      console.log('🗑  A eliminar todo o schema...');
+      // ─── Porque é que isto deixou de ser uma lista de tabelas ────────────
+      // Aqui estava uma lista de DROP TABLE escrita à mão. Já tinha sido corrigida uma
+      // vez — o comentário anterior explicava que lhe faltavam todas as tabelas criadas
+      // depois da baseline — e voltou a ficar desatualizada, porque uma lista à mão
+      // desatualiza-se sempre: ninguém se lembra de a atualizar ao escrever a migração
+      // 44.ª.
+      //
+      // E a forma como falhava era pior do que "sobram tabelas". `DROP TABLE tenants
+      // CASCADE` apaga as CHAVES ESTRANGEIRAS que apontam para tenants a partir das
+      // tabelas que não estão na lista. Essas tabelas sobrevivem, agora sem as
+      // restrições. A seguir, as migrações voltam a correr (schema_migrations também é
+      // apagada) e todos os `CREATE TABLE IF NOT EXISTS` são no-ops, porque a tabela
+      // ainda lá está. Resultado: numa instalação NOVA, purchase_orders,
+      // inventory_batches, inventory_movements e companhia ficavam sem
+      // `REFERENCES tenants(id)` — sem ON DELETE CASCADE, e com encomendas órfãs
+      // possíveis. Silenciosamente, e só em bases criadas de raiz: a base de
+      // desenvolvimento de quem foi acompanhando as migrações tinha tudo certo, que é
+      // exatamente porque isto nunca deu nas vistas.
+      //
+      // Apagar o schema inteiro não pode desatualizar-se. A extensão pgcrypto é
+      // recriada logo a seguir por schema.sql, e as permissões do papel portucale_app
+      // são repostas pela migração 011, que corre sempre depois disto.
+      await client.query('DROP SCHEMA public CASCADE');
+      await client.query('CREATE SCHEMA public');
+      // O dono do schema volta a ser quem estamos a ser agora; sem isto, uma ligação
+      // seguinte com outro papel não conseguiria criar nada.
+      await client.query('GRANT ALL ON SCHEMA public TO CURRENT_USER');
+      await client.query('GRANT USAGE ON SCHEMA public TO PUBLIC');
       console.log('   Concluído.');
     }
     console.log('🔧 A executar schema...');
@@ -131,23 +132,27 @@ async function seed() {
     ];
 
     const STATUS_META = {
-      confirmed: { label: 'Confirmado', bg: '#DEEBFF', color: '#0052CC' },
-      registered: { label: 'Registado', bg: '#EBECF0', color: '#5E6C84' },
-      waiting: { label: 'A aguardar', bg: '#FFF7E6', color: '#FF8B00' },
-      'in-operatory': { label: 'Na sala', bg: '#DEEBFF', color: '#0052CC' },
-      'procedure-active': { label: 'Procedimento ativo', bg: '#FFEBE6', color: '#DE350B' },
-      'ready-dismissal': { label: 'Pronto para alta', bg: '#E3FCEF', color: '#00875A' },
-      departed: { label: 'Saiu', bg: '#E6FCFF', color: '#00A3BF' },
-      'no-show': { label: 'Faltou', bg: '#FFEBE6', color: '#DE350B' },
-      active: { label: 'Ativo', bg: '#E3FCEF', color: '#00875A' },
-      provisioning: { label: 'A provisionar', bg: '#FFF7E6', color: '#FF8B00' },
-      suspended: { label: 'Suspenso', bg: '#FFEBE6', color: '#DE350B' },
-      completed: { label: 'Concluído', bg: '#E3FCEF', color: '#00875A' },
-      accepted: { label: 'Aceite', bg: '#DEEBFF', color: '#0052CC' },
-      proposed: { label: 'Proposto', bg: '#FFF7E6', color: '#FF8B00' },
-      paid: { label: 'Pago', bg: '#E3FCEF', color: '#00875A' },
-      partial: { label: 'Parcial', bg: '#FFF7E6', color: '#FF8B00' },
-      pending: { label: 'Pendente', bg: '#FFEBE6', color: '#DE350B' },
+      confirmed: { label: 'Confirmado', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+      registered: { label: 'Registado', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
+      waiting: { label: 'A aguardar', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+      'in-operatory': { label: 'Na sala', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+      'procedure-active': {
+        label: 'Procedimento ativo',
+        bg: 'var(--urgency-critical-bg)',
+        color: 'var(--urgency-critical)',
+      },
+      'ready-dismissal': { label: 'Pronto para alta', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+      departed: { label: 'Saiu', bg: 'var(--cat-teal-bg)', color: 'var(--cat-teal)' },
+      'no-show': { label: 'Faltou', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+      active: { label: 'Ativo', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+      provisioning: { label: 'A provisionar', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+      suspended: { label: 'Suspenso', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+      completed: { label: 'Concluído', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+      accepted: { label: 'Aceite', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+      proposed: { label: 'Proposto', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+      paid: { label: 'Pago', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+      partial: { label: 'Parcial', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+      pending: { label: 'Pendente', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
     };
 
     const STATUS_TRANSITIONS = {

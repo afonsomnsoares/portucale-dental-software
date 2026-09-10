@@ -61,10 +61,10 @@ export default function ClinicInvoicesPage() {
                 fontSize: 12,
                 fontWeight: status === value ? 700 : 500,
                 border: '1px solid',
-                borderColor: status === value ? '#0052CC' : '#DFE1E6',
-                borderRadius: 8,
-                background: status === value ? '#DEEBFF' : 'white',
-                color: status === value ? '#0052CC' : '#5E6C84',
+                borderColor: status === value ? 'var(--accent)' : 'var(--border-subtle)',
+                borderRadius: 'var(--radius-control)',
+                background: status === value ? 'var(--accent-bg)' : 'white',
+                color: status === value ? 'var(--accent)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
               }}
@@ -78,16 +78,16 @@ export default function ClinicInvoicesPage() {
       <div className="card overflow-x-auto p-5">
         <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
           <div>
-            <span style={{ fontSize: 12, color: '#97A0AF' }}>Total</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total</span>
             <div style={{ fontWeight: 700 }}>{totals.count}</div>
           </div>
           <div>
-            <span style={{ fontSize: 12, color: '#97A0AF' }}>Faturado</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Faturado</span>
             <div style={{ fontWeight: 700, fontFamily: '"JetBrains Mono",monospace' }}>{formatEUR(totals.amount)}</div>
           </div>
           <div>
-            <span style={{ fontSize: 12, color: '#97A0AF' }}>Cobrado</span>
-            <div style={{ fontWeight: 700, fontFamily: '"JetBrains Mono",monospace', color: '#00875A' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cobrado</span>
+            <div style={{ fontWeight: 700, fontFamily: '"JetBrains Mono",monospace', color: 'var(--urgency-ok)' }}>
               {formatEUR(totals.paid)}
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function ClinicInvoicesPage() {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid #EBECF0' }}>
+              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                 <th className="data-th">Fatura</th>
                 <th className="data-th">Doente</th>
                 <th className="data-th">Data</th>
@@ -118,11 +118,11 @@ export default function ClinicInvoicesPage() {
             </thead>
             <tbody>
               {invoices.map((inv) => (
-                <tr key={inv.id} style={{ borderBottom: '1px solid #EBECF0' }}>
+                <tr key={inv.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
                   <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
                     <Link
                       href={`/dashboard/admin/invoices/${inv.id}`}
-                      style={{ color: '#0052CC', fontWeight: 600, textDecoration: 'none' }}
+                      style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
                     >
                       #{inv.id.slice(0, 8).toUpperCase()}
                     </Link>
@@ -130,7 +130,7 @@ export default function ClinicInvoicesPage() {
                   <td className="data-td" style={{ fontWeight: 600 }}>
                     {inv.patient_name}
                   </td>
-                  <td className="data-td" style={{ color: '#5E6C84' }}>
+                  <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                     {inv.invoice_date ? formatDatePT(inv.invoice_date) : '—'}
                   </td>
                   <td
@@ -145,7 +145,7 @@ export default function ClinicInvoicesPage() {
                       textAlign: 'right',
                       fontFamily: '"JetBrains Mono",monospace',
                       fontSize: 12,
-                      color: Number(inv.paid) > 0 ? '#00875A' : '#97A0AF',
+                      color: Number(inv.paid) > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)',
                     }}
                   >
                     {formatEUR(Number(inv.paid))}
@@ -156,7 +156,7 @@ export default function ClinicInvoicesPage() {
                       textAlign: 'right',
                       fontFamily: '"JetBrains Mono",monospace',
                       fontSize: 12,
-                      color: Number(inv.amount) > Number(inv.paid) ? '#DE350B' : '#00875A',
+                      color: Number(inv.amount) > Number(inv.paid) ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
                     }}
                   >
                     {formatEUR(Math.max(0, Number(inv.amount) - Number(inv.paid)))}

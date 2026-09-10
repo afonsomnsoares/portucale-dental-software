@@ -5,15 +5,15 @@ import { Badge, PageHeader, Spinner } from '@/components/ui';
 import type { AuditLogEntry } from '@/lib/types';
 
 const AM: Record<string, { bg: string; color: string }> = {
-  UPDATE: { bg: '#FFF7E6', color: '#FF8B00' },
-  CREATE: { bg: '#E3FCEF', color: '#00875A' },
-  DELETE: { bg: '#FFEBE6', color: '#DE350B' },
-  PROVISION: { bg: '#EAE6FF', color: '#5243AA' },
+  UPDATE: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  CREATE: { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  DELETE: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  PROVISION: { bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
 };
 const RM: Record<string, { bg: string; color: string }> = {
-  dentist: { bg: '#DEEBFF', color: '#0052CC' },
-  receptionist: { bg: '#E6FCFF', color: '#00A3BF' },
-  admin: { bg: '#EAE6FF', color: '#5243AA' },
+  dentist: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  receptionist: { bg: 'var(--cat-teal-bg)', color: 'var(--cat-teal)' },
+  admin: { bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
 };
 
 // Registo de auditoria da própria clínica. app/api/audit/route.ts força o `clinic` de
@@ -57,7 +57,7 @@ export default function ClinicAuditPage() {
             <option key={a}>{a}</option>
           ))}
         </select>
-        <div style={{ fontSize: 12, color: '#97A0AF', display: 'flex', alignItems: 'center' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
           {logs.length} {logs.length === 1 ? 'entrada' : 'entradas'}
         </div>
       </div>
@@ -87,15 +87,15 @@ export default function ClinicAuditPage() {
                     alignItems: 'center',
                     padding: '13px 20px',
                     cursor: 'pointer',
-                    background: open ? '#F4F7FA' : 'white',
-                    borderBottom: '1px solid #F4F7FA',
+                    background: open ? 'var(--bg-page)' : 'white',
+                    borderBottom: '1px solid var(--bg-page)',
                     transition: 'background 0.1s',
                   }}
                 >
                   <div
                     style={{
                       fontSize: 11,
-                      color: '#97A0AF',
+                      color: 'var(--text-muted)',
                       whiteSpace: 'nowrap',
                       minWidth: 148,
                       fontFamily: '"JetBrains Mono",monospace',
@@ -109,7 +109,7 @@ export default function ClinicAuditPage() {
                       flex: 1,
                       fontSize: 13,
                       fontWeight: 500,
-                      color: '#172B4D',
+                      color: 'var(--text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -118,13 +118,18 @@ export default function ClinicAuditPage() {
                     {l.resource}
                   </div>
                   <Badge label={l.user_role} bg={rm.bg} color={rm.color} />
-                  <div style={{ fontSize: 12, color: '#5E6C84', minWidth: 100 }}>{l.user_name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', minWidth: 100 }}>{l.user_name}</div>
                   <div
-                    style={{ fontSize: 10, color: '#C1C7D0', fontFamily: '"JetBrains Mono",monospace', minWidth: 90 }}
+                    style={{
+                      fontSize: 10,
+                      color: 'var(--text-muted)',
+                      fontFamily: '"JetBrains Mono",monospace',
+                      minWidth: 90,
+                    }}
                   >
                     #{l.hash}
                   </div>
-                  <div style={{ color: '#97A0AF', fontSize: 12 }}>{open ? '▲' : '▼'}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</div>
                 </button>
                 {open && (
                   <div
@@ -133,14 +138,14 @@ export default function ClinicAuditPage() {
                       gridTemplateColumns: '1fr 1fr',
                       gap: 12,
                       padding: '16px 20px',
-                      background: '#F4F7FA',
-                      borderBottom: '1px solid #DFE1E6',
+                      background: 'var(--bg-page)',
+                      borderBottom: '1px solid var(--border-subtle)',
                     }}
                   >
                     {(
                       [
-                        ['ANTES', l.before_val, '#DE350B'],
-                        ['DEPOIS', l.after_val, '#00875A'],
+                        ['ANTES', l.before_val, 'var(--urgency-critical)'],
+                        ['DEPOIS', l.after_val, 'var(--urgency-ok)'],
                       ] as Array<[string, string | null, string]>
                     ).map(([lbl, val, col]) => (
                       <div key={lbl}>
@@ -152,12 +157,12 @@ export default function ClinicAuditPage() {
                         <div
                           style={{
                             background: 'white',
-                            border: '1px solid #DFE1E6',
-                            borderRadius: 6,
+                            border: '1px solid var(--border-subtle)',
+                            borderRadius: 'var(--radius-control)',
                             padding: '12px 14px',
                             fontSize: 12,
                             fontFamily: '"JetBrains Mono",monospace',
-                            color: '#172B4D',
+                            color: 'var(--text-primary)',
                             minHeight: 44,
                           }}
                         >

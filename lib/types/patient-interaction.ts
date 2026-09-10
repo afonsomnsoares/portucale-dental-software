@@ -1,4 +1,4 @@
-export type InteractionChannel = 'phone' | 'email' | 'whatsapp' | 'sms' | 'in_person' | 'other';
+export type InteractionChannel = 'phone' | 'email' | 'sms' | 'in_person' | 'other';
 export type InteractionDirection = 'inbound' | 'outbound';
 
 export interface PatientInteraction {

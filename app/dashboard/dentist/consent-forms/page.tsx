@@ -92,7 +92,7 @@ export default function ConsentFormsPage() {
       <PageHeader title="Consentimentos" sub="Consentimento informado por procedimento, com registo da assinatura" />
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid #EBECF0' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -125,13 +125,13 @@ export default function ConsentFormsPage() {
                     textAlign: 'left',
                     padding: '11px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #F4F7FA',
-                    background: selected?.id === p.id ? '#DEEBFF' : 'white',
-                    borderLeft: `3px solid ${selected?.id === p.id ? '#0052CC' : 'transparent'}`,
+                    borderBottom: '1px solid var(--bg-page)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#172B4D' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: '#97A0AF' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -223,17 +223,19 @@ export default function ConsentFormsPage() {
             {detailModal.description && (
               <div>
                 <div className="section-label mb-1">Descrição</div>
-                <p style={{ fontSize: 13, color: '#5E6C84' }}>{detailModal.description}</p>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{detailModal.description}</p>
               </div>
             )}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <div className="section-label mb-1">Assinado por</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#172B4D' }}>{detailModal.signed_by}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {detailModal.signed_by}
+                </div>
               </div>
               <div>
                 <div className="section-label mb-1">Data da assinatura</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#172B4D' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
                   {detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString('pt-PT') : '—'}
                 </div>
               </div>
@@ -245,7 +247,7 @@ export default function ConsentFormsPage() {
                   href={detailModal.signature_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: 13, color: '#0052CC', fontWeight: 600, textDecoration: 'none' }}
+                  style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
                 >
                   Abrir PDF da assinatura ↗
                 </a>

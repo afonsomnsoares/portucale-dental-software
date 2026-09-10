@@ -26,7 +26,7 @@ export interface ClampedLeadTriage {
   leadId: string;
   qualification: LeadQualification;
   intent: string;
-  draftChannel: 'sms' | 'email';
+  draftChannel: 'sms';
   draftReply: string;
 }
 
@@ -49,17 +49,19 @@ export function clampLeadTriage(
     const draftReply = typeof raw.draftReply === 'string' ? raw.draftReply.trim().slice(0, 600) : '';
     if (!qualification || !draftReply) continue;
 
-    // Prefere SMS quando há as duas vias — é o canal que este projeto já sabe enviar
-    // (ver lib/sms.ts); um lead só com email fica marcado para envio manual até essa
-    // capacidade existir (ver o cabeçalho de app/api/leads/[id]/send-reply/route.ts).
-    const draftChannel: 'sms' | 'email' = contact.hasPhone ? 'sms' : 'email';
+    // SMS ou nada. O ramo do e-mail existiu e nunca chegou a enviar coisa nenhuma —
+    // app/api/leads/[id]/send-reply/route.ts devolvia 'email_not_supported' desde
+    // sempre — e com o agente reduzido a chamada e SMS (migração 052) deixou de fazer
+    // sentido escrever um rascunho que ninguém pode expedir. Um lead sem telefone fica
+    // sem rascunho e vai para contacto manual, que é o que já acontecia na prática.
+    if (!contact.hasPhone) continue;
 
     seen.add(leadId);
     out.push({
       leadId,
       qualification,
       intent: typeof raw.intent === 'string' ? raw.intent.trim().slice(0, 300) : '',
-      draftChannel,
+      draftChannel: 'sms',
       draftReply,
     });
   }

@@ -6,32 +6,38 @@ import { useAuth } from '@/app/providers';
 import type { TimelineEvent } from '@/lib/types';
 
 const FALLBACK_STATUS = {
-  confirmed: { label: 'Confirmada', bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  registered: { label: 'Registada', bg: 'var(--surface-2)', color: 'var(--ink-2)' },
-  waiting: { label: 'A aguardar', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  'in-operatory': { label: 'Em Consultório', bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  'procedure-active': { label: 'Procedimento Ativo', bg: 'var(--red-bg)', color: 'var(--red)' },
-  'ready-dismissal': { label: 'Pronto para Saída', bg: 'var(--green-bg)', color: 'var(--green)' },
-  departed: { label: 'Saiu', bg: 'var(--teal-bg)', color: 'var(--teal)' },
-  'no-show': { label: 'Não Compareceu', bg: 'var(--red-bg)', color: 'var(--red)' },
-  active: { label: 'Ativo', bg: 'var(--green-bg)', color: 'var(--green)' },
-  provisioning: { label: 'A provisionar', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  suspended: { label: 'Suspenso', bg: 'var(--red-bg)', color: 'var(--red)' },
-  completed: { label: 'Concluído', bg: 'var(--green-bg)', color: 'var(--green)' },
-  accepted: { label: 'Aceite', bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  proposed: { label: 'Proposto', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  paid: { label: 'Pago', bg: 'var(--green-bg)', color: 'var(--green)' },
-  partial: { label: 'Parcial', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  pending: { label: 'Pendente', bg: 'var(--red-bg)', color: 'var(--red)' },
-  proposto: { label: 'Proposto', bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  aceite: { label: 'Aceite', bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  concluído: { label: 'Concluído', bg: 'var(--green-bg)', color: 'var(--green)' },
+  confirmed: { label: 'Confirmada', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  registered: { label: 'Registada', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
+  waiting: { label: 'A aguardar', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  'in-operatory': { label: 'Em Consultório', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  'procedure-active': {
+    label: 'Procedimento Ativo',
+    bg: 'var(--urgency-critical-bg)',
+    color: 'var(--urgency-critical)',
+  },
+  'ready-dismissal': { label: 'Pronto para Saída', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  departed: { label: 'Saiu', bg: 'var(--cat-teal-bg)', color: 'var(--cat-teal)' },
+  'no-show': { label: 'Não Compareceu', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  active: { label: 'Ativo', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  provisioning: { label: 'A provisionar', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  suspended: { label: 'Suspenso', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  completed: { label: 'Concluído', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  accepted: { label: 'Aceite', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  proposed: { label: 'Proposto', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  paid: { label: 'Pago', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
+  partial: { label: 'Parcial', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  pending: { label: 'Pendente', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  proposto: { label: 'Proposto', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  aceite: { label: 'Aceite', bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  concluído: { label: 'Concluído', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
 };
 
 export function Badge({ s, label, color, bg }: { s?: string; label?: string; color?: string; bg?: string }) {
   const { settings } = useAuth();
   const STATUS: Record<string, { label: string; bg: string; color: string }> = settings?.STATUS_META || FALLBACK_STATUS;
-  const m = s ? STATUS[s] || { label: s, bg: 'var(--surface-2)', color: 'var(--ink-2)' } : { label, bg, color };
+  const m = s
+    ? STATUS[s] || { label: s, bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' }
+    : { label, bg, color };
   return (
     <span className="badge" style={{ background: m.bg, color: m.color }}>
       <span
@@ -53,10 +59,10 @@ export function Badge({ s, label, color, bg }: { s?: string; label?: string; col
 export function RiskBadge({ score = 0 }) {
   const cfg =
     score >= 60
-      ? ['var(--red-bg)', 'var(--red)', 'ALTO']
+      ? ['var(--urgency-critical-bg)', 'var(--urgency-critical)', 'ALTO']
       : score >= 30
-        ? ['var(--amber-bg)', 'var(--amber)', 'MÉDIO']
-        : ['var(--green-bg)', 'var(--green)', 'BAIXO'];
+        ? ['var(--urgency-soon-bg)', 'var(--urgency-soon)', 'MÉDIO']
+        : ['var(--urgency-ok-bg)', 'var(--urgency-ok)', 'BAIXO'];
   return (
     <span className="badge" style={{ background: cfg[0], color: cfg[1] }}>
       <span
@@ -95,7 +101,7 @@ export function Card({
   return (
     // biome-ignore lint/a11y/useSemanticElements: children is arbitrary ReactNode (may include block content), so a native <button> isn't a safe wrapper here.
     <div
-      className={`card ${className}`}
+      className={`card card-interactive ${className}`}
       style={style}
       role="button"
       tabIndex={0}
@@ -116,7 +122,7 @@ export function MetricCard({
   label,
   value,
   sub,
-  color = 'var(--brand)',
+  color = 'var(--accent)',
   icon,
 }: {
   label: ReactNode;
@@ -142,7 +148,7 @@ export function MetricCard({
             {value ?? '—'}
           </div>
           {sub && (
-            <div className="text-xs mt-2" style={{ color: 'var(--ink-3)' }}>
+            <div className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
               {sub}
             </div>
           )}
@@ -173,7 +179,7 @@ export function PageHeader({
           style={{
             fontSize: 24,
             fontWeight: 800,
-            color: 'var(--ink)',
+            color: 'var(--text-primary)',
             lineHeight: 1.15,
             fontFamily: '"Plus Jakarta Sans",sans-serif',
           }}
@@ -181,7 +187,7 @@ export function PageHeader({
           {title}
         </h1>
         {sub && (
-          <p className="text-sm mt-1.5" style={{ color: 'var(--ink-2)' }}>
+          <p className="text-sm mt-1.5" style={{ color: 'var(--text-secondary)' }}>
             {sub}
           </p>
         )}
@@ -227,7 +233,7 @@ export function TD({
       className="data-td"
       style={{
         fontWeight: bold ? 600 : 400,
-        color: muted ? 'var(--ink-2)' : color || 'var(--ink)',
+        color: muted ? 'var(--text-secondary)' : color || 'var(--text-primary)',
         fontFamily: mono ? '"JetBrains Mono",monospace' : 'inherit',
         textAlign: right ? 'right' : 'left',
         fontSize: mono ? 12 : 13,
@@ -325,7 +331,7 @@ export function FormField({ label, children, hint }: { label: ReactNode; childre
         {children}
       </label>
       {hint && (
-        <p className="text-xs mt-1" style={{ color: '#97A0AF' }}>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
           {hint}
         </p>
       )}
@@ -345,25 +351,21 @@ export function Modal({
   width?: number;
 }) {
   return (
-    <div
-      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(15,23,42,0.54)' }}
-    >
+    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="modal-content bg-white rounded-lg w-full overflow-y-auto"
         style={{
           maxWidth: width,
           maxHeight: '90vh',
-          borderRadius: 'var(--radius)',
-          boxShadow: '0 30px 80px rgba(2,6,23,0.22)',
-          border: '1px solid rgba(226,232,240,0.7)',
+          borderRadius: 'var(--radius-card)',
+          border: '1px solid var(--border-subtle)',
         }}
       >
         <div
           className="flex items-center justify-between px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(226,232,240,0.9)' }}
+          style={{ borderBottom: '1px solid var(--border-subtle)' }}
         >
-          <h2 style={{ fontSize: 16, fontWeight: 750, color: 'var(--ink)' }}>{title}</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)' }}>{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -371,7 +373,7 @@ export function Modal({
               background: 'transparent',
               border: 'none',
               fontSize: 20,
-              color: 'var(--ink-3)',
+              color: 'var(--text-muted)',
               cursor: 'pointer',
               lineHeight: 1,
               padding: '2px 6px',
@@ -393,13 +395,13 @@ export function Spinner() {
         style={{
           width: 18,
           height: 18,
-          border: '2.5px solid var(--border)',
-          borderTopColor: 'var(--brand)',
+          border: '2.5px solid var(--border-subtle)',
+          borderTopColor: 'var(--accent)',
           borderRadius: '50%',
           animation: 'spin 0.7s linear infinite',
         }}
       />
-      <span className="text-sm" style={{ color: 'var(--ink-2)' }}>
+      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         A carregar…
       </span>
     </div>
@@ -410,7 +412,7 @@ export function Empty({ message = 'Sem dados', icon }: { message?: string; icon?
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       {icon ? <div style={{ fontSize: 32, opacity: 0.3 }}>{icon}</div> : <Inbox size={32} opacity={0.3} />}
-      <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
         {message}
       </p>
     </div>
@@ -427,10 +429,14 @@ const BANNER_ICONS = {
 export function AlertBanner({ type = 'info', children }: { type?: string; children?: ReactNode }) {
   const t =
     {
-      info: { bg: 'var(--brand-bg)', color: 'var(--brand)', border: 'rgba(37,99,235,0.30)' },
-      success: { bg: 'var(--green-bg)', color: 'var(--green)', border: 'rgba(15,118,110,0.22)' },
-      warning: { bg: 'var(--amber-bg)', color: 'var(--amber)', border: 'rgba(217,119,6,0.22)' },
-      danger: { bg: 'var(--red-bg)', color: 'var(--red)', border: 'rgba(220,38,38,0.22)' },
+      info: { bg: 'var(--accent-bg)', color: 'var(--accent)', border: 'var(--accent)' },
+      success: { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)', border: 'var(--urgency-ok-border)' },
+      warning: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)', border: 'var(--urgency-soon-border)' },
+      danger: {
+        bg: 'var(--urgency-critical-bg)',
+        color: 'var(--urgency-critical)',
+        border: 'var(--urgency-critical-border)',
+      },
     }[type] || {};
   const IconComp = (BANNER_ICONS as Record<string, typeof Info>)[type] || Info;
   return (
@@ -462,17 +468,17 @@ export function AppLogo({ size = 32, className = '', style = {} }) {
 export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
   if (!events.length) return <Empty message="Sem eventos na cronologia." />;
   const COL = {
-    clinical: 'var(--brand)',
-    admin: 'var(--ink-2)',
-    financial: 'var(--green)',
-    note: 'var(--purple)',
-    interaction: 'var(--teal)',
+    clinical: 'var(--accent)',
+    admin: 'var(--text-secondary)',
+    financial: 'var(--urgency-ok)',
+    note: 'var(--cat-purple)',
+    interaction: 'var(--cat-teal)',
   };
   return (
     <div className="relative" style={{ paddingLeft: 28 }}>
-      <div className="absolute" style={{ left: 7, top: 6, bottom: 0, width: 2, background: 'var(--border)' }} />
+      <div className="absolute" style={{ left: 7, top: 6, bottom: 0, width: 2, background: 'var(--border-subtle)' }} />
       {events.map((e, i) => {
-        const col = (COL as Record<string, string>)[e.event_type] || 'var(--ink-2)';
+        const col = (COL as Record<string, string>)[e.event_type] || 'var(--text-secondary)';
         return (
           <div key={e.id ?? i} className="relative mb-5">
             <div
@@ -488,11 +494,11 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
                 boxShadow: `0 0 0 2px ${col}30`,
               }}
             />
-            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--ink)', lineHeight: 1.4 }}>
+            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)', lineHeight: 1.4 }}>
               {e.event}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs" style={{ color: 'var(--ink-3)' }}>
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {new Date(e.created_at).toLocaleString('pt-PT', {
                   month: 'short',
                   day: 'numeric',
@@ -501,7 +507,7 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
                   minute: '2-digit',
                 })}
               </span>
-              <span style={{ color: '#C1C7D0', fontSize: 10 }}>·</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>·</span>
               <span className="text-xs font-semibold" style={{ color: col }}>
                 {e.user_name}
               </span>
@@ -512,7 +518,7 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
             {e.hash && (
               <div
                 className="text-xs mt-1"
-                style={{ fontFamily: '"JetBrains Mono",monospace', color: 'var(--ink-3)', opacity: 0.6 }}
+                style={{ fontFamily: '"JetBrains Mono",monospace', color: 'var(--text-muted)', opacity: 0.6 }}
               >
                 #{e.hash}
               </div>
@@ -524,7 +530,7 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
   );
 }
 
-export function Avatar({ name = '', size = 40, color = '#0052CC' }) {
+export function Avatar({ name = '', size = 40, color = 'var(--accent)' }) {
   const initials = name
     .split(' ')
     .map((n) => n[0])
@@ -558,7 +564,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
   return (
     <div
       className="flex gap-1 mb-5 p-1"
-      style={{ background: 'var(--surface-2)', display: 'inline-flex', borderRadius: 'var(--radius)' }}
+      style={{ background: 'var(--bg-sunken)', display: 'inline-flex', borderRadius: 'var(--radius-card)' }}
     >
       {tabs.map((t) => (
         <button
@@ -569,14 +575,14 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
             padding: '8px 16px',
             fontSize: 12,
             fontWeight: active === t.key ? 650 : 550,
-            borderRadius: 'var(--radius-sm)',
+            borderRadius: 'var(--radius-control)',
             border: '1px solid transparent',
             cursor: 'pointer',
-            background: active === t.key ? 'var(--surface)' : 'transparent',
-            color: active === t.key ? 'var(--brand)' : 'var(--ink-2)',
-            boxShadow: active === t.key ? '0 6px 18px rgba(2,6,23,0.06)' : 'none',
+            background: active === t.key ? 'var(--bg-surface)' : 'transparent',
+            color: active === t.key ? 'var(--accent)' : 'var(--text-secondary)',
+            boxShadow: active === t.key ? 'var(--elev-1)' : 'var(--elev-0)',
             fontFamily: 'inherit',
-            borderColor: active === t.key ? 'rgba(226,232,240,0.9)' : 'transparent',
+            borderColor: active === t.key ? 'var(--border-subtle)' : 'transparent',
           }}
         >
           {t.label}
@@ -584,8 +590,8 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
             <span
               className="ml-1.5 px-1.5 py-0.5 rounded text-xs"
               style={{
-                background: active === t.key ? 'var(--brand-bg)' : 'rgba(226,232,240,0.9)',
-                color: active === t.key ? 'var(--brand)' : 'var(--ink-2)',
+                background: active === t.key ? 'var(--accent-bg)' : 'var(--bg-sunken)',
+                color: active === t.key ? 'var(--accent)' : 'var(--text-secondary)',
               }}
             >
               {t.count}

@@ -26,15 +26,20 @@ export default function OperatoryPanel({
     <div className="card" style={{ padding: '18px 18px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: '#172B4D' }}>Operatory</div>
-          <div style={{ fontSize: 12, color: '#97A0AF' }}>Treatment chairs in real time</div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Operatory</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Treatment chairs in real time</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {chairs.slice(0, 6).map((_, i) => (
             <span
               // biome-ignore lint/suspicious/noArrayIndexKey: purely decorative dot indicators, fixed count
               key={i}
-              style={{ width: 10, height: 10, borderRadius: 999, background: CHAIR_COLORS[i % CHAIR_COLORS.length] }}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 'var(--radius-pill)',
+                background: CHAIR_COLORS[i % CHAIR_COLORS.length],
+              }}
             />
           ))}
         </div>
@@ -54,19 +59,24 @@ export default function OperatoryPanel({
           return (
             <div
               key={chair}
-              style={{ border: '1px solid #EBECF0', borderRadius: 14, padding: '14px 14px 12px', background: 'white' }}
+              style={{
+                border: '1px solid var(--bg-sunken)',
+                borderRadius: 'var(--radius-card)',
+                padding: '14px 14px 12px',
+                background: 'white',
+              }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <ChairGraphic color={color} occupied={!!current} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: '#172B4D' }}>
+                    <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>
                       {current ? current.patient_name || '—' : 'Available'}
                     </div>
                     <div
                       style={{
                         fontSize: 11,
-                        color: '#97A0AF',
+                        color: 'var(--text-muted)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -83,7 +93,7 @@ export default function OperatoryPanel({
                       <div
                         style={{
                           fontSize: 11,
-                          color: '#97A0AF',
+                          color: 'var(--text-muted)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -95,7 +105,14 @@ export default function OperatoryPanel({
                     )}
                   </div>
                 </div>
-                <div style={{ width: 10, height: 10, borderRadius: 999, background: current ? color : '#DFE1E6' }} />
+                <div
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 'var(--radius-pill)',
+                    background: current ? color : 'var(--border-subtle)',
+                  }}
+                />
               </div>
 
               {current && (
@@ -125,10 +142,10 @@ export default function OperatoryPanel({
                           onClick={() => next && onSetStatus(current, next)}
                           style={{
                             width: '100%',
-                            background: next ? color : '#EBECF0',
-                            color: next ? 'white' : '#97A0AF',
+                            background: next ? color : 'var(--bg-sunken)',
+                            color: next ? 'white' : 'var(--text-muted)',
                             border: 'none',
-                            borderRadius: 8,
+                            borderRadius: 'var(--radius-control)',
                             padding: '9px 0',
                             fontSize: 11,
                             fontWeight: 900,
@@ -145,10 +162,10 @@ export default function OperatoryPanel({
                           onClick={() => canNoShow && onSetStatus(current, 'no-show')}
                           style={{
                             width: '100%',
-                            background: canNoShow ? '#FFEBE6' : '#F4F7FA',
-                            color: canNoShow ? '#DE350B' : '#C1C7D0',
-                            border: `1px solid ${canNoShow ? '#FFBDAD' : '#EBECF0'}`,
-                            borderRadius: 8,
+                            background: canNoShow ? 'var(--urgency-critical-bg)' : 'var(--bg-page)',
+                            color: canNoShow ? 'var(--urgency-critical)' : 'var(--text-muted)',
+                            border: `1px solid ${canNoShow ? 'var(--urgency-critical-border)' : 'var(--bg-sunken)'}`,
+                            borderRadius: 'var(--radius-control)',
                             padding: '9px 0',
                             fontSize: 11,
                             fontWeight: 900,

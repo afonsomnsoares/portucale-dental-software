@@ -88,13 +88,13 @@ export default function ClinicInventoryPage() {
       {tab === 'ledger' ? (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
-            <MetricCard label="SEM STOCK" value={outCount} color="#DE350B" />
-            <MetricCard label="STOCK BAIXO" value={lowCount} color="#FF8B00" />
-            <MetricCard label="ITENS SEGUIDOS" value={items.length} color="#0052CC" />
+            <MetricCard label="SEM STOCK" value={outCount} color="var(--urgency-critical)" />
+            <MetricCard label="STOCK BAIXO" value={lowCount} color="var(--urgency-soon)" />
+            <MetricCard label="ITENS SEGUIDOS" value={items.length} color="var(--accent)" />
           </div>
           <div className="card" style={{ padding: 0 }}>
             {!rows.length ? (
-              <div style={{ padding: '18px 16px', color: '#97A0AF', fontSize: 13 }}>
+              <div style={{ padding: '18px 16px', color: 'var(--text-muted)', fontSize: 13 }}>
                 {/* Sem esta distinção, uma falha de carregamento passava-se por catálogo
                     vazio e convidava a criar um item que já existe. */}
                 {error
@@ -117,19 +117,22 @@ export default function ClinicInventoryPage() {
                       <td className="data-td" style={{ fontWeight: 600 }}>
                         {item.item}
                       </td>
-                      <td className="data-td" style={{ color: '#97A0AF' }}>
+                      <td className="data-td" style={{ color: 'var(--text-muted)' }}>
                         {item.unit}
                       </td>
                       <td
                         className="data-td"
-                        style={{ fontWeight: 700, color: out ? '#DE350B' : low ? '#FF8B00' : '#00875A' }}
+                        style={{
+                          fontWeight: 700,
+                          color: out ? 'var(--urgency-critical)' : low ? 'var(--urgency-soon)' : 'var(--urgency-ok)',
+                        }}
                       >
                         {out ? (
                           <span
                             style={{
-                              background: '#FFEBE6',
-                              color: '#DE350B',
-                              borderRadius: 4,
+                              background: 'var(--urgency-critical-bg)',
+                              color: 'var(--urgency-critical)',
+                              borderRadius: 'var(--radius-control)',
                               padding: '2px 8px',
                               fontSize: 11,
                             }}
@@ -140,10 +143,14 @@ export default function ClinicInventoryPage() {
                           qty
                         )}
                         {low && !out && (
-                          <AlertTriangle size={10} color="#FF8B00" style={{ marginLeft: 4, display: 'inline' }} />
+                          <AlertTriangle
+                            size={10}
+                            color="var(--urgency-soon)"
+                            style={{ marginLeft: 4, display: 'inline' }}
+                          />
                         )}
                       </td>
-                      <td className="data-td" style={{ color: '#97A0AF' }}>
+                      <td className="data-td" style={{ color: 'var(--text-muted)' }}>
                         {reorderAt}
                       </td>
                     </tr>

@@ -6,7 +6,7 @@
 // recarregar. É o comportamento que interessa aqui, já que cada página vai
 // buscar os seus próprios dados e falha isoladamente.
 import { useEffect } from 'react';
-import { C, FONTS } from '@/lib/constants';
+import { FONTS } from '@/lib/constants';
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -16,25 +16,25 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
   return (
     <div
       style={{
-        background: C.W,
-        border: `1px solid ${C.BDR}`,
-        borderRadius: 12,
-        boxShadow: C.SH,
+        background: 'var(--bg-surface)',
+        border: `1px solid var(--border-subtle)`,
+        borderRadius: 'var(--radius-card)',
+        boxShadow: 'var(--elev-1)',
         padding: 28,
         maxWidth: 520,
         fontFamily: FONTS.body,
       }}
     >
-      <h2 style={{ fontFamily: FONTS.display, fontSize: 17, color: C.T, margin: '0 0 8px' }}>
+      <h2 style={{ fontFamily: FONTS.display, fontSize: 17, color: 'var(--text-primary)', margin: '0 0 8px' }}>
         Não foi possível carregar esta página
       </h2>
-      <p style={{ color: C.TM, fontSize: 14, lineHeight: 1.6, margin: '0 0 18px' }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6, margin: '0 0 18px' }}>
         Ocorreu um erro ao mostrar esta secção. As outras secções continuam acessíveis pelo menu lateral.
       </p>
       {error.digest && (
         <p
           style={{
-            color: C.TL,
+            color: 'var(--text-muted)',
             fontSize: 12,
             fontFamily: 'var(--font-jetbrains-mono), monospace',
             margin: '0 0 18px',
@@ -47,10 +47,10 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
         type="button"
         onClick={reset}
         style={{
-          background: C.P,
-          color: C.W,
+          background: 'var(--accent)',
+          color: 'var(--bg-surface)',
           border: 'none',
-          borderRadius: 8,
+          borderRadius: 'var(--radius-control)',
           padding: '9px 16px',
           fontSize: 14,
           fontWeight: 600,

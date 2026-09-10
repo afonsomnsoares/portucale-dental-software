@@ -22,11 +22,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const ACTION_COLOR: Record<string, { bg: string; color: string }> = {
-  MISSING_DATA: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  OPEN_TASKS: { bg: 'var(--brand-bg)', color: 'var(--brand)' },
-  PLAN_NOT_ACCEPTED: { bg: 'var(--amber-bg)', color: 'var(--amber)' },
-  REACTIVATE: { bg: 'var(--red-bg)', color: 'var(--red)' },
-  NO_UPCOMING_VISIT: { bg: 'var(--brand-bg)', color: 'var(--brand)' },
+  MISSING_DATA: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  OPEN_TASKS: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
+  PLAN_NOT_ACCEPTED: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
+  REACTIVATE: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  NO_UPCOMING_VISIT: { bg: 'var(--accent-bg)', color: 'var(--accent)' },
 };
 
 export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProps) {
@@ -53,14 +53,17 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
   return (
     <div className="card p-5">
       <div className="section-label mb-1">PREPARAÇÃO DE HOJE</div>
-      <p className="text-xs mb-4" style={{ color: 'var(--ink-3)' }}>
+      <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
         Dados em falta, tarefas pendentes e o que fazer a seguir, por paciente — sem tocar em nada clínico.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {rows.map((r) => {
           const needsFollowUp =
             r.appointmentStatus === 'departed' && !r.hasUpcomingAppointment && r.nextAction.code !== 'UP_TO_DATE';
-          const actionColor = ACTION_COLOR[r.nextAction.code] || { bg: 'var(--surface-2)', color: 'var(--ink-2)' };
+          const actionColor = ACTION_COLOR[r.nextAction.code] || {
+            bg: 'var(--bg-sunken)',
+            color: 'var(--text-secondary)',
+          };
           return (
             <div
               key={r.appointmentId}
@@ -69,8 +72,8 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 12,
-                border: '1px solid var(--border)',
-                borderRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-control)',
                 padding: '10px 14px',
                 flexWrap: 'wrap',
               }}
@@ -81,7 +84,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                   <span style={{ fontWeight: 600, fontSize: 13 }}>{r.patientName}</span>
                   <span
                     className="badge"
-                    style={{ background: 'var(--surface-2)', color: 'var(--ink-2)', fontSize: 10 }}
+                    style={{ background: 'var(--bg-sunken)', color: 'var(--text-secondary)', fontSize: 10 }}
                   >
                     {STATUS_LABEL[r.appointmentStatus] || r.appointmentStatus}
                   </span>
@@ -91,9 +94,9 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                     <span
                       className="text-xs"
                       style={{
-                        background: 'var(--amber-bg)',
-                        color: 'var(--amber)',
-                        borderRadius: 6,
+                        background: 'var(--urgency-soon-bg)',
+                        color: 'var(--urgency-soon)',
+                        borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
                         fontWeight: 600,
                       }}
@@ -105,9 +108,9 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                     <span
                       className="text-xs"
                       style={{
-                        background: 'var(--brand-bg)',
-                        color: 'var(--brand)',
-                        borderRadius: 6,
+                        background: 'var(--accent-bg)',
+                        color: 'var(--accent)',
+                        borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
                         fontWeight: 600,
                       }}
@@ -121,7 +124,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                       style={{
                         background: actionColor.bg,
                         color: actionColor.color,
-                        borderRadius: 6,
+                        borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
                         fontWeight: 600,
                       }}
@@ -134,7 +137,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
 
               {needsFollowUp &&
                 (taskCreatedFor.has(r.appointmentId) ? (
-                  <span className="text-xs" style={{ color: 'var(--green)', fontWeight: 700, flexShrink: 0 }}>
+                  <span className="text-xs" style={{ color: 'var(--urgency-ok)', fontWeight: 700, flexShrink: 0 }}>
                     Tarefa criada
                   </span>
                 ) : (

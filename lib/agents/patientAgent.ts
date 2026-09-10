@@ -91,6 +91,7 @@ export async function reviewPatients(tenantId: string) {
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'patientAgent',
+    tenantId,
     system: SYSTEM_PROMPT,
     payload: {
       totalDoentes: Number(facts.total_doentes),

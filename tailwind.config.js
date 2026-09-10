@@ -1,4 +1,14 @@
 /** @type {import('tailwindcss').Config} */
+
+/* As cores vivem em app/globals.css, não aqui. Este ficheiro só as expõe como
+   utilitários, apontando para os tokens semânticos — para `text-muted` e
+   `bg-sunken` significarem exatamente o mesmo que `var(--text-muted)` e
+   `var(--bg-sunken)` num style inline. Uma fonte de verdade, dois sotaques.
+
+   Nada de escalas numéricas (brand-500, ink-300): um número não diz para que
+   serve, e foi por isso que a paleta anterior acabou usada 3 vezes em 208
+   ficheiros enquanto o resto da app escrevia hex à mão. */
+
 const config = {
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
@@ -6,46 +16,69 @@ const config = {
   ],
   theme: {
     extend: {
-      colors: {
-        brand: {
-          50:  '#DEEBFF',
-          100: '#B3D4FF',
-          200: '#87BAFF',
-          300: '#5A9EFF',
-          400: '#2684FF',
-          500: '#0052CC',
-          600: '#0747A6',
-          700: '#0535A3',
-          800: '#0329A3',
-          900: '#021D98',
-        },
-        surface: {
-          DEFAULT: '#FFFFFF',
-          page:    '#F4F7FA',
-          hover:   '#F4F7FA',
-          active:  '#DEEBFF',
-        },
-        ink: {
-          DEFAULT:   '#172B4D',
-          secondary: '#5E6C84',
-          tertiary:  '#97A0AF',
-          subtle:    '#C1C7D0',
-        },
-        line: {
-          DEFAULT: '#DFE1E6',
-          subtle:  '#EBECF0',
-        },
-        success: { DEFAULT:'#00875A', light:'#E3FCEF', border:'#57D9A3', dark:'#006644' },
-        warning: { DEFAULT:'#FF8B00', light:'#FFF7E6', border:'#FFE380', dark:'#FF991F' },
-        danger:  { DEFAULT:'#DE350B', light:'#FFEBE6', border:'#FFBDAD', dark:'#BF2600' },
-        info:    { DEFAULT:'#0052CC', light:'#DEEBFF', border:'#4C9AFF' },
-        purple:  { DEFAULT:'#5243AA', light:'#EAE6FF', border:'#998DD9' },
-        teal:    { DEFAULT:'#00A3BF', light:'#E6FCFF', border:'#79E2F2' },
+      textColor: {
+        primary:   'var(--text-primary)',
+        secondary: 'var(--text-secondary)',
+        muted:     'var(--text-muted)',
+        disabled:  'var(--text-disabled)',
+        onAccent:  'var(--text-onAccent)',
+        accent:    'var(--accent)',
+        critical:  'var(--urgency-critical)',
+        soon:      'var(--urgency-soon)',
+        ok:        'var(--urgency-ok)',
+      },
+      backgroundColor: {
+        page:          'var(--bg-page)',
+        surface:       'var(--bg-surface)',
+        sunken:        'var(--bg-sunken)',
+        raised:        'var(--bg-raised)',
+        accent:        'var(--accent)',
+        'accent-soft': 'var(--accent-bg)',
+        'critical':    'var(--urgency-critical)',
+        'critical-bg': 'var(--urgency-critical-bg)',
+        'soon':        'var(--urgency-soon)',
+        'soon-bg':     'var(--urgency-soon-bg)',
+        'ok':          'var(--urgency-ok)',
+        'ok-bg':       'var(--urgency-ok-bg)',
+      },
+      borderColor: {
+        DEFAULT:  'var(--border-subtle)',
+        subtle:   'var(--border-subtle)',
+        strong:   'var(--border-strong)',
+        focus:    'var(--border-focus)',
+        critical: 'var(--urgency-critical-border)',
+        soon:     'var(--urgency-soon-border)',
+        ok:       'var(--urgency-ok-border)',
+      },
+      borderRadius: {
+        // Três valores, e os nomes antigos do Tailwind encaixam neles. Assim
+        // um `rounded-lg` já escrito passa a apontar para o token do cartão em
+        // vez de para um 10px avulso, sem ter de se tocar em nenhum .tsx.
+        none:    '0',
+        DEFAULT: 'var(--radius-control)',
+        sm:      'var(--radius-control)',
+        md:      'var(--radius-control)',
+        lg:      'var(--radius-card)',
+        xl:      'var(--radius-card)',
+        full:    'var(--radius-pill)',
+        control: 'var(--radius-control)',
+        card:    'var(--radius-card)',
+        pill:    'var(--radius-pill)',
+      },
+      boxShadow: {
+        // A escala completa. `shadow-none` é o defeito de tudo o que está
+        // assente — se um componente precisa de `shadow-1` ou acima, é porque
+        // flutua, e isso é uma afirmação sobre o que ele é.
+        DEFAULT: 'var(--elev-1)',
+        none:    'var(--elev-0)',
+        1:       'var(--elev-1)',
+        2:       'var(--elev-2)',
+        3:       'var(--elev-3)',
+        focus:   'var(--ring-focus)',
       },
       fontFamily: {
-        sans:    ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-        mono:    ['"JetBrains Mono"', '"Fira Code"', 'monospace'],
-        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-plus-jakarta)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'ui-monospace', 'monospace'],
       },
       fontSize: {
         '2xs': ['10px', { lineHeight: '14px' }],
@@ -58,37 +91,6 @@ const config = {
         '2xl': ['20px', { lineHeight: '28px' }],
         '3xl': ['24px', { lineHeight: '32px' }],
         '4xl': ['30px', { lineHeight: '36px' }],
-      },
-      boxShadow: {
-        card:  '0 1px 3px rgba(23,43,77,0.10), 0 0 0 1px rgba(23,43,77,0.06)',
-        hover: '0 4px 12px rgba(23,43,77,0.12), 0 0 0 1px rgba(23,43,77,0.08)',
-        modal: '0 20px 64px rgba(23,43,77,0.22), 0 4px 16px rgba(23,43,77,0.12)',
-        focus: '0 0 0 3px rgba(0,82,204,0.20)',
-        'inset-brand': 'inset 0 0 0 2px #0052CC',
-      },
-      borderRadius: {
-        sm:  '4px',
-        DEFAULT: '6px',
-        md:  '8px',
-        lg:  '10px',
-        xl:  '12px',
-      },
-      spacing: {
-        '4.5': '18px',
-        '13':  '52px',
-        '15':  '60px',
-        '18':  '72px',
-      },
-      animation: {
-        'fade-in':    'fadeIn 0.15s ease-out',
-        'slide-up':   'slideUp 0.2s ease-out',
-        'spin-slow':  'spin 1.5s linear infinite',
-        'pulse-dot':  'pulseDot 2s ease-in-out infinite',
-      },
-      keyframes: {
-        fadeIn:   { from: { opacity: '0' },               to: { opacity: '1' } },
-        slideUp:  { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
-        pulseDot: { '0%,100%': { opacity: '1' }, '50%': { opacity: '0.4' } },
       },
     },
   },

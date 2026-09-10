@@ -96,9 +96,9 @@ export default function TreatmentTable({
                       style={{
                         fontFamily: '"JetBrains Mono",monospace',
                         fontSize: 11,
-                        background: '#EAE6FF',
-                        color: '#5243AA',
-                        borderRadius: 4,
+                        background: 'var(--cat-purple-bg)',
+                        color: 'var(--cat-purple)',
+                        borderRadius: 'var(--radius-control)',
                         padding: '2px 7px',
                         fontWeight: 600,
                       }}
@@ -112,7 +112,7 @@ export default function TreatmentTable({
                 <td className="data-td" style={{ fontWeight: 500 }}>
                   {t.description}
                 </td>
-                <td className="data-td" style={{ color: '#5E6C84' }}>
+                <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                   Fase {t.phase}
                 </td>
                 <td className="data-td">
@@ -137,7 +137,11 @@ export default function TreatmentTable({
             ))}
             {treatments.length === 0 && (
               <tr>
-                <td colSpan={showPatient ? 7 : 6} className="data-td text-center py-12" style={{ color: '#97A0AF' }}>
+                <td
+                  colSpan={showPatient ? 7 : 6}
+                  className="data-td text-center py-12"
+                  style={{ color: 'var(--text-muted)' }}
+                >
                   Sem tratamentos encontrados
                 </td>
               </tr>

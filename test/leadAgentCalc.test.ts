@@ -17,12 +17,16 @@ test('clampLeadTriage: aceita uma qualificação válida com rascunho', () => {
   ]);
 });
 
-test('clampLeadTriage: canal é sempre calculado a partir do contacto real, nunca escolhido pela IA', () => {
+// Com o agente reduzido a chamada e SMS (migração 052), um lead sem telefone não tem por
+// onde ser respondido. O ramo do e-mail existia e nunca chegou a enviar nada — a rota de
+// envio devolvia 'email_not_supported' desde sempre — por isso escrever-lhe um rascunho
+// era produzir trabalho que ninguém podia expedir.
+test('clampLeadTriage: um lead sem telefone não recebe rascunho', () => {
   const out = clampLeadTriage(CANDIDATES, [{ leadId: 'lead-2', qualification: 'warm', draftReply: 'Olá!' }]);
-  assert.equal(out[0].draftChannel, 'email'); // lead-2 só tem email
+  assert.deepEqual(out, [], 'lead-2 só tem email — fica para contacto manual');
 });
 
-test('clampLeadTriage: com telefone e email, prefere SMS (único canal que este projeto sabe enviar)', () => {
+test('clampLeadTriage: o canal é sempre SMS, nunca escolhido pela IA', () => {
   const out = clampLeadTriage(CANDIDATES, [{ leadId: 'lead-3', qualification: 'cold', draftReply: 'Olá!' }]);
   assert.equal(out[0].draftChannel, 'sms');
 });
