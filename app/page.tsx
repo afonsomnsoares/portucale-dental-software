@@ -110,7 +110,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-[#F2F3F0] lg:flex-row">
+    <div className="flex min-h-dvh flex-col bg-[var(--entry-canvas)] lg:flex-row">
       <ParedeAzulejo montado={montado} />
 
       <main className="flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
@@ -121,11 +121,13 @@ export default function LoginPage() {
           ].join(' ')}
         >
           <header>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1D4E8F]">Área da equipa</p>
-            <h1 style={serif} className="mt-3 text-[2rem] leading-[1.15] text-[#132133]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--entry-accent)]">
+              Área da equipa
+            </p>
+            <h1 style={serif} className="mt-3 text-[2rem] leading-[1.15] text-[var(--entry-text)]">
               Bem-vindo de volta
             </h1>
-            <p className="mt-2 text-[15px] leading-relaxed text-[#5B6B7C]">
+            <p className="mt-2 text-[15px] leading-relaxed text-[var(--entry-text-muted)]">
               Entre para aceder à agenda e às fichas dos pacientes.
             </p>
           </header>
@@ -135,7 +137,7 @@ export default function LoginPage() {
               {erro && (
                 <p
                   role="alert"
-                  className="flex items-start gap-2.5 rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3.5 py-3 text-[14px] leading-snug text-[#8E2A22]"
+                  className="flex items-start gap-2.5 rounded-md border border-[var(--entry-alert-border)] bg-[var(--entry-alert-bg)] px-3.5 py-3 text-[14px] leading-snug text-[var(--entry-alert)]"
                 >
                   <IconeAviso />
                   <span>{erro}</span>
@@ -179,22 +181,22 @@ export default function LoginPage() {
                 onClick={() => setVisivel((v) => !v)}
                 aria-pressed={visivel}
                 aria-label={visivel ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-2 text-[#8A96A2] transition-colors hover:text-[#1D4E8F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F]"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-2 text-[var(--entry-text-faint)] transition-colors hover:text-[var(--entry-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--entry-accent)]"
               >
                 {visivel ? <IconeOlhoFechado /> : <IconeOlho />}
               </button>
             </Campo>
 
-            {capsLock && <p className="-mt-2 text-[13px] text-[#8E2A22]">Caps Lock está ligado.</p>}
+            {capsLock && <p className="-mt-2 text-[13px] text-[var(--entry-alert)]">Caps Lock está ligado.</p>}
 
             <div className="flex items-center justify-between gap-4 pt-1">
-              <label className="group inline-flex cursor-pointer select-none items-center gap-2.5 text-[14px] text-[#3E4C5A]">
+              <label className="group inline-flex cursor-pointer select-none items-center gap-2.5 text-[14px] text-[var(--entry-slate)]">
                 <span className="relative inline-flex h-[18px] w-[18px] items-center justify-center">
                   <input
                     type="checkbox"
                     checked={guardarEmail}
                     onChange={(e) => setGuardarEmail(e.target.checked)}
-                    className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-[5px] border border-[#C6CCC5] bg-white transition-colors checked:border-[#0B2545] checked:bg-[#0B2545] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0]"
+                    className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-[5px] border border-[var(--entry-line-check)] bg-white transition-colors checked:border-[var(--entry-ink)] checked:bg-[var(--entry-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--entry-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--entry-canvas)]"
                   />
                   <IconeVisto />
                 </span>
@@ -202,7 +204,7 @@ export default function LoginPage() {
               </label>
               <a
                 href="/recuperar-palavra-passe"
-                className="rounded text-[14px] text-[#1D4E8F] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F]"
+                className="rounded text-[14px] text-[var(--entry-accent)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--entry-accent)]"
               >
                 Recuperar acesso
               </a>
@@ -221,14 +223,14 @@ export default function LoginPage() {
 
           {SSO_ATIVO && (
             <>
-              <div className="my-7 flex items-center gap-4 text-[12px] uppercase tracking-[0.16em] text-[#9AA5AF]">
-                <span className="h-px flex-1 bg-[#DDE1DB]" />
+              <div className="my-7 flex items-center gap-4 text-[12px] uppercase tracking-[0.16em] text-[var(--entry-muted-line)]">
+                <span className="h-px flex-1 bg-[var(--entry-line-soft)]" />
                 ou
-                <span className="h-px flex-1 bg-[#DDE1DB]" />
+                <span className="h-px flex-1 bg-[var(--entry-line-soft)]" />
               </div>
               <button
                 type="button"
-                className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-[#D8DCD6] bg-white px-4 py-3 text-[15px] font-medium text-[#132133] transition-colors hover:border-[#0B2545] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0]"
+                className="flex w-full items-center justify-center gap-2.5 rounded-lg border border-[var(--entry-line)] bg-white px-4 py-3 text-[15px] font-medium text-[var(--entry-text)] transition-colors hover:border-[var(--entry-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--entry-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--entry-canvas)]"
               >
                 <IconeCadeado />
                 Entrar com SSO empresarial
@@ -236,7 +238,7 @@ export default function LoginPage() {
             </>
           )}
 
-          <p className="mt-10 text-[13px] leading-relaxed text-[#7A8794]">
+          <p className="mt-10 text-[13px] leading-relaxed text-[var(--entry-text-subtle)]">
             © 2026 Portucale Dental ·{' '}
             <a href="/privacidade" className="underline-offset-4 hover:underline">
               Privacidade
@@ -256,11 +258,11 @@ export default function LoginPage() {
 
 function ParedeAzulejo({ montado }: { montado: boolean }) {
   return (
-    <aside className="relative flex shrink-0 flex-col justify-between overflow-hidden bg-[#0B2545] px-8 py-8 text-white lg:w-[46%] lg:max-w-[38rem] lg:px-14 lg:py-14">
+    <aside className="relative flex shrink-0 flex-col justify-between overflow-hidden bg-[var(--entry-ink)] px-8 py-8 text-white lg:w-[46%] lg:max-w-[38rem] lg:px-14 lg:py-14">
       <svg
         aria-hidden="true"
         className={[
-          'pointer-events-none absolute inset-0 h-full w-full text-[#7FA9D9] transition-opacity duration-1000 ease-out motion-reduce:transition-none',
+          'pointer-events-none absolute inset-0 h-full w-full text-[var(--entry-accent-soft)] transition-opacity duration-1000 ease-out motion-reduce:transition-none',
           montado ? 'opacity-100' : 'opacity-0',
         ].join(' ')}
       >
@@ -288,8 +290,8 @@ function ParedeAzulejo({ montado }: { montado: boolean }) {
             <circle cx="48" cy="48" r="2" fill="currentColor" opacity=".28" />
           </pattern>
           <radialGradient id="brilho-esmalte" cx="28%" cy="18%" r="85%">
-            <stop offset="0%" stopColor="#1D4E8F" stopOpacity=".55" />
-            <stop offset="100%" stopColor="#0B2545" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--entry-accent)" stopOpacity=".55" />
+            <stop offset="100%" stopColor="var(--entry-ink)" stopOpacity="0" />
           </radialGradient>
         </defs>
         <rect width="100%" height="100%" fill="url(#azulejo-portucale)" />
@@ -310,7 +312,7 @@ function ParedeAzulejo({ montado }: { montado: boolean }) {
           />
         </span>
         <span style={serif} className="text-[1.35rem] tracking-tight">
-          Portucale <span className="text-[#9CC1E8]">Dental</span>
+          Portucale <span className="text-[var(--entry-accent-faint)]">Dental</span>
         </span>
       </div>
 
@@ -326,10 +328,10 @@ function ParedeAzulejo({ montado }: { montado: boolean }) {
 /* ── Peças reutilizáveis ──────────────────────────────────────────────── */
 
 const INPUT =
-  'w-full rounded-lg border border-[#D8DCD6] bg-white py-3 pl-11 pr-4 text-[15px] text-[#132133] placeholder:text-[#A6B0BA] transition-colors focus:border-[#1D4E8F] focus:outline-none focus:ring-4 focus:ring-[#1D4E8F]/10 disabled:opacity-60';
+  'w-full rounded-lg border border-[var(--entry-line)] bg-white py-3 pl-11 pr-4 text-[15px] text-[var(--entry-text)] placeholder:text-[var(--entry-placeholder)] transition-colors focus:border-[var(--entry-accent)] focus:outline-none focus:ring-4 focus:ring-[var(--entry-focus-ring)] disabled:opacity-60';
 
 const BOTAO_PRIMARIO =
-  'flex w-full items-center justify-center gap-2 rounded-lg bg-[#0B2545] px-4 py-3.5 text-[15px] font-medium text-white transition-colors hover:bg-[#16386B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4E8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F2F3F0] disabled:cursor-not-allowed disabled:opacity-70';
+  'flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--entry-ink)] px-4 py-3.5 text-[15px] font-medium text-white transition-colors hover:bg-[var(--entry-ink-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--entry-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--entry-canvas)] disabled:cursor-not-allowed disabled:opacity-70';
 
 function Campo({
   id,
@@ -344,11 +346,13 @@ function Campo({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-[#3E4C5A]">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-[var(--entry-slate)]">
         {etiqueta}
       </label>
       <div className="relative">
-        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8A96A2]">{icone}</span>
+        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--entry-text-faint)]">
+          {icone}
+        </span>
         {children}
       </div>
     </div>

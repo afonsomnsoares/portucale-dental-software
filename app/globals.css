@@ -116,6 +116,44 @@
   --radius-control: 6px;    /* botão, input, select, chip, separador   */
   --radius-card:    12px;   /* cartão, modal, painel                   */
   --radius-pill:    999px;  /* badge, avatar, barra de progresso       */
+
+  /* ---------- 3. Superfícies públicas ----------
+     As duas páginas que alguém de fora da clínica vê — a entrada da equipa
+     (app/page.tsx) e o portal do doente (app/portal/[token]/page.tsx) — têm
+     paleta própria, e de propósito: azul-marinho sobre creme, não o cinzento
+     azulado dos dashboards. Uma porta de entrada não se parece com uma
+     ferramenta de trabalho.
+
+     Estavam escritas em hexadecimal literal — 44 e 37 ocorrências — o que fazia
+     destas as duas únicas páginas a violar a regra lá de cima, e logo as que
+     não pertencem a ninguém que possa reparar. Coincidiam entre si por acaso,
+     não por partilharem uma definição; a partir daqui coincidem por construção. */
+  --entry-ink:          #0B2545;  /* painel escuro, botão primário            */
+  --entry-ink-hover:    #16386B;
+  --entry-accent:       #1D4E8F;  /* ligações, foco, sobretítulos             */
+  --entry-accent-soft:  #7FA9D9;
+  /* O anel de foco dos inputs é o accent a 10%. Tem de ser um token próprio e
+     não `ring-[var(--entry-accent)]/10`: o modificador de opacidade do Tailwind
+     sabe injetar alfa num hex literal, mas não numa var() — escrito assim, a
+     regra saía inválida e o anel desaparecia sem erro nenhum. */
+  --entry-focus-ring:   rgba(29, 78, 143, 0.10);
+  --entry-accent-faint: #9CC1E8;
+  --entry-canvas:       #F2F3F0;  /* creme de fundo                           */
+  --entry-text:         #132133;
+  --entry-text-muted:   #5B6B7C;
+  --entry-text-subtle:  #7A8794;
+  --entry-text-faint:   #8A96A2;
+  --entry-placeholder:  #A6B0BA;
+  --entry-slate:        #3E4C5A;
+  --entry-line:         #D8DCD6;  /* bordas sobre o creme                     */
+  --entry-line-soft:    #DDE1DB;
+  --entry-line-check:   #C6CCC5;
+  --entry-muted-line:   #9AA5AF;
+
+  /* Aviso no portal do doente — terracota sobre rosa, dentro da mesma família */
+  --entry-alert:        #8E2A22;
+  --entry-alert-bg:     #FBF0EE;
+  --entry-alert-border: #E4C4C0;
 }
 
 @layer base {

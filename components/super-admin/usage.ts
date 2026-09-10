@@ -27,8 +27,8 @@ export function daysSinceActivity(r: UsageRow): number | null {
 // marca nada". Uma clínica dentária sem marcações há um mês não está a usar isto.
 export function retentionBand(r: UsageRow): { key: string; label: string; color: string; bg: string } {
   const d = daysSinceActivity(r);
-  if (d === null) return { key: 'never', label: 'NUNCA USOU', color: '#5E6C84', bg: '#F4F7FA' };
-  if (d <= 7) return { key: 'active', label: 'ATIVA', color: '#00875A', bg: '#E3FCEF' };
-  if (d <= 30) return { key: 'slowing', label: 'A ABRANDAR', color: '#B25000', bg: '#FFF7E6' };
-  return { key: 'at-risk', label: 'EM RISCO', color: '#DE350B', bg: '#FFEBE6' };
+  if (d === null) return { key: 'never', label: 'NUNCA USOU', color: 'var(--text-secondary)', bg: 'var(--bg-page)' };
+  if (d <= 7) return { key: 'active', label: 'ATIVA', color: 'var(--urgency-ok)', bg: 'var(--urgency-ok-bg)' };
+  if (d <= 30) return { key: 'slowing', label: 'A ABRANDAR', color: 'var(--urgency-soon)', bg: 'var(--urgency-soon-bg)' };
+  return { key: 'at-risk', label: 'EM RISCO', color: 'var(--urgency-critical)', bg: 'var(--urgency-critical-bg)' };
 }

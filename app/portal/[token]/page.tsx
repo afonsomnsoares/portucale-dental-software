@@ -29,10 +29,10 @@ interface PortalData {
 }
 
 const INPUT =
-  'w-full rounded-lg border border-[#D8DCD6] bg-white py-2.5 px-3.5 text-[15px] text-[#132133] placeholder:text-[#A6B0BA] transition-colors focus:border-[#1D4E8F] focus:outline-none focus:ring-4 focus:ring-[#1D4E8F]/10 disabled:opacity-60';
-const LABEL = 'mb-1.5 block text-[13px] font-medium text-[#3E4C5A]';
+  'w-full rounded-lg border border-[var(--entry-line)] bg-white py-2.5 px-3.5 text-[15px] text-[var(--entry-text)] placeholder:text-[var(--entry-placeholder)] transition-colors focus:border-[var(--entry-accent)] focus:outline-none focus:ring-4 focus:ring-[var(--entry-focus-ring)] disabled:opacity-60';
+const LABEL = 'mb-1.5 block text-[13px] font-medium text-[var(--entry-slate)]';
 const BTN =
-  'flex w-full items-center justify-center gap-2 rounded-lg bg-[#0B2545] px-4 py-3 text-[15px] font-medium text-white transition-colors hover:bg-[#16386B] disabled:cursor-not-allowed disabled:opacity-70';
+  'flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--entry-ink)] px-4 py-3 text-[15px] font-medium text-white transition-colors hover:bg-[var(--entry-ink-hover)] disabled:cursor-not-allowed disabled:opacity-70';
 
 function friendlyError(status: number, message: string) {
   if (status === 401) return 'Este link não é válido.';
@@ -73,21 +73,21 @@ export default function PatientPortalPage({ params }: { params: Promise<{ token:
   }, [token]);
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#F2F3F0] px-6 py-12">
-      <div className="w-full max-w-[28rem] rounded-xl border border-[#D8DCD6] bg-white p-8 shadow-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1D4E8F]">
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--entry-canvas)] px-6 py-12">
+      <div className="w-full max-w-[28rem] rounded-xl border border-[var(--entry-line)] bg-white p-8 shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--entry-accent)]">
           {data?.tenantName || 'Portucale Dental'}
         </p>
-        {loading && <p className="mt-4 text-[15px] text-[#5B6B7C]">A carregar…</p>}
+        {loading && <p className="mt-4 text-[15px] text-[var(--entry-text-muted)]">A carregar…</p>}
         {loadError && !loading && (
-          <p className="mt-4 rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3.5 py-3 text-[14px] text-[#8E2A22]">
+          <p className="mt-4 rounded-md border border-[var(--entry-alert-border)] bg-[var(--entry-alert-bg)] px-3.5 py-3 text-[14px] text-[var(--entry-alert)]">
             {loadError}
           </p>
         )}
         {submitted && (
           <>
-            <h1 className="mt-3 text-[1.5rem] leading-[1.15] text-[#132133]">Obrigado!</h1>
-            <p className="mt-2 text-[15px] leading-relaxed text-[#5B6B7C]">
+            <h1 className="mt-3 text-[1.5rem] leading-[1.15] text-[var(--entry-text)]">Obrigado!</h1>
+            <p className="mt-2 text-[15px] leading-relaxed text-[var(--entry-text-muted)]">
               A sua informação foi enviada para a clínica. Já não precisa de fazer mais nada — a equipa trata do resto.
             </p>
           </>
@@ -129,7 +129,7 @@ function MissingDataForm({ token, data, onDone }: { token: string; data: PortalD
 
   if (!missing.length) {
     return (
-      <p className="mt-4 text-[15px] leading-relaxed text-[#5B6B7C]">
+      <p className="mt-4 text-[15px] leading-relaxed text-[var(--entry-text-muted)]">
         Olá {data.patientName}, não temos nada em falta neste momento. Obrigado!
       </p>
     );
@@ -158,12 +158,14 @@ function MissingDataForm({ token, data, onDone }: { token: string; data: PortalD
 
   return (
     <form onSubmit={submit} className="mt-5 space-y-4">
-      <h1 className="text-[1.4rem] leading-[1.2] text-[#132133]">Olá {data.patientName}</h1>
-      <p className="text-[14px] leading-relaxed text-[#5B6B7C]">
+      <h1 className="text-[1.4rem] leading-[1.2] text-[var(--entry-text)]">Olá {data.patientName}</h1>
+      <p className="text-[14px] leading-relaxed text-[var(--entry-text-muted)]">
         Faltam-nos alguns dados para a sua ficha em {data.tenantName}.
       </p>
       {error && (
-        <p className="rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3 py-2 text-[13px] text-[#8E2A22]">{error}</p>
+        <p className="rounded-md border border-[var(--entry-alert-border)] bg-[var(--entry-alert-bg)] px-3 py-2 text-[13px] text-[var(--entry-alert)]">
+          {error}
+        </p>
       )}
       {missing.map((f) => {
         const meta = customFieldMeta.get(f.field);
@@ -220,13 +222,15 @@ function DocumentUploadForm({ token, data, onDone }: { token: string; data: Port
 
   return (
     <form onSubmit={submit} className="mt-5 space-y-4">
-      <h1 className="text-[1.4rem] leading-[1.2] text-[#132133]">Olá {data.patientName}</h1>
-      <p className="text-[14px] leading-relaxed text-[#5B6B7C]">
+      <h1 className="text-[1.4rem] leading-[1.2] text-[var(--entry-text)]">Olá {data.patientName}</h1>
+      <p className="text-[14px] leading-relaxed text-[var(--entry-text-muted)]">
         {data.task?.title || `A equipa de ${data.tenantName} pediu-lhe um documento.`}
       </p>
-      {data.task?.notes && <p className="text-[13px] text-[#7A8794]">{data.task.notes}</p>}
+      {data.task?.notes && <p className="text-[13px] text-[var(--entry-text-subtle)]">{data.task.notes}</p>}
       {error && (
-        <p className="rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3 py-2 text-[13px] text-[#8E2A22]">{error}</p>
+        <p className="rounded-md border border-[var(--entry-alert-border)] bg-[var(--entry-alert-bg)] px-3 py-2 text-[13px] text-[var(--entry-alert)]">
+          {error}
+        </p>
       )}
       <div>
         <label className={LABEL} htmlFor="file">
@@ -239,7 +243,7 @@ function DocumentUploadForm({ token, data, onDone }: { token: string; data: Port
           onChange={(e) => setFile(e.target.files?.[0] || null)}
           disabled={busy}
           required
-          className="block w-full text-[14px] text-[#3E4C5A]"
+          className="block w-full text-[14px] text-[var(--entry-slate)]"
         />
       </div>
       <button type="submit" disabled={busy || !file} className={BTN}>
@@ -270,15 +274,19 @@ function ConsentForm({ token, data, onDone }: { token: string; data: PortalData;
 
   return (
     <form onSubmit={submit} className="mt-5 space-y-4">
-      <h1 className="text-[1.4rem] leading-[1.2] text-[#132133]">Olá {data.patientName}</h1>
-      <p className="text-[14px] font-medium text-[#132133]">{data.consentForm?.procedure_name}</p>
+      <h1 className="text-[1.4rem] leading-[1.2] text-[var(--entry-text)]">Olá {data.patientName}</h1>
+      <p className="text-[14px] font-medium text-[var(--entry-text)]">{data.consentForm?.procedure_name}</p>
       {data.consentForm?.description && (
-        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#5B6B7C]">{data.consentForm.description}</p>
+        <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--entry-text-muted)]">
+          {data.consentForm.description}
+        </p>
       )}
       {error && (
-        <p className="rounded-md border border-[#E4C4C0] bg-[#FBF0EE] px-3 py-2 text-[13px] text-[#8E2A22]">{error}</p>
+        <p className="rounded-md border border-[var(--entry-alert-border)] bg-[var(--entry-alert-bg)] px-3 py-2 text-[13px] text-[var(--entry-alert)]">
+          {error}
+        </p>
       )}
-      <label className="flex items-start gap-2 text-[13px] text-[#3E4C5A]">
+      <label className="flex items-start gap-2 text-[13px] text-[var(--entry-slate)]">
         <input
           type="checkbox"
           checked={agreed}
