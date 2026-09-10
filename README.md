@@ -603,6 +603,13 @@ estado local.
 - **Sessão**: JWT próprio (HMAC-SHA256) em cookie `httpOnly`, com rotação de chaves —
   `JWT_SECRET` assina, `JWT_SECRETS` lista segredos antigos que ainda validam, para que uma
   rotação não expulse quem tem sessão aberta.
+- **Uma rota não pode esquecer-se de autorizar.** Os 191 handlers de `app/api/` passam por
+  `withRoute` (`lib/route.ts`), que faz o preâmbulo inteiro — origem/CSRF, autenticação,
+  revalidação de sessão, autorização, teto de escrita e resolução de clínica. As opções são
+  uma união discriminada de quatro regimes (`permission`, `platform`, `authOnly`, `public`),
+  por isso uma rota que não declare em qual vive **não compila**. As três exceções que
+  recebem tráfego sem cookie de sessão — captação de leads, webhooks de canal e portal do
+  doente — declaram-no com `crossOrigin: true`, e encontram-se com um grep.
 - **A autorização segue a base de dados, não o token.** `revalidateSession` confronta cada
   pedido com `users`: conta apagada, desativada, movida de clínica ou despromovida perde
   acesso **no pedido seguinte**, não daí a uma semana. Mudar a password invalida os tokens
@@ -611,10 +618,13 @@ estado local.
   no corpo nem no tempo de resposta (coberto por `test/integration/login-oracle.test.ts`).
 - **CSRF**: double-submit cookie com comparação em tempo constante + verificação de origem
   em todas as mutações.
-- **Rate limiting**: teto genérico sobre `/api/*` no proxy Edge (240 pedidos/min por
-  utilizador autenticado, 60/min por IP anónimo). O limite do **login** é diferente: vive em
-  `rate_limit_counters` no Postgres (`lib/rateLimitShared.ts`), porque é um controlo de
-  segurança e não pode depender de qual réplica atendeu o pedido.
+- **Rate limiting em duas camadas**: o teto genérico sobre `/api/*` vive no proxy Edge (240
+  pedidos/min por utilizador autenticado, 60/min por IP anónimo) e conta em memória, por
+  instância — é a primeira linha, não o teto. Por cima dele, **todas as mutações** passam por
+  um contador partilhado em Postgres (120/min por utilizador, `lib/rateLimitGlobal.ts`), que
+  vale entre réplicas. O limite do **login** é diferente ainda: vive em `rate_limit_counters`
+  (`lib/rateLimitShared.ts`), porque é um controlo de segurança e não pode depender de qual
+  réplica atendeu o pedido.
 - **Isolamento multi-clínica em duas camadas independentes**: filtros `tenant_id` na
   aplicação **e** políticas de Row-Level Security no próprio PostgreSQL (migração 011). Isto
   só funciona se a app ligar com `APP_DATABASE_URL` (papel `portucale_app`, não-superuser):
@@ -863,14 +873,17 @@ portucale_dental/
 ├── app/
 │   ├── page.tsx               ← Login
 │   ├── portal/[token]/        ← Portal do doente (sem sessão, token de uso único)
-│   ├── api/                   ← 125 rotas (inclui /api/webhooks/[channel], público)
+│   ├── api/                   ← 132 rotas, todas por lib/route.ts's withRoute
 │   └── dashboard/
 │       ├── super-admin/       ← Plataforma: clínicas, utilizadores, comparação de grupo
 │       ├── admin/             ← Direção da clínica
 │       ├── receptionist/      ← Receção
 │       └── dentist/           ← Clínico
 │
-├── components/                ← 71 componentes
+├── components/
+│   ├── shared/                ← Ecrãs comuns a clínica e plataforma
+│   ├── clinic/, super-admin/  ← O que é próprio de cada âmbito
+│   └── …                      ← Por domínio: doente, receção, inventário, equipa
 ├── hooks/                     ← useSpeechRecognition, useSSE
 ├── test/                      ← 36 ficheiros unitários
 │   └── integration/           ← 22 ficheiros contra PostgreSQL real
