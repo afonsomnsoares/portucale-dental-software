@@ -1,4 +1,4 @@
-# Portucale Dental
+# Portucale Software
 
 **Camada de operação e receita para clínicas dentárias.**
 Next.js 16 · React 19 · TypeScript · PostgreSQL 17 · App Router · interface em pt-PT
@@ -952,4 +952,4 @@ decisão, calibração e contas de terceiros.
 
 ## Licença
 
-Projeto privado — Portucale Dental
+Projeto privado — Portucale Software
