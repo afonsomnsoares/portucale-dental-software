@@ -580,15 +580,50 @@ async function handoffReminders(tenantId: string) {
   return { queued, scanned: blocksByUser.size };
 }
 
+// Quanto tempo uma linha reservada fica fora do alcance da fila. É o tecto para o
+// que uma chamada à Twilio pode demorar mais a margem para o processo escrever o
+// resultado; passado isso, presume-se que quem a reservou morreu e a linha volta a
+// estar disponível. Curto demais reintroduz o envio duplicado que isto corrige;
+// longo demais atrasa a recuperação de um processo que caiu. Cinco minutos é a
+// mesma ordem de grandeza do primeiro degrau de computeNextRetry.
+const CLAIM_TTL_MINUTES = 5;
+
 async function sendDueNotifications(tenantId: string, limit = 25) {
+  // ─── Reservar antes de enviar, não depois ─────────────────────────────────
+  // A versão anterior lia com SELECT, chamava a Twilio e só então marcava a linha.
+  // Entre as duas coisas havia uma chamada de rede a um terceiro, e nada — nem
+  // FOR UPDATE, nem um lock à volta da corrida — impedia um segundo processo de
+  // ler as mesmas linhas e enviar as mesmas mensagens. O doente recebia a dobrar.
+  //
+  // Aqui a leitura e a reserva são a MESMA instrução: quem consegue escrever
+  // 'sending' é dono da linha, e o SKIP LOCKED faz com que um segundo processo
+  // salte as linhas já reservadas em vez de esperar por elas (esperar só serviria
+  // para enviar a seguir o que o primeiro já enviou).
+  //
+  // `attempts` sobe aqui, na reserva, e não no resultado: uma mensagem entregue à
+  // Twilio por um processo que morre antes de gravar a resposta FOI uma tentativa
+  // — não sabemos se saiu, e contá-la é o que impede um envio a repetir-se para
+  // sempre. É também por isso que os dois caminhos de resultado abaixo já não
+  // voltam a incrementar.
   const rows = await query(
-    `SELECT * FROM notifications
-     WHERE tenant_id=$1
-       AND status IN ('queued','retry')
-       AND (next_retry_at IS NULL OR next_retry_at <= NOW())
-     ORDER BY created_at
-     LIMIT $2`,
-    [tenantId, limit],
+    `UPDATE notifications SET
+       status = 'sending',
+       attempts = attempts + 1,
+       next_retry_at = NOW() + make_interval(mins => $3)
+     WHERE id IN (
+       SELECT id FROM notifications
+        WHERE tenant_id = $1
+          AND (
+            (status IN ('queued','retry') AND (next_retry_at IS NULL OR next_retry_at <= NOW()))
+            -- Reserva expirada: quem a fez não chegou a gravar o resultado.
+            OR (status = 'sending' AND next_retry_at <= NOW())
+          )
+        ORDER BY created_at
+        LIMIT $2
+        FOR UPDATE SKIP LOCKED
+     )
+     RETURNING *`,
+    [tenantId, limit, CLAIM_TTL_MINUTES],
   );
 
   let sent = 0;
@@ -602,7 +637,7 @@ async function sendDueNotifications(tenantId: string, limit = 25) {
     if (result.ok) {
       await query(
         `UPDATE notifications
-         SET status='sent', provider_id=$1, sent_at=NOW(), attempts=attempts+1, last_error=NULL
+         SET status='sent', provider_id=$1, sent_at=NOW(), last_error=NULL, next_retry_at=NULL
          WHERE id=$2`,
         [result.id, n.id],
       );
@@ -614,11 +649,14 @@ async function sendDueNotifications(tenantId: string, limit = 25) {
       );
       sent += 1;
     } else {
-      const nextRetry = computeNextRetry(Number(n.attempts || 0) + 1);
-      const nextStatus = Number(n.attempts || 0) + 1 >= 5 ? 'failed' : 'retry';
+      // `n.attempts` vem do RETURNING acima, ou seja já inclui esta tentativa —
+      // por isso não se soma 1 outra vez, como a versão anterior fazia.
+      const attempts = Number(n.attempts || 0);
+      const nextRetry = computeNextRetry(attempts);
+      const nextStatus = attempts >= 5 ? 'failed' : 'retry';
       await query(
         `UPDATE notifications
-         SET status=$1, attempts=attempts+1, last_error=$2, next_retry_at=$3::timestamptz
+         SET status=$1, last_error=$2, next_retry_at=$3::timestamptz
          WHERE id=$4`,
         [nextStatus, result.error || 'Send failed', nextRetry, n.id],
       );
@@ -640,7 +678,9 @@ async function cleanupUploads() {
   for (const u of expired) {
     try {
       await unlink(path.join(uploadsDir, u.storage_key));
-    } catch {}
+    } catch {
+      // intentional — file may already be deleted or missing; DB row is still cleaned up below
+    }
     await query(`DELETE FROM uploads WHERE id=$1`, [u.id]);
     removed += 1;
   }
@@ -657,11 +697,13 @@ async function cleanupUploads() {
       const st = await stat(full).catch(() => null);
       if (!st) continue;
       if (st.isFile() && st.mtimeMs < cutoff) {
-        await unlink(full).catch(() => {});
+        await unlink(full).catch(() => {}); // intentional — file may already be gone
         swept += 1;
       }
     }
-  } catch {}
+  } catch {
+    // intentional — uploadsDir may not exist on first run; sweep is non-critical
+  }
 
   return { removed, scanned, swept };
 }

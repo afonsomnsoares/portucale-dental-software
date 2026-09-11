@@ -1,5 +1,5 @@
 -- ============================================================
--- Portucale Dental — Full PostgreSQL Schema (Portugal)
+-- Portucale Software — Full PostgreSQL Schema (Portugal)
 -- Run: psql -d portucale_dental -f schema.sql
 -- ============================================================
 
@@ -279,7 +279,10 @@ CREATE TABLE IF NOT EXISTS notifications (
   channel       TEXT NOT NULL,
   to_addr       TEXT,
   payload       JSONB NOT NULL DEFAULT '{}'::jsonb,
-  status        TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','sent','failed','retry')),
+  -- 'sending' = reservada por um processo de envio (ver migração 055 e
+  -- lib/jobsRunner.ts:sendDueNotifications). O next_retry_at dessa linha marca
+  -- a hora a partir da qual a reserva expira e a fila lhe volta a pegar.
+  status        TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','sending','sent','failed','retry')),
   provider_id   TEXT,
   attempts      INTEGER NOT NULL DEFAULT 0,
   next_retry_at TIMESTAMPTZ,
