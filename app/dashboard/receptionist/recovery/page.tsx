@@ -143,7 +143,7 @@ export default function RecoveryReceptionistPage() {
         <Empty message="Sem dados disponíveis." />
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }} className="mb-4">
+          <div className="grid-cards mb-4" style={{ gap: 16 }}>
             <MetricCard
               label="Pendentes de decisão"
               value={formatEUR(sumCategories(data.categories, ['proposed_treatments', 'plans_pending_decision']))}
@@ -186,118 +186,122 @@ export default function RecoveryReceptionistPage() {
             <Empty message="Sem oportunidades nesta categoria." />
           ) : (
             <div className="card" style={{ padding: 0 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th className="data-th">Doente</th>
-                    <th className="data-th">Contacto</th>
-                    <th className="data-th">Motivo</th>
-                    <th className="data-th">Categoria</th>
-                    <th className="data-th" style={{ textAlign: 'right' }}>
-                      Valor
-                    </th>
-                    <th className="data-th" style={{ textAlign: 'right' }}>
-                      Ação
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((r) => (
-                    <tr key={rowKey(r)} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
-                        {r.patient_name}
-                      </td>
-                      <td className="data-td">
-                        <div>{r.phone ? <a href={`tel:${r.phone}`}>{formatPhonePT(r.phone)}</a> : '—'}</div>
-                        {r.email && (
-                          <a href={`mailto:${r.email}`} className="text-xs" style={{ color: 'var(--accent)' }}>
-                            {r.email}
-                          </a>
-                        )}
-                      </td>
-                      <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
-                        {r.detail}
-                        {r.daysSince != null && r.daysSince >= 14 && (
-                          <span
-                            className="badge ml-2"
-                            style={{
-                              background: 'var(--urgency-critical-bg)',
-                              color: 'var(--urgency-critical)',
-                              fontSize: 10,
-                            }}
-                          >
-                            atrasado
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th className="data-th">Doente</th>
+                      <th className="data-th">Contacto</th>
+                      <th className="data-th">Motivo</th>
+                      <th className="data-th">Categoria</th>
+                      <th className="data-th" style={{ textAlign: 'right' }}>
+                        Valor
+                      </th>
+                      <th className="data-th" style={{ textAlign: 'right' }}>
+                        Ação
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => (
+                      <tr key={rowKey(r)} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                        <td className="data-td" style={{ fontWeight: 600 }}>
+                          {r.patient_name}
+                        </td>
+                        <td className="data-td">
+                          <div>{r.phone ? <a href={`tel:${r.phone}`}>{formatPhonePT(r.phone)}</a> : '—'}</div>
+                          {r.email && (
+                            <a href={`mailto:${r.email}`} className="text-xs" style={{ color: 'var(--accent)' }}>
+                              {r.email}
+                            </a>
+                          )}
+                        </td>
+                        <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
+                          {r.detail}
+                          {r.daysSince != null && r.daysSince >= 14 && (
+                            <span
+                              className="badge ml-2"
+                              style={{
+                                background: 'var(--urgency-critical-bg)',
+                                color: 'var(--urgency-critical)',
+                                fontSize: 10,
+                              }}
+                            >
+                              atrasado
+                            </span>
+                          )}
+                        </td>
+                        <td className="data-td">
+                          <span className="badge" style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}>
+                            {r.categoryLabel}
                           </span>
-                        )}
-                      </td>
-                      <td className="data-td">
-                        <span className="badge" style={{ background: 'var(--accent-bg)', color: 'var(--accent)' }}>
-                          {r.categoryLabel}
-                        </span>
-                      </td>
-                      <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>
-                        {formatEUR(r.value)}
-                      </td>
-                      <td className="data-td" style={{ textAlign: 'right' }}>
-                        {r.categoryKey === 'recalls_overdue' ? (
-                          <GhostBtn
-                            disabled={busyId === r.id}
-                            onClick={() => completeRecall(r)}
-                            style={{ padding: '5px 10px' }}
-                          >
-                            {busyId === r.id ? '…' : 'Concluir recall'}
-                          </GhostBtn>
-                        ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            {r.patient_id &&
-                              (tasksCreated.has(rowKey(r)) ? (
-                                <span className="text-xs" style={{ color: 'var(--urgency-ok)', fontWeight: 700 }}>
-                                  Tarefa criada
-                                </span>
-                              ) : (
+                        </td>
+                        <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>
+                          {formatEUR(r.value)}
+                        </td>
+                        <td className="data-td" style={{ textAlign: 'right' }}>
+                          {r.categoryKey === 'recalls_overdue' ? (
+                            <GhostBtn
+                              disabled={busyId === r.id}
+                              onClick={() => completeRecall(r)}
+                              style={{ padding: '5px 10px' }}
+                            >
+                              {busyId === r.id ? '…' : 'Concluir recall'}
+                            </GhostBtn>
+                          ) : (
+                            <div className="flex items-center justify-end gap-2">
+                              {r.patient_id &&
+                                (tasksCreated.has(rowKey(r)) ? (
+                                  <span className="text-xs" style={{ color: 'var(--urgency-ok)', fontWeight: 700 }}>
+                                    Tarefa criada
+                                  </span>
+                                ) : (
+                                  <GhostBtn
+                                    disabled={busyId === rowKey(r)}
+                                    onClick={() => createFollowUp(r)}
+                                    style={{ padding: '5px 10px' }}
+                                  >
+                                    {busyId === rowKey(r) ? '…' : 'Criar tarefa'}
+                                  </GhostBtn>
+                                ))}
+                              {(r.phone || r.email) && (
                                 <GhostBtn
-                                  disabled={busyId === rowKey(r)}
-                                  onClick={() => createFollowUp(r)}
+                                  onClick={() => {
+                                    window.location.href = r.phone ? `tel:${r.phone}` : `mailto:${r.email}`;
+                                  }}
                                   style={{ padding: '5px 10px' }}
                                 >
-                                  {busyId === rowKey(r) ? '…' : 'Criar tarefa'}
+                                  Contactar
                                 </GhostBtn>
-                              ))}
-                            {(r.phone || r.email) && (
-                              <GhostBtn
-                                onClick={() => {
-                                  window.location.href = r.phone ? `tel:${r.phone}` : `mailto:${r.email}`;
-                                }}
-                                style={{ padding: '5px 10px' }}
-                              >
-                                Contactar
-                              </GhostBtn>
-                            )}
-                            {[
-                              'never_booked',
-                              'inactive_patients',
-                              'no_shows_90d',
-                              'cancelled_90d',
-                              'unbooked_leads',
-                            ].includes(r.categoryKey) ? (
-                              <GhostBtn onClick={() => openSchedule(r)} style={{ padding: '5px 10px' }}>
-                                Agendar
-                              </GhostBtn>
-                            ) : (
-                              <GhostBtn
-                                onClick={() => router.push(CATEGORY_ROUTES[r.categoryKey] || '/dashboard/receptionist')}
-                                style={{ padding: '5px 10px' }}
-                              >
-                                Abrir
-                              </GhostBtn>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                              )}
+                              {[
+                                'never_booked',
+                                'inactive_patients',
+                                'no_shows_90d',
+                                'cancelled_90d',
+                                'unbooked_leads',
+                              ].includes(r.categoryKey) ? (
+                                <GhostBtn onClick={() => openSchedule(r)} style={{ padding: '5px 10px' }}>
+                                  Agendar
+                                </GhostBtn>
+                              ) : (
+                                <GhostBtn
+                                  onClick={() =>
+                                    router.push(CATEGORY_ROUTES[r.categoryKey] || '/dashboard/receptionist')
+                                  }
+                                  style={{ padding: '5px 10px' }}
+                                >
+                                  Abrir
+                                </GhostBtn>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

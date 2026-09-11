@@ -369,7 +369,7 @@ export default function Costing() {
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="grid-pair" style={{ gap: 12 }}>
                 {/* biome-ignore lint/a11y/noLabelWithoutControl: o Inp abaixo É o controlo deste label */}
                 <label style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
                   Custo fixo mensal (€)

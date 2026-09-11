@@ -158,7 +158,7 @@ export default function CarePathways() {
             marginBottom: 20,
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <div className="grid-pair" style={{ gap: 12, marginBottom: 14 }}>
             <Sel
               value={rascunho.appointmentType}
               onChange={(e) => setRascunho({ ...rascunho, appointmentType: e.target.value })}

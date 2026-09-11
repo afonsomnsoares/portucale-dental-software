@@ -144,7 +144,7 @@ export default function LabOrdersPage() {
           Não foi possível ler as encomendas deste doente. {ordersQuery.error.message}
         </AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
@@ -240,7 +240,7 @@ export default function LabOrdersPage() {
 
       {modal && (
         <Modal title="Nova Encomenda de Laboratório" onClose={() => setModal(false)} width={540}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Laboratório *">
               <Inp
                 value={form.labName}
@@ -276,7 +276,7 @@ export default function LabOrdersPage() {
               placeholder="Cor, material, notas de execução…"
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Prazo de entrega">
               <Inp
                 type="date"

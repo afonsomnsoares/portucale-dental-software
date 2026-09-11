@@ -64,7 +64,7 @@ export default function ClinicRecoveryPage() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }} className="mb-4">
+          <div className="grid-cards mb-4" style={{ gap: 16 }}>
             <MetricCard
               label="Pendentes de decisão"
               value={formatEUR(sumCategories(data.categories, ['proposed_treatments', 'plans_pending_decision']))}
@@ -131,7 +131,7 @@ export default function ClinicRecoveryPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+          <div className="grid-cards" style={{ gap: 16 }}>
             {data.categories.map((c) => (
               <button
                 type="button"

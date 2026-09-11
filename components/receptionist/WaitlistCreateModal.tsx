@@ -109,7 +109,7 @@ export default function WaitlistCreateModal({
             ))}
           </div>
         </FormField>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           <FormField label="Hora início (opcional)">
             <Inp
               type="time"
@@ -125,7 +125,7 @@ export default function WaitlistCreateModal({
             />
           </FormField>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           <FormField label="Duração mínima (min)">
             <Inp
               type="number"

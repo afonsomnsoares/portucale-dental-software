@@ -16,7 +16,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+      <div className="grid-cards" style={{ gap: 12 }}>
         {Array.from({ length: WAITING_SEATS }).map((_, i) => {
           const apt = waiting[i] || null;
           const color = CHAIR_COLORS[(Number(apt?.chair || 1) - 1) % CHAIR_COLORS.length] || CHAIR_COLORS[0];

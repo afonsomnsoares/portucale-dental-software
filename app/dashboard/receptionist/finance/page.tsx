@@ -65,7 +65,7 @@ export default function FinanceDashboard() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 16 }}>
+          <div className="grid-cards" style={{ gap: 14, marginBottom: 16 }}>
             <MetricCard
               label="RECEITA TOTAL"
               value={fmt(data.totals?.total_paid)}
@@ -96,7 +96,7 @@ export default function FinanceDashboard() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid-pair" style={{ gap: 16 }}>
             <div className="card p-5">
               <div className="section-label mb-3">Faturas por estado</div>
               {!outstandingByStatus.length ? (
@@ -244,57 +244,59 @@ export default function FinanceDashboard() {
             {!data.recentPayments?.length ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem pagamentos ainda</div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                    <th className="data-th">Fatura</th>
-                    <th className="data-th">Doente</th>
-                    <th className="data-th">Data</th>
-                    <th className="data-th" style={{ textAlign: 'right' }}>
-                      Pago
-                    </th>
-                    <th className="data-th">Forma</th>
-                    <th className="data-th">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recentPayments.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                      <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
-                        <Link
-                          href={`/dashboard/receptionist/invoices/${p.id}`}
-                          style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
-                        >
-                          #{p.id.slice(0, 8).toUpperCase()}
-                        </Link>
-                      </td>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
-                        {p.patient_name}
-                      </td>
-                      <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
-                        {fmtDate(p.invoice_date)}
-                      </td>
-                      <td
-                        className="data-td"
-                        style={{
-                          textAlign: 'right',
-                          fontFamily: '"JetBrains Mono",monospace',
-                          fontSize: 12,
-                          color: 'var(--urgency-ok)',
-                        }}
-                      >
-                        ${Number(p.paid).toLocaleString()}
-                      </td>
-                      <td className="data-td" style={{ fontSize: 12 }}>
-                        {p.method}
-                      </td>
-                      <td className="data-td">
-                        <Badge s={p.status} />
-                      </td>
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
+                      <th className="data-th">Fatura</th>
+                      <th className="data-th">Doente</th>
+                      <th className="data-th">Data</th>
+                      <th className="data-th" style={{ textAlign: 'right' }}>
+                        Pago
+                      </th>
+                      <th className="data-th">Forma</th>
+                      <th className="data-th">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.recentPayments.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
+                        <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
+                          <Link
+                            href={`/dashboard/receptionist/invoices/${p.id}`}
+                            style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            #{p.id.slice(0, 8).toUpperCase()}
+                          </Link>
+                        </td>
+                        <td className="data-td" style={{ fontWeight: 600 }}>
+                          {p.patient_name}
+                        </td>
+                        <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
+                          {fmtDate(p.invoice_date)}
+                        </td>
+                        <td
+                          className="data-td"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: '"JetBrains Mono",monospace',
+                            fontSize: 12,
+                            color: 'var(--urgency-ok)',
+                          }}
+                        >
+                          ${Number(p.paid).toLocaleString()}
+                        </td>
+                        <td className="data-td" style={{ fontSize: 12 }}>
+                          {p.method}
+                        </td>
+                        <td className="data-td">
+                          <Badge s={p.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>

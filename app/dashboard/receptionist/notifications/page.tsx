@@ -107,55 +107,57 @@ export default function ReceptionistNotificationsPage() {
         <Empty message="Sem mensagens para os filtros selecionados." />
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th className="data-th">Paciente</th>
-                <th className="data-th">Tipo</th>
-                <th className="data-th">Destinatário</th>
-                <th className="data-th">Mensagem</th>
-                <th className="data-th">Estado</th>
-                <th className="data-th">Enviado em</th>
-                <th className="data-th">Tentativas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((n) => {
-                const sm = STATUS_META[n.status] || {
-                  label: n.status,
-                  bg: 'var(--bg-sunken)',
-                  color: 'var(--text-secondary)',
-                };
-                const kind = n.payload?.kind || '';
-                return (
-                  <tr key={n.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                    <td className="data-td" style={{ fontWeight: 600 }}>
-                      {n.patient_name || n.patient_id?.slice(0, 8) || '—'}
-                    </td>
-                    <td className="data-td">{KIND_LABEL[kind] || kind || '—'}</td>
-                    <td className="data-td">{n.to_addr || '—'}</td>
-                    <td
-                      className="data-td"
-                      style={{ maxWidth: 320, whiteSpace: 'normal' }}
-                      title={n.payload?.body || ''}
-                    >
-                      {n.payload?.body || '—'}
-                    </td>
-                    <td className="data-td">
-                      <Badge label={sm.label} bg={sm.bg} color={sm.color} />
-                      {n.status === 'failed' && n.last_error && (
-                        <div style={{ fontSize: 12, color: 'var(--red, var(--urgency-critical))', marginTop: 4 }}>
-                          {n.last_error}
-                        </div>
-                      )}
-                    </td>
-                    <td className="data-td">{n.sent_at ? fmtDateTime(n.sent_at) : fmtDateTime(n.created_at)}</td>
-                    <td className="data-td">{n.attempts}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="data-th">Paciente</th>
+                  <th className="data-th">Tipo</th>
+                  <th className="data-th">Destinatário</th>
+                  <th className="data-th">Mensagem</th>
+                  <th className="data-th">Estado</th>
+                  <th className="data-th">Enviado em</th>
+                  <th className="data-th">Tentativas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((n) => {
+                  const sm = STATUS_META[n.status] || {
+                    label: n.status,
+                    bg: 'var(--bg-sunken)',
+                    color: 'var(--text-secondary)',
+                  };
+                  const kind = n.payload?.kind || '';
+                  return (
+                    <tr key={n.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                      <td className="data-td" style={{ fontWeight: 600 }}>
+                        {n.patient_name || n.patient_id?.slice(0, 8) || '—'}
+                      </td>
+                      <td className="data-td">{KIND_LABEL[kind] || kind || '—'}</td>
+                      <td className="data-td">{n.to_addr || '—'}</td>
+                      <td
+                        className="data-td"
+                        style={{ maxWidth: 320, whiteSpace: 'normal' }}
+                        title={n.payload?.body || ''}
+                      >
+                        {n.payload?.body || '—'}
+                      </td>
+                      <td className="data-td">
+                        <Badge label={sm.label} bg={sm.bg} color={sm.color} />
+                        {n.status === 'failed' && n.last_error && (
+                          <div style={{ fontSize: 12, color: 'var(--red, var(--urgency-critical))', marginTop: 4 }}>
+                            {n.last_error}
+                          </div>
+                        )}
+                      </td>
+                      <td className="data-td">{n.sent_at ? fmtDateTime(n.sent_at) : fmtDateTime(n.created_at)}</td>
+                      <td className="data-td">{n.attempts}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

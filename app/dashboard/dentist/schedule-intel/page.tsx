@@ -30,7 +30,7 @@ export default function DentistScheduleIntelPage() {
         <Spinner />
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+          <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
             <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
               <div className="section-label">Consultas Agendadas</div>
               <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{upcomingAppts.length}</div>

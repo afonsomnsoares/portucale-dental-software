@@ -1,6 +1,7 @@
 'use client';
+import { Menu } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import ActingClinicBanner from '@/components/ActingClinicBanner';
 import Sidebar from '@/components/Sidebar';
@@ -11,10 +12,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [menuAberto, setMenuAberto] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/');
   }, [user, loading, router]);
+
+  // Navegar fecha a gaveta. O onNavigate dos links trata do caso normal; isto
+  // apanha o resto — um redirecionamento, o botão de voltar do browser.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: é a mudança de rota que fecha
+  useEffect(() => {
+    setMenuAberto(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (loading || !user) return;
@@ -68,11 +77,27 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg-page)' }}>
-      <Sidebar />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="app-shell">
+      <Sidebar open={menuAberto} onNavigate={() => setMenuAberto(false)} />
+      {/* Só existe abaixo de 900 px (ver .app-scrim). Fechar ao clicar fora é o
+          que faz uma gaveta parecer uma gaveta. */}
+      {menuAberto ? (
+        <button type="button" className="app-scrim" aria-label="Fechar menu" onClick={() => setMenuAberto(false)} />
+      ) : null}
+      <div className="app-main-col">
         <ActingClinicBanner />
-        <main style={{ flex: 1, overflowY: 'auto', padding: '32px 36px' }}>{children}</main>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px 0' }}>
+          <button
+            type="button"
+            className="app-sidebar-toggle"
+            aria-label="Abrir menu"
+            aria-expanded={menuAberto}
+            onClick={() => setMenuAberto(true)}
+          >
+            <Menu size={18} />
+          </button>
+        </div>
+        <main className="app-main">{children}</main>
       </div>
     </div>
   );

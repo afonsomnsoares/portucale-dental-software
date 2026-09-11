@@ -206,7 +206,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
       {error && <AlertBanner type="danger">{error}</AlertBanner>}
 
       {tab === 'issue' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16, marginTop: 16 }}>
+        <div className="grid-sidebar" style={{ gap: 16, marginTop: 16 }}>
           <PatientsSidebarList
             patients={visiblePatients}
             selectedId={selected?.id}

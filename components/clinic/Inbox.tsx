@@ -169,7 +169,7 @@ export default function Inbox() {
       {rows.length === 0 ? (
         <Empty message="Nenhuma conversa ainda. Quando um doente enviar uma SMS ou deixar uma chamada, aparece aqui — é preciso ter um número configurado." />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,340px) minmax(0,1fr)', gap: 16 }}>
+        <div className="grid-inbox" style={{ gap: 16 }}>
           {/* ── Lista ── */}
           <div
             style={{

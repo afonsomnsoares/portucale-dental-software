@@ -17,7 +17,7 @@ export default function PatientOverviewTab({
   onEditExtra?: () => void;
 }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+    <div className="grid-pair" style={{ gap: 12 }}>
       {fields.map(([k, v]) => (
         <div key={k} className="card" style={{ padding: '14px 18px', border: '1px solid var(--border-subtle)' }}>
           <div className="section-label mb-1">{k}</div>
@@ -49,7 +49,7 @@ export default function PatientOverviewTab({
               </GhostBtn>
             )}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="grid-pair" style={{ gap: 10 }}>
             {Object.entries(customFields).map(([k, v]) => {
               const def = schemaFields.find((s) => s.field_name === k);
               return (

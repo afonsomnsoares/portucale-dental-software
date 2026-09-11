@@ -28,7 +28,7 @@ export default function AnalyticsRetention() {
     <div>
       <PageHeader title="Retenção" sub="Medida por atividade real, não por contrato" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         {BANDS.map((b) => (
           <MetricCard key={b.key} label={b.label} value={count(b.key)} sub={b.sub} color={b.color} />
         ))}

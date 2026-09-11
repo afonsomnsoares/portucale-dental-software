@@ -178,7 +178,7 @@ export default function MedicalHistoryPage() {
           {historyQuery.error.message}
         </AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
@@ -234,7 +234,7 @@ export default function MedicalHistoryPage() {
             {renderListEditor('Alergias', 'allergies', newAllergy, setNewAllergy, 'Alergénio')}
             {renderListEditor('Medicação', 'medications', newMed, setNewMed, 'Medicamento')}
             {renderListEditor('Condições', 'conditions', newCond, setNewCond, 'Condição')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-pair" style={{ gap: 12 }}>
               <FormField label="Tabagismo">
                 <Sel value={form.smoking} onChange={(e) => setForm((p) => ({ ...p, smoking: e.target.value }))}>
                   <option value="never">Nunca fumou</option>

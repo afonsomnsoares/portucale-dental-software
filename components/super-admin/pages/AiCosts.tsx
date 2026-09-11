@@ -59,7 +59,7 @@ export default function AiCosts() {
     <div>
       <PageHeader title="Custos de IA" sub={`Últimos ${d.days} dias · modelo ${d.configuredModel}`} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="CUSTO ESTIMADO"
           value={`${totalCost.toFixed(2)} €`}

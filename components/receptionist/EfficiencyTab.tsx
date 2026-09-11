@@ -78,7 +78,7 @@ export default function EfficiencyTab({ efficiency }: { efficiency: AgendaEffici
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="mb-5">
+      <div className="grid-pair mb-5" style={{ gap: 16 }}>
         <div className="card p-5">
           <div className="section-label mb-3">DISPONIBILIDADE DOS DENTISTAS</div>
           {!efficiency.byDentist.length ? (

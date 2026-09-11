@@ -254,7 +254,7 @@ export default function ReceptionDashboard() {
       </PageHeader>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
         <MetricCard label="MARCADAS PARA HOJE" value={appts.length} sub="consultas no total" color="var(--accent)" />
         <MetricCard label="SALA DE ESPERA" value={waiting} sub="com entrada registada" color="var(--urgency-soon)" />
         <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
@@ -495,7 +495,7 @@ export default function ReceptionDashboard() {
                   ))}
                 </Sel>
               </FormField>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="grid-pair" style={{ gap: 12 }}>
                 <FormField label="Hora de início">
                   <input
                     type="time"

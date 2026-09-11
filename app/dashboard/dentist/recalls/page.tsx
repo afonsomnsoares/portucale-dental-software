@@ -119,7 +119,7 @@ export default function RecallsPage() {
           Não foi possível ler os recalls deste doente. {recallsQuery.error.message}
         </AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input

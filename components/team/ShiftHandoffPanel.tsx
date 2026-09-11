@@ -205,7 +205,7 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
 
       {composer && (
         <Modal title="Passagem de turno" onClose={() => setComposer(false)} width={640}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Turno">
               <Sel value={shiftLabel} onChange={(e) => setShiftLabel(e.target.value as ShiftLabel)}>
                 {Object.entries(SHIFT_LABEL).map(([k, label]) => (

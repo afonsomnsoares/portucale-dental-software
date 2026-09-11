@@ -114,7 +114,7 @@ export default function InvoiceDetailPage() {
       {success && <AlertBanner type="success">{success}</AlertBanner>}
       {err && <AlertBanner type="danger">{err}</AlertBanner>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid-pair" style={{ gap: 16 }}>
         <div className="card p-5">
           <div className="section-label mb-4">Detalhes da fatura</div>
           <div style={{ display: 'grid', gap: 12 }}>
@@ -151,46 +151,48 @@ export default function InvoiceDetailPage() {
       {items.length > 0 && (
         <div className="card mt-4 p-5">
           <div className="section-label mb-3">Linhas</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                <th className="data-th">Descrição</th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Valor
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: invoice line items have no id and this list is static (never reordered)
-                <tr key={i} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                  <td className="data-td">{item.description || '—'}</td>
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
+                  <th className="data-th">Descrição</th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Valor
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: invoice line items have no id and this list is static (never reordered)
+                  <tr key={i} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
+                    <td className="data-td">{item.description || '—'}</td>
+                    <td
+                      className="data-td"
+                      style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                    >
+                      ${Number(item.amount || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="data-td" style={{ fontWeight: 700 }}>
+                    Total
+                  </td>
                   <td
                     className="data-td"
-                    style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                    style={{
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      fontFamily: '"JetBrains Mono",monospace',
+                      fontSize: 12,
+                    }}
                   >
-                    ${Number(item.amount || 0).toLocaleString()}
+                    ${Number(inv.amount).toLocaleString()}
                   </td>
                 </tr>
-              ))}
-              <tr>
-                <td className="data-td" style={{ fontWeight: 700 }}>
-                  Total
-                </td>
-                <td
-                  className="data-td"
-                  style={{
-                    textAlign: 'right',
-                    fontWeight: 700,
-                    fontFamily: '"JetBrains Mono",monospace',
-                    fontSize: 12,
-                  }}
-                >
-                  ${Number(inv.amount).toLocaleString()}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

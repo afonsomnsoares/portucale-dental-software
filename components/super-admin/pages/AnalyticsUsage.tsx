@@ -26,7 +26,7 @@ export default function AnalyticsUsage() {
     <div>
       <PageHeader title="Utilização" sub="Trabalho real por clínica, últimos 30 dias" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="MARCAÇÕES 30D"
           value={appts30.toLocaleString('pt-PT')}

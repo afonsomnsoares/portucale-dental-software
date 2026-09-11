@@ -23,7 +23,7 @@ export default function Organizations() {
     <div>
       <PageHeader title="Todas as Organizações" sub={`${rows.length} clínicas na rede`} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard label="ATIVAS" value={active} sub={`de ${rows.length}`} color="var(--urgency-ok)" />
         <MetricCard
           label="DOENTES"

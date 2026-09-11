@@ -117,7 +117,7 @@ export default function PrescriptionsPage() {
           Não foi possível ler as prescrições deste doente. {prescriptionsQuery.error.message}
         </AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
@@ -216,7 +216,7 @@ export default function PrescriptionsPage() {
               placeholder="Nome do medicamento"
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Dosagem *">
               <Inp
                 value={form.dosage}
@@ -232,7 +232,7 @@ export default function PrescriptionsPage() {
               />
             </FormField>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Via">
               <Sel value={form.route} onChange={(e) => setForm((p) => ({ ...p, route: e.target.value }))}>
                 <option value="oral">Oral</option>
@@ -249,7 +249,7 @@ export default function PrescriptionsPage() {
               />
             </FormField>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Quantidade">
               <Inp
                 type="number"

@@ -175,7 +175,7 @@ export default function CommsSettings() {
           />
         </FormField>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           <FormField label="Silêncio a partir de" hint="Nada automático sai entre estas horas.">
             <Inp
               type="time"

@@ -133,32 +133,34 @@ export default function ClinicScheduleIntelPage() {
               <Empty message="Sem consultas nos próximos 14 dias." />
             ) : (
               <div className="card" style={{ padding: 0 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th className="data-th">Doente</th>
-                      <th className="data-th">Contacto</th>
-                      <th className="data-th">Consulta</th>
-                      <th className="data-th">Risco</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {risk.appointments.map((a) => (
-                      <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
-                          {a.patient_name}
-                        </td>
-                        <td className="data-td">{a.phone ? formatPhonePT(a.phone) : '—'}</td>
-                        <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
-                          {String(a.appt_date).slice(0, 10)} · {String(a.start_time).slice(0, 5)} · {a.type}
-                        </td>
-                        <td className="data-td">
-                          <RiskBadge score={a.score} />
-                        </td>
+                <div className="table-scroll">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th className="data-th">Doente</th>
+                        <th className="data-th">Contacto</th>
+                        <th className="data-th">Consulta</th>
+                        <th className="data-th">Risco</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {risk.appointments.map((a) => (
+                        <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                          <td className="data-td" style={{ fontWeight: 600 }}>
+                            {a.patient_name}
+                          </td>
+                          <td className="data-td">{a.phone ? formatPhonePT(a.phone) : '—'}</td>
+                          <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
+                            {String(a.appt_date).slice(0, 10)} · {String(a.start_time).slice(0, 5)} · {a.type}
+                          </td>
+                          <td className="data-td">
+                            <RiskBadge score={a.score} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
 
@@ -232,28 +234,30 @@ export default function ClinicScheduleIntelPage() {
                 <div className="mb-6">
                   <div className="section-label mb-2">Ofertas pendentes</div>
                   <div className="card" style={{ padding: 0 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr>
-                          <th className="data-th">Doente</th>
-                          <th className="data-th">Tratamento</th>
-                          <th className="data-th">Horário oferecido</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(waitlist?.pendingOffers || []).map((o) => (
-                          <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                            <td className="data-td" style={{ fontWeight: 600 }}>
-                              {o.patient_name || '—'}
-                            </td>
-                            <td className="data-td">{o.treatment_type}</td>
-                            <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
-                              {String(o.offered_date).slice(0, 10)} · {String(o.offered_start_time).slice(0, 5)}
-                            </td>
+                    <div className="table-scroll">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th className="data-th">Doente</th>
+                            <th className="data-th">Tratamento</th>
+                            <th className="data-th">Horário oferecido</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {(waitlist?.pendingOffers || []).map((o) => (
+                            <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                              <td className="data-td" style={{ fontWeight: 600 }}>
+                                {o.patient_name || '—'}
+                              </td>
+                              <td className="data-td">{o.treatment_type}</td>
+                              <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
+                                {String(o.offered_date).slice(0, 10)} · {String(o.offered_start_time).slice(0, 5)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
@@ -263,32 +267,34 @@ export default function ClinicScheduleIntelPage() {
                 <Empty message="Sem doentes na lista de espera." />
               ) : (
                 <div className="card" style={{ padding: 0 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th className="data-th">Doente</th>
-                        <th className="data-th">Tratamento</th>
-                        <th className="data-th">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {waitlist.entries.map((w) => (
-                        <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                          <td className="data-td" style={{ fontWeight: 600 }}>
-                            {w.patient_name}
-                          </td>
-                          <td className="data-td">{w.treatment_type}</td>
-                          <td className="data-td">
-                            <Badge
-                              label={WAITLIST_STATUS_LABEL[w.status] || w.status}
-                              bg="var(--bg-sunken)"
-                              color="var(--text-secondary)"
-                            />
-                          </td>
+                  <div className="table-scroll">
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th className="data-th">Doente</th>
+                          <th className="data-th">Tratamento</th>
+                          <th className="data-th">Estado</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {waitlist.entries.map((w) => (
+                          <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                            <td className="data-td" style={{ fontWeight: 600 }}>
+                              {w.patient_name}
+                            </td>
+                            <td className="data-td">{w.treatment_type}</td>
+                            <td className="data-td">
+                              <Badge
+                                label={WAITLIST_STATUS_LABEL[w.status] || w.status}
+                                bg="var(--bg-sunken)"
+                                color="var(--text-secondary)"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>

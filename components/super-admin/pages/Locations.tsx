@@ -33,7 +33,7 @@ export default function Locations() {
     <div>
       <PageHeader title="Localizações" sub={`${rows.length} clínicas em ${cities.length} cidades`} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard label="CIDADES" value={cities.length} sub="com pelo menos uma clínica" color="var(--accent)" />
         <MetricCard
           label="GABINETES"

@@ -91,7 +91,7 @@ export default function ClinicInventoryPage() {
 
       {tab === 'ledger' ? (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
+          <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
             <MetricCard label="SEM STOCK" value={outCount} color="var(--urgency-critical)" />
             <MetricCard label="STOCK BAIXO" value={lowCount} color="var(--urgency-soon)" />
             <MetricCard label="ITENS SEGUIDOS" value={items.length} color="var(--accent)" />
@@ -106,61 +106,63 @@ export default function ClinicInventoryPage() {
                   : 'Sem itens de inventário. Cria o primeiro no separador Itens.'}
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th className="data-th">Item</th>
-                    <th className="data-th">Unidade</th>
-                    <th className="data-th">Quantidade</th>
-                    <th className="data-th">Repor a</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(({ item, qty, reorderAt, out, low }) => (
-                    <tr key={item.id}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
-                        {item.item}
-                      </td>
-                      <td className="data-td" style={{ color: 'var(--text-muted)' }}>
-                        {item.unit}
-                      </td>
-                      <td
-                        className="data-td"
-                        style={{
-                          fontWeight: 700,
-                          color: out ? 'var(--urgency-critical)' : low ? 'var(--urgency-soon)' : 'var(--urgency-ok)',
-                        }}
-                      >
-                        {out ? (
-                          <span
-                            style={{
-                              background: 'var(--urgency-critical-bg)',
-                              color: 'var(--urgency-critical)',
-                              borderRadius: 'var(--radius-control)',
-                              padding: '2px 8px',
-                              fontSize: 11,
-                            }}
-                          >
-                            ESGOTADO
-                          </span>
-                        ) : (
-                          qty
-                        )}
-                        {low && !out && (
-                          <AlertTriangle
-                            size={10}
-                            color="var(--urgency-soon)"
-                            style={{ marginLeft: 4, display: 'inline' }}
-                          />
-                        )}
-                      </td>
-                      <td className="data-td" style={{ color: 'var(--text-muted)' }}>
-                        {reorderAt}
-                      </td>
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th className="data-th">Item</th>
+                      <th className="data-th">Unidade</th>
+                      <th className="data-th">Quantidade</th>
+                      <th className="data-th">Repor a</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.map(({ item, qty, reorderAt, out, low }) => (
+                      <tr key={item.id}>
+                        <td className="data-td" style={{ fontWeight: 600 }}>
+                          {item.item}
+                        </td>
+                        <td className="data-td" style={{ color: 'var(--text-muted)' }}>
+                          {item.unit}
+                        </td>
+                        <td
+                          className="data-td"
+                          style={{
+                            fontWeight: 700,
+                            color: out ? 'var(--urgency-critical)' : low ? 'var(--urgency-soon)' : 'var(--urgency-ok)',
+                          }}
+                        >
+                          {out ? (
+                            <span
+                              style={{
+                                background: 'var(--urgency-critical-bg)',
+                                color: 'var(--urgency-critical)',
+                                borderRadius: 'var(--radius-control)',
+                                padding: '2px 8px',
+                                fontSize: 11,
+                              }}
+                            >
+                              ESGOTADO
+                            </span>
+                          ) : (
+                            qty
+                          )}
+                          {low && !out && (
+                            <AlertTriangle
+                              size={10}
+                              color="var(--urgency-soon)"
+                              style={{ marginLeft: 4, display: 'inline' }}
+                            />
+                          )}
+                        </td>
+                        <td className="data-td" style={{ color: 'var(--text-muted)' }}>
+                          {reorderAt}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>

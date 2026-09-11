@@ -135,7 +135,7 @@ export default function OperatoryPanel({
                     const next = transitions[0] || null;
                     const canNoShow = transitions.includes('no-show');
                     return (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div className="grid-pair" style={{ gap: 10 }}>
                         <button
                           type="button"
                           disabled={!next || updatingId === current.id}

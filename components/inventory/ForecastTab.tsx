@@ -119,7 +119,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
         <MetricCard label="ITENS EM RISCO DE RUTURA" value={atRiskCount} color="var(--urgency-critical)" />
         <MetricCard label="LOTES A EXPIRAR / EXPIRADOS" value={expiringCount} color="var(--urgency-soon)" />
         <MetricCard label="ITENS RASTREADOS" value={rows.length} color="var(--accent)" />

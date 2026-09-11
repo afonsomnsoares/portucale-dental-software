@@ -56,7 +56,7 @@ export default function ClinicOverview() {
         </AlertBanner>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="DOENTES"
           value={stats.data ? Number(stats.data.totalPatients).toLocaleString('pt-PT') : '—'}

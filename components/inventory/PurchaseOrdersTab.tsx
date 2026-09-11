@@ -238,18 +238,20 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                     )}
                   </div>
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <tbody>
-                    {o.items.map((it) => (
-                      <tr key={it.id}>
-                        <TD>{it.item_name}</TD>
-                        <TD muted>{it.unit}</TD>
-                        <TD right>{it.quantity}</TD>
-                        <TD muted>{it.expiry_date ? `val. ${it.expiry_date.slice(0, 10)}` : ''}</TD>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="table-scroll">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <tbody>
+                      {o.items.map((it) => (
+                        <tr key={it.id}>
+                          <TD>{it.item_name}</TD>
+                          <TD muted>{it.unit}</TD>
+                          <TD right>{it.quantity}</TD>
+                          <TD muted>{it.expiry_date ? `val. ${it.expiry_date.slice(0, 10)}` : ''}</TD>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
                 {recon[o.id] && (
                   <div

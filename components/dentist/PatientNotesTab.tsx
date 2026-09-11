@@ -127,13 +127,13 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div className="grid-pair" style={{ gap: 16 }}>
       <div className="card p-5">
         <div className="section-label mb-3">NOTA NOVA</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
           {user?.name || 'Dentist'} · {new Date().toLocaleString()}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div className="grid-pair" style={{ gap: 12, marginBottom: 12 }}>
           <FormField label="Etiquetas (opcional)">
             <Inp
               value={noteTags}

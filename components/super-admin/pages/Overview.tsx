@@ -39,7 +39,7 @@ export default function AdminOverview() {
         })}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="CLÍNICAS ATIVAS"
           value={stats?.activeClinics ?? '—'}
@@ -70,7 +70,7 @@ export default function AdminOverview() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+      <div className="grid-split" style={{ gap: 16 }}>
         <div className="card p-5">
           <div className="section-label mb-4">AUDITORIA RECENTE</div>
           {auditQuery.error ? (

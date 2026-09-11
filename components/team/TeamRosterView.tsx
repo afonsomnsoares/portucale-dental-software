@@ -223,7 +223,7 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
               <option value="other">Outro</option>
             </Sel>
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Data de início">
               <input
                 type="date"

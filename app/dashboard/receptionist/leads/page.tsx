@@ -85,7 +85,7 @@ export default function ReceptionLeadsPage() {
 
       <form className="card p-5 mb-4" onSubmit={createLead}>
         <div className="section-label mb-3">Registar lead</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+        <div className="grid-cards" style={{ gap: 12 }}>
           <Inp
             value={form.name}
             onChange={(e: ChangeEvent<HTMLInputElement>) => update('name', e.target.value)}
@@ -138,80 +138,82 @@ export default function ReceptionLeadsPage() {
         <Empty message="Não existem leads abertos." />
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th className="data-th">Nome</th>
-                <th className="data-th">Contacto</th>
-                <th className="data-th">Origem</th>
-                <th className="data-th">Registado</th>
-                <th className="data-th">Triagem IA</th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Estado
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead) => {
-                const qual = lead.ai_qualification ? QUALIFICATION_BADGE[lead.ai_qualification] : null;
-                const hasDraft = !!lead.ai_draft_reply && !lead.ai_reply_sent_at;
-                return (
-                  <Fragment key={lead.id}>
-                    <tr>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
-                        {lead.name}
-                      </td>
-                      <td className="data-td">{lead.phone || lead.email || '—'}</td>
-                      <td className="data-td">{lead.source || '—'}</td>
-                      <td className="data-td">{String(lead.created_at).slice(0, 10)}</td>
-                      <td className="data-td">
-                        {qual ? (
-                          <Badge label={qual.label} bg={qual.bg} color={qual.color} />
-                        ) : (
-                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            Por triar
-                          </span>
-                        )}
-                      </td>
-                      <td className="data-td" style={{ textAlign: 'right' }}>
-                        <GhostBtn onClick={() => updateStatus(lead.id, 'converted')} style={{ padding: '5px 10px' }}>
-                          Marcação feita
-                        </GhostBtn>
-                        <GhostBtn
-                          onClick={() => updateStatus(lead.id, 'lost')}
-                          style={{ padding: '5px 10px', marginLeft: 6 }}
-                        >
-                          Fechar
-                        </GhostBtn>
-                      </td>
-                    </tr>
-                    {hasDraft && (
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="data-th">Nome</th>
+                  <th className="data-th">Contacto</th>
+                  <th className="data-th">Origem</th>
+                  <th className="data-th">Registado</th>
+                  <th className="data-th">Triagem IA</th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Estado
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {leads.map((lead) => {
+                  const qual = lead.ai_qualification ? QUALIFICATION_BADGE[lead.ai_qualification] : null;
+                  const hasDraft = !!lead.ai_draft_reply && !lead.ai_reply_sent_at;
+                  return (
+                    <Fragment key={lead.id}>
                       <tr>
-                        <td className="data-td" colSpan={6} style={{ background: 'var(--bg-page)' }}>
-                          <div className="text-xs" style={{ color: 'var(--text-secondary)', marginBottom: 6 }}>
-                            {lead.ai_intent ? `Intenção: ${lead.ai_intent} — ` : ''}Rascunho de resposta (SMS):
-                          </div>
-                          <div className="text-sm" style={{ marginBottom: 8 }}>
-                            "{lead.ai_draft_reply}"
-                          </div>
-                          {/* Só há rascunho quando há telefone: o agente Lead deixou de
-                              escrever para leads sem número, porque não havia por onde o
-                              expedir (ver lib/agents/leadAgentCalc.ts). */}
-                          <PrimaryBtn
-                            onClick={() => sendReply(lead)}
-                            disabled={sendingId === lead.id}
-                            style={{ padding: '5px 12px' }}
+                        <td className="data-td" style={{ fontWeight: 600 }}>
+                          {lead.name}
+                        </td>
+                        <td className="data-td">{lead.phone || lead.email || '—'}</td>
+                        <td className="data-td">{lead.source || '—'}</td>
+                        <td className="data-td">{String(lead.created_at).slice(0, 10)}</td>
+                        <td className="data-td">
+                          {qual ? (
+                            <Badge label={qual.label} bg={qual.bg} color={qual.color} />
+                          ) : (
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              Por triar
+                            </span>
+                          )}
+                        </td>
+                        <td className="data-td" style={{ textAlign: 'right' }}>
+                          <GhostBtn onClick={() => updateStatus(lead.id, 'converted')} style={{ padding: '5px 10px' }}>
+                            Marcação feita
+                          </GhostBtn>
+                          <GhostBtn
+                            onClick={() => updateStatus(lead.id, 'lost')}
+                            style={{ padding: '5px 10px', marginLeft: 6 }}
                           >
-                            {sendingId === lead.id ? 'A enviar...' : 'Enviar por SMS'}
-                          </PrimaryBtn>
+                            Fechar
+                          </GhostBtn>
                         </td>
                       </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                      {hasDraft && (
+                        <tr>
+                          <td className="data-td" colSpan={6} style={{ background: 'var(--bg-page)' }}>
+                            <div className="text-xs" style={{ color: 'var(--text-secondary)', marginBottom: 6 }}>
+                              {lead.ai_intent ? `Intenção: ${lead.ai_intent} — ` : ''}Rascunho de resposta (SMS):
+                            </div>
+                            <div className="text-sm" style={{ marginBottom: 8 }}>
+                              "{lead.ai_draft_reply}"
+                            </div>
+                            {/* Só há rascunho quando há telefone: o agente Lead deixou de
+                                escrever para leads sem número, porque não havia por onde o
+                                expedir (ver lib/agents/leadAgentCalc.ts). */}
+                            <PrimaryBtn
+                              onClick={() => sendReply(lead)}
+                              disabled={sendingId === lead.id}
+                              style={{ padding: '5px 12px' }}
+                            >
+                              {sendingId === lead.id ? 'A enviar...' : 'Enviar por SMS'}
+                            </PrimaryBtn>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

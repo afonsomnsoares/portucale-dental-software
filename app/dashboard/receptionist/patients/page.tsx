@@ -175,7 +175,7 @@ export default function ReceptionPatientsPage() {
           Importar CSV
         </GhostBtn>
       </PageHeader>
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <PatientsSidebarList
           patients={patients}
           selectedId={selected?.id}

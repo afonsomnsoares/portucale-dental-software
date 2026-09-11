@@ -57,7 +57,7 @@ export default function DentistDashboard() {
       {apptsQuery.error ? (
         <AlertBanner type="danger">Não foi possível ler a agenda de hoje. {apptsQuery.error.message}</AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
         <MetricCard label="CONSULTAS DE HOJE" value={appts.length} sub="marcadas" color="var(--accent)" />
         <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
         <MetricCard

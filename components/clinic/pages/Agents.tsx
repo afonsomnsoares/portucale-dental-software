@@ -82,7 +82,7 @@ export default function ClinicAgentsPage() {
           <div className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
             {comRegisto} de {agents.length} com execuções registadas nesta clínica
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+          <div className="grid-cards" style={{ gap: 16 }}>
             {agents.map((agent) => (
               <AgentCard key={agent.id} agent={agent} />
             ))}

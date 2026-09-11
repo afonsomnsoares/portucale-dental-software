@@ -296,7 +296,11 @@ const ROLE_ICONS = {
   dentist: { icon: <ToothIcon size={18} color="var(--accent)" />, color: 'var(--accent)' },
 };
 
-export default function Sidebar() {
+// `open` e `onNavigate` só contam abaixo de 900 px, onde a barra é uma gaveta
+// (ver .app-sidebar em app/globals.css). Acima disso a barra está sempre no
+// fluxo e os dois são inertes — daí serem opcionais: quem a usa em largura
+// total não precisa de saber que existem.
+export default function Sidebar({ open = false, onNavigate }: { open?: boolean; onNavigate?: () => void } = {}) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -326,6 +330,8 @@ export default function Sidebar() {
 
   return (
     <aside
+      className="app-sidebar"
+      data-open={open ? 'true' : 'false'}
       style={{
         width: 240,
         background: 'white',
@@ -412,6 +418,7 @@ export default function Sidebar() {
             <div key={`${item.group || ''}:${item.href}`}>
               {header && <div className="section-label px-2 mb-1.5 mt-4">{header}</div>}
               <Link
+                onClick={onNavigate}
                 href={item.href}
                 className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}
                 aria-current={active ? 'page' : undefined}

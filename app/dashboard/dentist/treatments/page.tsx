@@ -141,7 +141,7 @@ export default function DentistTreatmentsPage() {
         <AlertBanner type="danger">Não foi possível ler os tratamentos. {treatmentsQuery.error.message}</AlertBanner>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
         <MetricCard
           label="VALOR TOTAL"
           value={`$${visible.reduce((a, t) => a + Number(t.fee), 0).toLocaleString()}`}
@@ -179,7 +179,7 @@ export default function DentistTreatmentsPage() {
       {treatmentsQuery.loading ? (
         <Spinner />
       ) : viewMode === 'roadmap' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+        <div className="grid-cards" style={{ gap: 16 }}>
           {PHASES.map((ph) => {
             const items = visible.filter((t) => t.phase === ph.n);
             return (
@@ -355,7 +355,7 @@ export default function DentistTreatmentsPage() {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Fase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: e.target.value }))}>
                 <option value="1">1 — Emergency</option>

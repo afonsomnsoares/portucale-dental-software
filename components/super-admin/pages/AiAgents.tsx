@@ -54,7 +54,7 @@ export default function AiAgents() {
     <div>
       <PageHeader title="Agentes" sub={`${runs.length} agentes no catálogo · ${wired} com modelo ligado`} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard label="AGENTES" value={runs.length} sub="no registo" color="var(--accent)" />
         <MetricCard label="COM IA" value={wired} sub="os restantes correm por regra" color="var(--cat-purple)" />
         <MetricCard

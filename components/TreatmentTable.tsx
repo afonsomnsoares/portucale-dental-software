@@ -152,7 +152,7 @@ export default function TreatmentTable({
 
       {editing && (
         <Modal title={`Editar — ${editing.description}`} onClose={() => setEditing(null)}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Código TANOMD">
               <Sel
                 value={form.treatmentCode}
@@ -181,7 +181,7 @@ export default function TreatmentTable({
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div className="grid-cards" style={{ gap: 12 }}>
             <FormField label="Fase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: Number(e.target.value) }))}>
                 <option value={1}>1 — Urgência</option>

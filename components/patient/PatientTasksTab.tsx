@@ -111,10 +111,10 @@ export default function PatientTasksTab({ api, user, patientId, tasks, onChanged
   const closed = tasks.filter((t) => t.status !== 'pending');
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div className="grid-pair" style={{ gap: 16 }}>
       <div className="card p-5">
         <div className="section-label mb-3">NOVA TAREFA</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           <FormField label="Tipo">
             <Sel value={type} onChange={(e) => setType(e.target.value as PatientTaskType)}>
               {Object.entries(TYPE_LABELS).map(([k, label]) => (

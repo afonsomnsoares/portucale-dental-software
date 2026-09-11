@@ -226,3 +226,159 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Grelhas responsivas ────────────────────────────────────────────────────
+   Este projeto tinha 103 `gridTemplateColumns` escritos inline, e duas media
+   queries em todo o código. O resultado era uma aplicação que só funciona à
+   largura em que foi desenhada — e a recepção de uma clínica trabalha num
+   portátil pequeno, muitas vezes com a barra lateral aberta ao lado.
+
+   As três formas abaixo cobrem todos esses casos. Vivem aqui, e não em cada
+   ficheiro, porque o ponto de quebra é uma decisão do produto e não de um ecrã:
+   se mudar, muda uma vez.
+
+   O `gap` continua inline de propósito — varia entre 10 e 16 px consoante a
+   densidade de cada ecrã, e isso é mesmo uma escolha local. */
+
+/* Fila de cartões de métrica: tantas colunas quantas couberem.
+   O `min(200px, 100%)` em vez de `200px` é o que impede a grelha de transbordar
+   num contentor mais estreito do que uma coluna — que é o que acontece num
+   telemóvel com a `minmax(200px, 1fr)` simples. */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+}
+
+/* Duas colunas de formulário. Colapsam cedo: dois campos lado a lado com 160 px
+   cada não se preenchem, leem-se mal e enganam na leitura de qual é qual. */
+.grid-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 640px) {
+  .grid-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Lista à esquerda, detalhe à direita — os ecrãs de doente, receitas, recalls.
+   Abaixo de 900 px a lista passa para cima do detalhe em vez de o espremer:
+   260 px de lista contra 300 px de conteúdo não é uma divisão útil. */
+.grid-sidebar {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+}
+@media (max-width: 900px) {
+  .grid-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Uma tabela que não cabe rola dentro do seu contentor, em vez de esticar a
+   página inteira e levar a barra lateral à frente. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Conteúdo principal com uma coluna de apoio ao lado (gráfico + resumo).
+   Empilha antes da barra lateral porque a coluna de apoio é mais estreita e
+   perde sentido primeiro. */
+.grid-split {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+@media (max-width: 1000px) {
+  .grid-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Caixa de entrada: lista de conversas + conversa aberta. Precisa de mais
+   largura do que a .grid-sidebar porque as duas metades têm texto corrido. */
+.grid-inbox {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+}
+@media (max-width: 1000px) {
+  .grid-inbox {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── A moldura da aplicação ─────────────────────────────────────────────────
+   A barra lateral tem 240 px fixos. Num ecrã de 1280 px isso é 19% e não se
+   nota; num portátil de 1024 px com o browser em meia janela, ou num tablet de
+   pé, passa a comer metade do espaço útil — e a recepção de uma clínica
+   trabalha exatamente nesses.
+
+   Abaixo de 900 px ela sai do fluxo e passa a gaveta: escondida por omissão,
+   aberta por um botão, fechada ao navegar e ao clicar fora. */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-page);
+}
+
+/* `min-width: 0` é o que impede uma tabela larga de esticar esta coluna e
+   empurrar a barra lateral para fora do ecrã — o defeito clássico do flex. */
+.app-main-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 36px;
+}
+
+.app-sidebar-toggle,
+.app-scrim {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .app-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: var(--elev-3);
+    z-index: 60;
+  }
+  .app-sidebar[data-open='true'] {
+    transform: translateX(0);
+  }
+  .app-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .app-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    z-index: 50;
+  }
+  /* O respiro lateral generoso do desktop não cabe aqui, mas nunca abaixo de
+     16 px: uma tabela colada à margem do ecrã lê-se pior do que uma estreita. */
+  .app-main {
+    padding: 20px 16px;
+  }
+}

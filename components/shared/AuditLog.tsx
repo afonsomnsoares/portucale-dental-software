@@ -149,9 +149,8 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                 </button>
                 {open && (
                   <div
+                    className="grid-pair"
                     style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
                       gap: 12,
                       padding: '16px 20px',
                       background: 'var(--bg-page)',

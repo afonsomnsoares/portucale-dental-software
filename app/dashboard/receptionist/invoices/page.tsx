@@ -327,7 +327,7 @@ export default function InvoicesPage() {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, amount: e.target.value }))}
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Data da fatura">
               <Inp
                 type="date"

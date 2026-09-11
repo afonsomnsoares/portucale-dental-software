@@ -182,7 +182,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
             })}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div className="grid-cards" style={{ gap: 12, marginBottom: 12 }}>
             <div>
               <div className="section-label mb-1">A PARTIR DE</div>
               <input

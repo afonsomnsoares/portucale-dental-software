@@ -94,7 +94,7 @@ export default function ConsentFormsPage() {
           Não foi possível ler os consentimentos deste doente. {formsQuery.error.message}
         </AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
@@ -230,7 +230,7 @@ export default function ConsentFormsPage() {
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{detailModal.description}</p>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-pair" style={{ gap: 12 }}>
               <div>
                 <div className="section-label mb-1">Assinado por</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>

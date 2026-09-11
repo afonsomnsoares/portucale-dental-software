@@ -49,7 +49,7 @@ export default function ClinicInvoiceDetailPage() {
         </GhostBtn>
       </PageHeader>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid-pair" style={{ gap: 16 }}>
         <div className="card p-5">
           <div className="section-label mb-4">DADOS DA FATURA</div>
           <div style={{ display: 'grid', gap: 12 }}>
@@ -85,46 +85,48 @@ export default function ClinicInvoiceDetailPage() {
       {items.length > 0 && (
         <div className="card mt-4 p-5">
           <div className="section-label mb-3">LINHAS</div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                <th className="data-th">Descrição</th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Valor
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: as linhas da fatura não têm id e a lista é estática (nunca reordenada)
-                <tr key={i} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                  <td className="data-td">{item.description || '—'}</td>
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
+                  <th className="data-th">Descrição</th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Valor
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: as linhas da fatura não têm id e a lista é estática (nunca reordenada)
+                  <tr key={i} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
+                    <td className="data-td">{item.description || '—'}</td>
+                    <td
+                      className="data-td"
+                      style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                    >
+                      {formatEUR(Number(item.amount || 0))}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="data-td" style={{ fontWeight: 700 }}>
+                    Total
+                  </td>
                   <td
                     className="data-td"
-                    style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                    style={{
+                      textAlign: 'right',
+                      fontWeight: 700,
+                      fontFamily: '"JetBrains Mono",monospace',
+                      fontSize: 12,
+                    }}
                   >
-                    {formatEUR(Number(item.amount || 0))}
+                    {formatEUR(Number(inv.amount))}
                   </td>
                 </tr>
-              ))}
-              <tr>
-                <td className="data-td" style={{ fontWeight: 700 }}>
-                  Total
-                </td>
-                <td
-                  className="data-td"
-                  style={{
-                    textAlign: 'right',
-                    fontWeight: 700,
-                    fontFamily: '"JetBrains Mono",monospace',
-                    fontSize: 12,
-                  }}
-                >
-                  {formatEUR(Number(inv.amount))}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

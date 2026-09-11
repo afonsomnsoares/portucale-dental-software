@@ -128,7 +128,7 @@ export default function PatientImportCsvModal({
       </FormField>
 
       {headers.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           {columnFields.map(({ key, label, none }) => (
             <FormField key={key} label={label}>
               <Sel value={mapping[key]} onChange={(e) => setMapping((p) => ({ ...p, [key]: e.target.value }))}>

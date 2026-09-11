@@ -93,76 +93,78 @@ export default function ClinicInvoicesPage() {
         ) : !invoices.length ? (
           <Empty message="Sem faturas para este filtro." />
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                <th className="data-th">Fatura</th>
-                <th className="data-th">Doente</th>
-                <th className="data-th">Data</th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Valor
-                </th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Pago
-                </th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Saldo
-                </th>
-                <th className="data-th">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv) => (
-                <tr key={inv.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                  <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
-                    <Link
-                      href={`/dashboard/admin/invoices/${inv.id}`}
-                      style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
-                    >
-                      #{inv.id.slice(0, 8).toUpperCase()}
-                    </Link>
-                  </td>
-                  <td className="data-td" style={{ fontWeight: 600 }}>
-                    {inv.patient_name}
-                  </td>
-                  <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
-                    {inv.invoice_date ? formatDatePT(inv.invoice_date) : '—'}
-                  </td>
-                  <td
-                    className="data-td"
-                    style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
-                  >
-                    {formatEUR(Number(inv.amount))}
-                  </td>
-                  <td
-                    className="data-td"
-                    style={{
-                      textAlign: 'right',
-                      fontFamily: '"JetBrains Mono",monospace',
-                      fontSize: 12,
-                      color: Number(inv.paid) > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)',
-                    }}
-                  >
-                    {formatEUR(Number(inv.paid))}
-                  </td>
-                  <td
-                    className="data-td"
-                    style={{
-                      textAlign: 'right',
-                      fontFamily: '"JetBrains Mono",monospace',
-                      fontSize: 12,
-                      color: Number(inv.amount) > Number(inv.paid) ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
-                    }}
-                  >
-                    {formatEUR(Math.max(0, Number(inv.amount) - Number(inv.paid)))}
-                  </td>
-                  <td className="data-td">
-                    <Badge s={inv.status} />
-                  </td>
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
+                  <th className="data-th">Fatura</th>
+                  <th className="data-th">Doente</th>
+                  <th className="data-th">Data</th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Valor
+                  </th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Pago
+                  </th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Saldo
+                  </th>
+                  <th className="data-th">Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
+                    <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
+                      <Link
+                        href={`/dashboard/admin/invoices/${inv.id}`}
+                        style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                      >
+                        #{inv.id.slice(0, 8).toUpperCase()}
+                      </Link>
+                    </td>
+                    <td className="data-td" style={{ fontWeight: 600 }}>
+                      {inv.patient_name}
+                    </td>
+                    <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
+                      {inv.invoice_date ? formatDatePT(inv.invoice_date) : '—'}
+                    </td>
+                    <td
+                      className="data-td"
+                      style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                    >
+                      {formatEUR(Number(inv.amount))}
+                    </td>
+                    <td
+                      className="data-td"
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: '"JetBrains Mono",monospace',
+                        fontSize: 12,
+                        color: Number(inv.paid) > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)',
+                      }}
+                    >
+                      {formatEUR(Number(inv.paid))}
+                    </td>
+                    <td
+                      className="data-td"
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: '"JetBrains Mono",monospace',
+                        fontSize: 12,
+                        color: Number(inv.amount) > Number(inv.paid) ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
+                      }}
+                    >
+                      {formatEUR(Math.max(0, Number(inv.amount) - Number(inv.paid)))}
+                    </td>
+                    <td className="data-td">
+                      <Badge s={inv.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

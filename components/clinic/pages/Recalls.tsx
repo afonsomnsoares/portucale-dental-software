@@ -157,69 +157,74 @@ export default function Recalls() {
         <Empty message="Sem recalls em atraso neste período." />
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th className="data-th">Doente</th>
-                <th className="data-th">Tipo</th>
-                <th className="data-th">Intervalo</th>
-                <th className="data-th">Última realização</th>
-                <th className="data-th">Próxima</th>
-                <th className="data-th">Status</th>
-                <th className="data-th">Lembrete enviado</th>
-                <th className="data-th" style={{ textAlign: 'right' }}>
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {recalls.map((r) => {
-                const sm = statusMeta(r);
-                return (
-                  <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                    <td className="data-td" style={{ fontWeight: 600 }}>
-                      {patientName(r.patient_id)}
-                    </td>
-                    <td className="data-td" style={{ textTransform: 'capitalize' }}>
-                      {r.recall_type}
-                    </td>
-                    <td className="data-td">{r.interval_months}mo</td>
-                    <td className="data-td">{r.last_done?.slice(0, 10) || '—'}</td>
-                    <td className="data-td" style={{ fontWeight: sm.label === 'Overdue' ? 700 : 400, color: sm.color }}>
-                      {r.next_due?.slice(0, 10)}
-                    </td>
-                    <td className="data-td">
-                      <span className="badge" style={{ background: sm.bg, color: sm.color }}>
-                        <span
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: '50%',
-                            background: sm.color,
-                            display: 'inline-block',
-                            marginRight: 5,
-                          }}
-                        />
-                        {sm.label}
-                      </span>
-                    </td>
-                    <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                      {r.last_notified_at ? new Date(r.last_notified_at).toLocaleDateString('pt-PT') : '—'}
-                    </td>
-                    <td className="data-td" style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        {patientPhone(r.patient_id) && (
-                          <GhostBtn onClick={() => window.open(`tel:${patientPhone(r.patient_id)}`)}>Ligar</GhostBtn>
-                        )}
-                        {r.active && <GhostBtn onClick={() => handleComplete(r.id)}>Concluir</GhostBtn>}
-                        {r.active && <DangerBtn onClick={() => handleDeactivate(r.id)}>Terminar</DangerBtn>}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="data-th">Doente</th>
+                  <th className="data-th">Tipo</th>
+                  <th className="data-th">Intervalo</th>
+                  <th className="data-th">Última realização</th>
+                  <th className="data-th">Próxima</th>
+                  <th className="data-th">Status</th>
+                  <th className="data-th">Lembrete enviado</th>
+                  <th className="data-th" style={{ textAlign: 'right' }}>
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {recalls.map((r) => {
+                  const sm = statusMeta(r);
+                  return (
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                      <td className="data-td" style={{ fontWeight: 600 }}>
+                        {patientName(r.patient_id)}
+                      </td>
+                      <td className="data-td" style={{ textTransform: 'capitalize' }}>
+                        {r.recall_type}
+                      </td>
+                      <td className="data-td">{r.interval_months}mo</td>
+                      <td className="data-td">{r.last_done?.slice(0, 10) || '—'}</td>
+                      <td
+                        className="data-td"
+                        style={{ fontWeight: sm.label === 'Overdue' ? 700 : 400, color: sm.color }}
+                      >
+                        {r.next_due?.slice(0, 10)}
+                      </td>
+                      <td className="data-td">
+                        <span className="badge" style={{ background: sm.bg, color: sm.color }}>
+                          <span
+                            style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: '50%',
+                              background: sm.color,
+                              display: 'inline-block',
+                              marginRight: 5,
+                            }}
+                          />
+                          {sm.label}
+                        </span>
+                      </td>
+                      <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                        {r.last_notified_at ? new Date(r.last_notified_at).toLocaleDateString('pt-PT') : '—'}
+                      </td>
+                      <td className="data-td" style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          {patientPhone(r.patient_id) && (
+                            <GhostBtn onClick={() => window.open(`tel:${patientPhone(r.patient_id)}`)}>Ligar</GhostBtn>
+                          )}
+                          {r.active && <GhostBtn onClick={() => handleComplete(r.id)}>Concluir</GhostBtn>}
+                          {r.active && <DangerBtn onClick={() => handleDeactivate(r.id)}>Terminar</DangerBtn>}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -240,7 +245,7 @@ export default function Recalls() {
                 ))}
               </Sel>
             </FormField>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-pair" style={{ gap: 12 }}>
               <FormField label="Tipo de recall">
                 <Sel value={form.recallType} onChange={(e) => setForm((p) => ({ ...p, recallType: e.target.value }))}>
                   {RECALL_TYPES.map((t) => (
@@ -263,7 +268,7 @@ export default function Recalls() {
                 />
               </FormField>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-pair" style={{ gap: 12 }}>
               <FormField label="Última realização">
                 <Inp
                   type="date"

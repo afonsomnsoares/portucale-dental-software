@@ -36,7 +36,7 @@ export default function Onboarding() {
     <div>
       <PageHeader title="Onboarding" sub={`${onboarding.length} clínicas por concluir · ${done} a trabalhar`} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="EM ONBOARDING"
           value={onboarding.length}

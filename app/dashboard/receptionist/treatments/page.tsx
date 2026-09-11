@@ -118,7 +118,7 @@ export default function ReceptionTreatmentsPage() {
       {treatmentsQuery.error ? (
         <AlertBanner type="danger">Não foi possível ler os tratamentos. {treatmentsQuery.error.message}</AlertBanner>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
         <MetricCard label="VALOR TOTAL" value={`$${totalFee.toLocaleString()}`} color="var(--accent)" />
         <MetricCard label="PROPOSTOS" value={proposed} sub="à espera de aceitação" color="var(--urgency-soon)" />
         <MetricCard label="ACEITES" value={accepted} sub="marcadas" color="var(--cat-teal)" />
@@ -209,7 +209,7 @@ export default function ReceptionTreatmentsPage() {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Fase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: e.target.value }))}>
                 <option value="1">1 — Emergência</option>

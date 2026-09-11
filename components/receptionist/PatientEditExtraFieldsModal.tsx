@@ -21,7 +21,7 @@ export default function PatientEditExtraFieldsModal({
       {schemaFields.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sem campos adicionais configurados.</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           {schemaFields.map((f) => (
             <FormField key={f.id} label={`${fieldLabel(f)}${f.required ? ' *' : ''}`}>
               <SchemaFieldInput

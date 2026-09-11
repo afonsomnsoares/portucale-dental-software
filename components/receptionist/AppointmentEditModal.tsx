@@ -69,7 +69,7 @@ export default function AppointmentEditModal({
           {error}
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="grid-pair" style={{ gap: 12 }}>
         <FormRow label="Data">
           <Inp
             type="date"

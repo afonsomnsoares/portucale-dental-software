@@ -191,7 +191,7 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
               placeholder="Ex: Luvas de nitrilo (M)"
             />
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Unidade">
               <input
                 className="input"
@@ -248,7 +248,7 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
             />
           </FormField>
           {moveForm.reason === 'received' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-pair" style={{ gap: 12 }}>
               <FormField label="Nº de lote (opcional)">
                 <input
                   className="input"

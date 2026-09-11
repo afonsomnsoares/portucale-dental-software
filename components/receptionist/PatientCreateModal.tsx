@@ -50,7 +50,7 @@ export default function PatientCreateModal({
           {error}
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="grid-pair" style={{ gap: 12 }}>
         <FormField label="Nome completo *">
           <Inp
             value={form.name}
@@ -102,7 +102,7 @@ export default function PatientCreateModal({
           <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 10 }}>
             Campos adicionais
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             {schemaFields.map((f) => (
               <FormField key={f.id} label={`${fieldLabel(f)}${f.required ? ' *' : ''}`}>
                 <SchemaFieldInput

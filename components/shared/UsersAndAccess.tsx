@@ -279,7 +279,7 @@ export default function UsersAndAccess() {
               />
             </FormField>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-pair" style={{ gap: 12 }}>
               <FormField label="Função *">
                 {form.role === 'super_admin' ? (
                   // O único super-admin da plataforma — nunca criado nem alterado por este

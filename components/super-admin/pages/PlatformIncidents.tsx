@@ -46,7 +46,7 @@ export default function PlatformIncidents() {
     <div>
       <PageHeader title="Incidentes" sub="Do lado da plataforma — o que está partido aqui" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="INCIDENTES ABERTOS"
           value={incidents.length}

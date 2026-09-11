@@ -180,7 +180,7 @@ export default function DentistPatientsPage() {
         title="Espaço do Doente"
         sub="Abre-se a pessoa e o resto são separadores — quem é, o que tem, o que estamos a tratar, o que falta."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
+      <div className="grid-sidebar" style={{ gap: 16 }}>
         <PatientsSidebarList
           patients={patients}
           selectedId={selected?.id}

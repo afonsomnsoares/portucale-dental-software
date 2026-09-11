@@ -51,10 +51,10 @@ export default function PatientInteractionsTab({
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <div className="grid-pair" style={{ gap: 16 }}>
       <div className="card p-5">
         <div className="section-label mb-3">REGISTAR INTERAÇÃO</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid-pair" style={{ gap: 12 }}>
           <FormField label="Canal">
             <Sel value={channel} onChange={(e) => setChannel(e.target.value as InteractionChannel)}>
               {Object.entries(CHANNEL_LABELS).map(([k, label]) => (

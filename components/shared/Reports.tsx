@@ -145,7 +145,7 @@ export default function Reports() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
+          <div className="grid-cards" style={{ gap: 16, marginBottom: 16 }}>
             <MetricCard
               label="Receita"
               value={formatEUR(data.metrics.completedValue)}
@@ -175,7 +175,7 @@ export default function Reports() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16, marginBottom: 16 }}>
+          <div className="grid-cards" style={{ gap: 16, marginBottom: 16 }}>
             <MetricCard
               label="Planos Apresentados"
               value={formatEUR(data.metrics.presentedValue)}

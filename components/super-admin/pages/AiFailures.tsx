@@ -50,7 +50,7 @@ export default function AiFailures() {
     <div>
       <PageHeader title="Falhas" sub="Passagens rebentadas e chamadas ao modelo falhadas" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="PASSAGENS FALHADAS"
           value={runs.length}

@@ -31,7 +31,7 @@ export default function Health() {
     <div>
       <PageHeader title="Estado do Sistema" sub="Medido agora, em toda a rede" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="BASE DE DADOS"
           value={h.database.ok ? 'OK' : 'FALHA'}
@@ -62,7 +62,7 @@ export default function Health() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid-pair" style={{ gap: 16 }}>
         <div className="card p-5">
           <div className="section-label mb-4">CLÍNICAS POR ESTADO</div>
           {!h.tenantsByStatus.length ? (

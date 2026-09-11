@@ -274,7 +274,7 @@ export default function ClinicTeamPage() {
               ))}
             </Sel>
           </FormField>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="grid-pair" style={{ gap: 12 }}>
             <FormField label="Início">
               <input
                 type="time"

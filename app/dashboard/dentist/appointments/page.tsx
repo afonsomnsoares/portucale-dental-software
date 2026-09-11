@@ -47,7 +47,7 @@ export default function DentistAppointmentsPage() {
           style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
         />
       </PageHeader>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
         <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
           <div className="section-label">Consultas Hoje</div>
           <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{appts.length}</div>
@@ -71,43 +71,45 @@ export default function DentistAppointmentsPage() {
               <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)', marginBottom: 10 }}>
                 Próximas Consultas
               </h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th className="data-th">Doente</th>
-                    <th className="data-th">Hora</th>
-                    <th className="data-th">Estado</th>
-                    <th className="data-th" style={{ textAlign: 'right' }}>
-                      Ação
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appts
-                    .filter((a) => ['confirmed', 'registered', 'waiting'].includes(a.status))
-                    .map((a) => (
-                      <tr key={a.id}>
-                        <td className="data-td">{a.patient_name}</td>
-                        <td className="data-td">{a.start_time?.slice(0, 5)}</td>
-                        <td className="data-td">
-                          <Badge s={a.status} />
-                        </td>
-                        <td className="data-td" style={{ textAlign: 'right' }}>
-                          {['confirmed', 'registered', 'waiting'].includes(a.status) && (
-                            <button
-                              type="button"
-                              className="btn btn-primary"
-                              style={{ padding: '4px 12px', fontSize: 12 }}
-                              onClick={() => handleStatusChange(a.id, 'in-operatory')}
-                            >
-                              Iniciar
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th className="data-th">Doente</th>
+                      <th className="data-th">Hora</th>
+                      <th className="data-th">Estado</th>
+                      <th className="data-th" style={{ textAlign: 'right' }}>
+                        Ação
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {appts
+                      .filter((a) => ['confirmed', 'registered', 'waiting'].includes(a.status))
+                      .map((a) => (
+                        <tr key={a.id}>
+                          <td className="data-td">{a.patient_name}</td>
+                          <td className="data-td">{a.start_time?.slice(0, 5)}</td>
+                          <td className="data-td">
+                            <Badge s={a.status} />
+                          </td>
+                          <td className="data-td" style={{ textAlign: 'right' }}>
+                            {['confirmed', 'registered', 'waiting'].includes(a.status) && (
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                style={{ padding: '4px 12px', fontSize: 12 }}
+                                onClick={() => handleStatusChange(a.id, 'in-operatory')}
+                              >
+                                Iniciar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

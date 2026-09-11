@@ -67,7 +67,7 @@ export default function ClinicFinanceDashboard() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 16 }}>
+          <div className="grid-cards" style={{ gap: 14, marginBottom: 16 }}>
             <MetricCard
               label="RECEITA COBRADA"
               value={fmt(data.totals?.total_paid)}
@@ -98,7 +98,7 @@ export default function ClinicFinanceDashboard() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid-pair" style={{ gap: 16 }}>
             <div className="card p-5">
               <div className="section-label mb-3">FATURAS POR ESTADO</div>
               {!data.statusCounts?.length ? (
@@ -246,52 +246,54 @@ export default function ClinicFinanceDashboard() {
             {!data.recentPayments?.length ? (
               <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem pagamentos registados</div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                    <th className="data-th">Fatura</th>
-                    <th className="data-th">Doente</th>
-                    <th className="data-th">Data</th>
-                    <th className="data-th" style={{ textAlign: 'right' }}>
-                      Pago
-                    </th>
-                    <th className="data-th">Método</th>
-                    <th className="data-th">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recentPayments.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                      <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
-                        #{p.id.slice(0, 8).toUpperCase()}
-                      </td>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
-                        {p.patient_name}
-                      </td>
-                      <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
-                        {fmtDate(p.invoice_date)}
-                      </td>
-                      <td
-                        className="data-td"
-                        style={{
-                          textAlign: 'right',
-                          fontFamily: '"JetBrains Mono",monospace',
-                          fontSize: 12,
-                          color: 'var(--urgency-ok)',
-                        }}
-                      >
-                        {fmt(p.paid)}
-                      </td>
-                      <td className="data-td" style={{ fontSize: 12 }}>
-                        {p.method}
-                      </td>
-                      <td className="data-td">
-                        <Badge s={p.status} />
-                      </td>
+              <div className="table-scroll">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
+                      <th className="data-th">Fatura</th>
+                      <th className="data-th">Doente</th>
+                      <th className="data-th">Data</th>
+                      <th className="data-th" style={{ textAlign: 'right' }}>
+                        Pago
+                      </th>
+                      <th className="data-th">Método</th>
+                      <th className="data-th">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.recentPayments.map((p) => (
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
+                        <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
+                          #{p.id.slice(0, 8).toUpperCase()}
+                        </td>
+                        <td className="data-td" style={{ fontWeight: 600 }}>
+                          {p.patient_name}
+                        </td>
+                        <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
+                          {fmtDate(p.invoice_date)}
+                        </td>
+                        <td
+                          className="data-td"
+                          style={{
+                            textAlign: 'right',
+                            fontFamily: '"JetBrains Mono",monospace',
+                            fontSize: 12,
+                            color: 'var(--urgency-ok)',
+                          }}
+                        >
+                          {fmt(p.paid)}
+                        </td>
+                        <td className="data-td" style={{ fontSize: 12 }}>
+                          {p.method}
+                        </td>
+                        <td className="data-td">
+                          <Badge s={p.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>
