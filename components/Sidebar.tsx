@@ -357,7 +357,7 @@ export default function Sidebar() {
                 fontFamily: '"Plus Jakarta Sans",sans-serif',
               }}
             >
-              Portucale Dental
+              Portucale Software
             </div>
           </div>
         </div>
@@ -411,7 +411,11 @@ export default function Sidebar() {
             // isso a chave é grupo+href: só o href colidia e o React descartava uma delas.
             <div key={`${item.group || ''}:${item.href}`}>
               {header && <div className="section-label px-2 mb-1.5 mt-4">{header}</div>}
-              <Link href={item.href} className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}>
+              <Link
+                href={item.href}
+                className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}
+                aria-current={active ? 'page' : undefined}
+              >
                 {/* Com cabeçalho de grupo, o ícone por entrada deixa de informar: são 41
                     entradas e nenhuma tem ícone próprio no Icon() acima, pelo que todas
                     cairiam no mesmo "+" genérico. O grupo carrega o significado. */}
