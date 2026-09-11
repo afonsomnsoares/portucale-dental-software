@@ -6,7 +6,7 @@ import type { CSSProperties, FormEvent, KeyboardEvent, ReactNode, SVGProps } fro
 import { useEffect, useRef, useState } from 'react';
 import { ROLE_HOME } from '@/lib/constants';
 import type { AuthUser } from './providers';
-import { useAuth } from './providers';
+import { ApiError, useAuth } from './providers';
 
 /* Ligar quando o SSO empresarial estiver mesmo implementado. */
 const SSO_ATIVO = false;
@@ -18,21 +18,28 @@ const serif: CSSProperties = {
   fontFamily: "'Newsreader', ui-serif, Georgia, 'Times New Roman', serif",
 };
 
-/* O servidor devolve mensagens técnicas; aqui traduzimos para o que a pessoa pode fazer. */
+/* O servidor devolve mensagens técnicas; aqui traduzimos para o que a pessoa pode fazer.
+ *
+ * Decide pelo ESTADO, não pelo texto. A versão anterior fazia `message.includes('401')`,
+ * o que só funcionava porque o código HTTP ia embutido na mensagem que o `api()`
+ * construía — bastava melhorar a frase para o «e-mail ou palavra-passe incorretos»
+ * deixar silenciosamente de aparecer. Hoje o ApiError traz `status` e `code`. */
 function mensagemDeErro(erro: unknown): string {
-  const original = erro instanceof Error ? erro.message : '';
-  const bruto = original.toLowerCase();
-
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return 'Sem ligação à internet. Verifique a rede e tente outra vez.';
   }
-  if (bruto.includes('401') || bruto.includes('invalid') || bruto.includes('credential')) {
-    return 'E-mail ou palavra-passe incorretos.';
+
+  if (erro instanceof ApiError) {
+    if (erro.status === 401) return 'E-mail ou palavra-passe incorretos.';
+    if (erro.status === 429 || erro.code === 'RATE_LIMIT') {
+      return 'Demasiadas tentativas. Aguarde um minuto antes de tentar de novo.';
+    }
+    return erro.message || 'Não foi possível concluir o pedido. Tente outra vez.';
   }
-  if (bruto.includes('429') || bruto.includes('too many')) {
-    return 'Demasiadas tentativas. Aguarde um minuto antes de tentar de novo.';
-  }
-  if (bruto.includes('failed to fetch') || bruto.includes('network')) {
+
+  // Falhas antes de haver resposta — o fetch nem chegou ao servidor.
+  const original = erro instanceof Error ? erro.message : '';
+  if (/failed to fetch|network|load failed/i.test(original)) {
     return 'Não foi possível contactar o servidor. Tente outra vez.';
   }
   return original || 'Não foi possível concluir o pedido. Tente outra vez.';
@@ -239,7 +246,7 @@ export default function LoginPage() {
           )}
 
           <p className="mt-10 text-[13px] leading-relaxed text-[var(--entry-text-subtle)]">
-            © 2026 Portucale Dental ·{' '}
+            © 2026 Portucale Software ·{' '}
             <a href="/privacidade" className="underline-offset-4 hover:underline">
               Privacidade
             </a>{' '}

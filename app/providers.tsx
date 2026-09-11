@@ -39,13 +39,54 @@ export interface ApiOptions {
   [key: string]: unknown;
 }
 
+/**
+ * O erro que `api()` lança. Existe para que quem apanha possa decidir pelo CÓDIGO em
+ * vez de pelo texto: a página de login chegava a fazer `message.includes('401')`, o que
+ * só funcionava porque o estado ia embutido na mensagem — e deixava de funcionar assim
+ * que alguém melhorasse a frase.
+ *
+ * A `message` passa a ser o que o servidor diz, sem o prefixo `GET /api/x → 401` que
+ * antes ia à frente. Cinquenta ecrãs mostram `err.message` diretamente ao utilizador, e
+ * nenhum deles ganhava alguma coisa com o método e o caminho lá dentro; o detalhe
+ * técnico vive nos campos abaixo e na consola.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code: string | null;
+  readonly details: unknown;
+  readonly path: string;
+  readonly method: string;
+
+  constructor(init: {
+    status: number;
+    code: string | null;
+    details: unknown;
+    path: string;
+    method: string;
+    message: string;
+  }) {
+    super(init.message);
+    this.name = 'ApiError';
+    this.status = init.status;
+    this.code = init.code;
+    this.details = init.details;
+    this.path = init.path;
+    this.method = init.method;
+  }
+}
+
+// Caminhos onde um 401 é uma resposta normal e não uma sessão que caiu: o login com a
+// password errada, e o /me de quem ainda não entrou. Terminar a sessão aqui seria
+// reagir a um erro que já está a ser tratado no sítio certo.
+const AUTH_PATHS = ['/auth/login', '/auth/me', '/auth/csrf'];
+
 interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (u: AuthUser) => void;
   logout: () => Promise<void>;
-  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint, callers type their own state
-  api: (path: string, opts?: ApiOptions) => Promise<any>;
+  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — callers provide their own return type
+  api: <T = any>(path: string, opts?: ApiOptions) => Promise<T>;
   settings: AppSettings | null;
 }
 
@@ -77,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
 
   useEffect(() => {
-    fetch('/api/auth/csrf', { method: 'GET' }).catch(() => {});
+    fetch('/api/auth/csrf', { method: 'GET' }).catch(() => {}); // intentional — warm-up; CSRF cookie arrives either way
   }, []);
 
   useEffect(() => {
@@ -98,8 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const api = useCallback(
-    // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint, callers type their own state
-    async (path: string, opts: ApiOptions = {}): Promise<any> => {
+    // biome-ignore lint/suspicious/noExplicitAny: response shape varies per endpoint, callers type their own state
+    async <T = any>(path: string, opts: ApiOptions = {}): Promise<T> => {
       const method = String(opts.method || 'GET').toUpperCase();
       const isMutation = !(method === 'GET' || method === 'HEAD' || method === 'OPTIONS');
       const headers: Record<string, string> = {
@@ -109,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isMutation && !headers['x-csrf-token'] && !headers['X-CSRF-Token']) {
         let csrf = getCookieValue('dent_csrf');
         if (!csrf) {
-          await fetch('/api/auth/csrf', { method: 'GET' }).catch(() => {});
+          await fetch('/api/auth/csrf', { method: 'GET' }).catch(() => {}); // intentional — retry after missing cookie
           csrf = getCookieValue('dent_csrf');
         }
         if (csrf) headers['x-csrf-token'] = csrf;
@@ -123,23 +164,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok) {
         const contentType = res.headers.get('content-type') || '';
         let message = res.statusText;
-        let code = null;
-        let details = null;
+        let code: string | null = null;
+        let details: unknown = null;
         if (contentType.includes('application/json')) {
-          const err = await res.json().catch(() => null);
+          const err = await res.json().catch(() => null); // intentional — response may not be JSON
           code = err?.code || null;
           details = err?.details ?? null;
           message = err?.message || err?.error || message;
         } else {
-          const text = await res.text().catch(() => '');
+          const text = await res.text().catch(() => ''); // intentional — body may be unreadable
           if (text) message = text;
         }
-        const suffix = details ? ` (${typeof details === 'string' ? details : JSON.stringify(details)})` : '';
-        throw new Error(
-          `${method} /api${path} → ${res.status} ${code ? `${code}: ` : ''}${message || 'Request failed'}${suffix}`,
-        );
+
+        // ─── A sessão pode ter morrido a meio ────────────────────────────────
+        // lib/permissions.ts's revalidateSession recusa, a cada pedido, um token cuja
+        // conta foi desativada, despromovida, movida de clínica ou cuja password mudou.
+        // O servidor fazia a sua parte e o cliente não tinha contraparte nenhuma: o
+        // estado `user` continuava preenchido, a Sidebar continuava a desenhar o menu, e
+        // a pessoa via o painel encher-se de erros sem perceber que tinha sido desligada.
+        //
+        // Limpar o utilizador chega para a expulsar: app/dashboard/layout.tsx já tem
+        // `if (!loading && !user) router.replace('/')`. Reaproveitar esse caminho em vez
+        // de navegar daqui mantém o provider fora de assuntos de rotas — e faz com que
+        // exista um só sítio a decidir para onde vai quem não tem sessão.
+        if (res.status === 401 && !AUTH_PATHS.some((p) => path === p || path.startsWith(`${p}?`))) {
+          setUser(null);
+          setSettings(null);
+        }
+
+        // O detalhe técnico deixa de ir na mensagem que o utilizador lê, mas não se
+        // perde — quem estiver a depurar precisa dele.
+        console.error(`[api] ${method} /api${path} → ${res.status}`, { code, details, message });
+
+        throw new ApiError({
+          status: res.status,
+          code,
+          details,
+          path,
+          method,
+          message: message || 'Não foi possível concluir o pedido.',
+        });
       }
-      return res.json();
+      // 204 e afins não trazem corpo; res.json() rebentaria sobre um corpo vazio.
+      if (res.status === 204 || res.headers.get('content-length') === '0') return null as T;
+      return res.json() as Promise<T>;
     },
     [],
   );
