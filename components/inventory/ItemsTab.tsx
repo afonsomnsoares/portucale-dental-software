@@ -1,7 +1,20 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { DataTable, Empty, FormField, GhostBtn, Modal, PrimaryBtn, Sel, Spinner, TD, Textarea } from '@/components/ui';
+import {
+  DataTable,
+  Empty,
+  ErrorState,
+  FormField,
+  GhostBtn,
+  Modal,
+  PrimaryBtn,
+  Sel,
+  Spinner,
+  TD,
+  Textarea,
+} from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { InventoryItem, InventoryMovementReason } from '@/lib/types';
 
 interface ItemsTabProps {
@@ -35,8 +48,6 @@ const EMPTY_MOVE_FORM = {
 // exist. Creating an item here, then "Registar movimento" on it, is what makes the
 // Previsão/Encomendas tabs have anything to show for a brand new clinic.
 export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [itemModal, setItemModal] = useState<InventoryItem | 'new' | null>(null);
   const [itemForm, setItemForm] = useState(EMPTY_ITEM_FORM);
   const [moveTarget, setMoveTarget] = useState<InventoryItem | null>(null);
@@ -44,16 +55,11 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const rows = await api('/inventory/items').catch(() => []);
-    setItems(rows || []);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const itemsQuery = useQuery<InventoryItem[]>('/inventory/items');
+  const items = itemsQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const load = itemsQuery.refetch;
 
   function openNewItem() {
     setItemForm(EMPTY_ITEM_FORM);
@@ -127,7 +133,12 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
     }
   }
 
-  if (loading) return <Spinner />;
+  if (itemsQuery.error)
+    return (
+      <ErrorState error={itemsQuery.error} onRetry={itemsQuery.refetch} message="Não foi possível ler o inventário." />
+    );
+  if (itemsQuery.loading) return <Spinner />;
+  if (itemsQuery.error) return <ErrorState error={itemsQuery.error} onRetry={itemsQuery.refetch} />;
 
   return (
     <div>

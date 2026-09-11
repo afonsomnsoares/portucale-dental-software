@@ -1,7 +1,19 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { Badge, Empty, FormField, GhostBtn, Modal, PrimaryBtn, Sel, Spinner, Textarea } from '@/components/ui';
+import {
+  Badge,
+  Empty,
+  ErrorState,
+  FormField,
+  GhostBtn,
+  Modal,
+  PrimaryBtn,
+  Sel,
+  Spinner,
+  Textarea,
+} from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { ChecklistTemplate, ChecklistType } from '@/lib/types';
 
 interface TemplateManagerProps {
@@ -17,25 +29,18 @@ const EMPTY_FORM = { name: '', type: 'opening' as ChecklistType, itemsText: '' }
 // line in a textarea rather than a dynamic list-of-inputs — simpler to build and to use
 // for what's typically a short, rarely-changed list (5-15 items).
 export default function TemplateManager({ api, tenantId }: TemplateManagerProps) {
-  const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ChecklistTemplate | null | 'new'>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const qs = tenantId ? `?active=false&tenantId=${tenantId}` : '?active=false';
-    const rows = await api(`/checklist-templates${qs}`).catch(() => []);
-    setTemplates(rows || []);
-    setLoading(false);
-  }, [api, tenantId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const qs = tenantId ? `?active=false&tenantId=${tenantId}` : '?active=false';
+  const templatesQuery = useQuery<ChecklistTemplate[]>(`/checklist-templates${qs}`);
+  const templates = templatesQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const load = templatesQuery.refetch;
 
   function openNew() {
     setForm(EMPTY_FORM);
@@ -88,7 +93,16 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
     load();
   }
 
-  if (loading) return <Spinner />;
+  if (templatesQuery.error)
+    return (
+      <ErrorState
+        error={templatesQuery.error}
+        onRetry={templatesQuery.refetch}
+        message="Não foi possível ler os modelos."
+      />
+    );
+  if (templatesQuery.loading) return <Spinner />;
+  if (templatesQuery.error) return <ErrorState error={templatesQuery.error} onRetry={templatesQuery.refetch} />;
 
   return (
     <div>

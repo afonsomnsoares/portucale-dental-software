@@ -1,7 +1,19 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { DataTable, Empty, FormField, GhostBtn, Inp, Modal, PrimaryBtn, Spinner, TD } from '@/components/ui';
+import {
+  DataTable,
+  Empty,
+  ErrorState,
+  FormField,
+  GhostBtn,
+  Inp,
+  Modal,
+  PrimaryBtn,
+  Spinner,
+  TD,
+} from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface ClinicEquipment {
   id: string;
@@ -23,23 +35,16 @@ const EMPTY_FORM = { name: '', chair: '', tags: '' };
 // which tagged equipment (see requiredEquipmentTags in lib/constants.ts). Not the full
 // Categoria 14 (maintenance calendars, alerts, usage history).
 export default function EquipmentTab({ api }: EquipmentTabProps) {
-  const [items, setItems] = useState<ClinicEquipment[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ClinicEquipment | 'new' | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const rows = await api('/equipment').catch(() => []);
-    setItems(rows || []);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const itemsQuery = useQuery<ClinicEquipment[]>('/equipment');
+  const items = itemsQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const load = itemsQuery.refetch;
 
   function openNew() {
     setForm(EMPTY_FORM);
@@ -87,7 +92,12 @@ export default function EquipmentTab({ api }: EquipmentTabProps) {
     load();
   }
 
-  if (loading) return <Spinner />;
+  if (itemsQuery.error)
+    return (
+      <ErrorState error={itemsQuery.error} onRetry={itemsQuery.refetch} message="Não foi possível ler o equipamento." />
+    );
+  if (itemsQuery.loading) return <Spinner />;
+  if (itemsQuery.error) return <ErrorState error={itemsQuery.error} onRetry={itemsQuery.refetch} />;
 
   return (
     <div>

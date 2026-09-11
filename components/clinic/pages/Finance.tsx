@@ -1,8 +1,8 @@
 'use client';
 import { AlertTriangle, CreditCard, DollarSign, TrendingUp } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, GhostBtn, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, Empty, ErrorState, GhostBtn, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { FinanceData } from '@/lib/types';
 
@@ -11,9 +11,6 @@ import type { FinanceData } from '@/lib/types';
 // app/api/finance/stats/route.ts já ignora ?tenantId= para quem não é super_admin e usa
 // sempre user.tenantId, por isso a página carrega direta e mostra valores em euros.
 export default function ClinicFinanceDashboard() {
-  const { api } = useAuth();
-  const [data, setData] = useState<FinanceData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -21,17 +18,12 @@ export default function ClinicFinanceDashboard() {
   });
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ from, to });
-    const res = await api(`/finance/stats?${params.toString()}`).catch(() => null);
-    setData(res);
-    setLoading(false);
-  }, [api, from, to]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const params = new URLSearchParams({ from, to });
+  const dataQuery = useQuery<FinanceData>(`/finance/stats?${params.toString()}`);
+  const data = dataQuery.data ?? null;
+  // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const load = dataQuery.refetch;
 
   function fmt(n: number | undefined) {
     return formatEUR(Number(n || 0));
@@ -63,7 +55,9 @@ export default function ClinicFinanceDashboard() {
         </GhostBtn>
       </PageHeader>
 
-      {loading && !data ? (
+      {dataQuery.error ? (
+        <ErrorState error={dataQuery.error} onRetry={dataQuery.refetch} message="Não foi possível ler as contas." />
+      ) : dataQuery.loading && !data ? (
         <div className="card p-5">
           <Spinner />
         </div>

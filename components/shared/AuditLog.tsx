@@ -1,7 +1,7 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, PageHeader, Spinner } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { AuditLogEntry } from '@/lib/types';
 
 const AM: Record<string, { bg: string; color: string }> = {
@@ -30,25 +30,15 @@ const RM: Record<string, { bg: string; color: string }> = {
 export type AuditScope = 'clinic' | 'platform';
 
 export default function AuditLog({ scope }: { scope: AuditScope }) {
-  const { api } = useAuth();
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | number | null>(null);
   const [search, setSearch] = useState('');
   const [action, setAction] = useState('');
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    const p = new URLSearchParams();
-    if (action) p.set('action', action);
-    if (search) p.set('q', search);
-    const d = await api(`/audit?${p}`).catch(() => []);
-    setLogs(d || []);
-    setLoading(false);
-  }, [api, action, search]);
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  const p = new URLSearchParams();
+  if (action) p.set('action', action);
+  if (search) p.set('q', search);
+  const logsQuery = useQuery<AuditLogEntry[]>(`/audit?${p}`);
+  const logs = logsQuery.data ?? [];
 
   return (
     <div>
@@ -79,7 +69,13 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
         </div>
       </div>
       <div className="card" style={{ padding: 0 }}>
-        {loading ? (
+        {logsQuery.error ? (
+          <ErrorState
+            error={logsQuery.error}
+            onRetry={logsQuery.refetch}
+            message="Não foi possível ler o registo de auditoria."
+          />
+        ) : logsQuery.loading ? (
           <Spinner />
         ) : (
           logs.map((l) => {

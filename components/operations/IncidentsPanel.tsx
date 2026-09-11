@@ -1,10 +1,11 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import {
   Badge,
   DataTable,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Modal,
@@ -15,6 +16,7 @@ import {
   TD,
   Textarea,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { DbUser, Incident, IncidentCategory, IncidentSeverity, IncidentStatus } from '@/lib/types';
 
 interface IncidentsPanelProps {
@@ -56,9 +58,7 @@ const EMPTY_FORM = {
 // (canManage=false hides assignment/resolution controls, everyone can still report and
 // see the list — see app/api/incidents/route.ts's GET being open to any tenant member).
 export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [] }: IncidentsPanelProps) {
-  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [statusFilter, setStatusFilter] = useState('open');
-  const [loading, setLoading] = useState(true);
   const [reportModal, setReportModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
@@ -67,20 +67,15 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
   const [resolveTarget, setResolveTarget] = useState<Incident | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (tenantId) params.set('tenantId', tenantId);
-    const qs = params.toString();
-    const rows = await api(`/incidents${qs ? `?${qs}` : ''}`).catch(() => []);
-    setIncidents(rows || []);
-    setLoading(false);
-  }, [api, statusFilter, tenantId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const params = new URLSearchParams();
+  if (statusFilter !== 'all') params.set('status', statusFilter);
+  if (tenantId) params.set('tenantId', tenantId);
+  const qs = params.toString();
+  const incidentsQuery = useQuery<Incident[]>(`/incidents${qs ? `?${qs}` : ''}`);
+  const incidents = incidentsQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const load = incidentsQuery.refetch;
 
   async function reportIncident() {
     if (!form.title.trim()) return;
@@ -144,7 +139,13 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
         </Sel>
       </div>
 
-      {loading ? (
+      {incidentsQuery.error ? (
+        <ErrorState
+          error={incidentsQuery.error}
+          onRetry={incidentsQuery.refetch}
+          message="Não foi possível ler os incidentes."
+        />
+      ) : incidentsQuery.loading ? (
         <Spinner />
       ) : !incidents.length ? (
         <Empty message="Sem incidentes." />

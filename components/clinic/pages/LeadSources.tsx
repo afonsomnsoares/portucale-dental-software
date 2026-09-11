@@ -1,10 +1,11 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   Badge,
   DataTable,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Inp,
@@ -14,6 +15,7 @@ import {
   Spinner,
   TD,
 } from '@/components/ui';
+import { useInvalidate, useQuery } from '@/hooks/useQuery';
 import type { LeadCaptureSource, LeadCaptureSourceWithToken } from '@/lib/types';
 
 // Fontes de captação de leads da própria clínica — a mesma página sem o seletor de
@@ -21,8 +23,6 @@ import type { LeadCaptureSource, LeadCaptureSourceWithToken } from '@/lib/types'
 // app/api/lead-sources só aceita ?tenantId= / body.tenantId de um super_admin.
 export default function ClinicLeadSourcesPage() {
   const { api } = useAuth();
-  const [sources, setSources] = useState<LeadCaptureSource[]>([]);
-  const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState('');
   const [saving, setSaving] = useState(false);
@@ -31,16 +31,9 @@ export default function ClinicLeadSourcesPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const rows = await api('/lead-sources').catch(() => []);
-    setSources(rows || []);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const sourcesQuery = useQuery<LeadCaptureSource[]>('/lead-sources');
+  const sources = sourcesQuery.data ?? [];
+  const invalidate = useInvalidate();
 
   async function create() {
     if (!label.trim()) return;
@@ -51,7 +44,7 @@ export default function ClinicLeadSourcesPage() {
         method: 'POST',
         body: { label: label.trim() },
       });
-      setSources((prev) => [row, ...prev]);
+      invalidate('/lead-sources');
       setCreateOpen(false);
       setLabel('');
       setRevealed(row);
@@ -65,11 +58,13 @@ export default function ClinicLeadSourcesPage() {
 
   async function toggleActive(source: LeadCaptureSource) {
     setBusyId(source.id);
-    const row = await api(`/lead-sources/${source.id}`, {
-      method: 'PUT',
-      body: { active: !source.active },
-    }).catch(() => null);
-    if (row) setSources((prev) => prev.map((s) => (s.id === row.id ? row : s)));
+    setError('');
+    try {
+      await api(`/lead-sources/${source.id}`, { method: 'PUT', body: { active: !source.active } });
+      invalidate('/lead-sources');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível mudar o estado da fonte.');
+    }
     setBusyId(null);
   }
 
@@ -97,7 +92,13 @@ export default function ClinicLeadSourcesPage() {
         }}
       />
 
-      {loading ? (
+      {sourcesQuery.error ? (
+        <ErrorState
+          error={sourcesQuery.error}
+          onRetry={sourcesQuery.refetch}
+          message="Não foi possível ler as fontes de angariação."
+        />
+      ) : sourcesQuery.loading ? (
         <Spinner />
       ) : !sources.length ? (
         <Empty message="Sem fontes de captação. Cria a primeira para começares a receber leads automaticamente." />

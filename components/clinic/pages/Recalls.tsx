@@ -12,6 +12,7 @@ import { useAuth } from '@/app/providers';
 import {
   DangerBtn,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Inp,
@@ -21,6 +22,7 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Patient, Recall } from '@/lib/types';
 
 const RECALL_TYPES = ['checkup', 'prophylaxis', 'follow-up', 'other'];
@@ -36,9 +38,7 @@ interface NewRecallForm {
 
 export default function Recalls() {
   const { api } = useAuth();
-  const [recalls, setRecalls] = useState<Recall[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
   const [_search, _setSearch] = useState('');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<NewRecallForm>({
@@ -52,18 +52,13 @@ export default function Recalls() {
   const [saving, setSaving] = useState(false);
   const [dueFilter, setDueFilter] = useState('30');
 
-  const loadRecalls = useCallback(async () => {
-    setLoading(true);
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + Number(dueFilter));
-    const r = await api(`/recalls?dueBefore=${dueDate.toISOString().slice(0, 10)}`).catch(() => []);
-    setRecalls(r || []);
-    setLoading(false);
-  }, [api, dueFilter]);
-
-  useEffect(() => {
-    loadRecalls();
-  }, [loadRecalls]);
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + Number(dueFilter));
+  const recallsQuery = useQuery<Recall[]>(`/recalls?dueBefore=${dueDate.toISOString().slice(0, 10)}`);
+  const recalls = recallsQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro chamavam `loadRecalls()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const loadRecalls = recallsQuery.refetch;
 
   const loadPatients = useCallback(async () => {
     const d = await api('/patients?q=').catch(() => []);
@@ -140,7 +135,13 @@ export default function Recalls() {
         </span>
       </div>
 
-      {loading ? (
+      {recallsQuery.error ? (
+        <ErrorState
+          error={recallsQuery.error}
+          onRetry={recallsQuery.refetch}
+          message="Não foi possível ler os recalls."
+        />
+      ) : recallsQuery.loading ? (
         <Spinner />
       ) : !recalls.length ? (
         <Empty message="Sem recalls em atraso neste período." />

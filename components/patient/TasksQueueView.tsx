@@ -1,7 +1,19 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { Badge, DangerBtn, DataTable, Empty, GhostBtn, PageHeader, Sel, Spinner, TD } from '@/components/ui';
+import {
+  AlertBanner,
+  Badge,
+  DangerBtn,
+  DataTable,
+  Empty,
+  GhostBtn,
+  PageHeader,
+  Sel,
+  Spinner,
+  TD,
+} from '@/components/ui';
+import { useInvalidate, useQuery } from '@/hooks/useQuery';
 import type { PatientTask, PatientTaskType } from '@/lib/types';
 
 interface TasksQueueViewProps {
@@ -19,26 +31,26 @@ const TYPE_LABELS: Record<PatientTaskType, string> = {
 };
 
 export default function TasksQueueView({ api, currentUserId }: TasksQueueViewProps) {
-  const [tasks, setTasks] = useState<PatientTask[]>([]);
-  const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState<'all' | 'mine' | 'unassigned'>('all');
   const [typeFilter, setTypeFilter] = useState<PatientTaskType | 'all'>('all');
   const [assigning, setAssigning] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const rows = await api('/patient-tasks?status=pending').catch(() => []);
-    setTasks(rows || []);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const tasksQuery = useQuery<PatientTask[]>('/patient-tasks?status=pending');
+  const tasks = tasksQuery.data ?? [];
+  // As escritas abaixo invalidam em vez de remendar o array local: o servidor
+  // decide quem fica com a tarefa (lib/taskRouting.ts) e devolve uma linha com
+  // campos que o cliente não sabe calcular.
+  const invalidate = useInvalidate();
+  const [erro, setErro] = useState('');
 
   async function setStatus(id: string, patch: { complete?: boolean; cancel?: boolean }) {
-    const row = await api(`/patient-tasks/${id}`, { method: 'PUT', body: patch }).catch(() => null);
-    if (row) setTasks((prev) => prev.filter((t) => t.id !== id));
+    setErro('');
+    try {
+      await api(`/patient-tasks/${id}`, { method: 'PUT', body: patch });
+      invalidate('/patient-tasks');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível atualizar a tarefa.');
+    }
   }
 
   // Item 11 — "distribuição de tarefas", manualmente accionada. O mesmo router que
@@ -46,9 +58,14 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
   // menos tarefas abertas. A tarefa continua na lista, agora com dono.
   async function autoAssign(id: string) {
     setAssigning(id);
-    const row = await api(`/patient-tasks/${id}`, { method: 'PUT', body: { autoAssign: true } }).catch(() => null);
+    setErro('');
+    try {
+      await api(`/patient-tasks/${id}`, { method: 'PUT', body: { autoAssign: true } });
+      invalidate('/patient-tasks');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível distribuir a tarefa.');
+    }
     setAssigning(null);
-    if (row) setTasks((prev) => prev.map((t) => (t.id === id ? row : t)));
   }
 
   const visible = tasks.filter((t) => {
@@ -63,6 +80,12 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
   return (
     <div>
       <PageHeader title="Tarefas" sub="Fila de tarefas e lembretes ligados a pacientes" />
+      {/* Concluir ou distribuir uma tarefa falhava sem dizer nada: a linha ficava
+          onde estava, e quem carregou não sabia se tinha sido ignorado ou recusado. */}
+      {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
+      {tasksQuery.error ? (
+        <AlertBanner type="danger">Não foi possível ler a fila de tarefas. {tasksQuery.error.message}</AlertBanner>
+      ) : null}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <Sel value={scope} onChange={(e) => setScope(e.target.value as typeof scope)} style={{ width: 200 }}>
           <option value="all">Todas</option>
@@ -83,7 +106,7 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
         </Sel>
       </div>
 
-      {loading ? (
+      {tasksQuery.loading ? (
         <Spinner />
       ) : !visible.length ? (
         <Empty message="Sem tarefas em aberto." />

@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, PageHeader, Spinner } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, Empty, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatDatePT, formatEUR } from '@/lib/constants';
 import type { Invoice } from '@/lib/types';
 
@@ -19,24 +19,13 @@ const STATUS_LABELS: Array<[value: string, label: string]> = [
 // ?tenantId= nenhum. Como esta cópia só monta em /dashboard/admin, o link para o detalhe
 // pode ser fixo — não precisa do basePathFor que a versão partilhada exigia.
 export default function ClinicInvoicesPage() {
-  const { api } = useAuth();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (status) params.set('status', status);
-    const qs = params.toString();
-    const res = await api(`/invoices${qs ? `?${qs}` : ''}`).catch(() => []);
-    setInvoices(res || []);
-    setLoading(false);
-  }, [api, status]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  const qs = params.toString();
+  const invoicesQuery = useQuery<Invoice[]>(`/invoices${qs ? `?${qs}` : ''}`);
+  const invoices = invoicesQuery.data ?? [];
 
   const totals = invoices.reduce(
     (acc, inv) => ({
@@ -93,7 +82,13 @@ export default function ClinicInvoicesPage() {
           </div>
         </div>
 
-        {loading ? (
+        {invoicesQuery.error ? (
+          <ErrorState
+            error={invoicesQuery.error}
+            onRetry={invoicesQuery.refetch}
+            message="Não foi possível ler as faturas."
+          />
+        ) : invoicesQuery.loading ? (
           <Spinner />
         ) : !invoices.length ? (
           <Empty message="Sem faturas para este filtro." />
