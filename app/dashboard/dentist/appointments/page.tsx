@@ -1,29 +1,20 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import DayCalendar from '@/components/DayCalendar';
-import { Badge, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Appointment } from '@/lib/types';
 
 export default function DentistAppointmentsPage() {
   const { api, user } = useAuth();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [date, setDate] = useState(today);
-  const [appts, setAppts] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    const res = await api(`/appointments?date=${date}&dentistId=${user?.id}`).catch(() => []);
-    const all = Array.isArray(res) ? res : [];
-    const mine = all.filter((a: Appointment) => a.dentist_id === user?.id);
-    setAppts(mine);
-    setLoading(false);
-  }, [api, date, user?.id]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const [erro, setErro] = useState('');
+  const apptsQuery = useQuery<Appointment[]>(user?.id ? `/appointments?date=${date}&dentistId=${user.id}` : null);
+  // A rota já filtra por dentista; o filtro local é a segunda linha, para o caso
+  // de uma resposta em cache de outro contexto.
+  const appts = (apptsQuery.data ?? []).filter((a) => a.dentist_id === user?.id);
 
   const label = new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -35,12 +26,18 @@ export default function DentistAppointmentsPage() {
   const highRisk = appts.filter((a) => (a.risk_score || 0) >= 60).length;
 
   async function handleStatusChange(aptId: string, status: string) {
-    await api(`/appointments/${aptId}/status`, { method: 'PUT', body: { status } }).catch(() => null);
-    setAppts((prev) => prev.map((a) => (a.id === aptId ? { ...a, status } : a)));
+    setErro('');
+    try {
+      await api(`/appointments/${aptId}/status`, { method: 'PUT', body: { status } });
+      apptsQuery.refetch();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível mudar o estado da consulta.');
+    }
   }
 
   return (
     <div>
+      {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
       <PageHeader title="As Minhas Consultas" sub={label}>
         <input
           type="date"
@@ -64,7 +61,7 @@ export default function DentistAppointmentsPage() {
           <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-critical)' }}>{highRisk}</div>
         </div>
       </div>
-      {loading ? (
+      {apptsQuery.loading ? (
         <Spinner />
       ) : (
         <>

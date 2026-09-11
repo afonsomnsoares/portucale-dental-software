@@ -1,7 +1,7 @@
 'use client';
 import { ArrowLeft, Check } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { type ChangeEvent, type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, type ReactNode, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
@@ -15,6 +15,7 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Invoice } from '@/lib/types';
 
 const PAY_METHODS = [
@@ -29,8 +30,7 @@ export default function InvoiceDetailPage() {
   const { api } = useAuth();
   const params = useParams();
   const router = useRouter();
-  const [inv, setInv] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
+
   const [payModal, setPayModal] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('cash');
@@ -38,17 +38,10 @@ export default function InvoiceDetailPage() {
   const [err, setErr] = useState('');
   const [success, setSuccess] = useState('');
 
-  const load = useCallback(async () => {
-    const id = params?.id;
-    if (!id) return;
-    const res = await api(`/invoices/${id}`).catch(() => null);
-    setInv(res);
-    setLoading(false);
-  }, [api, params?.id]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const id = params?.id;
+  const invQuery = useQuery<Invoice>(id ? `/invoices/${id}` : null);
+  const inv = invQuery.data ?? null;
+  const load = invQuery.refetch;
 
   async function handlePay() {
     if (!inv) return;
@@ -69,7 +62,10 @@ export default function InvoiceDetailPage() {
     });
     setSaving(false);
     if (res) {
-      setInv(res);
+      // Revalida em vez de aceitar o corpo da resposta como a fatura completa:
+      // registar um pagamento muda o saldo e o estado, e a linha que conta é a
+      // que ficou na base de dados.
+      load();
       setPayModal(false);
       setPayAmount('');
       setPayMethod('cash');
@@ -90,7 +86,7 @@ export default function InvoiceDetailPage() {
   const items = inv?.items || [];
   const balance = inv ? Math.max(0, Number(inv.amount) - Number(inv.paid)) : 0;
 
-  if (loading) return <Spinner />;
+  if (invQuery.loading) return <Spinner />;
   if (!inv) {
     return (
       <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>

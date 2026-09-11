@@ -52,7 +52,12 @@ export default function ReceptionLeadsPage() {
   }
 
   async function updateStatus(id: string, status: string) {
-    await api('/leads', { method: 'PATCH', body: { id, status } }).catch(() => null);
+    setError('');
+    try {
+      await api('/leads', { method: 'PATCH', body: { id, status } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível mudar o estado do contacto.');
+    }
     load();
   }
 

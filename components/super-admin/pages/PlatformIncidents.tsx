@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
 import { Badge, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Run {
   id: string;
@@ -31,19 +30,10 @@ interface Insight {
 // tarefa a falhar em cinco clínicas é UM incidente, não cinco), mais o que os agentes
 // classificaram como crítico.
 export default function PlatformIncidents() {
-  const { api } = useAuth();
-  const [runs, setRuns] = useState<Run[] | null>(null);
-  const [critical, setCritical] = useState<Insight[]>([]);
-
-  useEffect(() => {
-    Promise.all([
-      api('/platform/agent-runs?status=failed&limit=200').catch(() => ({ runs: [] })),
-      api('/platform/insights?severity=critical').catch(() => []),
-    ]).then(([r, i]) => {
-      setRuns(r.runs || []);
-      setCritical(i || []);
-    });
-  }, [api]);
+  const runsQuery = useQuery<{ runs: Run[] }>('/platform/agent-runs?status=failed&limit=200');
+  const criticalQuery = useQuery<Insight[]>('/platform/insights?severity=critical');
+  const runs = runsQuery.data ? runsQuery.data.runs || [] : null;
+  const critical = criticalQuery.data ?? [];
 
   if (!runs) return <Spinner />;
 

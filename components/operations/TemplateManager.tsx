@@ -88,7 +88,12 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
 
   async function toggleActive(t: ChecklistTemplate) {
     setBusyId(t.id);
-    await api(`/checklist-templates/${t.id}`, { method: 'PUT', body: { active: !t.active } }).catch(() => null);
+    setError('');
+    try {
+      await api(`/checklist-templates/${t.id}`, { method: 'PUT', body: { active: !t.active } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível mudar o estado do modelo.');
+    }
     setBusyId(null);
     load();
   }

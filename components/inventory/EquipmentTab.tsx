@@ -88,7 +88,12 @@ export default function EquipmentTab({ api }: EquipmentTabProps) {
   }
 
   async function toggleActive(it: ClinicEquipment) {
-    await api(`/equipment/${it.id}`, { method: 'PUT', body: { active: !it.active } }).catch(() => null);
+    setError('');
+    try {
+      await api(`/equipment/${it.id}`, { method: 'PUT', body: { active: !it.active } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível mudar o estado do equipamento.');
+    }
     load();
   }
 

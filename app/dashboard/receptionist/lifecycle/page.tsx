@@ -28,7 +28,12 @@ export default function LifecycleReceptionistPage() {
 
   async function updateLeadStatus(lead: Lead, status: 'converted' | 'lost') {
     setBusyId(lead.id);
-    await api('/leads', { method: 'PATCH', body: { id: lead.id, status } }).catch(() => null);
+    setErr('');
+    try {
+      await api('/leads', { method: 'PATCH', body: { id: lead.id, status } });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Não foi possível mudar o estado do contacto.');
+    }
     setBusyId(null);
     load();
   }

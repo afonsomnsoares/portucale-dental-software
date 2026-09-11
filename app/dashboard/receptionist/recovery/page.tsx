@@ -79,7 +79,12 @@ export default function RecoveryReceptionistPage() {
   async function completeRecall(row: RecoveryRow) {
     if (!row.id) return;
     setBusyId(row.id);
-    await api(`/recalls/${row.id}`, { method: 'PUT', body: { complete: true } }).catch(() => null);
+    setErr('');
+    try {
+      await api(`/recalls/${row.id}`, { method: 'PUT', body: { complete: true } });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Não foi possível marcar este recall como feito.');
+    }
     setBusyId(null);
     load();
   }

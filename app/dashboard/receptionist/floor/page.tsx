@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers';
 import OperatoryPanel from '@/components/receptionist/OperatoryPanel';
 import WaitingRoomPanel from '@/components/receptionist/WaitingRoomPanel';
 import { FormField, GhostBtn, Inp, Modal, PageHeader, PrimaryBtn, SecondaryBtn, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { useSSE } from '@/hooks/useSSE';
 import type { Appointment } from '@/lib/types';
 
@@ -14,24 +15,16 @@ function toMins(t = '00:00') {
 
 export default function LiveFloorPage() {
   const { api, settings, user } = useAuth();
-  const [appts, setAppts] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const apptsQuery = useQuery<Appointment[]>('/appointments');
+  const appts = apptsQuery.data ?? [];
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [syncedAt, setSyncedAt] = useState<Date | null>(null);
   const [closing, setClosing] = useState<{ apt: Appointment; amount: string; error: string } | null>(null);
 
-  const load = useCallback(async () => {
-    const isInitial = syncedAt == null;
-    if (isInitial) setLoading(true);
-    const a = await api('/appointments').catch(() => []);
-    setAppts(a || []);
+  const load = useCallback(() => {
+    apptsQuery.refetch();
     setSyncedAt(new Date());
-    if (isInitial) setLoading(false);
-  }, [api, syncedAt]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  }, [apptsQuery]);
 
   // ─── Tempo real ─────────────────────────────────────────────────────────
   // Esta página recarregava a agenda inteira de 5 em 5 segundos. Numa receção com
@@ -74,10 +67,8 @@ export default function LiveFloorPage() {
     try {
       const body: { status: string; amount?: string } = { status: nextStatus };
       if (amount) body.amount = amount;
-      const updated = await api(`/appointments/${apt.id}/status`, { method: 'PUT', body });
-      if (updated) {
-        setAppts((prev) => prev.map((a) => (a.id === apt.id ? { ...a, ...updated } : a)));
-      }
+      await api(`/appointments/${apt.id}/status`, { method: 'PUT', body });
+      apptsQuery.refetch();
       return true;
     } catch (e) {
       setClosing((c) => (c ? { ...c, error: e instanceof Error ? e.message : 'Não foi possível guardar.' } : c));
@@ -119,7 +110,7 @@ export default function LiveFloorPage() {
     return Array.from({ length: n }, (_, i) => i + 1);
   }, [user?.operatories]);
 
-  if (loading) return <Spinner />;
+  if (apptsQuery.loading) return <Spinner />;
 
   return (
     <div>
