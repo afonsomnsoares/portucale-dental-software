@@ -1,11 +1,12 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useCallback, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import ShiftHandoffPanel from '@/components/team/ShiftHandoffPanel';
 import {
   AlertBanner,
   Badge,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Modal,
@@ -16,6 +17,7 @@ import {
   Tabs,
   Textarea,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { StaffTimeOff, StaffTimeOffType, TeamRosterEntry } from '@/lib/types';
 
 interface TeamRosterViewProps {
@@ -40,28 +42,21 @@ const COVERAGE_ROLE_LABEL: Record<string, string> = { dentist: 'dentista', recep
 
 export default function TeamRosterView({ api, currentUserId }: TeamRosterViewProps) {
   const [tab, setTab] = useState('today');
-  const [roster, setRoster] = useState<TeamRosterEntry[]>([]);
-  const [coverageWarnings, setCoverageWarnings] = useState<string[]>([]);
-  const [myRequests, setMyRequests] = useState<StaffTimeOff[]>([]);
-  const [loading, setLoading] = useState(true);
+  const rosterQuery = useQuery<{ rows: TeamRosterEntry[]; coverageWarnings: string[] }>('/team-roster');
+  const timeOffQuery = useQuery<StaffTimeOff[]>('/staff-time-off');
+  const roster = rosterQuery.data?.rows ?? [];
+  const coverageWarnings = rosterQuery.data?.coverageWarnings ?? [];
+  const myRequests = timeOffQuery.data ?? [];
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [r, t] = await Promise.all([api('/team-roster').catch(() => null), api('/staff-time-off').catch(() => [])]);
-    setRoster(r?.rows || []);
-    setCoverageWarnings(r?.coverageWarnings || []);
-    setMyRequests(t || []);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = useCallback(() => {
+    rosterQuery.refetch();
+    timeOffQuery.refetch();
+  }, [rosterQuery, timeOffQuery]);
 
   async function requestTimeOff() {
     if (!form.startDate || !form.endDate) return;
@@ -81,12 +76,19 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
 
   async function cancelRequest(id: string) {
     setBusyId(id);
-    await api(`/staff-time-off/${id}`, { method: 'PUT', body: { status: 'cancelled' } }).catch(() => null);
+    setError('');
+    try {
+      await api(`/staff-time-off/${id}`, { method: 'PUT', body: { status: 'cancelled' } });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível cancelar o pedido.');
+    }
     setBusyId(null);
-    load();
   }
 
-  if (loading) return <Spinner />;
+  if (rosterQuery.error)
+    return <ErrorState error={rosterQuery.error} onRetry={load} message="Não foi possível ler a escala da equipa." />;
+  if (rosterQuery.loading) return <Spinner />;
 
   return (
     <div>

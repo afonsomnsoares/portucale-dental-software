@@ -7,9 +7,10 @@
 // O dentista mantém a sua própria página: a dele é centrada no doente que tem à frente,
 // esta é centrada na lista. São 29% de código em comum — trabalho genuinamente diferente
 // sobre os mesmos dados, e fundi-las daria um ecrã pior para ambos.
-import { type ChangeEvent, type FormEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, type FormEvent, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
+  AlertBanner,
   DangerBtn,
   Empty,
   ErrorState,
@@ -38,7 +39,9 @@ interface NewRecallForm {
 
 export default function Recalls() {
   const { api } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const patientsQuery = useQuery<Patient[]>('/patients?q=');
+  const patients = patientsQuery.data ?? [];
+  const [erroEscrita, setErroEscrita] = useState('');
   const [_search, _setSearch] = useState('');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<NewRecallForm>({
@@ -59,15 +62,6 @@ export default function Recalls() {
   // Alias do refetch: as escritas deste ficheiro chamavam `loadRecalls()` depois de
   // gravar, e continuam a poder fazê-lo.
   const loadRecalls = recallsQuery.refetch;
-
-  const loadPatients = useCallback(async () => {
-    const d = await api('/patients?q=').catch(() => []);
-    setPatients(d || []);
-  }, [api]);
-
-  useEffect(() => {
-    loadPatients();
-  }, [loadPatients]);
 
   function patientName(id: string) {
     const p = patients.find((x) => x.id === id);
@@ -98,21 +92,36 @@ export default function Recalls() {
       nextDue: form.nextDue,
       notes: form.notes || null,
     };
-    await api('/recalls', { method: 'POST', body }).catch(() => null);
+    setErroEscrita('');
+    try {
+      await api('/recalls', { method: 'POST', body });
+      setModal(false);
+      setForm({ patientId: '', recallType: 'checkup', intervalMonths: 6, lastDone: '', nextDue: '', notes: '' });
+      loadRecalls();
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível criar o recall.');
+    }
     setSaving(false);
-    setModal(false);
-    setForm({ patientId: '', recallType: 'checkup', intervalMonths: 6, lastDone: '', nextDue: '', notes: '' });
-    loadRecalls();
   }
 
   async function handleComplete(id: string) {
-    await api(`/recalls/${id}`, { method: 'PUT', body: { complete: true } }).catch(() => null);
-    loadRecalls();
+    setErroEscrita('');
+    try {
+      await api(`/recalls/${id}`, { method: 'PUT', body: { complete: true } });
+      loadRecalls();
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível marcar o recall como feito.');
+    }
   }
 
   async function handleDeactivate(id: string) {
-    await api(`/recalls/${id}`, { method: 'PUT', body: { active: false } }).catch(() => null);
-    loadRecalls();
+    setErroEscrita('');
+    try {
+      await api(`/recalls/${id}`, { method: 'PUT', body: { active: false } });
+      loadRecalls();
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível desativar o recall.');
+    }
   }
 
   return (
@@ -120,6 +129,7 @@ export default function Recalls() {
       <PageHeader title="Recalls de doentes" sub="Convocatórias periódicas de consulta e higiene">
         <PrimaryBtn onClick={() => setModal(true)}>+ Novo recall</PrimaryBtn>
       </PageHeader>
+      {erroEscrita ? <AlertBanner type="danger">{erroEscrita}</AlertBanner> : null}
 
       <div className="card p-4 mb-5 flex items-center gap-4">
         <span className="section-label">Prazo até</span>

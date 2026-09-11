@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { Badge, Empty, PrimaryBtn, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, Empty, ErrorState, PrimaryBtn, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { ChecklistRun, ChecklistTemplate } from '@/lib/types';
 
 interface ChecklistPanelProps {
@@ -17,27 +18,19 @@ const TYPE_LABEL: Record<string, string> = { opening: 'Abertura', closing: 'Fech
 // as-is by admin/receptionist/dentist — running a checklist needs no special permission
 // (see app/api/checklist-runs/route.ts), only managing templates does.
 export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
-  const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
-  const [runs, setRuns] = useState<ChecklistRun[]>([]);
-  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [erro, setErro] = useState('');
 
   const qs = tenantId ? `?tenantId=${tenantId}` : '';
+  const templatesQuery = useQuery<ChecklistTemplate[]>(`/checklist-templates${qs}`);
+  const runsQuery = useQuery<ChecklistRun[]>(`/checklist-runs${qs}`);
+  const templates = templatesQuery.data ?? [];
+  const runs = runsQuery.data ?? [];
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [t, r] = await Promise.all([
-      api(`/checklist-templates${qs}`).catch(() => []),
-      api(`/checklist-runs${qs}`).catch(() => []),
-    ]);
-    setTemplates(t || []);
-    setRuns(r || []);
-    setLoading(false);
-  }, [api, qs]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = useCallback(() => {
+    templatesQuery.refetch();
+    runsQuery.refetch();
+  }, [templatesQuery, runsQuery]);
 
   async function startRun(templateId: string) {
     setBusyId(templateId);
@@ -52,12 +45,21 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
 
   async function toggle(run: ChecklistRun, index: number, checked: boolean) {
     setBusyId(run.id);
-    await api(`/checklist-runs/${run.id}`, { method: 'PUT', body: { index, checked } }).catch(() => null);
+    setErro('');
+    try {
+      await api(`/checklist-runs/${run.id}`, { method: 'PUT', body: { index, checked } });
+      load();
+    } catch (e) {
+      // Um visto numa checklist que não fica gravado é pior do que não existir:
+      // a caixa fica marcada no ecrã e o passo conta como feito.
+      setErro(e instanceof Error ? e.message : 'Não foi possível registar este passo.');
+    }
     setBusyId(null);
-    load();
   }
 
-  if (loading) return <Spinner />;
+  if (templatesQuery.error)
+    return <ErrorState error={templatesQuery.error} onRetry={load} message="Não foi possível ler as checklists." />;
+  if (templatesQuery.loading) return <Spinner />;
 
   if (!templates.length) {
     return <Empty message="Sem checklists configuradas." />;
@@ -65,6 +67,7 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
       {templates.map((t) => {
         const run = runs.find((r) => r.template_id === t.id);
         const checkedCount = run ? run.items.filter((i) => i.checked).length : 0;

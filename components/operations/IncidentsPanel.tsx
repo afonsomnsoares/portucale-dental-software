@@ -95,32 +95,47 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
 
   async function assign(incident: Incident, userId: string) {
     setBusyId(incident.id);
-    await api(`/incidents/${incident.id}`, {
-      method: 'PUT',
-      body: { assignedTo: userId || null, status: incident.status === 'open' ? 'in_progress' : incident.status },
-    }).catch(() => null);
+    setError('');
+    try {
+      await api(`/incidents/${incident.id}`, {
+        method: 'PUT',
+        body: { assignedTo: userId || null, status: incident.status === 'open' ? 'in_progress' : incident.status },
+      });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível atribuir o incidente.');
+    }
     setBusyId(null);
-    load();
   }
 
   async function setStatus(incident: Incident, status: IncidentStatus) {
     setBusyId(incident.id);
-    await api(`/incidents/${incident.id}`, { method: 'PUT', body: { status } }).catch(() => null);
+    setError('');
+    try {
+      await api(`/incidents/${incident.id}`, { method: 'PUT', body: { status } });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível mudar o estado do incidente.');
+    }
     setBusyId(null);
-    load();
   }
 
   async function resolve() {
     if (!resolveTarget) return;
     setBusyId(resolveTarget.id);
-    await api(`/incidents/${resolveTarget.id}`, {
-      method: 'PUT',
-      body: { status: 'resolved', resolutionNotes },
-    }).catch(() => null);
+    setError('');
+    try {
+      await api(`/incidents/${resolveTarget.id}`, {
+        method: 'PUT',
+        body: { status: 'resolved', resolutionNotes },
+      });
+      setResolveTarget(null);
+      setResolutionNotes('');
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível resolver o incidente.');
+    }
     setBusyId(null);
-    setResolveTarget(null);
-    setResolutionNotes('');
-    load();
   }
 
   return (

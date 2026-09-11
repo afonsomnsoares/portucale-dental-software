@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import { AlertBanner, Badge, Empty, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { AgentInsight, AgentStatus } from '@/lib/types/agent';
 
@@ -15,34 +16,28 @@ import type { AgentInsight, AgentStatus } from '@/lib/types/agent';
 // não existe é como se perdeu a Imagiologia (ver o commit 353c129).
 export default function ClinicAgentsPage() {
   const { api } = useAuth();
-  const [agents, setAgents] = useState<AgentStatus[]>([]);
-  const [insights, setInsights] = useState<AgentInsight[]>([]);
-  const [loading, setLoading] = useState(true);
+  const agentsQuery = useQuery<{ agents: AgentStatus[] }>('/agents');
+  const insightsQuery = useQuery<AgentInsight[]>('/agent-insights');
+  const agents = agentsQuery.data?.agents ?? [];
+  const insights = insightsQuery.data ?? [];
   const [err, setErr] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setErr('');
-    const [res, ins] = await Promise.all([
-      api('/agents').catch((e) => {
-        setErr(e instanceof Error ? e.message : 'Falha ao carregar');
-        return null;
-      }),
-      api('/agent-insights').catch(() => []),
-    ]);
-    setAgents(res?.agents || []);
-    setInsights(ins || []);
-    setLoading(false);
-  }, [api]);
+  const load = useCallback(() => {
+    agentsQuery.refetch();
+    insightsQuery.refetch();
+  }, [agentsQuery, insightsQuery]);
 
   async function resolveInsight(id: string) {
-    await api('/agent-insights', { method: 'PATCH', body: { id } }).catch(() => null);
-    load();
+    setErr('');
+    try {
+      await api('/agent-insights', { method: 'PATCH', body: { id } });
+      load();
+    } catch (e) {
+      // Dar um insight por tratado sem que fique gravado fá-lo reaparecer na
+      // próxima leitura, como se ninguém lhe tivesse tocado.
+      setErr(e instanceof Error ? e.message : 'Não foi possível dar este alerta por tratado.');
+    }
   }
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const comRegisto = agents.filter((a) => a.lastRun).length;
 
@@ -76,7 +71,7 @@ export default function ClinicAgentsPage() {
         </div>
       )}
 
-      {loading ? (
+      {agentsQuery.loading ? (
         <div className="card p-5">
           <Spinner />
         </div>

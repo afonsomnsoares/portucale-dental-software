@@ -1,5 +1,5 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useCallback, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import {
   AlertBanner,
@@ -13,6 +13,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { ShiftHandoff, ShiftHandoffDraft, ShiftLabel, TeamRosterEntry } from '@/lib/types';
 
 interface ShiftHandoffPanelProps {
@@ -29,9 +30,14 @@ const SHIFT_LABEL: Record<ShiftLabel, string> = {
 };
 
 export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPanelProps) {
-  const [handoffs, setHandoffs] = useState<ShiftHandoff[]>([]);
-  const [colleagues, setColleagues] = useState<TeamRosterEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const handoffsQuery = useQuery<ShiftHandoff[]>('/shift-handoffs');
+  // /team-roster, não /users: este último exige 'users:manage' (só admin), e quem
+  // faz turnos — rececionista e dentista — ficaria sem lista de colegas nenhuma.
+  // O roster já é exatamente "quem trabalha nesta clínica" e está aberto a toda a
+  // equipa (ver app/api/team-roster/route.ts).
+  const rosterQuery = useQuery<{ rows: TeamRosterEntry[] }>('/team-roster');
+  const handoffs = handoffsQuery.data ?? [];
+  const colleagues = (rosterQuery.data?.rows ?? []).filter((u) => u.userId !== currentUserId);
   const [composer, setComposer] = useState(false);
   const [draft, setDraft] = useState<ShiftHandoffDraft | null>(null);
   const [items, setItems] = useState<string[]>([]);
@@ -42,34 +48,25 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    // /team-roster, não /users: este último exige 'users:manage' (só admin), e quem
-    // faz turnos — rececionista e dentista — ficaria sem lista de colegas nenhuma.
-    // O roster já é exatamente "quem trabalha nesta clínica" e está aberto a toda a
-    // equipa (ver app/api/team-roster/route.ts).
-    const [rows, roster] = await Promise.all([
-      api('/shift-handoffs').catch(() => []),
-      api('/team-roster').catch(() => null),
-    ]);
-    setHandoffs(rows || []);
-    setColleagues((roster?.rows || []).filter((u: TeamRosterEntry) => u.userId !== currentUserId));
-    setLoading(false);
-  }, [api, currentUserId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = useCallback(() => {
+    handoffsQuery.refetch();
+    rosterQuery.refetch();
+  }, [handoffsQuery, rosterQuery]);
 
   async function openComposer() {
     setError('');
     setBusy(true);
-    const d = await api('/shift-handoffs/draft').catch(() => null);
-    setBusy(false);
-    if (!d) {
-      setError('Não foi possível preparar o rascunho.');
+    let d: ShiftHandoffDraft;
+    try {
+      d = await api('/shift-handoffs/draft');
+    } catch (e) {
+      // A frase do servidor em vez da genérica: a preparação do rascunho lê a
+      // agenda do turno, e o motivo de falhar interessa a quem está a sair.
+      setError(e instanceof Error ? e.message : 'Não foi possível preparar o rascunho.');
+      setBusy(false);
       return;
     }
+    setBusy(false);
     setDraft(d);
     setItems(d.items || []);
     setShiftLabel(d.shiftLabel || 'other');
@@ -126,7 +123,7 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
     }
   }
 
-  if (loading) return <Spinner />;
+  if (handoffsQuery.loading) return <Spinner />;
 
   const openForMe = handoffs.filter(
     (h) => h.status === 'open' && h.from_user_id !== currentUserId && (!h.to_user_id || h.to_user_id === currentUserId),
