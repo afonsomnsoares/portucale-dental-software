@@ -18,7 +18,7 @@ export const SERVICE_WARN_DAYS = 14;
 function daysBetween(from: string, to: Date): number {
   const start = new Date(`${from}T00:00:00`).getTime();
   if (Number.isNaN(start)) return Number.NaN;
-  const end = new Date(to.toISOString().slice(0, 10) + 'T00:00:00').getTime();
+  const end = new Date(`${to.toISOString().slice(0, 10)}T00:00:00`).getTime();
   return Math.round((end - start) / 86400000);
 }
 
