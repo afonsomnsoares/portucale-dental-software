@@ -307,7 +307,7 @@ export function DangerBtn({ children, onClick, disabled, className = '', style =
   );
 }
 
-export function Inp({ style = {}, className = '', ...props }) {
+export function Inp({ style = {}, className = '', ...props }: ComponentProps<'input'>) {
   return <input className={`input ${className}`} style={style} {...props} />;
 }
 export function Sel({ children, style = {}, className = '', ...props }: ComponentProps<'select'>) {
@@ -317,7 +317,7 @@ export function Sel({ children, style = {}, className = '', ...props }: Componen
     </select>
   );
 }
-export function Textarea({ style = {}, className = '', ...props }) {
+export function Textarea({ style = {}, className = '', ...props }: ComponentProps<'textarea'>) {
   return (
     <textarea className={`input ${className}`} style={{ resize: 'vertical', minHeight: 80, ...style }} {...props} />
   );

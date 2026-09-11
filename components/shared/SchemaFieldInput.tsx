@@ -35,6 +35,12 @@ export default function SchemaFieldInput({
   onChange: (v: unknown) => void;
 }) {
   const t = String(field.field_type || 'string');
+  const asStr = (v: unknown): string => (v == null ? '' : String(v));
+  const asNum = (v: unknown): number | string => {
+    if (v == null) return '';
+    const n = Number(v);
+    return Number.isFinite(n) ? n : '';
+  };
   if (t === 'boolean') {
     return (
       <Sel value={String(!!value)} onChange={(e) => onChange(e.target.value === 'true')}>
@@ -46,8 +52,8 @@ export default function SchemaFieldInput({
   if (t === 'enum') {
     const opts = fieldOptions(field);
     return (
-      <Sel value={String(value ?? '')} onChange={(e) => onChange(e.target.value)}>
-        <option value="">— Select —</option>
+      <Sel value={asStr(value)} onChange={(e) => onChange(e.target.value)}>
+        <option value="">— Selecionar —</option>
         {opts.map((o) => (
           <option key={String(o)} value={String(o)}>
             {String(o)}
@@ -60,7 +66,7 @@ export default function SchemaFieldInput({
     return (
       <Inp
         type="number"
-        value={value ?? ''}
+        value={asNum(value)}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
       />
     );
@@ -70,14 +76,14 @@ export default function SchemaFieldInput({
       <Inp
         type="number"
         step="0.01"
-        value={value ?? ''}
+        value={asNum(value)}
         onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
       />
     );
   }
   return (
     <Inp
-      value={value ?? ''}
+      value={asStr(value)}
       onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
       placeholder={t}
     />

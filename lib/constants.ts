@@ -3,6 +3,8 @@
 // em cada um dos sítios: o formulário deixava submeter qualquer password não-vazia e só o
 // servidor recusava, pelo que a pessoa preenchia tudo e levava com um 400 no fim.
 export const MIN_PASSWORD_LENGTH = 10;
+export const BCRYPT_COST = 10;
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days in seconds
 
 // Apontam para as variáveis que o next/font define em app/layout.tsx. Antes
 // nomeavam 'DM Sans' e 'Bricolage Grotesque', que não são carregadas em lado
