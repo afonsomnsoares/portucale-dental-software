@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
   Badge,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Inp,
@@ -15,6 +16,7 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Invoice, Patient } from '@/lib/types';
 
 interface Dentist {
@@ -43,10 +45,7 @@ const STATUS_FILTERS = [
 
 export default function InvoicesPage() {
   const { api } = useAuth();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [dentists, setDentists] = useState<Dentist[]>([]);
-  const [loading, setLoading] = useState(true);
+
   const [status, setStatus] = useState('');
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,23 +61,18 @@ export default function InvoicesPage() {
     items: '',
   });
 
-  const load = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (status) params.set('status', status);
-    const [inv, pat, den] = await Promise.all([
-      api(`/invoices?${params.toString()}`).catch(() => []),
-      api('/patients').catch(() => []),
-      api('/dentists').catch(() => []),
-    ]);
-    setInvoices(inv || []);
-    setPatients(pat || []);
-    setDentists(den || []);
-    setLoading(false);
-  }, [api, status]);
+  const invoiceParams = new URLSearchParams();
+  if (status) invoiceParams.set('status', status);
+  const invoicesQuery = useQuery<Invoice[]>(`/invoices?${invoiceParams.toString()}`);
+  // Doentes e dentistas alimentam o formulário de emissão, e não dependem do
+  // filtro de estado — mudar o filtro deixa de os voltar a pedir.
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const dentistsQuery = useQuery<Dentist[]>('/dentists');
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const invoices = invoicesQuery.data ?? [];
+  const patients = patientsQuery.data ?? [];
+  const dentists = dentistsQuery.data ?? [];
+  const load = invoicesQuery.refetch;
 
   const totals = useMemo(() => {
     return invoices.reduce(
@@ -156,7 +150,15 @@ export default function InvoicesPage() {
     return dt.toLocaleDateString('pt-PT', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  if (loading) return <Spinner />;
+  if (invoicesQuery.error)
+    return (
+      <ErrorState
+        error={invoicesQuery.error}
+        onRetry={invoicesQuery.refetch}
+        message="Não foi possível ler as faturas."
+      />
+    );
+  if (invoicesQuery.loading) return <Spinner />;
 
   return (
     <div>

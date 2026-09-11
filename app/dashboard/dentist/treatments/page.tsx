@@ -1,8 +1,9 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import TreatmentTable from '@/components/TreatmentTable';
 import {
+  AlertBanner,
   Badge,
   FormField,
   GhostBtn,
@@ -14,6 +15,7 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Patient, Treatment } from '@/lib/types';
 
 interface NewTreatmentForm {
@@ -34,11 +36,13 @@ const PHASES = [
 export default function DentistTreatmentsPage() {
   const { api, settings } = useAuth();
   const TANOMD_CODES = settings?.TANOMD_CODES || [];
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const treatmentsQuery = useQuery<Treatment[]>('/treatments');
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const treatments = treatmentsQuery.data ?? [];
+  const patients = patientsQuery.data ?? [];
+  const [erro, setErro] = useState('');
   const [selPat, setSelPat] = useState('all');
   const [viewMode, setViewMode] = useState('roadmap');
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<NewTreatmentForm>({
@@ -50,46 +54,51 @@ export default function DentistTreatmentsPage() {
     notes: '',
   });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [tr, pts] = await Promise.all([api('/treatments').catch(() => []), api('/patients').catch(() => [])]);
-    setTreatments(tr || []);
-    setPatients(pts || []);
-    setLoading(false);
-  }, [api]);
-  useEffect(() => {
-    load();
-  }, [load]);
-
   async function create() {
     if (!form.patientId || !form.description) return;
     setSaving(true);
-    const t = await api('/treatments', {
-      method: 'POST',
-      body: {
-        patientId: form.patientId,
-        treatmentCode: form.treatmentCode || null,
-        description: form.description,
-        phase: Number(form.phase),
-        fee: Number(form.fee) || 0,
-        notes: form.notes,
-      },
-    }).catch(() => null);
-    if (t) {
-      setTreatments((prev) => [t, ...prev]);
+    setErro('');
+    try {
+      await api('/treatments', {
+        method: 'POST',
+        body: {
+          patientId: form.patientId,
+          treatmentCode: form.treatmentCode || null,
+          description: form.description,
+          phase: Number(form.phase),
+          fee: Number(form.fee) || 0,
+          notes: form.notes,
+        },
+      });
+      treatmentsQuery.refetch();
       setModal(false);
       setForm({ patientId: '', treatmentCode: '', description: '', phase: '1', fee: '', notes: '' });
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível registar o tratamento.');
     }
     setSaving(false);
   }
 
   async function update(id: string, body: Record<string, unknown>) {
-    const u = await api(`/treatments/${id}`, { method: 'PUT', body }).catch(() => null);
-    if (u) setTreatments((prev) => prev.map((t) => (t.id === id ? u : t)));
+    setErro('');
+    try {
+      await api(`/treatments/${id}`, { method: 'PUT', body });
+      treatmentsQuery.refetch();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível atualizar o tratamento.');
+    }
   }
   async function del(id: string) {
-    await api(`/treatments/${id}`, { method: 'DELETE' }).catch(() => null);
-    setTreatments((prev) => prev.filter((t) => t.id !== id));
+    setErro('');
+    try {
+      await api(`/treatments/${id}`, { method: 'DELETE' });
+      treatmentsQuery.refetch();
+    } catch (e) {
+      // Este era o pior dos três: apagava a linha do ecrã SEM esperar pela
+      // resposta e sem a repor se o servidor recusasse. O tratamento continuava
+      // na base de dados e desaparecia da vista de quem o apagou.
+      setErro(e instanceof Error ? e.message : 'Não foi possível apagar o tratamento.');
+    }
   }
 
   const visible = selPat === 'all' ? treatments : treatments.filter((t) => t.patient_id === selPat);
@@ -127,6 +136,10 @@ export default function DentistTreatmentsPage() {
           ))}
         </div>
       </PageHeader>
+      {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
+      {treatmentsQuery.error ? (
+        <AlertBanner type="danger">Não foi possível ler os tratamentos. {treatmentsQuery.error.message}</AlertBanner>
+      ) : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         <MetricCard
@@ -163,7 +176,7 @@ export default function DentistTreatmentsPage() {
         {selPat !== 'all' && <GhostBtn onClick={() => setSelPat('all')}>Limpar</GhostBtn>}
       </div>
 
-      {loading ? (
+      {treatmentsQuery.loading ? (
         <Spinner />
       ) : viewMode === 'roadmap' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>

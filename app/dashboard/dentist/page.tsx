@@ -1,39 +1,34 @@
 'use client';
 import { Check } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/app/providers';
 import DayCalendar from '@/components/DayCalendar';
 import DailyBriefingPanel from '@/components/patient/DailyBriefingPanel';
-import { MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Appointment, DailyBriefingRow, Treatment } from '@/lib/types';
 
 export default function DentistDashboard() {
   const { api, user } = useAuth();
-  const [appts, setAppts] = useState<Appointment[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [briefing, setBriefing] = useState<DailyBriefingRow[]>([]);
-  const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [erro, setErro] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [a, t, b] = await Promise.all([
-      api(`/appointments?date=${date}`).catch(() => []),
-      api('/treatments').catch(() => []),
-      api(`/daily-briefing?date=${date}`).catch(() => null),
-    ]);
-    setAppts(a || []);
-    setTreatments(t || []);
-    setBriefing(b?.rows || []);
-    setLoading(false);
-  }, [api, date]);
-  useEffect(() => {
-    load();
-  }, [load]);
+  const apptsQuery = useQuery<Appointment[]>(`/appointments?date=${date}`);
+  const treatmentsQuery = useQuery<Treatment[]>('/treatments');
+  const briefingQuery = useQuery<{ rows: DailyBriefingRow[] }>(`/daily-briefing?date=${date}`);
+
+  const appts = apptsQuery.data ?? [];
+  const treatments = treatmentsQuery.data ?? [];
+  const briefing = briefingQuery.data?.rows ?? [];
 
   async function handleStatusChange(aptId: string, status: string) {
-    const u = await api(`/appointments/${aptId}/status`, { method: 'PUT', body: { status } }).catch(() => null);
-    if (u) setAppts((prev) => prev.map((a) => (a.id === aptId ? { ...a, status } : a)));
+    setErro('');
+    try {
+      await api(`/appointments/${aptId}/status`, { method: 'PUT', body: { status } });
+      apptsQuery.refetch();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível mudar o estado da consulta.');
+    }
   }
 
   const label = new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
@@ -58,6 +53,10 @@ export default function DentistDashboard() {
           style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
         />
       </PageHeader>
+      {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
+      {apptsQuery.error ? (
+        <AlertBanner type="danger">Não foi possível ler a agenda de hoje. {apptsQuery.error.message}</AlertBanner>
+      ) : null}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         <MetricCard label="CONSULTAS DE HOJE" value={appts.length} sub="marcadas" color="var(--accent)" />
         <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
@@ -104,7 +103,7 @@ export default function DentistDashboard() {
           ))}
         </div>
       )}
-      {loading ? (
+      {apptsQuery.loading ? (
         <Spinner />
       ) : (
         <>
