@@ -2,13 +2,11 @@
 // como lib/forecastCalc.ts e companhia.
 //
 // ─── Porque é que isto existe ───────────────────────────────────────────────
-// Setenta e seis componentes escreviam a mesma dança à mão: `useState` para os
-// dados, `useState` para o `loading`, um `useEffect` que chama `api()` e um
-// `.catch(() => [])` no fim. Nenhuma das cópias deduplicava, nenhuma revalidava
-// e nenhuma sabia dizer se uma lista vazia era mesmo vazia ou um servidor em
-// baixo. É a mesma classe de repetição que o lib/route.ts foi escrito para
-// absorver do lado do servidor — com a mesma consequência: quando o preâmbulo
-// se copia, a omissão não se vê.
+// É o gémeo do lib/route.ts, do lado do cliente: quando o preâmbulo de uma
+// leitura se copia — `useState` para os dados, outro para o `loading`, um
+// `useEffect` que chama `api()` — a omissão não se vê. E o que se omitia era
+// sempre o mesmo: a deduplicação, a revalidação, e sobretudo a diferença entre
+// uma lista vazia e um servidor em baixo.
 //
 // ─── Porque é que a cache é separada do hook ────────────────────────────────
 // O que aqui está — quando é que um valor está velho, quem partilha o pedido em

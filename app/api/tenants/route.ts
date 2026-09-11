@@ -7,9 +7,8 @@ import { withRoute } from '@/lib/route';
 // hasPermission('tenants:manage') concedido não pode listar nem criar outras clínicas,
 // por isso 'admin' não é aceite aqui.
 //
-// Isto era um `requireSuperAdmin` local, byte a byte igual ao requirePlatform de
-// lib/platform.ts — cujo próprio comentário já dizia ser "a mesma forma do
-// requireSuperAdmin local de app/api/tenants/route.ts". Passou a ser o mesmo código.
+// O porteiro é o requirePlatform de lib/platform.ts, partilhado com as restantes
+// rotas que leem acima da clínica.
 export const GET = withRoute({ platform: 'tenants:manage', tenant: 'optional' }, async () => {
   const rows = await query(
     `SELECT t.*, (SELECT COUNT(*) FROM patients p WHERE p.tenant_id=t.id)::int as patients

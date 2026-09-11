@@ -305,13 +305,13 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
   const pathname = usePathname();
   const router = useRouter();
   const role = user?.role as keyof typeof NAV | undefined;
-  // O menu segue as PERMISSÕES, não só o papel. Antes era `NAV[role]` e mais nada: a UI de
-  // permissões por clínica (role_permissions) não tinha qualquer efeito aqui, pelo que
-  // retirar 'finance:read' à receção deixava 'Finanças' à vista, a levar a um 403.
+  // O menu segue as PERMISSÕES, não só o papel — senão a UI de permissões por
+  // clínica (role_permissions) não teria efeito nenhum aqui, e retirar
+  // 'finance:read' à receção deixaria 'Finanças' à vista, a levar a um 403.
   //
-  // `permissions` chega de /api/auth/me. Enquanto não chegar (primeiro render, ou uma
-  // sessão antiga anterior a este campo) mostra-se o menu do papel, como antes — esconder
-  // tudo faria a sidebar piscar a cada carregamento.
+  // `permissions` chega de /api/auth/me. Enquanto não chegar — primeiro render, ou
+  // uma sessão anterior a este campo — mostra-se o menu do papel: esconder tudo
+  // faria a barra lateral piscar a cada carregamento.
   const permissions = user?.permissions;
   // Dentro de uma clínica, o super_admin está nas páginas do admin — o menu tem de ser o
   // do admin, senão via a navegação de plataforma por cima de páginas de clínica.

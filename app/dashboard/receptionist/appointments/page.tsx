@@ -128,12 +128,10 @@ export default function ReceptionAppointmentsPage() {
     setEditErr('');
     setEditSaving(true);
     try {
-      // O remendo otimista que aqui estava recalculava a linha inteira no cliente
-      // — incluindo o `dentist_name`, que ia buscar à lista local. Mas guardar uma
-      // consulta pode ser RECUSADO por sobreposição (o advisory lock em
-      // app/api/appointments/route.ts), e nesse caso a linha otimista já estava
-      // no ecrã e era desfeita com um `load()` no catch. Revalidar sempre é a
-      // mesma coisa com metade do código e sem o estado intermédio errado.
+      // Revalidar em vez de remendar a linha no cliente. Guardar uma consulta
+      // pode ser RECUSADO por sobreposição (o advisory lock em
+      // app/api/appointments/route.ts), e um remendo otimista põe no ecrã um
+      // estado que o servidor nunca aceitou.
       await api(`/appointments/${editing.id}`, {
         method: 'PUT',
         body: {

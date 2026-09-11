@@ -390,9 +390,8 @@ export async function hasPermission(user: SessionUser | null | undefined, action
 
   // A partir daqui manda a base de dados, não o token.
   const role = live.role;
-  // Antes: `return true`. O super_admin nunca chegava a ser confrontado com as ações, o
-  // que tornava o DEFAULT.super_admin acima código morto — declarava-se um conjunto que
-  // nada lia. Agora segue o mesmo caminho que todos; salta apenas o permissionOverride,
+  // O super_admin é confrontado com as ações como toda a gente — é isso que dá
+  // sentido ao DEFAULT.super_admin declarado acima. Só salta o permissionOverride,
   // que é por clínica (role_permissions.tenant_id) e ele não tem nenhuma.
   if (role === 'super_admin') return defaultAllows(role, action);
   const tenantId = live.tenantId;

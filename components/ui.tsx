@@ -46,12 +46,11 @@ const FALLBACK_STATUS = {
 // `${cor}30` só funciona se `cor` for um hex de 6 dígitos. Metade das cores deste
 // ficheiro são tokens — `var(--accent)`, `var(--cat-purple)` — e `var(--accent)30`
 // não é uma cor válida: o browser descarta a declaração inteira, sem erro nenhum
-// na consola. Era assim que o anel dos pontos da cronologia, o fundo dos avatares
-// e o enchimento da cadeira estavam a desaparecer sem ninguém dar por isso.
+// na consola — a cor não fica errada, desaparece.
 //
-// `color-mix` aceita as duas formas — hex e var() — e é por isso a única maneira
+// `color-mix` aceita as duas formas, hex e var(), e é por isso a única maneira
 // segura de compor cor num projeto onde a paleta vive em tokens. As percentagens
-// abaixo são a conversão dos alfa hexadecimais que aqui estavam (0x30 ≈ 19%).
+// correspondem aos alfa hexadecimais habituais (0x30 ≈ 19%).
 export const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 export const over = (color: string, pct: number, base = 'var(--bg-surface)') =>
   `color-mix(in srgb, ${color} ${pct}%, ${base})`;

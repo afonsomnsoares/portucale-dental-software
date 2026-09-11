@@ -228,8 +228,7 @@
 }
 
 /* ─── Grelhas responsivas ────────────────────────────────────────────────────
-   Este projeto tinha 103 `gridTemplateColumns` escritos inline, e duas media
-   queries em todo o código. O resultado era uma aplicação que só funciona à
+   Uma grelha escrita inline em cada ecrã é uma aplicação que só funciona à
    largura em que foi desenhada — e a recepção de uma clínica trabalha num
    portátil pequeno, muitas vezes com a barra lateral aberta ao lado.
 

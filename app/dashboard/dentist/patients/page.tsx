@@ -117,14 +117,12 @@ export default function DentistPatientsPage() {
   const [search, setSearch] = useState('');
 
   // ─── O espaço de um doente, declarado em vez de orquestrado ───────────────
-  // Isto era um `select(p)` que disparava sete pedidos em Promise.all e os
-  // distribuía por sete useState. Duas consequências: os sete falhavam para
-  // dentro (`.catch(() => [])`), e o separador «Documentos» de um doente ficava
-  // a mostrar os do anterior até o novo lote chegar todo.
+  // Cada separador tem a sua leitura, e o id do doente escolhido é a única coisa
+  // que as comanda. Escolher outro doente troca as sete de uma vez.
   //
-  // Declarado assim, cada separador tem a sua leitura, e o id do doente
-  // escolhido é a única coisa que a comanda. Escolher outro doente invalida
-  // tudo de uma vez, sem orquestração nenhuma.
+  // Orquestrá-las num só pedido teria duas consequências más: um destino comum
+  // para sete falhas independentes, e o separador «Documentos» a mostrar os do
+  // doente ANTERIOR até o lote novo chegar todo.
   const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(search)}`);
   const patients = patientsQuery.data ?? [];
 

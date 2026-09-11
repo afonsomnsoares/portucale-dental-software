@@ -4,10 +4,10 @@ import { useAuth } from '@/app/providers';
 import { DEFAULT_STALE_MS, queryCache } from '@/lib/queryCache';
 
 // ─── Uma leitura de /api, com os três estados que ela tem mesmo ─────────────
-// O que estava escrito à mão em setenta e seis componentes tinha dois estados:
-// «a carregar» e «tenho dados». O terceiro — «não consegui» — era engolido por
-// um `.catch(() => [])`, e a partir daí uma lista vazia e um servidor em baixo
-// ficavam indistinguíveis. Para quem usa, e para quem depura.
+// Uma leitura tem três estados, não dois: «a carregar», «tenho dados» e «não
+// consegui». O terceiro é o que se perde quando cada componente trata do seu
+// fetch à mão, e sem ele uma lista vazia e um servidor em baixo ficam
+// indistinguíveis — para quem usa e para quem depura.
 //
 // Este hook devolve os três, e é por isso que existe. A deduplicação, a cache e
 // o cancelamento vêm por acréscimo — são bons, mas não são o motivo.

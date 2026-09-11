@@ -8,8 +8,7 @@ import { Badge, over, RiskBadge, tint } from './ui';
 type CalendarAppointment = Appointment & { time?: string; patient?: string };
 
 // ─── Porque é que a cor NÃO se concatena ────────────────────────────────────
-// A versão anterior escrevia `${stColor}10` para obter o mesmo tom a 6% de alfa.
-// Isso só funciona enquanto `statuses.color` for um hex — e a migração 054
+// `${stColor}10` só funciona enquanto `statuses.color` for um hex — e a migração 054
 // (`054_status_colors_as_tokens.sql`, ainda por correr nesta base) converte-os
 // precisamente para `var(--urgency-soon)` e companhia, para a paleta poder ser
 // auditada em app/globals.css em vez de viver na base de dados.
@@ -306,11 +305,9 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
           </div>
         )}
 
-        {/* `62vh` era o mesmo tipo de número mágico que o `calc(100vh - 320px)`
-            que aqui estava antes: adivinha a altura do que está por cima em vez
-            de a medir. `dvh` acompanha a barra do browser no telemóvel, e o
-            mínimo em px impede que num ecrã baixo a grelha fique com duas horas
-            visíveis. */}
+        {/* Qualquer altura fixa aqui adivinha o que está por cima em vez de o
+            medir. `dvh` acompanha a barra do browser no telemóvel, e o mínimo em
+            px impede que num ecrã baixo a grelha fique com duas horas visíveis. */}
         <div
           ref={scrollRef}
           style={{ overflowY: 'auto', maxHeight: 'max(320px, calc(100dvh - 300px))', position: 'relative' }}

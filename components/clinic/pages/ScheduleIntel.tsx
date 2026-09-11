@@ -45,10 +45,10 @@ export default function ClinicScheduleIntelPage() {
   const [tab, setTab] = useState('risk');
 
   // ─── Seis leituras, seis separadores, seis destinos ───────────────────────
-  // Estavam num Promise.all com um `loading` e um `err` para todas: qualquer uma
-  // a falhar deixava o ecrã inteiro parado, e cinco a correr bem não valiam nada
-  // se a sexta demorasse. Cada separador é um assunto independente — e a página
-  // existe para os comparar, o que só funciona se os que responderam aparecerem.
+  // Cada separador é um assunto independente. Num destino comum, qualquer uma a
+  // falhar deixaria o ecrã inteiro parado e as outras cinco não valeriam nada —
+  // e esta página existe para comparar os seis ângulos, o que só funciona se os
+  // que responderam aparecerem.
   const riskQuery = useQuery<RiskData>('/schedule-intel/risk?days=14');
   const heatmapQuery = useQuery<RiskHeatmapData>('/schedule-intel/heatmap');
   const efficiencyQuery = useQuery<AgendaEfficiency>('/schedule-intel/efficiency?days=14');

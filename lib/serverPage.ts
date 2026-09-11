@@ -28,8 +28,8 @@ import { requirePlatform } from './platform';
 // Uma página de plataforma lê ACIMA da clínica — todas as clínicas de uma vez.
 // `platform: 'reports:read'` quer dizer «super-admin E com esta ação»;
 // `permission: 'reports:read'` quer dizer só a segunda metade, e um admin de
-// clínica também a tem. Confundi-los na primeira versão deste ficheiro: as
-// páginas de utilização por clínica ficaram a aceitar um admin de clínica.
+// clínica também a tem. Traduzir um por outro deixa as páginas que leem todas
+// as clínicas abertas a quem só devia ver a sua.
 //
 // A RLS tê-lo-ia contido — a política de `tenants` é chaveada em `id`, por isso
 // ele veria a sua própria linha e mais nenhuma — mas este projeto trata «a RLS

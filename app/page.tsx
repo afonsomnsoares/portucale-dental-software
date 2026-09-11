@@ -20,10 +20,9 @@ const serif: CSSProperties = {
 
 /* O servidor devolve mensagens técnicas; aqui traduzimos para o que a pessoa pode fazer.
  *
- * Decide pelo ESTADO, não pelo texto. A versão anterior fazia `message.includes('401')`,
- * o que só funcionava porque o código HTTP ia embutido na mensagem que o `api()`
- * construía — bastava melhorar a frase para o «e-mail ou palavra-passe incorretos»
- * deixar silenciosamente de aparecer. Hoje o ApiError traz `status` e `code`. */
+ * Decide pelo ESTADO, não pelo texto: o ApiError traz `status` e `code`. Casar
+ * contra a frase funcionaria só até alguém a melhorar, e aí o «e-mail ou
+ * palavra-passe incorretos» deixava de aparecer sem nada falhar. */
 function mensagemDeErro(erro: unknown): string {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return 'Sem ligação à internet. Verifique a rede e tente outra vez.';

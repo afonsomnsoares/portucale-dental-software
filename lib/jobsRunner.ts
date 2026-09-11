@@ -590,10 +590,9 @@ const CLAIM_TTL_MINUTES = 5;
 
 async function sendDueNotifications(tenantId: string, limit = 25) {
   // ─── Reservar antes de enviar, não depois ─────────────────────────────────
-  // A versão anterior lia com SELECT, chamava a Twilio e só então marcava a linha.
-  // Entre as duas coisas havia uma chamada de rede a um terceiro, e nada — nem
-  // FOR UPDATE, nem um lock à volta da corrida — impedia um segundo processo de
-  // ler as mesmas linhas e enviar as mesmas mensagens. O doente recebia a dobrar.
+  // Entre ler uma linha e marcá-la como enviada há uma chamada de rede à Twilio.
+  // Se a leitura e a reserva forem instruções separadas, um segundo processo lê
+  // as mesmas linhas nesse intervalo e o doente recebe a mensagem a dobrar.
   //
   // Aqui a leitura e a reserva são a MESMA instrução: quem consegue escrever
   // 'sending' é dono da linha, e o SKIP LOCKED faz com que um segundo processo

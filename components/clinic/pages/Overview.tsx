@@ -17,9 +17,9 @@ export default function ClinicOverview() {
   // app/api/dashboard/stats/route.ts, o `clinic` forçado em app/api/audit/route.ts),
   // por isso não há nada a passar nem a filtrar do lado do cliente.
   //
-  // Dois useQuery e não um Promise.all: são dois painéis independentes, e o que
-  // isso compra é que a atividade recente falhar deixa de apagar os números do
-  // topo. O Promise.all que aqui estava punha os dois no mesmo destino.
+  // Dois useQuery e não um Promise.all: são dois painéis independentes, e um
+  // Promise.all dá-lhes um destino único — a atividade recente a falhar apagaria
+  // os números do topo.
   const stats = useQuery<DashboardStats>('/dashboard/stats');
   const audit = useQuery<AuditLogEntry[]>('/audit');
 

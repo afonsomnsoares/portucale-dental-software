@@ -3,9 +3,9 @@ import { forbidden, requireRoles } from '@/lib/auth';
 import { getPermissionMatrix, setPermissionOverrides } from '@/lib/permissions';
 import { withRoute } from '@/lib/route';
 
-// 'resolved' É esta regra: quem tem clínica usa sempre a sua e o ?tenantId= é ignorado;
-// só o super-admin escolhe, e a clínica em que ele tenha entrado ganha à query string.
-// Estava aqui escrita à mão — uma das cópias locais que o withRoute existe para absorver.
+// 'resolved' É esta regra: quem tem clínica usa sempre a sua e o ?tenantId= é
+// ignorado; só o super-admin escolhe, e a clínica em que ele tenha entrado ganha
+// à query string.
 export const GET = withRoute({ permission: 'permissions:manage', tenant: 'resolved' }, async ({ user, tenantId }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
 

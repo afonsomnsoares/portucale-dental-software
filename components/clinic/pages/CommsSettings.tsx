@@ -1,9 +1,8 @@
 'use client';
 // ─── Canais e autonomia ─────────────────────────────────────────────────────
-// O ecrã onde a clínica decide se a IA pode falar sozinha com um doente. É a decisão de
-// produto mais consequente que uma clínica toma aqui — o cabeçalho de
-// lib/conversationCalc.ts diz isso por escrito — e até agora não havia forma de a tomar
-// sem um cliente de base de dados.
+// O ecrã onde a clínica decide se a IA pode falar sozinha com um doente. É a decisão
+// de produto mais consequente que uma clínica toma aqui — o cabeçalho de
+// lib/conversationCalc.ts diz isso por escrito.
 //
 // ─── Porque é que os quatro degraus aparecem todos, sempre ──────────────────
 // Um seletor com quatro opções e uma frase por baixo esconderia o que a escolha

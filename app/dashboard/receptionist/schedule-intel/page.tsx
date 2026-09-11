@@ -30,8 +30,8 @@ export default function ScheduleIntelReceptionistPage() {
   const [tab, setTab] = useState('risk');
 
   // Cinco leituras independentes, uma por separador — como na versão de clínica
-  // (components/clinic/pages/ScheduleIntel.tsx). Estavam num Promise.all com um
-  // `loading` e um `err` únicos, e por isso qualquer uma a falhar parava as cinco.
+  // (components/clinic/pages/ScheduleIntel.tsx), e pela mesma razão: um destino
+  // comum faria qualquer uma delas a falhar parar as outras quatro.
   const riskQuery = useQuery<RiskData>('/schedule-intel/risk?days=14');
   const heatmapQuery = useQuery<RiskHeatmapData>('/schedule-intel/heatmap');
   const efficiencyQuery = useQuery<AgendaEfficiency>('/schedule-intel/efficiency?days=14');

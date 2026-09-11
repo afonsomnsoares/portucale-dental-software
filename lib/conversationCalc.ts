@@ -220,10 +220,10 @@ const CLINICAL_WORDS = [
 // Cada intenção declara termos FORTES e termos AMBÍGUOS, e a distinção não é
 // cosmética: é ela que decide se um nível de autonomia mais alto pode responder
 // sozinho. «cancelar» só quer dizer uma coisa numa clínica; «consulta» aparece em
-// qualquer mensagem, incluindo nas que pedem o contrário. A versão anterior desta
-// heurística usava o comprimento da expressão como sucedâneo disto — o que fazia
-// «morada» (inequívoco) valer menos do que «que horas» (duas palavras), e classificava
-// «quero cancelar a consulta de quinta» com confiança baixa.
+// qualquer mensagem, incluindo nas que pedem o contrário.
+//
+// A alternativa óbvia — pesar pelo comprimento da expressão — não serve: faria
+// «morada» (inequívoco) valer menos do que «que horas» (duas palavras).
 interface IntentTerms {
   strong: string[];
   ambiguous: string[];

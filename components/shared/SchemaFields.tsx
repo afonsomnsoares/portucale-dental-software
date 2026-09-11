@@ -44,8 +44,8 @@ export default function SchemaFields() {
   const tenantsQuery = useQuery<Tenant[]>(user?.role === 'super_admin' ? '/tenants' : null);
   const tenants = tenantsQuery.data ?? [];
 
-  // O `cancelled` que aqui estava fazia à mão o que o hook faz: descartar a
-  // resposta que já não é a que interessa quando a clínica muda a meio.
+  // O hook descarta a resposta que já não interessa quando a clínica muda a
+  // meio — não é preciso um `cancelled` à mão no efeito.
   const fieldsQuery = useQuery<{ rows?: SchemaFieldRow[] } | SchemaFieldRow[]>(
     tenantId ? `/schema?tenantId=${encodeURIComponent(tenantId)}` : null,
   );

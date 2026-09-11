@@ -10,19 +10,13 @@ import { rateLimitGlobal } from './rateLimitGlobal';
 //   'resolved' — como 'required', mas o super-admin fora de uma clínica pode
 //                escolhê-la por ?tenantId= ou no body.
 //
-// ─── Declarar a política não chega: é preciso USAR o que ela resolve ────────
-// A primeira passagem por aqui converteu a FORMA das rotas e deixou o conteúdo:
-// 48 delas declaravam 'optional' e voltavam a derivar o âmbito de `user.tenantId`,
-// que vem do token. Para quem tem clínica própria os dois valores coincidem, e por
-// isso nada parecia partido. Para o super-admin DENTRO de uma clínica (cookie
-// acting_tenant) não coincidem — o `user.tenantId` dele é sempre null, por
-// construção — e o resultado eram rotas de leitura a devolver os dados de todas as
-// clínicas com o banner a dizer que ele estava numa, e 26 rotas de escrita a
-// barrá-lo das páginas que a Fase 3 desenhou para ele usar.
+// ─── Nenhuma rota deriva o âmbito de `user.tenantId` ───────────────────────
+// Esse valor vem do token, e para o super-admin é sempre null por construção —
+// mesmo quando ele está DENTRO de uma clínica (cookie acting_tenant). Quem o
+// usar como âmbito serve-lhe os dados de todas as clínicas com o banner a dizer
+// que ele está numa.
 //
-// Hoje nenhuma rota lê `user.tenantId` para saber o âmbito, e test/routeScoping.test.ts
-// falha o build se alguma voltar a fazê-lo. As 30 cópias locais de `scopeTenant` que
-// existiam por app/api/ passaram todas a declarar a política em vez de a reimplementar.
+// test/routeScoping.test.ts falha o build se alguma rota voltar a fazê-lo.
 type TenantPolicy = 'required' | 'optional' | 'resolved';
 
 export interface RouteContext<P> {
@@ -36,14 +30,10 @@ export interface RouteContext<P> {
 }
 
 // ─── Porque é que isto é uma união, e não um objeto com tudo opcional ───────
-// A versão anterior declarava `{ permission?: string; public?: true }`, ou seja
-// TODOS os campos opcionais — e por isso `withRoute({}, handler)` compilava sem
-// uma queixa. A promessa escrita no comentário da função ("uma rota sem
-// `permission` nem `public` nem sequer é aceite pelo TypeScript") era
-// simplesmente falsa: o tipo não a impunha.
-//
-// Escrita como união discriminada, passa a ser verdade. Cada rota tem de dizer
-// em qual dos quatro mundos vive, e não há um quinto:
+// Com todos os campos opcionais, `withRoute({}, handler)` compila — uma rota
+// sem verificação nenhuma, indistinguível das outras à vista. Escrita como
+// união discriminada, cada rota TEM de dizer em qual dos quatro mundos vive, e
+// não há um quinto:
 //
 //   permission — o caso normal: uma ação de lib/permissions.ts.
 //   platform   — só super-admin (o que `requirePlatform` já fazia à mão).
@@ -110,10 +100,9 @@ type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
 // atrás de um balanceador, o limite efetivo passa a ser N × o configurado.
 //
 // Isto não resolve o caso Edge — não há como, sem Redis — mas fecha a metade que
-// importa mais e que já era resolúvel com o que o projeto tem: as ESCRITAS. Os route
-// handlers correm no runtime Node, com pool de ligações, por isso podem usar o contador
-// partilhado em Postgres que lib/rateLimitGlobal.ts já implementava e que, até agora,
-// nenhuma rota chamava — escrito e sem consumidores, exatamente como o canal SSE.
+// importa mais: as ESCRITAS. Os route handlers correm no runtime Node, com pool de
+// ligações, por isso podem usar o contador partilhado em Postgres de
+// lib/rateLimitGlobal.ts.
 //
 // Só mutações, por uma questão de custo: uma ida à base de dados por LEITURA duplicaria
 // o número de consultas da aplicação inteira para proteger o que já é idempotente e já
@@ -123,13 +112,10 @@ const WRITE_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // ─── Resolução de clínica ───────────────────────────────────────────────────
-// Delega em scopeTenant (lib/auth.ts) em vez de reimplementar a regra, e isso
-// corrige um erro que a versão anterior tinha: scopeTenant honra o cookie
-// `acting_tenant` — o "entrar na clínica" do super-admin, POST /api/tenants/enter
-// — e a implementação local aqui não o lia. Uma rota migrada para withRoute
-// deixava portanto de funcionar para um super-admin dentro de uma clínica, ao
-// contrário das rotas que chamavam scopeTenant diretamente. As cópias locais
-// espalhadas por app/api/ tinham o mesmo buraco — já não existem nenhumas.
+// Delega em scopeTenant (lib/auth.ts) em vez de reimplementar a regra. É ele que
+// honra o cookie `acting_tenant` — o "entrar na clínica" do super-admin, POST
+// /api/tenants/enter — e uma reimplementação local que o ignorasse deixaria o
+// super-admin sem acesso às clínicas em que entrou.
 //
 // A precedência é a de scopeTenant, e é a única segura: quem tem clínica própria
 // usa sempre a sua e o `?tenantId=` é ignorado — deixá-lo escolher outra seria um

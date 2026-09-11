@@ -5,13 +5,12 @@ import { withRoute } from '@/lib/route';
 // clínica de quem chama; os dois de plataforma — quantas clínicas existem, quantas
 // estão ativas — só são calculados para o super-admin.
 //
-// Antes eram calculados para toda a gente: `SELECT COUNT(*) FROM tenants` sem
-// filtro nem verificação. Na prática a RLS salvava-o (a política de `tenants` é
-// chaveada em `id`, por isso uma rececionista contava a sua própria clínica e mais
-// nenhuma), mas era a única rota do projeto onde a RLS era a ÚNICA linha de defesa
-// em vez da segunda — e uma resposta que devolve 1 porque a base a cortou, e não
-// porque alguém decidiu, é uma resposta certa por acidente. Quem os lê é só
-// components/super-admin/pages/Overview.tsx.
+// A verificação de papel não é redundante com a RLS. A política de `tenants` é
+// chaveada em `id`, por isso um `SELECT COUNT(*) FROM tenants` sem filtro
+// devolveria 1 a uma rececionista — o número certo, mas porque a base o cortou e
+// não porque alguém o decidiu. Uma resposta certa por acidente não é defesa.
+//
+// Quem lê estes dois números é só components/super-admin/pages/Overview.tsx.
 export const GET = withRoute(
   {
     authOnly:
