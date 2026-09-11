@@ -1,7 +1,17 @@
 'use client';
 import { AlertTriangle, Check, Inbox, Info } from 'lucide-react';
 import Image from 'next/image';
-import type { ComponentProps, CSSProperties, MouseEvent, MouseEventHandler, ReactNode } from 'react';
+import {
+  type ComponentProps,
+  type CSSProperties,
+  type KeyboardEvent,
+  type MouseEvent,
+  type MouseEventHandler,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { useAuth } from '@/app/providers';
 import type { TimelineEvent } from '@/lib/types';
 
@@ -31,6 +41,20 @@ const FALLBACK_STATUS = {
   aceite: { label: 'Aceite', bg: 'var(--accent-bg)', color: 'var(--accent)' },
   concluído: { label: 'Concluído', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
 };
+
+// ─── Compor cor com transparência ───────────────────────────────────────────
+// `${cor}30` só funciona se `cor` for um hex de 6 dígitos. Metade das cores deste
+// ficheiro são tokens — `var(--accent)`, `var(--cat-purple)` — e `var(--accent)30`
+// não é uma cor válida: o browser descarta a declaração inteira, sem erro nenhum
+// na consola. Era assim que o anel dos pontos da cronologia, o fundo dos avatares
+// e o enchimento da cadeira estavam a desaparecer sem ninguém dar por isso.
+//
+// `color-mix` aceita as duas formas — hex e var() — e é por isso a única maneira
+// segura de compor cor num projeto onde a paleta vive em tokens. As percentagens
+// abaixo são a conversão dos alfa hexadecimais que aqui estavam (0x30 ≈ 19%).
+export const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+export const over = (color: string, pct: number, base = 'var(--bg-surface)') =>
+  `color-mix(in srgb, ${color} ${pct}%, ${base})`;
 
 export function Badge({ s, label, color, bg }: { s?: string; label?: string; color?: string; bg?: string }) {
   const { settings } = useAuth();
@@ -350,10 +374,68 @@ export function Modal({
   children: ReactNode;
   width?: number;
 }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Prevent body scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Focus the modal content on mount and set up focus trap
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.focus({ preventScroll: true });
+
+    function handleKeyDown(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && el) {
+        const focusable = el.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      ref={overlayRef}
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      onMouseDown={(e) => {
+        if (e.target === overlayRef.current) onClose();
+      }}
+    >
       <div
-        className="modal-content bg-white rounded-lg w-full overflow-y-auto"
+        ref={contentRef}
+        tabIndex={-1}
+        className="modal-content bg-white rounded-lg w-full overflow-y-auto outline-none"
         style={{
           maxWidth: width,
           maxHeight: '90vh',
@@ -365,10 +447,13 @@ export function Modal({
           className="flex items-center justify-between px-6 py-4"
           style={{ borderBottom: '1px solid var(--border-subtle)' }}
         >
-          <h2 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)' }}>{title}</h2>
+          <h2 id="modal-title" style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)' }}>
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Fechar"
             style={{
               background: 'transparent',
               border: 'none',
@@ -454,7 +539,7 @@ export function AppLogo({ size = 32, className = '', style = {} }) {
   return (
     <Image
       src="/logo.svg"
-      alt="Portucale Dental"
+      alt="Portucale Software"
       width={size}
       height={size}
       className={className}
@@ -491,7 +576,7 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
                 borderRadius: '50%',
                 background: col,
                 border: '2px solid white',
-                boxShadow: `0 0 0 2px ${col}30`,
+                boxShadow: `0 0 0 2px ${tint(col, 19)}`,
               }}
             />
             <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)', lineHeight: 1.4 }}>
@@ -511,7 +596,10 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
               <span className="text-xs font-semibold" style={{ color: col }}>
                 {e.user_name}
               </span>
-              <span className="badge" style={{ background: `${col}15`, color: col, fontSize: 10, padding: '1px 6px' }}>
+              <span
+                className="badge"
+                style={{ background: tint(col, 8), color: col, fontSize: 10, padding: '1px 6px' }}
+              >
                 {e.event_type}
               </span>
             </div>
@@ -543,7 +631,7 @@ export function Avatar({ name = '', size = 40, color = 'var(--accent)' }) {
       style={{
         width: size,
         height: size,
-        background: `${color}18`,
+        background: tint(color, 9),
         color,
         fontSize: size * 0.36,
         fontFamily: '"Plus Jakarta Sans",sans-serif',
@@ -561,15 +649,32 @@ interface TabItem {
 }
 
 export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: string; onChange: (key: string) => void }) {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const idx = tabs.findIndex((t) => t.key === active);
+      if (idx === -1) return;
+      e.preventDefault();
+      const next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+      onChange(tabs[next].key);
+    },
+    [tabs, active, onChange],
+  );
+
   return (
     <div
+      role="tablist"
       className="flex gap-1 mb-5 p-1"
       style={{ background: 'var(--bg-sunken)', display: 'inline-flex', borderRadius: 'var(--radius-card)' }}
+      onKeyDown={handleKeyDown}
     >
       {tabs.map((t) => (
         <button
+          role="tab"
           type="button"
           key={t.key}
+          aria-selected={active === t.key}
+          tabIndex={active === t.key ? 0 : -1}
           onClick={() => onChange(t.key)}
           style={{
             padding: '8px 16px',
@@ -599,6 +704,15 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
           )}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function ErrorText({ children }: { children?: ReactNode }) {
+  if (!children) return null;
+  return (
+    <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }} role="alert">
+      {children}
     </div>
   );
 }

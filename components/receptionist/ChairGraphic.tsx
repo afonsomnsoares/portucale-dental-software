@@ -1,3 +1,4 @@
+import { tint } from '@/components/ui';
 export const CHAIR_COLORS = ['var(--accent)', 'var(--urgency-ok)', 'var(--urgency-soon)'];
 
 export default function ChairGraphic({ color, occupied }: { color: string; occupied: boolean }) {
@@ -11,8 +12,8 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           top: 6,
           height: 24,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? `${color}1A` : 'var(--bg-page)',
-          border: `2px solid ${occupied ? `${color}55` : 'var(--border-subtle)'}`,
+          background: occupied ? tint(color, 10) : 'var(--bg-page)',
+          border: `2px solid ${occupied ? tint(color, 33) : 'var(--border-subtle)'}`,
         }}
       />
       <div
@@ -23,8 +24,8 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           top: 30,
           height: 18,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? `${color}22` : 'var(--bg-page)',
-          border: `2px solid ${occupied ? `${color}66` : 'var(--border-subtle)'}`,
+          background: occupied ? tint(color, 13) : 'var(--bg-page)',
+          border: `2px solid ${occupied ? tint(color, 40) : 'var(--border-subtle)'}`,
         }}
       />
       <div
@@ -35,7 +36,7 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           width: 10,
           height: 16,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? `${color}66` : 'var(--border-subtle)',
+          background: occupied ? tint(color, 40) : 'var(--border-subtle)',
         }}
       />
       <div
@@ -46,7 +47,7 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           width: 10,
           height: 16,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? `${color}66` : 'var(--border-subtle)',
+          background: occupied ? tint(color, 40) : 'var(--border-subtle)',
         }}
       />
       <div
@@ -57,7 +58,7 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           width: 8,
           height: 18,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? `${color}55` : 'var(--border-subtle)',
+          background: occupied ? tint(color, 33) : 'var(--border-subtle)',
         }}
       />
       <div
@@ -68,7 +69,7 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           width: 8,
           height: 18,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? `${color}55` : 'var(--border-subtle)',
+          background: occupied ? tint(color, 33) : 'var(--border-subtle)',
         }}
       />
     </div>
