@@ -3,6 +3,7 @@ import { AlertTriangle, Check } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import DayCalendar from '@/components/DayCalendar';
+import DailyBriefingPanel from '@/components/patient/DailyBriefingPanel';
 import {
   FormField,
   GhostBtn,
@@ -15,7 +16,7 @@ import {
   Spinner,
 } from '@/components/ui';
 import { APPOINTMENT_TYPES, getDefaultDuration } from '@/lib/constants';
-import type { Appointment, Patient, SuggestedSlot } from '@/lib/types';
+import type { Appointment, DailyBriefingRow, Patient, SuggestedSlot } from '@/lib/types';
 
 interface Dentist {
   id: string;
@@ -46,6 +47,14 @@ export default function ReceptionDashboard() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [dentists, setDentists] = useState<Dentist[]>([]);
   const [loading, setLoading] = useState(true);
+  // ─── O que falta fazer a cada doente de hoje ──────────────────────────────
+  // lib/dailyBriefing.ts e DailyBriefingPanel existiam e nenhuma página os chamava. As
+  // métricas acima dizem QUANTOS; isto diz QUEM e O QUÊ — dados em falta, consentimento
+  // por assinar, saldo em aberto — que é a pergunta que a receção faz de facto.
+  //
+  // Falha em silêncio de propósito: um briefing que não carrega não deve impedir a
+  // receção de ver a agenda do dia.
+  const [briefing, setBriefing] = useState<DailyBriefingRow[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<BookForm>(EMPTY_BOOK_FORM);
@@ -92,14 +101,16 @@ export default function ReceptionDashboard() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [a, p, d] = await Promise.all([
+    const [a, p, d, b] = await Promise.all([
       api(`/appointments?date=${date}`).catch(() => []),
       api('/patients').catch(() => []),
       api('/dentists').catch(() => []),
+      api(`/daily-briefing?date=${date}`).catch(() => null),
     ]);
     setAppts(a || []);
     setPatients(p || []);
     setDentists(d || []);
+    setBriefing(b?.rows || []);
     setLoading(false);
   }, [api, date]);
 
@@ -216,7 +227,7 @@ export default function ReceptionDashboard() {
   const inChair = appts.filter((a) => ['in-operatory', 'procedure-active'].includes(a.status)).length;
   const ready = appts.filter((a) => a.status === 'ready-dismissal').length;
   const highRisk = appts.filter((a) => (a.risk_score || 0) >= 60);
-  const label = new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
+  const label = new Date(`${date}T12:00:00`).toLocaleDateString('pt-PT', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -265,7 +276,7 @@ export default function ReceptionDashboard() {
         >
           <AlertTriangle size={14} style={{ flexShrink: 0 }} />
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-critical)' }}>
-            {highRisk.length} high no-show risk appointment{highRisk.length > 1 ? 's' : ''} today
+            {highRisk.length} consulta{highRisk.length > 1 ? 's' : ''} com alto risco de falta hoje
           </div>
           {highRisk.map((a) => (
             <div
@@ -304,7 +315,7 @@ export default function ReceptionDashboard() {
         >
           <Check size={14} style={{ flexShrink: 0 }} />
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
-            {ready} patient{ready > 1 ? 's' : ''} ready for dismissal
+            {ready} doente{ready > 1 ? 's' : ''} pronto{ready > 1 ? 's' : ''} para alta
           </div>
           {appts
             .filter((a) => a.status === 'ready-dismissal')
@@ -337,10 +348,18 @@ export default function ReceptionDashboard() {
                     fontFamily: 'inherit',
                   }}
                 >
-                  Check Out
+                  Dar alta
                 </button>
               </div>
             ))}
+        </div>
+      )}
+
+      {/* O que falta fazer, antes do calendário: a agenda diz quem vem, isto diz o que
+          é preciso ter tratado antes de a pessoa chegar. */}
+      {!loading && briefing.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <DailyBriefingPanel api={api} rows={briefing} />
         </div>
       )}
 
@@ -351,18 +370,18 @@ export default function ReceptionDashboard() {
         <Modal title="Marcar consulta" onClose={() => setModal(false)} width={560}>
           <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
-              <option value="">— Select patient —</option>
+              <option value="">— Selecionar doente —</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} #{p.global_seq}
-                  {(p.no_show_score || 0) >= 60 ? ' HIGH RISK' : ''}
+                  {(p.no_show_score || 0) >= 60 ? ' ALTO RISCO' : ''}
                 </option>
               ))}
             </Sel>
           </FormField>
           <FormField label="Tipo de consulta *">
             <Sel value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
-              <option value="">— Select type —</option>
+              <option value="">— Selecionar tipo —</option>
               {APPOINTMENT_TYPES.map((t) => (
                 <option key={t.label} value={t.label}>
                   {t.label}
@@ -455,7 +474,7 @@ export default function ReceptionDashboard() {
             <>
               <FormField label="Dentista *">
                 <Sel value={form.dentistId} onChange={(e) => setForm((p) => ({ ...p, dentistId: e.target.value }))}>
-                  <option value="">— Select dentist —</option>
+                  <option value="">— Selecionar dentista —</option>
                   {dentists.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name}
@@ -509,7 +528,7 @@ export default function ReceptionDashboard() {
                 saving || !form.patientId || !form.type || (mode === 'suggest' ? !selectedSlot : !form.dentistId)
               }
             >
-              {saving ? 'Booking…' : 'Book Appointment'}
+              {saving ? 'A marcar…' : 'Marcar consulta'}
             </PrimaryBtn>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
