@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, DataTable, Empty, GhostBtn, Inp, PageHeader, Spinner } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, DataTable, Empty, ErrorState, GhostBtn, Inp, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { AuditLogEntry } from '@/lib/types';
 
 // Três páginas do menu (Registos de Acesso, Eventos de Segurança, Eventos de Sistema)
@@ -37,15 +37,9 @@ export default function AuditFeed({
   emptyMessage?: string;
   footnote?: string;
 }) {
-  const { api } = useAuth();
-  const [rows, setRows] = useState<AuditLogEntry[] | null>(null);
+  const rowsQuery = useQuery<AuditLogEntry[]>('/audit');
+  const rows = rowsQuery.data ?? null;
   const [q, setQ] = useState('');
-
-  useEffect(() => {
-    api('/audit')
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [api]);
 
   const filtered = (rows || [])
     .filter((r) => !actions?.length || actions.includes(r.action))
@@ -72,7 +66,9 @@ export default function AuditFeed({
         {q && <GhostBtn onClick={() => setQ('')}>Limpar</GhostBtn>}
       </div>
 
-      {!rows ? (
+      {rowsQuery.error ? (
+        <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} message="Não foi possível ler o registo." />
+      ) : !rows ? (
         <Spinner />
       ) : !filtered.length ? (
         <Empty message={emptyMessage || 'Sem registos'} />

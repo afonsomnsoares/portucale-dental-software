@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, DataTable, Empty, PageHeader, Spinner } from '@/components/ui';
+import { Badge, DataTable, Empty, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Data {
   configuredModel: string;
@@ -18,15 +17,10 @@ interface Data {
 // modelos antigos, que continuam em ai_calls depois de a constante mudar. É essa a
 // utilidade: ver que uma troca de modelo aconteceu mesmo, e quando.
 export default function AiModels() {
-  const { api } = useAuth();
-  const [d, setD] = useState<Data | null>(null);
+  const dQuery = useQuery<Data>('/platform/ai-usage');
+  const d = dQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/ai-usage')
-      .then(setD)
-      .catch(() => setD(null));
-  }, [api]);
-
+  if (dQuery.error) return <ErrorState error={dQuery.error} onRetry={dQuery.refetch} />;
   if (!d) return <Spinner />;
 
   return (

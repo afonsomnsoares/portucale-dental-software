@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface RoleRow {
   role: string;
@@ -15,15 +14,10 @@ interface RoleRow {
 }
 
 export default function Roles() {
-  const { api } = useAuth();
-  const [data, setData] = useState<{ roles: RoleRow[]; totalActions: number } | null>(null);
+  const dataQuery = useQuery<{ roles: RoleRow[]; totalActions: number }>('/platform/roles');
+  const data = dataQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/roles')
-      .then(setData)
-      .catch(() => setData(null));
-  }, [api]);
-
+  if (dataQuery.error) return <ErrorState error={dataQuery.error} onRetry={dataQuery.refetch} />;
   if (!data) return <Spinner />;
 
   return (

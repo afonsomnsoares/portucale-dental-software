@@ -1,8 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
 import type { UsageRow } from '@/components/super-admin/usage';
-import { DataTable, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { DataTable, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 // Utilização = quanto trabalho real passa por esta camada, por clínica.
 //
@@ -10,15 +9,10 @@ import { DataTable, Empty, MetricCard, PageHeader, Spinner } from '@/components/
 // inventa aqui. É o trabalho medido no que ficou gravado: marcações, equipa ativa,
 // doentes, execuções de agentes. Para uma camada de operação, esse é o uso que conta.
 export default function AnalyticsUsage() {
-  const { api } = useAuth();
-  const [rows, setRows] = useState<UsageRow[] | null>(null);
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+  const rows = rowsQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/usage')
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [api]);
-
+  if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;
   if (!rows) return <Spinner />;
 
   const appts30 = rows.reduce((a, r) => a + r.appts_30d, 0);

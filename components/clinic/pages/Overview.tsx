@@ -1,8 +1,8 @@
 'use client';
 import { AlertTriangle, CalendarCheck, CreditCard, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { AuditLogEntry, DashboardStats } from '@/lib/types';
 
@@ -12,22 +12,16 @@ import type { AuditLogEntry, DashboardStats } from '@/lib/types';
 // um admin de clínica só tem uma clínica, e /api/tenants devolve-lhe 403 de propósito
 // (ver requireSuperAdmin em app/api/tenants/route.ts).
 export default function ClinicOverview() {
-  const { api, user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [audit, setAudit] = useState<AuditLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Ambas as rotas já se limitam ao tenant de quem chama (o filtro `user.tenantId` em
-    // app/api/dashboard/stats/route.ts, o `clinic` forçado em app/api/audit/route.ts),
-    // por isso não há nada a passar nem a filtrar do lado do cliente.
-    Promise.all([api('/dashboard/stats').catch(() => null), api('/audit').catch(() => [])])
-      .then(([s, a]) => {
-        if (s) setStats(s);
-        setAudit(a || []);
-      })
-      .finally(() => setLoading(false));
-  }, [api]);
+  const { user } = useAuth();
+  // Ambas as rotas já se limitam ao tenant de quem chama (o filtro `user.tenantId` em
+  // app/api/dashboard/stats/route.ts, o `clinic` forçado em app/api/audit/route.ts),
+  // por isso não há nada a passar nem a filtrar do lado do cliente.
+  //
+  // Dois useQuery e não um Promise.all: são dois painéis independentes, e o que
+  // isso compra é que a atividade recente falhar deixa de apagar os números do
+  // topo. O Promise.all que aqui estava punha os dois no mesmo destino.
+  const stats = useQuery<DashboardStats>('/dashboard/stats');
+  const audit = useQuery<AuditLogEntry[]>('/audit');
 
   const AM: Record<string, { bg: string; color: string }> = {
     UPDATE: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
@@ -47,24 +41,39 @@ export default function ClinicOverview() {
     <div>
       <PageHeader title="Visão Geral" sub={`${user?.tenantName || user?.clinic || 'Clínica'} — ${hoje}`} />
 
+      {/* Um traço num cartão de métrica lê-se como «zero», não como «não sei».
+          Enquanto os números não vierem, é preciso dizê-lo por palavras. */}
+      {stats.error ? (
+        <AlertBanner type="danger">
+          Não foi possível ler os números da clínica. {stats.error.message}{' '}
+          <button
+            type="button"
+            onClick={stats.refetch}
+            style={{ textDecoration: 'underline', font: 'inherit', color: 'inherit', cursor: 'pointer' }}
+          >
+            Tentar novamente
+          </button>
+        </AlertBanner>
+      ) : null}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="DOENTES"
-          value={stats ? Number(stats.totalPatients).toLocaleString('pt-PT') : '—'}
+          value={stats.data ? Number(stats.data.totalPatients).toLocaleString('pt-PT') : '—'}
           sub="registados na clínica"
           color="var(--urgency-ok)"
           icon={<Users size={22} />}
         />
         <MetricCard
           label="SALDO POR COBRAR"
-          value={stats ? formatEUR(Number(stats.outstanding)) : '—'}
+          value={stats.data ? formatEUR(Number(stats.data.outstanding)) : '—'}
           sub="total em dívida"
           color="var(--urgency-soon)"
           icon={<CreditCard size={22} />}
         />
         <MetricCard
           label="MARCAÇÕES DE RISCO"
-          value={stats?.highRisk ?? '—'}
+          value={stats.data?.highRisk ?? '—'}
           sub="hoje — confirmar presença"
           color="var(--urgency-critical)"
           icon={<AlertTriangle size={22} />}
@@ -73,15 +82,17 @@ export default function ClinicOverview() {
 
       <div className="card p-5">
         <div className="section-label mb-4">ATIVIDADE RECENTE</div>
-        {loading ? (
+        {audit.loading ? (
           <Spinner />
-        ) : !audit.length ? (
+        ) : audit.error ? (
+          <ErrorState error={audit.error} onRetry={audit.refetch} message="Não foi possível ler a atividade recente." />
+        ) : !audit.data?.length ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
             <CalendarCheck size={16} />
             Sem atividade registada.
           </div>
         ) : (
-          audit.slice(0, 10).map((l) => {
+          audit.data.slice(0, 10).map((l) => {
             const m = AM[l.action] || AM.UPDATE;
             return (
               <div

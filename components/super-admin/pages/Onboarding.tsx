@@ -1,8 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
 import type { UsageRow } from '@/components/super-admin/usage';
-import { Badge, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 // Onboarding medido pelo que a clínica JÁ FEZ, não por uma checklist que alguém marca
 // à mão. Cada passo abaixo é uma consulta ao estado real: tem equipa? tem doentes? já
@@ -21,15 +20,10 @@ const STEPS: Array<{ key: string; label: string; done: (r: UsageRow) => boolean 
 ];
 
 export default function Onboarding() {
-  const { api } = useAuth();
-  const [rows, setRows] = useState<UsageRow[] | null>(null);
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+  const rows = rowsQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/usage')
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [api]);
-
+  if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;
   if (!rows) return <Spinner />;
 
   const progress = (r: UsageRow) => STEPS.filter((s) => s.done(r)).length;

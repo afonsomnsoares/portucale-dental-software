@@ -1,8 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
 import { retentionBand, type UsageRow } from '@/components/super-admin/usage';
-import { Badge, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 // ─── Uma nota sobre o modelo de dados ───────────────────────────────────────
 // A estrutura pedida separa "Organizações" de "Localizações", que é o modelo de um
@@ -15,15 +14,10 @@ import { Badge, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
 // pedida. Inventar uma organização-mãe aqui obrigaria a decidir sozinho um modelo de
 // dados que ainda não foi decidido.
 export default function Locations() {
-  const { api } = useAuth();
-  const [rows, setRows] = useState<UsageRow[] | null>(null);
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+  const rows = rowsQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/usage')
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [api]);
-
+  if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;
   if (!rows) return <Spinner />;
 
   const byCity = new Map<string, UsageRow[]>();

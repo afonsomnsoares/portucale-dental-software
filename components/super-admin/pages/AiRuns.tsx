@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, Empty, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Run {
   id: string;
@@ -62,17 +63,13 @@ const STATUS_META: Record<string, { bg: string; color: string }> = {
 // exatamente a diferença que uma página destas existe para mostrar.
 export default function AiRuns() {
   const { api } = useAuth();
-  const [data, setData] = useState<{ runs: Run[]; summary: Summary[] } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [agent, setAgent] = useState('');
-
-  useEffect(() => {
-    setData(null);
-    api(`/platform/agent-runs${agent ? `?agent=${agent}` : ''}`)
-      .then(setData)
-      .catch(() => setData({ runs: [], summary: [] }));
-  }, [api, agent]);
+  const dataQuery = useQuery<{ runs: Run[]; summary: Summary[] }>(
+    `/platform/agent-runs${agent ? `?agent=${agent}` : ''}`,
+  );
+  const data = dataQuery.data ?? null;
 
   const open = useCallback(
     (id: string) => {
@@ -85,6 +82,7 @@ export default function AiRuns() {
     [api],
   );
 
+  if (dataQuery.error) return <ErrorState error={dataQuery.error} onRetry={dataQuery.refetch} />;
   if (!data) return <Spinner />;
 
   return (

@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { DataTable, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { DataTable, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Row {
   tenant_name: string | null;
@@ -29,15 +28,10 @@ const n = (v: string | number) => Number(v || 0);
 const fmtTok = (v: string | number) => n(v).toLocaleString('pt-PT');
 
 export default function AiCosts() {
-  const { api } = useAuth();
-  const [d, setD] = useState<Data | null>(null);
+  const dQuery = useQuery<Data>('/platform/ai-usage');
+  const d = dQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/ai-usage')
-      .then(setD)
-      .catch(() => setD(null));
-  }, [api]);
-
+  if (dQuery.error) return <ErrorState error={dQuery.error} onRetry={dQuery.refetch} />;
   if (!d) return <Spinner />;
 
   const totalCost = d.byTenant.reduce((a, r) => a + (r.costEur || 0), 0);

@@ -1,8 +1,7 @@
 'use client';
 import { Activity, Database, ServerCrash, Timer } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Health {
   database: { ok: boolean; latencyMs: number };
@@ -14,19 +13,17 @@ interface Health {
 }
 
 export default function Health() {
-  const { api } = useAuth();
-  const [h, setH] = useState<Health | null>(null);
-  const [loading, setLoading] = useState(true);
+  const hQuery = useQuery<Health>('/platform/health');
+  const h = hQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/health')
-      .then(setH)
-      .catch(() => setH(null))
-      .finally(() => setLoading(false));
-  }, [api]);
-
-  if (loading) return <Spinner />;
-  if (!h) return <Empty message="Não foi possível ler o estado do sistema" />;
+  if (hQuery.loading) return <Spinner />;
+  if (hQuery.error)
+    return (
+      <ErrorState error={hQuery.error} onRetry={hQuery.refetch} message="Não foi possível ler o estado do sistema." />
+    );
+  // Chegar aqui é a rota responder 200 com corpo vazio — não é o mesmo que falhar,
+  // e a mensagem tem de o dizer, senão volta a confundir-se «não sei» com «não há».
+  if (!h) return <Empty message="O estado do sistema veio vazio" />;
 
   const failRate = h.jobs24h.total ? Math.round((h.jobs24h.failed / h.jobs24h.total) * 100) : 0;
 

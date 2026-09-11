@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, Empty, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Insight {
   id: string;
@@ -27,16 +27,9 @@ const SEV: Record<string, { bg: string; color: string; label: string }> = {
 // ainda ninguém tratou. Um insight de plataforma (agente Grupo) tem tenant_id NULL e
 // aparece atribuído à rede, não a uma clínica.
 export default function Alerts() {
-  const { api } = useAuth();
-  const [items, setItems] = useState<Insight[] | null>(null);
   const [severity, setSeverity] = useState<string>('');
-
-  useEffect(() => {
-    setItems(null);
-    api(`/platform/insights${severity ? `?severity=${severity}` : ''}`)
-      .then(setItems)
-      .catch(() => setItems([]));
-  }, [api, severity]);
+  const itemsQuery = useQuery<Insight[]>(`/platform/insights${severity ? `?severity=${severity}` : ''}`);
+  const items = itemsQuery.data ?? null;
 
   const totalImpact = (items || []).reduce((a, i) => a + Number(i.impact_eur || 0), 0);
 
@@ -63,7 +56,9 @@ export default function Alerts() {
         ))}
       </div>
 
-      {!items ? (
+      {itemsQuery.error ? (
+        <ErrorState error={itemsQuery.error} onRetry={itemsQuery.refetch} message="Não foi possível ler os alertas." />
+      ) : !items ? (
         <Spinner />
       ) : !items.length ? (
         <Empty message="Nada por tratar — ou os agentes ainda não correram" />

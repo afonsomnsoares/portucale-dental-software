@@ -1,8 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
 import { daysSinceActivity, retentionBand, type UsageRow } from '@/components/super-admin/usage';
-import { Badge, DataTable, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, DataTable, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 const BANDS = [
   { key: 'active', label: 'ATIVAS', sub: 'marcaram nos últimos 7 dias', color: 'var(--urgency-ok)' },
@@ -17,15 +16,10 @@ const BANDS = [
 // e que na prática antecede o churn — é a clínica deixar de marcar. Uma clínica
 // dentária que não marca consultas há um mês já saiu, só ainda não avisou.
 export default function AnalyticsRetention() {
-  const { api } = useAuth();
-  const [rows, setRows] = useState<UsageRow[] | null>(null);
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+  const rows = rowsQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/usage')
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [api]);
-
+  if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;
   if (!rows) return <Spinner />;
 
   const count = (key: string) => rows.filter((r) => retentionBand(r).key === key).length;

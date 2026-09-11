@@ -1,23 +1,17 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
 import { retentionBand, type UsageRow } from '@/components/super-admin/usage';
-import { Badge, DataTable, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, DataTable, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 // "Todas as Organizações" é a vista de CARTEIRA: cada clínica com o seu tamanho, o seu
 // uso e o seu estado, ordenada por quem mais pesa. A vista operacional de uma clínica
 // (criar, provisionar, entrar) continua em Clínicas — são trabalhos diferentes e por
 // isso são páginas diferentes, com a mesma fonte de dados.
 export default function Organizations() {
-  const { api } = useAuth();
-  const [rows, setRows] = useState<UsageRow[] | null>(null);
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+  const rows = rowsQuery.data ?? null;
 
-  useEffect(() => {
-    api('/platform/usage')
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, [api]);
-
+  if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;
   if (!rows) return <Spinner />;
 
   const active = rows.filter((r) => r.status === 'active').length;
