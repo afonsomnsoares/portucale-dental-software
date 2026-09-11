@@ -1,5 +1,11 @@
 import AiModels from '@/components/super-admin/pages/AiModels';
+import { aiUsage } from '@/lib/aiUsage';
+import { requirePage } from '@/lib/serverPage';
 
-export default function Page() {
-  return <AiModels />;
+// `platform: 'agents:read'`, a mesma da rota: o consumo de IA é de toda a rede,
+// e vê-se de fora de qualquer clínica.
+export default async function Page() {
+  await requirePage({ platform: 'agents:read', tenant: 'optional' });
+  const consumo = await aiUsage();
+  return <AiModels initialData={consumo} />;
 }

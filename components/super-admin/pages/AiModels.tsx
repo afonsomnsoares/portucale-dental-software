@@ -1,13 +1,7 @@
 'use client';
 import { Badge, DataTable, Empty, ErrorState, PageHeader, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
-
-interface Data {
-  configuredModel: string;
-  pricePerMTok: Record<string, { input: number; output: number }>;
-  byModel: Array<{ model: string; calls: number; last_at: string | null }>;
-  byAgent: Array<{ agent: string; model: string; calls: number; failed: number; avg_ms: number | null }>;
-}
+import type { AiUsage } from '@/lib/types/platform';
 
 // Que modelos esta plataforma usa, onde, e a que preço.
 //
@@ -16,8 +10,8 @@ interface Data {
 // Esta página mostra a escolha em vigor e o que já correu com cada modelo — incluindo
 // modelos antigos, que continuam em ai_calls depois de a constante mudar. É essa a
 // utilidade: ver que uma troca de modelo aconteceu mesmo, e quando.
-export default function AiModels() {
-  const dQuery = useQuery<Data>('/platform/ai-usage');
+export default function AiModels({ initialData }: { initialData?: AiUsage } = {}) {
+  const dQuery = useQuery<AiUsage>('/platform/ai-usage', { initialData });
   const d = dQuery.data ?? null;
 
   if (dQuery.error) return <ErrorState error={dQuery.error} onRetry={dQuery.refetch} />;

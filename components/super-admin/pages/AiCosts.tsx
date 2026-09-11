@@ -1,34 +1,13 @@
 'use client';
 import { DataTable, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
-
-interface Row {
-  tenant_name: string | null;
-  tenant_city: string | null;
-  agent?: string;
-  model?: string;
-  calls: number;
-  failed: number;
-  unconfigured?: number;
-  input_tokens: string;
-  output_tokens: string;
-  avg_ms?: number | null;
-  costEur: number | null;
-}
-interface Data {
-  days: number;
-  configuredModel: string;
-  pricePerMTok: Record<string, { input: number; output: number }>;
-  byTenant: Row[];
-  byAgent: Row[];
-  byDay: Array<{ day: string; calls: number; input_tokens: string; output_tokens: string; costEur: number | null }>;
-}
+import type { AiUsage } from '@/lib/types/platform';
 
 const n = (v: string | number) => Number(v || 0);
 const fmtTok = (v: string | number) => n(v).toLocaleString('pt-PT');
 
-export default function AiCosts() {
-  const dQuery = useQuery<Data>('/platform/ai-usage');
+export default function AiCosts({ initialData }: { initialData?: AiUsage } = {}) {
+  const dQuery = useQuery<AiUsage>('/platform/ai-usage', { initialData });
   const d = dQuery.data ?? null;
 
   if (dQuery.error) return <ErrorState error={dQuery.error} onRetry={dQuery.refetch} />;

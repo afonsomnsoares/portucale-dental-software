@@ -34,3 +34,34 @@ export interface PlatformHealth {
   staleJobs: Array<{ job_name: string; last_at: string }>;
   notInstrumented: string[];
 }
+
+/**
+ * O consumo da camada de agentes — lib/aiUsage.ts.
+ *
+ * Os dois painéis que o desenham (custos e modelos) declaravam cada um a sua
+ * versão parcial deste objeto. Duas leituras da mesma resposta, nenhuma delas
+ * confrontada com o que a consulta devolve mesmo.
+ */
+export interface AiUsageRow {
+  tenant_name: string | null;
+  tenant_city: string | null;
+  agent?: string;
+  model?: string;
+  calls: number;
+  failed: number;
+  unconfigured?: number;
+  input_tokens: string;
+  output_tokens: string;
+  avg_ms?: number | null;
+  costEur: number | null;
+}
+
+export interface AiUsage {
+  days: number;
+  configuredModel: string;
+  pricePerMTok: Record<string, { input: number; output: number }>;
+  byTenant: AiUsageRow[];
+  byAgent: AiUsageRow[];
+  byDay: Array<{ day: string; calls: number; input_tokens: string; output_tokens: string; costEur: number | null }>;
+  byModel: Array<{ model: string; calls: number; last_at: string | null }>;
+}
