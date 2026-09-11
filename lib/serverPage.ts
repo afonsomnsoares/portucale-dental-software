@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { type AuthRequest, getAuth, type SessionUser, scopeTenant } from './auth';
 import { hasPermission, revalidateSession } from './permissions';
+import { requirePlatform } from './platform';
 
 // ─── O withRoute das PÁGINAS ────────────────────────────────────────────────
 // Uma página que lê a base de dados diretamente, em vez de passar por /api/,
@@ -23,9 +24,22 @@ import { hasPermission, revalidateSession } from './permissions';
 // escreve, e não há credencial ambiente que um site terceiro possa aproveitar
 // para provocar uma. As escritas continuam todas em /api/, atrás do withRoute.
 
+// ─── Os três regimes, e porque é que `platform` não é `permission` ──────────
+// Uma página de plataforma lê ACIMA da clínica — todas as clínicas de uma vez.
+// `platform: 'reports:read'` quer dizer «super-admin E com esta ação»;
+// `permission: 'reports:read'` quer dizer só a segunda metade, e um admin de
+// clínica também a tem. Confundi-los na primeira versão deste ficheiro: as
+// páginas de utilização por clínica ficaram a aceitar um admin de clínica.
+//
+// A RLS tê-lo-ia contido — a política de `tenants` é chaveada em `id`, por isso
+// ele veria a sua própria linha e mais nenhuma — mas este projeto trata «a RLS
+// safou-nos» como defeito e não como defesa (ver o cabeçalho de
+// app/api/dashboard/stats/route.ts). Uma resposta certa por acidente continua a
+// ser uma resposta que ninguém decidiu.
 type PageOptions =
-  | { permission: string; tenant?: 'required' | 'optional' }
-  | { authOnly: string; tenant?: 'required' | 'optional' };
+  | { permission: string; platform?: never; authOnly?: never; tenant?: 'required' | 'optional' }
+  | { platform: string | true; permission?: never; authOnly?: never; tenant?: 'required' | 'optional' }
+  | { authOnly: string; permission?: never; platform?: never; tenant?: 'required' | 'optional' };
 
 export interface PageContext {
   user: SessionUser;
@@ -63,7 +77,13 @@ export async function requirePage(options: PageOptions): Promise<PageContext> {
   const user = getAuth(request);
   if (!user) redirect('/');
 
-  if ('permission' in options) {
+  if (options.platform !== undefined) {
+    // O mesmo porteiro das rotas /api/platform/*, e o mesmo registo de acesso
+    // barrado: quem tenta chegar a uma página de plataforma sem ser super-admin
+    // fica no audit_log, tal como ficaria numa rota.
+    const barrado = await requirePlatform(user, options.platform === true ? undefined : options.platform);
+    if (barrado) redirect('/dashboard');
+  } else if (options.permission !== undefined) {
     if (!(await hasPermission(user, options.permission))) redirect('/dashboard');
   } else {
     // Os três modos autenticados revalidam a sessão contra a base antes de

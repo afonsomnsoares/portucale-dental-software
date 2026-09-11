@@ -2,18 +2,10 @@
 import { Activity, Database, ServerCrash, Timer } from 'lucide-react';
 import { Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
+import type { PlatformHealth } from '@/lib/types/platform';
 
-interface Health {
-  database: { ok: boolean; latencyMs: number };
-  tenantsByStatus: Array<{ status: string; n: number }>;
-  jobs24h: { completed: number; failed: number; total: number };
-  lastJobRunAt: string | null;
-  staleJobs: Array<{ job_name: string; last_at: string }>;
-  notInstrumented: string[];
-}
-
-export default function Health() {
-  const hQuery = useQuery<Health>('/platform/health');
+export default function Health({ initialData }: { initialData?: PlatformHealth } = {}) {
+  const hQuery = useQuery<PlatformHealth>('/platform/health', { initialData });
   const h = hQuery.data ?? null;
 
   if (hQuery.loading) return <Spinner />;

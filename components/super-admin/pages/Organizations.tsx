@@ -7,8 +7,8 @@ import { useQuery } from '@/hooks/useQuery';
 // uso e o seu estado, ordenada por quem mais pesa. A vista operacional de uma clínica
 // (criar, provisionar, entrar) continua em Clínicas — são trabalhos diferentes e por
 // isso são páginas diferentes, com a mesma fonte de dados.
-export default function Organizations() {
-  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+export default function Organizations({ initialData }: { initialData?: UsageRow[] } = {}) {
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage', { initialData });
   const rows = rowsQuery.data ?? null;
 
   if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;

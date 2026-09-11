@@ -15,8 +15,8 @@ const BANDS = [
 // Não há tabela de subscrições, por isso não há churn no sentido comercial. O que há —
 // e que na prática antecede o churn — é a clínica deixar de marcar. Uma clínica
 // dentária que não marca consultas há um mês já saiu, só ainda não avisou.
-export default function AnalyticsRetention() {
-  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+export default function AnalyticsRetention({ initialData }: { initialData?: UsageRow[] } = {}) {
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage', { initialData });
   const rows = rowsQuery.data ?? null;
 
   if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;

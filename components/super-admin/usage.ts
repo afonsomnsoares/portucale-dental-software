@@ -1,20 +1,9 @@
-// A linha que /api/platform/usage devolve por clínica. Partilhada pelas quatro páginas
-// que a leem (Organizações, Localizações, Onboarding, Utilização, Retenção) para o
-// contrato ficar num sítio só.
-export interface UsageRow {
-  id: string;
-  name: string;
-  city: string;
-  status: string;
-  created_at: string;
-  operatories: number;
-  patients: number;
-  active_users: number;
-  appts_30d: number;
-  appts_prev_30d: number;
-  last_appointment: string | null;
-  agent_runs_7d: number;
-}
+// A forma da linha mudou-se para lib/types/platform.ts — é o contrato da consulta
+// que a produz. Fica reexportada daqui porque é daqui que as cinco páginas que a
+// desenham (Organizações, Localizações, Onboarding, Utilização, Retenção) a leem,
+// a par das funções puras abaixo.
+export type { UsageRow } from '@/lib/types/platform';
+import type { UsageRow } from '@/lib/types/platform';
 
 /** Dias desde a última marcação. null quando a clínica nunca teve nenhuma. */
 export function daysSinceActivity(r: UsageRow): number | null {

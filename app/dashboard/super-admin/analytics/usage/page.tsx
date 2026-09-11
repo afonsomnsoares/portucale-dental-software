@@ -1,5 +1,12 @@
 import AnalyticsUsage from '@/components/super-admin/pages/AnalyticsUsage';
+import { tenantUsage } from '@/lib/platformStats';
+import { requirePage } from '@/lib/serverPage';
 
-export default function Page() {
-  return <AnalyticsUsage />;
+// A mesma leitura que /api/platform/usage serve, feita aqui — e com o mesmo
+// porteiro: `platform`, não `permission`. Esta página lê TODAS as clínicas, e
+// `platform` é o que exige ser super-admin a par da ação.
+export default async function Page() {
+  await requirePage({ platform: 'reports:read', tenant: 'optional' });
+  const linhas = await tenantUsage();
+  return <AnalyticsUsage initialData={linhas} />;
 }

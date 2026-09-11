@@ -19,8 +19,8 @@ const STEPS: Array<{ key: string; label: string; done: (r: UsageRow) => boolean 
   { key: 'agents', label: 'Agentes a correr', done: (r) => r.agent_runs_7d > 0 },
 ];
 
-export default function Onboarding() {
-  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+export default function Onboarding({ initialData }: { initialData?: UsageRow[] } = {}) {
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage', { initialData });
   const rows = rowsQuery.data ?? null;
 
   if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;

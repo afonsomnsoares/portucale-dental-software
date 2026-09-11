@@ -8,8 +8,8 @@ import { useQuery } from '@/hooks/useQuery';
 // Não é telemetria de produto (sessões, ecrãs, cliques) — isso não existe e não se
 // inventa aqui. É o trabalho medido no que ficou gravado: marcações, equipa ativa,
 // doentes, execuções de agentes. Para uma camada de operação, esse é o uso que conta.
-export default function AnalyticsUsage() {
-  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+export default function AnalyticsUsage({ initialData }: { initialData?: UsageRow[] } = {}) {
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage', { initialData });
   const rows = rowsQuery.data ?? null;
 
   if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;

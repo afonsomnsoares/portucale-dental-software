@@ -13,8 +13,8 @@ import { useQuery } from '@/hooks/useQuery';
 // a única dimensão geográfica real que há hoje, e diz o que faltaria para ser a página
 // pedida. Inventar uma organização-mãe aqui obrigaria a decidir sozinho um modelo de
 // dados que ainda não foi decidido.
-export default function Locations() {
-  const rowsQuery = useQuery<UsageRow[]>('/platform/usage');
+export default function Locations({ initialData }: { initialData?: UsageRow[] } = {}) {
+  const rowsQuery = useQuery<UsageRow[]>('/platform/usage', { initialData });
   const rows = rowsQuery.data ?? null;
 
   if (rowsQuery.error) return <ErrorState error={rowsQuery.error} onRetry={rowsQuery.refetch} />;
