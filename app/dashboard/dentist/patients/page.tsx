@@ -14,7 +14,7 @@ import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import type { SchemaField } from '@/components/shared/SchemaFieldInput';
 import { Empty, PageHeader, Tabs, Timeline } from '@/components/ui';
-import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { useQuery } from '@/hooks/useQuery';
 import type { MissingField } from '@/lib/missingData';
 import type { NextAction } from '@/lib/nextAction';
 import type { Patient, PatientInteraction, PatientTask, TimelineEvent, Treatment } from '@/lib/types';
@@ -112,67 +112,56 @@ function Sintese({
 
 export default function DentistPatientsPage() {
   const { api, user } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [notes, setNotes] = useState<TimelineEvent[]>([]);
-  const [tasks, setTasks] = useState<PatientTask[]>([]);
-  const [interactions, setInteractions] = useState<PatientInteraction[]>([]);
-  const [uploads, setUploads] = useState<UploadRow[]>([]);
-  const [nextAction, setNextAction] = useState<NextAction | null>(null);
-  const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [schemaFields, setSchemaFields] = useState<SchemaField[]>([]);
 
-  const select = useCallback(
-    async (p: Patient) => {
-      setSelected(p);
-      setTab('overview');
-      const [tl, tr, n, tk, ia, up, na] = await Promise.all([
-        api(`/patients/${p.id}/timeline`).catch(() => []),
-        api(`/treatments?patientId=${p.id}`).catch(() => []),
-        api(`/notes?patientId=${p.id}`).catch(() => []),
-        api(`/patient-tasks?patientId=${p.id}`).catch(() => []),
-        api(`/patient-interactions?patientId=${p.id}`).catch(() => []),
-        api(`/uploads?patientId=${p.id}`).catch(() => []),
-        api(`/patients/${p.id}/next-action`).catch(() => null),
-      ]);
-      setTimeline(tl || []);
-      setTreatments(tr || []);
-      setNotes(n || []);
-      setTasks(tk || []);
-      setInteractions(ia || []);
-      setUploads(up || []);
-      setNextAction(na?.nextAction || null);
-      setMissingFields(na?.missingFields || []);
-    },
-    [api],
+  // ─── O espaço de um doente, declarado em vez de orquestrado ───────────────
+  // Isto era um `select(p)` que disparava sete pedidos em Promise.all e os
+  // distribuía por sete useState. Duas consequências: os sete falhavam para
+  // dentro (`.catch(() => [])`), e o separador «Documentos» de um doente ficava
+  // a mostrar os do anterior até o novo lote chegar todo.
+  //
+  // Declarado assim, cada separador tem a sua leitura, e o id do doente
+  // escolhido é a única coisa que a comanda. Escolher outro doente invalida
+  // tudo de uma vez, sem orquestração nenhuma.
+  const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(search)}`);
+  const patients = patientsQuery.data ?? [];
+
+  const pid = selected?.id ?? null;
+  const timelineQuery = useQuery<TimelineEvent[]>(pid ? `/patients/${pid}/timeline` : null);
+  const treatmentsQuery = useQuery<Treatment[]>(pid ? `/treatments?patientId=${pid}` : null);
+  const notesQuery = useQuery<TimelineEvent[]>(pid ? `/notes?patientId=${pid}` : null);
+  const tasksQuery = useQuery<PatientTask[]>(pid ? `/patient-tasks?patientId=${pid}` : null);
+  const interactionsQuery = useQuery<PatientInteraction[]>(pid ? `/patient-interactions?patientId=${pid}` : null);
+  const uploadsQuery = useQuery<UploadRow[]>(pid ? `/uploads?patientId=${pid}` : null);
+  const nextActionQuery = useQuery<{ nextAction: NextAction | null; missingFields: MissingField[] }>(
+    pid ? `/patients/${pid}/next-action` : null,
   );
+  const schemaQuery = useQuery<SchemaField[]>('/schema');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const d = await api(`/patients?q=${encodeURIComponent(search)}`).catch(() => []);
-    setPatients(d || []);
-    if (!selected && d?.length) select(d[0]);
-    setLoading(false);
-  }, [api, search, selected, select]);
-  useDebouncedEffect(() => {
-    load();
-  }, [load]);
+  const timeline = timelineQuery.data ?? [];
+  const treatments = treatmentsQuery.data ?? [];
+  const notes = notesQuery.data ?? [];
+  const tasks = tasksQuery.data ?? [];
+  const interactions = interactionsQuery.data ?? [];
+  const uploads = uploadsQuery.data ?? [];
+  const nextAction = nextActionQuery.data?.nextAction ?? null;
+  const missingFields = nextActionQuery.data?.missingFields ?? [];
+  const schemaFields = (schemaQuery.data ?? []).filter((f) => Number(f.rollout || 0) === 100);
+
+  const select = useCallback((p: Patient) => {
+    setSelected(p);
+    setTab('overview');
+  }, []);
+
+  // O primeiro doente da lista abre sozinho, mas só enquanto ninguém tiver
+  // escolhido nada — não se rouba a escolha a quem já a fez.
   useEffect(() => {
-    api('/schema')
-      .then((d) => setSchemaFields((d || []).filter((f: SchemaField) => Number(f.rollout || 0) === 100)))
-      .catch(() => {});
-  }, [api]);
+    if (!selected && patients.length) select(patients[0]);
+  }, [selected, patients, select]);
 
-  async function refreshTimeline() {
-    if (!selected) return;
-    const tl = await api(`/patients/${selected.id}/timeline`).catch(() => null);
-    if (tl) setTimeline(tl || []);
-  }
+  const refreshTimeline = timelineQuery.refetch;
 
   const openTaskCount = tasks.filter((t) => t.status === 'pending').length;
   const TABS = [
@@ -196,7 +185,7 @@ export default function DentistPatientsPage() {
           patients={patients}
           selectedId={selected?.id}
           onSelect={select}
-          loading={loading}
+          loading={patientsQuery.loading}
           search={search}
           onSearchChange={setSearch}
           alwaysShowRiskBadge
@@ -252,13 +241,21 @@ export default function DentistPatientsPage() {
                 user={user}
                 patientId={selected.id}
                 notes={notes}
-                setNotes={setNotes}
-                refreshTimeline={refreshTimeline}
+                onChanged={() => {
+                  notesQuery.refetch();
+                  refreshTimeline();
+                }}
               />
             )}
 
             {tab === 'tasks' && (
-              <PatientTasksTab api={api} user={user} patientId={selected.id} tasks={tasks} setTasks={setTasks} />
+              <PatientTasksTab
+                api={api}
+                user={user}
+                patientId={selected.id}
+                tasks={tasks}
+                onChanged={tasksQuery.refetch}
+              />
             )}
 
             {tab === 'interactions' && (
@@ -266,7 +263,7 @@ export default function DentistPatientsPage() {
                 api={api}
                 patientId={selected.id}
                 interactions={interactions}
-                setInteractions={setInteractions}
+                onChanged={interactionsQuery.refetch}
               />
             )}
 
@@ -275,9 +272,11 @@ export default function DentistPatientsPage() {
                 api={api}
                 patientId={selected.id}
                 tasks={tasks}
-                setTasks={setTasks}
                 uploads={uploads}
-                setUploads={setUploads}
+                onChanged={() => {
+                  tasksQuery.refetch();
+                  uploadsQuery.refetch();
+                }}
               />
             )}
           </div>

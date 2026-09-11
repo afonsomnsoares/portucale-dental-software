@@ -1,5 +1,5 @@
 'use client';
-import { type Dispatch, type SetStateAction, useState } from 'react';
+import { useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import { Badge, Empty, FormField, GhostBtn, Modal, PrimaryBtn, Sel } from '@/components/ui';
 import type { PatientTask } from '@/lib/types';
@@ -19,9 +19,8 @@ interface PatientDocumentsTabProps {
   api: (path: string, opts?: ApiOptions) => Promise<any>;
   patientId: string;
   tasks: PatientTask[];
-  setTasks: Dispatch<SetStateAction<PatientTask[]>>;
+  onChanged: () => void;
   uploads: UploadRow[];
-  setUploads: Dispatch<SetStateAction<UploadRow[]>>;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -52,14 +51,7 @@ async function uploadFile(
   return res.json();
 }
 
-export default function PatientDocumentsTab({
-  api,
-  patientId,
-  tasks,
-  setTasks,
-  uploads,
-  setUploads,
-}: PatientDocumentsTabProps) {
+export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, uploads }: PatientDocumentsTabProps) {
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestCategory, setRequestCategory] = useState('id_document');
   const [requestSaving, setRequestSaving] = useState(false);
@@ -72,7 +64,7 @@ export default function PatientDocumentsTab({
     setRequestSaving(true);
     setError('');
     try {
-      const row = await api('/patient-tasks', {
+      await api('/patient-tasks', {
         method: 'POST',
         body: {
           patientId,
@@ -81,7 +73,7 @@ export default function PatientDocumentsTab({
           notes: requestCategory,
         },
       });
-      setTasks((prev) => [row, ...(prev || [])]);
+      onChanged();
       setRequestOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao pedir documento.');
@@ -95,22 +87,12 @@ export default function PatientDocumentsTab({
     setUploadingFor(taskId || 'general');
     setError('');
     try {
-      const out = await uploadFile(file, patientId, category, taskId);
-      setUploads((prev) => [
-        {
-          id: out.uploadId,
-          url: out.url,
-          category: out.category || category,
-          content_type: out.type,
-          size: out.size,
-          created_at: new Date().toISOString(),
-          task_id: taskId,
-        },
-        ...(prev || []),
-      ]);
-      if (taskId) {
-        setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: 'done' as const } : t)));
-      }
+      await uploadFile(file, patientId, category, taskId);
+      // Revalida em vez de montar a linha à mão. O upload fecha a tarefa que o
+      // pediu do lado do SERVIDOR (ver app/api/uploads/route.ts), e o objeto que
+      // aqui se construía era um palpite: id, data e estado da tarefa vinham do
+      // cliente e podiam não ser os que ficaram gravados.
+      onChanged();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao carregar ficheiro.');
     } finally {

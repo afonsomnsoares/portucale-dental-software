@@ -1,5 +1,5 @@
 'use client';
-import { type ChangeEvent, type Dispatch, type SetStateAction, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import type { ApiOptions, AuthUser } from '@/app/providers';
 import { Badge, DangerBtn, Empty, FormField, GhostBtn, Inp, PrimaryBtn, Sel, Textarea } from '@/components/ui';
 import type { PatientTask, PatientTaskType } from '@/lib/types';
@@ -10,7 +10,7 @@ interface PatientTasksTabProps {
   user: AuthUser | null;
   patientId: string;
   tasks: PatientTask[];
-  setTasks: Dispatch<SetStateAction<PatientTask[]>>;
+  onChanged: () => void;
 }
 
 const TYPE_LABELS: Record<PatientTaskType, string> = {
@@ -29,7 +29,7 @@ const PORTAL_PURPOSE: Partial<Record<PatientTaskType, 'document_upload' | 'missi
   data_missing: 'missing_data',
 };
 
-export default function PatientTasksTab({ api, user, patientId, tasks, setTasks }: PatientTasksTabProps) {
+export default function PatientTasksTab({ api, user, patientId, tasks, onChanged }: PatientTasksTabProps) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<PatientTaskType>('generic');
   const [notes, setNotes] = useState('');
@@ -45,7 +45,7 @@ export default function PatientTasksTab({ api, user, patientId, tasks, setTasks 
     setSaving(true);
     setError('');
     try {
-      const row = await api('/patient-tasks', {
+      await api('/patient-tasks', {
         method: 'POST',
         body: {
           patientId,
@@ -56,7 +56,7 @@ export default function PatientTasksTab({ api, user, patientId, tasks, setTasks 
           assignedTo: assignToMe ? user?.id : null,
         },
       });
-      setTasks((prev) => [row, ...(prev || [])]);
+      onChanged();
       setTitle('');
       setNotes('');
       setDueAt('');
@@ -70,8 +70,13 @@ export default function PatientTasksTab({ api, user, patientId, tasks, setTasks 
   }
 
   async function setStatus(id: string, patch: { complete?: boolean; cancel?: boolean }) {
-    const row = await api(`/patient-tasks/${id}`, { method: 'PUT', body: patch }).catch(() => null);
-    if (row) setTasks((prev) => prev.map((t) => (t.id === row.id ? row : t)));
+    setError('');
+    try {
+      await api(`/patient-tasks/${id}`, { method: 'PUT', body: patch });
+      onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível atualizar a tarefa.');
+    }
   }
 
   // Item 4 — "enviar formulários"/"pedir documentos": mints a single-use link

@@ -1,5 +1,5 @@
 'use client';
-import { type ChangeEvent, type Dispatch, type SetStateAction, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import { Badge, Empty, FormField, PrimaryBtn, Sel, Textarea } from '@/components/ui';
 import type { InteractionChannel, InteractionDirection, PatientInteraction } from '@/lib/types';
@@ -9,7 +9,7 @@ interface PatientInteractionsTabProps {
   api: (path: string, opts?: ApiOptions) => Promise<any>;
   patientId: string;
   interactions: PatientInteraction[];
-  setInteractions: Dispatch<SetStateAction<PatientInteraction[]>>;
+  onChanged: () => void;
 }
 
 const CHANNEL_LABELS: Record<InteractionChannel, string> = {
@@ -24,7 +24,7 @@ export default function PatientInteractionsTab({
   api,
   patientId,
   interactions,
-  setInteractions,
+  onChanged,
 }: PatientInteractionsTabProps) {
   const [channel, setChannel] = useState<InteractionChannel>('phone');
   const [direction, setDirection] = useState<InteractionDirection>('outbound');
@@ -37,11 +37,11 @@ export default function PatientInteractionsTab({
     setSaving(true);
     setError('');
     try {
-      const row = await api('/patient-interactions', {
+      await api('/patient-interactions', {
         method: 'POST',
         body: { patientId, channel, direction, summary: summary.trim() },
       });
-      setInteractions((prev) => [row, ...(prev || [])]);
+      onChanged();
       setSummary('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao registar interação.');

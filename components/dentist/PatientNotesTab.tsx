@@ -1,6 +1,6 @@
 'use client';
 import { Mic, MicOff } from 'lucide-react';
-import { type ChangeEvent, type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type ChangeEvent, useEffect, useState } from 'react';
 import type { ApiOptions, AuthUser } from '@/app/providers';
 import { Badge, Empty, FormField, GhostBtn, Inp, PrimaryBtn, Textarea } from '@/components/ui';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -12,18 +12,12 @@ interface PatientNotesTabProps {
   user: AuthUser | null;
   patientId: string;
   notes: TimelineEvent[];
-  setNotes: Dispatch<SetStateAction<TimelineEvent[]>>;
-  refreshTimeline: () => Promise<void> | void;
+  /** Chamado depois de gravar. Substitui os antigos `setNotes`/`refreshTimeline`:
+   *  quem sabe o que ficou gravado é o servidor, não este componente. */
+  onChanged: () => void;
 }
 
-export default function PatientNotesTab({
-  api,
-  user,
-  patientId,
-  notes,
-  setNotes,
-  refreshTimeline,
-}: PatientNotesTabProps) {
+export default function PatientNotesTab({ api, user, patientId, notes, onChanged }: PatientNotesTabProps) {
   const [noteText, setNoteText] = useState('');
   const [noteTags, setNoteTags] = useState('');
   const [noteLinks, setNoteLinks] = useState('');
@@ -77,15 +71,14 @@ export default function PatientNotesTab({
         .filter(Boolean)
         .join('\n');
       const finalText = header ? `${header}\n\n${noteText}` : noteText;
-      const row = await api('/notes', { method: 'POST', body: { patientId, noteText: finalText } });
-      setNotes((prev) => [row, ...(prev || [])]);
+      await api('/notes', { method: 'POST', body: { patientId, noteText: finalText } });
       setSaved(true);
       setNoteText('');
       setNoteTags('');
       setNoteLinks('');
       setAttachments([]);
       setUploadErr('');
-      await refreshTimeline?.();
+      onChanged();
     } finally {
       setSaving(false);
     }

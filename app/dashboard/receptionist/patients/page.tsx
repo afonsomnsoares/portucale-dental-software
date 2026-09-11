@@ -15,6 +15,7 @@ import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import type { SchemaField } from '@/components/shared/SchemaFieldInput';
 import { Empty, GhostBtn, PageHeader, Spinner, Tabs, Timeline } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { MissingField } from '@/lib/missingData';
 import type { NextAction } from '@/lib/nextAction';
 import type { Patient, PatientInteraction, PatientTask, TimelineEvent } from '@/lib/types';
@@ -33,73 +34,53 @@ const EMPTY_NEW_PATIENT: NewPatientForm = { name: '', dob: '', phone: '', email:
 
 export default function ReceptionPatientsPage() {
   const { api, user } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
-  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
-  const [tasks, setTasks] = useState<PatientTask[]>([]);
-  const [interactions, setInteractions] = useState<PatientInteraction[]>([]);
-  const [uploads, setUploads] = useState<UploadRow[]>([]);
-  const [nextAction, setNextAction] = useState<NextAction | null>(null);
-  const [missingFields, setMissingFields] = useState<MissingField[]>([]);
   const [tab, setTab] = useState('profile');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [tlLoad, setTlLoad] = useState(false);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<NewPatientForm>(EMPTY_NEW_PATIENT);
   const [saving, setSaving] = useState(false);
   const [createErr, setCreateErr] = useState('');
-  const [schemaFields, setSchemaFields] = useState<SchemaField[]>([]);
   const [customFields, setCustomFields] = useState<Record<string, unknown>>({});
   const [editExtra, setEditExtra] = useState(false);
   const [extraSaving, setExtraSaving] = useState(false);
   const [extraForm, setExtraForm] = useState<Record<string, unknown>>({});
   const [importOpen, setImportOpen] = useState(false);
 
-  const select = useCallback(
-    async (p: Patient) => {
-      setSelected(p);
-      setTab('profile');
-      setTlLoad(true);
-      const [tl, tk, ia, up, na] = await Promise.all([
-        api(`/patients/${p.id}/timeline`).catch(() => []),
-        api(`/patient-tasks?patientId=${p.id}`).catch(() => []),
-        api(`/patient-interactions?patientId=${p.id}`).catch(() => []),
-        api(`/uploads?patientId=${p.id}`).catch(() => []),
-        api(`/patients/${p.id}/next-action`).catch(() => null),
-      ]);
-      setTimeline(tl || []);
-      setTasks(tk || []);
-      setInteractions(ia || []);
-      setUploads(up || []);
-      setNextAction(na?.nextAction || null);
-      setMissingFields(na?.missingFields || []);
-      setTlLoad(false);
-    },
-    [api],
+  // Mesmo desenho da página equivalente do dentista: o id do doente escolhido
+  // comanda as leituras, em vez de um `select()` a orquestrar cinco pedidos.
+  const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(search)}`);
+  const patients = patientsQuery.data ?? [];
+
+  const pid = selected?.id ?? null;
+  const timelineQuery = useQuery<TimelineEvent[]>(pid ? `/patients/${pid}/timeline` : null);
+  const tasksQuery = useQuery<PatientTask[]>(pid ? `/patient-tasks?patientId=${pid}` : null);
+  const interactionsQuery = useQuery<PatientInteraction[]>(pid ? `/patient-interactions?patientId=${pid}` : null);
+  const uploadsQuery = useQuery<UploadRow[]>(pid ? `/uploads?patientId=${pid}` : null);
+  const nextActionQuery = useQuery<{ nextAction: NextAction | null; missingFields: MissingField[] }>(
+    pid ? `/patients/${pid}/next-action` : null,
   );
+  const schemaQuery = useQuery<SchemaField[]>('/schema');
 
-  const loadPts = useCallback(async () => {
-    setLoading(true);
-    const d = await api(`/patients?q=${encodeURIComponent(search)}`).catch(() => []);
-    setPatients(d || []);
-    if (!selected && d?.length) select(d[0]);
-    setLoading(false);
-  }, [api, search, selected, select]);
+  const timeline = timelineQuery.data ?? [];
+  const tasks = tasksQuery.data ?? [];
+  const interactions = interactionsQuery.data ?? [];
+  const uploads = uploadsQuery.data ?? [];
+  const nextAction = nextActionQuery.data?.nextAction ?? null;
+  const missingFields = nextActionQuery.data?.missingFields ?? [];
+  const schemaFields = (schemaQuery.data ?? []).filter((f) => Number(f.rollout || 0) === 100);
 
-  const loadSchemaFields = useCallback(() => {
-    api('/schema')
-      .then((d) => setSchemaFields((d || []).filter((f: SchemaField) => Number(f.rollout || 0) === 100)))
-      .catch(() => {});
-  }, [api]);
+  const select = useCallback((p: Patient) => {
+    setSelected(p);
+    setTab('profile');
+  }, []);
 
   useEffect(() => {
-    const t = setTimeout(loadPts, 300);
-    return () => clearTimeout(t);
-  }, [loadPts]);
-  useEffect(() => {
-    loadSchemaFields();
-  }, [loadSchemaFields]);
+    if (!selected && patients.length) select(patients[0]);
+  }, [selected, patients, select]);
+
+  const loadPts = patientsQuery.refetch;
+  const loadSchemaFields = schemaQuery.refetch;
 
   async function create() {
     setCreateErr('');
@@ -135,7 +116,7 @@ export default function ReceptionPatientsPage() {
             .filter(Boolean)
         : [];
       const p = await api('/patients', { method: 'POST', body: { ...form, alerts, customFields: payloadCustom } });
-      setPatients((prev) => [p, ...prev]);
+      loadPts();
       setModal(false);
       setForm(EMPTY_NEW_PATIENT);
       setCustomFields({});
@@ -156,14 +137,19 @@ export default function ReceptionPatientsPage() {
   async function saveExtra() {
     if (!selected) return;
     setExtraSaving(true);
-    const updated = await api(`/patients/${selected.id}`, {
-      method: 'PUT',
-      body: { ...selected, customFields: extraForm },
-    }).catch(() => null);
-    if (updated) {
+    setCreateErr('');
+    try {
+      const updated = await api(`/patients/${selected.id}`, {
+        method: 'PUT',
+        body: { ...selected, customFields: extraForm },
+      });
       setSelected(updated);
-      setPatients((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+      loadPts();
       setEditExtra(false);
+    } catch (e) {
+      // Gravar campos adicionais falhava sem dizer nada: o modal ficava aberto
+      // e o botão desprendia-se, como se nada tivesse sido pedido.
+      setCreateErr(e instanceof Error ? e.message : 'Não foi possível guardar os campos adicionais.');
     }
     setExtraSaving(false);
   }
@@ -194,7 +180,7 @@ export default function ReceptionPatientsPage() {
           patients={patients}
           selectedId={selected?.id}
           onSelect={select}
-          loading={loading}
+          loading={patientsQuery.loading}
           search={search}
           onSearchChange={setSearch}
         />
@@ -230,12 +216,18 @@ export default function ReceptionPatientsPage() {
             {tab === 'timeline' && (
               <div className="card p-5">
                 <div className="section-label mb-4">LINHA DO TEMPO DO DOENTE — IMUTÁVEL · HASH SHA-256</div>
-                {tlLoad ? <Spinner /> : <Timeline events={timeline} />}
+                {timelineQuery.loading ? <Spinner /> : <Timeline events={timeline} />}
               </div>
             )}
 
             {tab === 'tasks' && (
-              <PatientTasksTab api={api} user={user} patientId={selected.id} tasks={tasks} setTasks={setTasks} />
+              <PatientTasksTab
+                api={api}
+                user={user}
+                patientId={selected.id}
+                tasks={tasks}
+                onChanged={tasksQuery.refetch}
+              />
             )}
 
             {tab === 'interactions' && (
@@ -243,7 +235,7 @@ export default function ReceptionPatientsPage() {
                 api={api}
                 patientId={selected.id}
                 interactions={interactions}
-                setInteractions={setInteractions}
+                onChanged={interactionsQuery.refetch}
               />
             )}
 
@@ -252,9 +244,11 @@ export default function ReceptionPatientsPage() {
                 api={api}
                 patientId={selected.id}
                 tasks={tasks}
-                setTasks={setTasks}
                 uploads={uploads}
-                setUploads={setUploads}
+                onChanged={() => {
+                  tasksQuery.refetch();
+                  uploadsQuery.refetch();
+                }}
               />
             )}
           </div>
