@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import { Badge, GhostBtn, PageHeader, PrimaryBtn, Sel, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Tenant } from '@/lib/types';
 
 interface PermEntry {
@@ -37,7 +38,10 @@ export default function PermissionsMatrix() {
   const { api, user } = useAuth();
   // Um admin de clínica tem a sua; o super-admin não tem nenhuma e escolhe-a.
   const ownTenantId = user?.tenantId || '';
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  // Só o super-admin (sem clínica própria) precisa de escolher; para os outros
+  // o hook fica em espera e não pede nada.
+  const tenantsQuery = useQuery<Tenant[]>(ownTenantId ? null : '/tenants');
+  const tenants = tenantsQuery.data ?? [];
   const [tenantId, setTenantId] = useState(ownTenantId);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,18 +52,8 @@ export default function PermissionsMatrix() {
   useEffect(() => {
     // Só quem não tem clínica própria precisa da lista — e é o único a quem o
     // servidor a dá.
-    if (ownTenantId) {
-      setLoading(false);
-      return;
-    }
-    api('/tenants')
-      .then((t) => {
-        setTenants(t || []);
-        if ((t || []).length) setTenantId(t[0].id);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api, ownTenantId]);
+    if (!tenantId && tenants.length) setTenantId(tenants[0].id);
+  }, [tenantId, tenants]);
 
   useEffect(() => {
     // Sem clínica escolhida não há matriz que faça sentido pedir — exceto para

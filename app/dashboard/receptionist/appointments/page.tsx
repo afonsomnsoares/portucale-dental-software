@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import AppointmentEditModal, { type AppointmentEditForm } from '@/components/receptionist/AppointmentEditModal';
 import AppointmentsTable from '@/components/receptionist/AppointmentsTable';
@@ -25,7 +25,8 @@ export default function ReceptionAppointmentsPage() {
   const [to, setTo] = useState(() => addDays(new Date().toISOString().slice(0, 10), 30));
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dentists, setDentists] = useState<Dentist[]>([]);
+  const dentistsQuery = useQuery<Dentist[]>('/dentists');
+  const dentists = dentistsQuery.data ?? [];
   const [removing, setRemoving] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Appointment | null>(null);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -51,12 +52,6 @@ export default function ReceptionAppointmentsPage() {
   // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
   // gravar, e continuam a poder fazê-lo.
   const load = apptsQuery.refetch;
-
-  useEffect(() => {
-    api('/dentists')
-      .then((d) => setDentists(d || []))
-      .catch(() => {});
-  }, [api]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

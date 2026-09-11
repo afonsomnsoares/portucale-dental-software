@@ -15,7 +15,7 @@
 // que alguém lesse a margem sem saber sobre que regra ela foi calculada.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { AlertBanner, Empty, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
 import { formatEUR } from '@/lib/constants';
 
 interface Margin {
@@ -161,14 +161,23 @@ export default function Costing() {
   const [aCarregar, setACarregar] = useState(true);
   const [aGravar, setAGravar] = useState(false);
   const [erro, setErro] = useState('');
+  const [avisoDefinicoes, setAvisoDefinicoes] = useState('');
 
   const carregar = useCallback(async () => {
     setACarregar(true);
     setErro('');
+    setAvisoDefinicoes('');
     try {
+      // As definições de custo são opcionais — uma clínica que ainda não as
+      // preencheu vê a margem à mesma, com a ressalva que o ecrã já mostra. Mas
+      // «ainda não preenchidas» e «não consegui ler» não são a mesma coisa, e a
+      // segunda passa a aparecer em vez de se disfarçar da primeira.
       const [r, c] = await Promise.all([
         api(`/finance/margin?from=${de}&to=${ate}`),
-        api('/finance/cost-settings').catch(() => null),
+        api('/finance/cost-settings').catch((e: unknown) => {
+          setAvisoDefinicoes(e instanceof Error ? e.message : 'Não foi possível ler as definições de custo.');
+          return null;
+        }),
       ]);
       setRel(r || null);
       if (c) {
@@ -218,6 +227,7 @@ export default function Costing() {
         </div>
       </PageHeader>
 
+      {avisoDefinicoes ? <AlertBanner type="warning">{avisoDefinicoes}</AlertBanner> : null}
       {erro && (
         <div
           style={{

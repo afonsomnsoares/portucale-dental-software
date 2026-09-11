@@ -40,7 +40,16 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const row: PatientSchedulingPrefs | null = await api(`/patients/${patient.id}/scheduling-prefs`).catch(() => null);
+    setError('');
+    // Sem `.catch(() => null)`: um erro aqui apagava as preferências guardadas do
+    // ecrã e mostrava o formulário vazio, como se o doente nunca tivesse dito nada.
+    let row: PatientSchedulingPrefs | null = null;
+    try {
+      row = await api(`/patients/${patient.id}/scheduling-prefs`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível ler as preferências.');
+      return;
+    }
     setSaved(row);
     setForm(
       row
@@ -54,7 +63,6 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
         : EMPTY,
     );
     setEditing(false);
-    setError('');
   }, [api, patient.id]);
 
   useEffect(() => {
@@ -66,7 +74,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
     // ficha recebe 403 e fica só sem o seletor, sem quebrar o resto do cartão.
     api('/dentists')
       .then((d) => setDentists(d || []))
-      .catch(() => setDentists([]));
+      .catch(() => setDentists([])); // intentional — ver o comentário acima: 403 esperado para um dentista
   }, [api]);
 
   function toggleDay(day: number) {

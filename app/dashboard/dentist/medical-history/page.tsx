@@ -1,5 +1,5 @@
 'use client';
-import { type ChangeEvent, type Dispatch, type SetStateAction, useCallback, useState } from 'react';
+import { type ChangeEvent, type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
@@ -15,7 +15,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
-import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { useQuery } from '@/hooks/useQuery';
 import type { Patient } from '@/lib/types';
 
 interface HistoryItem {
@@ -37,10 +37,10 @@ interface MedicalHistoryForm {
 
 export default function MedicalHistoryPage() {
   const { api } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const patients = patientsQuery.data ?? [];
   const [selected, setSelected] = useState<Patient | null>(null);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<MedicalHistoryForm>({
@@ -56,35 +56,35 @@ export default function MedicalHistoryPage() {
   const [newMed, setNewMed] = useState<HistoryItem>({ name: '', notes: '' });
   const [newCond, setNewCond] = useState<HistoryItem>({ name: '', notes: '' });
 
-  const select = useCallback(
-    async (p: Patient) => {
-      setSelected(p);
-      setError(null);
-      const mh = await api(`/patients/${p.id}/medical-history`).catch(() => null);
-      setForm({
-        allergies: mh?.allergies || [],
-        medications: mh?.medications || [],
-        conditions: mh?.conditions || [],
-        family_history: mh?.family_history || '',
-        smoking: mh?.smoking || 'never',
-        pregnancy: mh?.pregnancy || 'no',
-        notes: mh?.notes || '',
-      });
-    },
-    [api],
-  );
+  const select = useCallback((p: Patient) => {
+    setSelected(p);
+    setError(null);
+  }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const pts = await api('/patients').catch(() => []);
-    setPatients(pts || []);
-    if (!selected && pts?.length) select(pts[0]);
-    setLoading(false);
-  }, [api, selected, select]);
+  useEffect(() => {
+    if (!selected && patients.length) select(patients[0]);
+  }, [selected, patients, select]);
 
-  useDebouncedEffect(() => {
-    load();
-  }, [load]);
+  // A anamnese do doente escolhido. Falhar aqui é o caso grave desta página: o
+  // `.catch(() => null)` anterior enchia o formulário de valores por omissão —
+  // «sem alergias», «nunca fumou» — e o dentista lia isso como o histórico do
+  // doente. Um histórico clínico que não carregou tem de dizê-lo.
+  const pid = selected?.id ?? null;
+  const historyQuery = useQuery<MedicalHistoryForm>(pid ? `/patients/${pid}/medical-history` : null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: o formulário repõe-se quando o doente ou a resposta mudam
+  useEffect(() => {
+    const mh = historyQuery.data;
+    setForm({
+      allergies: mh?.allergies || [],
+      medications: mh?.medications || [],
+      conditions: mh?.conditions || [],
+      family_history: mh?.family_history || '',
+      smoking: mh?.smoking || 'never',
+      pregnancy: mh?.pregnancy || 'no',
+      notes: mh?.notes || '',
+    });
+  }, [historyQuery.data, pid]);
 
   function addListItem(
     list: HistoryListKey,
@@ -160,22 +160,11 @@ export default function MedicalHistoryPage() {
     if (!selected) return;
     setSaving(true);
     setError(null);
-    const res = await api(`/patients/${selected.id}/medical-history`, {
-      method: 'PUT',
-      body: form,
-    }).catch(() => null);
-    if (res) {
-      setForm({
-        allergies: res.allergies || [],
-        medications: res.medications || [],
-        conditions: res.conditions || [],
-        family_history: res.family_history || '',
-        smoking: res.smoking || 'never',
-        pregnancy: res.pregnancy || 'no',
-        notes: res.notes || '',
-      });
-    } else {
-      setError('Failed to save medical history');
+    try {
+      await api(`/patients/${selected.id}/medical-history`, { method: 'PUT', body: form });
+      historyQuery.refetch();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível guardar o histórico clínico.');
     }
     setSaving(false);
   }
@@ -183,6 +172,12 @@ export default function MedicalHistoryPage() {
   return (
     <div>
       <PageHeader title="Histórico Clínico" sub="Anamnese do doente — alergias, medicação e condições" />
+      {historyQuery.error ? (
+        <AlertBanner type="danger">
+          Não foi possível ler o histórico deste doente — o que está em baixo não é a anamnese dele.{' '}
+          {historyQuery.error.message}
+        </AlertBanner>
+      ) : null}
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
@@ -194,7 +189,7 @@ export default function MedicalHistoryPage() {
             />
           </div>
           <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
-            {loading ? (
+            {patientsQuery.loading ? (
               <Spinner />
             ) : !patients.length ? (
               <Empty message="Sem doentes" />

@@ -97,16 +97,21 @@ export default function RecoveryReceptionistPage() {
     if (!row.patient_id) return;
     const key = rowKey(row);
     setBusyId(key);
-    const created = await api('/patient-tasks', {
-      method: 'POST',
-      body: {
-        patientId: row.patient_id,
-        type: 'follow_up',
-        title: `Follow-up: ${row.categoryLabel} — ${row.patient_name}`,
-        notes: row.detail,
-      },
-    }).catch(() => null);
-    if (created) setTasksCreated((prev) => new Set(prev).add(key));
+    setErr('');
+    try {
+      await api('/patient-tasks', {
+        method: 'POST',
+        body: {
+          patientId: row.patient_id,
+          type: 'follow_up',
+          title: `Follow-up: ${row.categoryLabel} — ${row.patient_name}`,
+          notes: row.detail,
+        },
+      });
+      setTasksCreated((prev) => new Set(prev).add(key));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Não foi possível criar a tarefa de follow-up.');
+    }
     setBusyId(null);
   }
 

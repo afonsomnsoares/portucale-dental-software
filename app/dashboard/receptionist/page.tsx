@@ -123,9 +123,18 @@ export default function ReceptionDashboard() {
       fromDate: suggestFromDate,
     });
     if (preferredDentistId) params.set('dentistId', preferredDentistId);
-    const res = await api(`/appointments/suggest?${params.toString()}`).catch(() => null);
-    setSlots(res?.slots || []);
-    setSlotsDuration(res?.duration || getDefaultDuration(form.type));
+    setBookErr('');
+    try {
+      const res = await api(`/appointments/suggest?${params.toString()}`);
+      setSlots(res?.slots || []);
+      setSlotsDuration(res?.duration || getDefaultDuration(form.type));
+    } catch (e) {
+      // «Sem vagas» e «não consegui procurar» são conclusões opostas, e a lista
+      // vazia desenhava-se como a primeira.
+      setSlots([]);
+      setSlotsDuration(getDefaultDuration(form.type));
+      setBookErr(e instanceof Error ? e.message : 'Não foi possível procurar vagas.');
+    }
     setSlotsLoading(false);
   }, [api, form.patientId, form.type, preferredDentistId, suggestFromDate]);
 

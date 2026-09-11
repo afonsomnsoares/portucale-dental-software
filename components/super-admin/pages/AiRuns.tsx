@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, Empty, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, Empty, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 interface Run {
@@ -65,6 +65,7 @@ export default function AiRuns() {
   const { api } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [erroDetalhe, setErroDetalhe] = useState('');
   const [agent, setAgent] = useState('');
   const dataQuery = useQuery<{ runs: Run[]; summary: Summary[] }>(
     `/platform/agent-runs${agent ? `?agent=${agent}` : ''}`,
@@ -75,9 +76,14 @@ export default function AiRuns() {
     (id: string) => {
       setSelected(id);
       setDetail(null);
+      setErroDetalhe('');
       api(`/platform/agent-runs/${id}`)
         .then(setDetail)
-        .catch(() => setDetail(null));
+        .catch((e: unknown) => {
+          // Sem isto, uma execução cujo detalhe falhasse ficava a mostrar o
+          // esqueleto vazio para sempre, indistinguível de uma sem passos.
+          setErroDetalhe(e instanceof Error ? e.message : 'Não foi possível ler o detalhe.');
+        });
     },
     [api],
   );
@@ -161,7 +167,9 @@ export default function AiRuns() {
 
         {selected && (
           <div className="card p-5" style={{ alignSelf: 'start', position: 'sticky', top: 0 }}>
-            {!detail ? (
+            {erroDetalhe ? (
+              <AlertBanner type="danger">{erroDetalhe}</AlertBanner>
+            ) : !detail ? (
               <Spinner />
             ) : (
               <>

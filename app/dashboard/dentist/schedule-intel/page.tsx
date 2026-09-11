@@ -1,42 +1,32 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, PageHeader, RiskBadge, Spinner } from '@/components/ui';
+import { Empty, ErrorState, PageHeader, RiskBadge, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Appointment } from '@/lib/types';
 
 export default function DentistScheduleIntelPage() {
-  const { api, user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [highRiskAppts, setHighRiskAppts] = useState<Appointment[]>([]);
-  const [upcomingAppts, setUpcomingAppts] = useState<Appointment[]>([]);
-  const [noShowData, setNoShowData] = useState<{ total: number; noShow: number }>({ total: 0, noShow: 0 });
+  const { user } = useAuth();
+  const riskQuery = useQuery<Appointment[]>('/schedule-intel/risk?days=14');
+  const schedQuery = useQuery<Appointment[]>('/appointments?from=&to=');
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [risk, sched] = await Promise.all([
-        api('/schedule-intel/risk?days=14').catch(() => []),
-        api('/appointments?from=&to=').catch(() => []),
-      ]);
-      const all = Array.isArray(sched) ? sched : [];
-      const myAppts = all.filter((a: Appointment) => a.dentist_id === user?.id);
-      const riskAll = Array.isArray(risk) ? risk : [];
-      setHighRiskAppts(riskAll.filter((a: Appointment) => (a.risk_score || 0) >= 60));
-      setUpcomingAppts(
-        myAppts.filter((a: Appointment) => ['confirmed', 'registered', 'waiting'].includes(a.status)).slice(0, 10),
-      );
-      const total = myAppts.length;
-      const noShow = myAppts.filter((a: Appointment) => a.status === 'no-show').length;
-      setNoShowData({ total, noShow });
-      setLoading(false);
-    }
-    load();
-  }, [api, user?.id]);
+  // Todo o cálculo abaixo era feito dentro do efeito e guardado em três estados.
+  // É derivação pura das duas respostas — deriva-se no render e deixa de haver
+  // estado para ficar dessincronizado.
+  const riskAll = riskQuery.data ?? [];
+  const myAppts = (schedQuery.data ?? []).filter((a) => a.dentist_id === user?.id);
+  const highRiskAppts = riskAll.filter((a) => (a.risk_score || 0) >= 60);
+  const upcomingAppts = myAppts.filter((a) => ['confirmed', 'registered', 'waiting'].includes(a.status)).slice(0, 10);
+  const noShowData = {
+    total: myAppts.length,
+    noShow: myAppts.filter((a) => a.status === 'no-show').length,
+  };
 
   return (
     <div>
       <PageHeader title="Inteligência de Agenda" sub="Visão do risco de falta e ocupação" />
-      {loading ? (
+      {schedQuery.error ? (
+        <ErrorState error={schedQuery.error} onRetry={schedQuery.refetch} message="Não foi possível ler a agenda." />
+      ) : schedQuery.loading ? (
         <Spinner />
       ) : (
         <>

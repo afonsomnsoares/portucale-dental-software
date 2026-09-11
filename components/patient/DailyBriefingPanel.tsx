@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { Empty, GhostBtn } from '@/components/ui';
+import { AlertBanner, Empty, GhostBtn } from '@/components/ui';
 import type { DailyBriefingRow } from '@/lib/types';
 
 interface DailyBriefingPanelProps {
@@ -32,19 +32,27 @@ const ACTION_COLOR: Record<string, { bg: string; color: string }> = {
 export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProps) {
   const [taskCreatedFor, setTaskCreatedFor] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [erroTarefa, setErroTarefa] = useState('');
 
   async function createFollowUp(row: DailyBriefingRow) {
     setBusyId(row.appointmentId);
-    const created = await api('/patient-tasks', {
-      method: 'POST',
-      body: {
-        patientId: row.patientId,
-        type: 'follow_up',
-        title: `Follow-up pós-consulta: ${row.patientName}`,
-        notes: row.nextAction.label,
-      },
-    }).catch(() => null);
-    if (created) setTaskCreatedFor((prev) => new Set(prev).add(row.appointmentId));
+    setErroTarefa('');
+    try {
+      await api('/patient-tasks', {
+        method: 'POST',
+        body: {
+          patientId: row.patientId,
+          type: 'follow_up',
+          title: `Follow-up pós-consulta: ${row.patientName}`,
+          notes: row.nextAction.label,
+        },
+      });
+      setTaskCreatedFor((prev) => new Set(prev).add(row.appointmentId));
+    } catch (e) {
+      // O botão vira «criada» a partir deste Set. Se a escrita falhar em
+      // silêncio, o ecrã diz que a tarefa existe e ela não existe.
+      setErroTarefa(e instanceof Error ? e.message : 'Não foi possível criar a tarefa de follow-up.');
+    }
     setBusyId(null);
   }
 
@@ -52,6 +60,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
 
   return (
     <div className="card p-5">
+      {erroTarefa ? <AlertBanner type="danger">{erroTarefa}</AlertBanner> : null}
       <div className="section-label mb-1">PREPARAÇÃO DE HOJE</div>
       <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
         Dados em falta, tarefas pendentes e o que fazer a seguir, por paciente — sem tocar em nada clínico.

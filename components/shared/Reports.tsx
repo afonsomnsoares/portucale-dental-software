@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import { Empty, GhostBtn, Inp, MetricCard, PageHeader, PrimaryBtn, Sel, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { ClinicComparison, ReportInsight, ReportSummary, Tenant } from '@/lib/types';
 
@@ -30,11 +31,9 @@ export default function Reports() {
   // ele, compara.
   const ownTenantId = user?.tenantId || '';
   const isGlobalAdmin = !ownTenantId;
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState(ownTenantId);
   const [from, setFrom] = useState(() => new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ReportSummary | null>(null);
   const [comparison, setComparison] = useState<ClinicComparison | null>(null);
   const [err, setErr] = useState('');
@@ -42,16 +41,14 @@ export default function Reports() {
   const [insightLoading, setInsightLoading] = useState(false);
   const [insightScope, setInsightScope] = useState<'clinic' | 'compare'>('clinic');
 
+  // Só o super-admin (sem clínica própria) precisa de escolher; para os outros
+  // o hook fica em espera e não pede nada.
+  const tenantsQuery = useQuery<Tenant[]>(ownTenantId ? null : '/tenants');
+  const tenants = tenantsQuery.data ?? [];
+
   useEffect(() => {
-    if (ownTenantId) return;
-    api('/tenants')
-      .then((t) => {
-        setTenants(t || []);
-        if ((t || []).length) setTenantId(t[0].id);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api, ownTenantId]);
+    if (!tenantId && tenants.length) setTenantId(tenants[0].id);
+  }, [tenantId, tenants]);
 
   const load = useCallback(async () => {
     if (!tenantId && !ownTenantId) return;
@@ -64,6 +61,8 @@ export default function Reports() {
         setErr(e instanceof Error ? e.message : 'Falha ao carregar');
         return null;
       }),
+      // intentional — a comparação entre clínicas é um extra do super-admin; falhar
+      // aqui não pode levar o relatório da própria clínica à frente
       isGlobalAdmin ? api(`/reports/compare?from=${from}&to=${to}`).catch(() => null) : Promise.resolve(null),
     ]);
     setData(summary);
@@ -94,7 +93,7 @@ export default function Reports() {
     <div>
       <PageHeader title="Relatórios" sub="Desempenho da clínica — receita, funil de conversão e eficiência">
         {isGlobalAdmin &&
-          (loading ? (
+          (tenantsQuery.loading ? (
             <Spinner />
           ) : (
             <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ maxWidth: 280 }}>
@@ -138,7 +137,11 @@ export default function Reports() {
 
       {!data ? (
         <div className="card p-5">
-          {loading ? <Spinner /> : <div style={{ color: 'var(--text-muted)' }}>Sem dados para o período.</div>}
+          {tenantsQuery.loading ? (
+            <Spinner />
+          ) : (
+            <div style={{ color: 'var(--text-muted)' }}>Sem dados para o período.</div>
+          )}
         </div>
       ) : (
         <>
