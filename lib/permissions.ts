@@ -419,15 +419,54 @@ export async function effectiveActions(role: string, tenantId: string | null | u
   return PERMISSION_ACTIONS.filter((a) => (override.has(a) ? !!override.get(a) : defaultAllows(role, a)));
 }
 
+// Os papéis que uma clínica pode reconfigurar. Não inclui 'super_admin': ele não tem
+// clínica, hasPermission salta-lhe o permissionOverride por isso mesmo, e uma linha de
+// role_permissions com o nome dele seria uma linha que nada lê — o género de estado que
+// mais tarde alguém interpreta como se tivesse efeito.
+//
+// Partilhado entre getPermissionMatrix (o que a UI mostra) e setPermissionOverrides (o
+// que ela pode gravar) de propósito: eram duas listas, e a de escrita não existia de
+// todo — aceitava qualquer string.
+export const OVERRIDABLE_ROLES = ['receptionist', 'dentist', 'admin'];
+
+/**
+ * Este par (papel, ação) pode ser reconfigurado por uma clínica?
+ *
+ * Existe como função pura, e exportada, para poder ser testada sem base de dados — o
+ * resto de setPermissionOverrides é escrita, e a regra que importa é esta.
+ *
+ * ─── Porque é que as PLATFORM_ACTIONS são recusadas aqui ────────────────────
+ * Tirá-las dos defaults do 'admin' não chegava. `setPermissionOverrides` só validava
+ * `PERMISSION_ACTIONS.includes(action)` — e 'tenants:manage' está nessa lista. Um admin
+ * de clínica tem 'permissions:manage' por omissão, logo podia gravar um override que
+ * devolvia ao seu próprio papel exatamente a ação que os defaults lhe retiraram, e
+ * `hasPermission` consulta o override ANTES dos defaults.
+ *
+ * Não era explorável: as rotas de plataforma usam `platform:` em withRoute, e
+ * requirePlatform verifica o papel antes da permissão. Mas a defesa em profundidade que
+ * PLATFORM_ACTIONS existe para dar estava, na prática, desligada — e a primeira rota
+ * escrita só com `permission: 'tenants:manage'` tornava-a real.
+ */
+export function canOverride(role: string, action: string): boolean {
+  if (!OVERRIDABLE_ROLES.includes(role)) return false;
+  if (!PERMISSION_ACTIONS.includes(action)) return false;
+  if (PLATFORM_ACTIONS.includes(action)) return false;
+  return true;
+}
+
 export async function getPermissionMatrix(tenantId: string) {
-  const roles = ['receptionist', 'dentist', 'admin'];
+  const roles = OVERRIDABLE_ROLES;
   const rows = await safeQuery(`SELECT role, action, allowed FROM role_permissions WHERE tenant_id=$1`, [tenantId]);
   const map = new Map(rows.map((r) => [`${r.role}:${r.action}`, !!r.allowed]));
+  // As ações que a UI mostra são exatamente as que setPermissionOverrides aceita
+  // gravar. Mostrar as de plataforma — que o guardião abaixo recusa — seria pôr no
+  // ecrã um interruptor que não liga nada.
+  const actions = PERMISSION_ACTIONS.filter((a) => !PLATFORM_ACTIONS.includes(a));
   type PermEntry = { default: boolean; override: boolean | null; effective: boolean };
   const matrix: Record<string, Record<string, PermEntry>> = {};
   for (const role of roles) {
     matrix[role] = {};
-    for (const action of PERMISSION_ACTIONS) {
+    for (const action of actions) {
       const key = `${role}:${action}`;
       const def = defaultAllows(role, action);
       const rawOvr = map.get(key);
@@ -439,7 +478,7 @@ export async function getPermissionMatrix(tenantId: string) {
       };
     }
   }
-  return { roles, actions: PERMISSION_ACTIONS, matrix };
+  return { roles, actions, matrix };
 }
 
 export async function setPermissionOverrides(
@@ -449,8 +488,7 @@ export async function setPermissionOverrides(
   for (const u of updates || []) {
     const role = String(u.role || '');
     const action = String(u.action || '');
-    if (!role || !action) continue;
-    if (!PERMISSION_ACTIONS.includes(action)) continue;
+    if (!canOverride(role, action)) continue;
     if (u.allowed === null) {
       await safeQuery(`DELETE FROM role_permissions WHERE tenant_id=$1 AND role=$2 AND action=$3`, [
         tenantId,

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NAV } from '../lib/constants.ts';
-import { PERMISSION_ACTIONS, PLATFORM_ACTIONS, defaultAllows } from '../lib/permissions.ts';
+import { OVERRIDABLE_ROLES, PERMISSION_ACTIONS, PLATFORM_ACTIONS, canOverride, defaultAllows } from '../lib/permissions.ts';
 
 test('permission actions list is stable', () => {
   assert.ok(Array.isArray(PERMISSION_ACTIONS));
@@ -71,4 +71,58 @@ test('as duas correções de links mortos mantêm-se', () => {
   assert.equal(defaultAllows('dentist', 'schedule:read'), true);
   // Ler não passa a deixar escrever.
   assert.equal(defaultAllows('receptionist', 'treatments:create'), false);
+});
+
+// ─── Overrides por clínica: o que a UI de permissões pode gravar ─────────────
+// Estes existem por causa de um buraco concreto. Retirar 'tenants:manage' dos defaults
+// do 'admin' (o teste acima) não chegava: setPermissionOverrides só verificava
+// `PERMISSION_ACTIONS.includes(action)`, e 'tenants:manage' está nessa lista. Um admin
+// tem 'permissions:manage' por omissão, logo podia gravar um override a devolver ao seu
+// próprio papel a ação que o default lhe tirava — e hasPermission lê o override ANTES
+// do default. Só não era explorável porque as rotas de plataforma verificam o PAPEL
+// (requirePlatform), que é o remendo que este teste existe para não voltar a ser
+// a única barreira.
+
+test('nenhuma ação de plataforma pode ser concedida por override', () => {
+  for (const action of PLATFORM_ACTIONS) {
+    for (const role of OVERRIDABLE_ROLES) {
+      assert.equal(
+        canOverride(role, action),
+        false,
+        `${role} conseguiria conceder-se '${action}' pela UI de permissões`,
+      );
+    }
+  }
+});
+
+test('as ações normais continuam configuráveis por clínica', () => {
+  assert.equal(canOverride('receptionist', 'treatments:create'), true);
+  assert.equal(canOverride('dentist', 'invoices:read'), true);
+  assert.equal(canOverride('admin', 'audit:read'), true);
+});
+
+test('o papel do override tem de ser um dos configuráveis', () => {
+  // super_admin não tem clínica e hasPermission salta-lhe o override — uma linha com
+  // este papel seria estado que nada lê.
+  assert.equal(canOverride('super_admin', 'patients:create'), false);
+  assert.equal(canOverride('', 'patients:create'), false);
+  assert.equal(canOverride('inventado', 'patients:create'), false);
+});
+
+test('uma ação que não existe nunca é gravável', () => {
+  assert.equal(canOverride('admin', 'nao:existe'), false);
+  assert.equal(canOverride('admin', ''), false);
+  // Propriedades do protótipo não são ações (PERMISSION_ACTIONS é um array, mas a
+  // regressão é barata de fixar).
+  assert.equal(canOverride('admin', 'constructor'), false);
+  assert.equal(canOverride('admin', '__proto__'), false);
+});
+
+test('a matriz mostra exatamente o que pode ser gravado', () => {
+  // Se a UI oferecer uma ação que canOverride recusa, o utilizador vê um interruptor
+  // que não liga nada.
+  const doMenu = PERMISSION_ACTIONS.filter((a) => !PLATFORM_ACTIONS.includes(a));
+  for (const action of doMenu) {
+    assert.equal(canOverride('admin', action), true, `a matriz oferece '${action}' mas o guardião recusa-o`);
+  }
 });
