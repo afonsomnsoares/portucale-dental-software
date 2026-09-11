@@ -76,7 +76,7 @@ export default function PatientPortalPage({ params }: { params: Promise<{ token:
     <div className="flex min-h-dvh items-center justify-center bg-[var(--entry-canvas)] px-6 py-12">
       <div className="w-full max-w-[28rem] rounded-xl border border-[var(--entry-line)] bg-white p-8 shadow-sm">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--entry-accent)]">
-          {data?.tenantName || 'Portucale Dental'}
+          {data?.tenantName || 'Portucale Software'}
         </p>
         {loading && <p className="mt-4 text-[15px] text-[var(--entry-text-muted)]">A carregar…</p>}
         {loadError && !loading && (

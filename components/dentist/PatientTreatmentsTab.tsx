@@ -4,9 +4,9 @@ import type { Treatment } from '@/lib/types';
 export default function PatientTreatmentsTab({ treatments }: { treatments: Treatment[] }) {
   return (
     <div className="card p-5">
-      <div className="section-label mb-4">TREATMENT HISTORY</div>
+      <div className="section-label mb-4">HISTÓRICO DE TRATAMENTOS</div>
       {!treatments.length ? (
-        <Empty message="No treatments recorded." />
+        <Empty message="Sem tratamentos registados." />
       ) : (
         treatments.map((t) => (
           <div
@@ -39,7 +39,7 @@ export default function PatientTreatmentsTab({ treatments }: { treatments: Treat
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t.description}</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                {t.treatment_code || '—'} · Phase {t.phase}
+                {t.treatment_code || '—'} · Fase {t.phase}
               </div>
             </div>
             <Badge s={t.status} />

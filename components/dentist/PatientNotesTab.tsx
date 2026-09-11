@@ -70,9 +70,9 @@ export default function PatientNotesTab({
     try {
       const attachmentLines = (attachments || []).map((a) => `- ${a.url}`).join('\n');
       const header = [
-        noteTags.trim() ? `Tags: ${noteTags.trim()}` : '',
-        noteLinks.trim() ? `Links: ${noteLinks.trim()}` : '',
-        attachmentLines ? `Attachments:\n${attachmentLines}` : '',
+        noteTags.trim() ? `Etiquetas: ${noteTags.trim()}` : '',
+        noteLinks.trim() ? `Ligações: ${noteLinks.trim()}` : '',
+        attachmentLines ? `Anexos:\n${attachmentLines}` : '',
       ]
         .filter(Boolean)
         .join('\n');
@@ -110,7 +110,7 @@ export default function PatientNotesTab({
           const text = await res.text().catch(() => '');
           if (text) msg = text;
         }
-        throw new Error(msg || 'Upload failed');
+        throw new Error(msg || 'Falha no envio');
       }
       const out = await res.json();
       if (out?.url) {
@@ -127,7 +127,7 @@ export default function PatientNotesTab({
         });
       }
     } catch (e) {
-      setUploadErr(e instanceof Error ? e.message : 'Failed to upload attachment.');
+      setUploadErr(e instanceof Error ? e.message : 'Falha ao enviar o anexo.');
     } finally {
       setUploading(false);
     }
@@ -136,7 +136,7 @@ export default function PatientNotesTab({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
       <div className="card p-5">
-        <div className="section-label mb-3">NEW NOTE</div>
+        <div className="section-label mb-3">NOTA NOVA</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
           {user?.name || 'Dentist'} · {new Date().toLocaleString()}
         </div>
@@ -157,7 +157,7 @@ export default function PatientNotesTab({
           </FormField>
         </div>
         <div style={{ marginBottom: 12 }}>
-          <div className="section-label mb-1.5">Attachments (optional)</div>
+          <div className="section-label mb-1.5">Anexos (opcional)</div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               type="file"
@@ -167,7 +167,7 @@ export default function PatientNotesTab({
               style={{ width: 280, padding: '7px 12px', fontSize: 13 }}
               accept="image/png,image/jpeg,image/webp,application/pdf"
             />
-            {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>Uploading…</span>}
+            {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>A enviar…</span>}
           </div>
           {uploadErr && (
             <div style={{ marginTop: 8, fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700 }}>
@@ -240,10 +240,10 @@ export default function PatientNotesTab({
             disabled={!isSupported}
             title={
               !isSupported
-                ? 'Speech recognition not supported in this browser. Use Chrome or Edge.'
+                ? 'Reconhecimento de voz não suportado neste navegador. Utilize Chrome ou Edge.'
                 : isRecording
-                  ? 'Stop dictation'
-                  : 'Start voice dictation'
+                  ? 'Parar ditado'
+                  : 'Iniciar ditado por voz'
             }
             style={{
               display: 'flex',
@@ -265,7 +265,7 @@ export default function PatientNotesTab({
             }}
           >
             {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
-            {isRecording ? 'Stop' : 'Dictate'}
+            {isRecording ? 'Parar' : 'Dictar'}
           </button>
           {isRecording && (
             <span
@@ -288,14 +288,14 @@ export default function PatientNotesTab({
                   animation: 'pulse 1.2s ease-in-out infinite',
                 }}
               />
-              Recording…
+              A gravar…
             </span>
           )}
           {speechError && !isRecording && (
             <span style={{ fontSize: 11, color: 'var(--urgency-critical)', fontWeight: 600 }}>{speechError}</span>
           )}
           {!isSupported && (
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Use Chrome or Edge to dictate</span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Utilize Chrome ou Edge para dictar</span>
           )}
         </div>
         <Textarea
@@ -306,12 +306,12 @@ export default function PatientNotesTab({
               setSaved(false);
             }
           }}
-          placeholder={isRecording ? 'Listening…' : 'Write your clinical note…'}
+          placeholder={isRecording ? 'A ouvir…' : 'Escreva a sua nota clínica…'}
           style={{ minHeight: 220, fontFamily: '"JetBrains Mono",monospace', fontSize: 12.5, lineHeight: 1.65 }}
         />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 12 }}>
           <PrimaryBtn onClick={saveNote} disabled={saving || !noteText.trim()} style={{ justifyContent: 'center' }}>
-            {saving ? 'Saving…' : 'Save note'}
+            {saving ? 'A guardar…' : 'Guardar nota'}
           </PrimaryBtn>
           <GhostBtn
             onClick={() => {
@@ -320,26 +320,26 @@ export default function PatientNotesTab({
             }}
             disabled={!noteText.trim()}
           >
-            Clear
+            Limpar
           </GhostBtn>
         </div>
         {saved && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--urgency-ok)', fontWeight: 600 }}>
-            Note saved to history.
+            Nota guardada no histórico.
           </div>
         )}
       </div>
 
       <div className="card p-5">
-        <div className="section-label mb-4">HISTORY</div>
+        <div className="section-label mb-4">HISTÓRICO</div>
         {!notes.length ? (
-          <Empty message="No notes for this patient." />
+          <Empty message="Sem notas para este doente." />
         ) : (
           notes.map((n, i) => (
             <div key={n.id} style={{ marginBottom: 22 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Badge bg="var(--cat-purple-bg)" color="var(--cat-purple)" label="NOTE" />
+                  <Badge bg="var(--cat-purple-bg)" color="var(--cat-purple)" label="NOTA" />
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     {new Date(n.created_at).toLocaleString()}
                   </span>

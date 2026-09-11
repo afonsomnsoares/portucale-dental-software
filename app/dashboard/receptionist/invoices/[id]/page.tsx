@@ -18,11 +18,11 @@ import {
 import type { Invoice } from '@/lib/types';
 
 const PAY_METHODS = [
-  { label: 'Cash', value: 'cash' },
-  { label: 'Card', value: 'card' },
-  { label: 'Insurance', value: 'insurance' },
-  { label: 'Bank Transfer', value: 'bank transfer' },
-  { label: 'Other', value: 'other' },
+  { label: 'Numerário', value: 'cash' },
+  { label: 'Cartão', value: 'card' },
+  { label: 'Seguro', value: 'insurance' },
+  { label: 'Transferência bancária', value: 'bank transfer' },
+  { label: 'Outro', value: 'other' },
 ];
 
 export default function InvoiceDetailPage() {
@@ -54,7 +54,7 @@ export default function InvoiceDetailPage() {
     if (!inv) return;
     const amt = Number(payAmount);
     if (!amt || amt <= 0) {
-      setErr('Enter a valid payment amount');
+      setErr('Introduza um valor de pagamento válido');
       return;
     }
     setErr('');
@@ -64,7 +64,7 @@ export default function InvoiceDetailPage() {
       method: 'PUT',
       body: { amount: amt, method: payMethod },
     }).catch((e) => {
-      setErr(e instanceof Error ? e.message : 'Payment failed');
+      setErr(e instanceof Error ? e.message : 'Pagamento falhou');
       return null;
     });
     setSaving(false);
@@ -73,7 +73,7 @@ export default function InvoiceDetailPage() {
       setPayModal(false);
       setPayAmount('');
       setPayMethod('cash');
-      setSuccess(`Payment of $${amt.toLocaleString()} recorded successfully`);
+      setSuccess(`Pagamento de ${amt.toLocaleString()} registado com sucesso`);
       setTimeout(() => setSuccess(''), 4000);
     }
   }
@@ -84,7 +84,7 @@ export default function InvoiceDetailPage() {
   function fmtDate(d: string | null | undefined) {
     if (!d) return '—';
     const dt = new Date(`${d}T00:00:00`);
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return dt.toLocaleDateString('pt-PT', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   const items = inv?.items || [];
@@ -95,22 +95,22 @@ export default function InvoiceDetailPage() {
     return (
       <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>
         <GhostBtn onClick={() => router.back()} style={{ marginBottom: 16 }}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Back
+          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
         </GhostBtn>
-        Invoice not found.
+        Fatura não encontrada.
       </div>
     );
   }
 
   return (
     <div>
-      <PageHeader title={`Invoice ${fmtId(inv.id)}`} sub={`${inv.patient_name} · ${fmtDate(inv.invoice_date)}`}>
+      <PageHeader title={`Fatura ${fmtId(inv.id)}`} sub={`${inv.patient_name} · ${fmtDate(inv.invoice_date)}`}>
         <GhostBtn onClick={() => router.back()} style={{ padding: '8px 12px' }}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Back
+          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
         </GhostBtn>
         {balance > 0 && (
           <PrimaryBtn onClick={() => setPayModal(true)} style={{ padding: '8px 14px' }}>
-            <Check size={16} style={{ marginRight: 6 }} /> Record Payment
+            <Check size={16} style={{ marginRight: 6 }} /> Registar pagamento
           </PrimaryBtn>
         )}
       </PageHeader>
@@ -120,11 +120,11 @@ export default function InvoiceDetailPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="card p-5">
-          <div className="section-label mb-4">Invoice Details</div>
+          <div className="section-label mb-4">Detalhes da fatura</div>
           <div style={{ display: 'grid', gap: 12 }}>
-            <Row label="Status" value={<Badge s={inv.status} />} />
+            <Row label="Estado" value={<Badge s={inv.status} />} />
             <Row label="Valor" value={`$${Number(inv.amount).toLocaleString()}`} bold />
-            <Row label="Paid" value={`$${Number(inv.paid).toLocaleString()}`} color="var(--urgency-ok)" />
+            <Row label="Pago" value={`$${Number(inv.paid).toLocaleString()}`} color="var(--urgency-ok)" />
             <Row
               label="Saldo"
               value={`$${balance.toLocaleString()}`}
@@ -154,13 +154,13 @@ export default function InvoiceDetailPage() {
 
       {items.length > 0 && (
         <div className="card mt-4 p-5">
-          <div className="section-label mb-3">Line Items</div>
+          <div className="section-label mb-3">Linhas</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
                 <th className="data-th">Descrição</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
-                  Amount
+                  Valor
                 </th>
               </tr>
             </thead>
@@ -201,19 +201,19 @@ export default function InvoiceDetailPage() {
       {payModal && (
         <Modal title="Registar pagamento" onClose={() => setPayModal(false)} width={400}>
           <div style={{ marginBottom: 16 }}>
-            <div className="section-label mb-1">Invoice Total</div>
+            <div className="section-label mb-1">Total da fatura</div>
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
               ${Number(inv.amount).toLocaleString()}
             </div>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <div className="section-label mb-1">Already Paid</div>
+            <div className="section-label mb-1">Já pago</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--urgency-ok)' }}>
               ${Number(inv.paid).toLocaleString()}
             </div>
           </div>
           <div style={{ marginBottom: 16 }}>
-            <div className="section-label mb-1">Remaining Balance</div>
+            <div className="section-label mb-1">Saldo remanescente</div>
             <div
               style={{
                 fontSize: 16,
@@ -247,7 +247,7 @@ export default function InvoiceDetailPage() {
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={handlePay} disabled={saving || !payAmount || Number(payAmount) <= 0}>
-              {saving ? 'Processing…' : `Pay $${Number(payAmount || 0).toLocaleString()}`}
+              {saving ? 'A processar…' : `Pagar $${Number(payAmount || 0).toLocaleString()}`}
             </PrimaryBtn>
             <GhostBtn onClick={() => setPayModal(false)}>Cancelar</GhostBtn>
           </div>

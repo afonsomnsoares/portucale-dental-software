@@ -26,8 +26,8 @@ export default function OperatoryPanel({
     <div className="card" style={{ padding: '18px 18px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Operatory</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Treatment chairs in real time</div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Gabinete</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cadeiras de tratamento em tempo real</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {chairs.slice(0, 6).map((_, i) => (
@@ -71,7 +71,7 @@ export default function OperatoryPanel({
                   <ChairGraphic color={color} occupied={!!current} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>
-                      {current ? current.patient_name || '—' : 'Available'}
+                      {current ? current.patient_name || '—' : 'Disponível'}
                     </div>
                     <div
                       style={{
@@ -86,8 +86,8 @@ export default function OperatoryPanel({
                       {current
                         ? `${String(current.start_time || '').slice(0, 5)} · ${current.type}`
                         : nextScheduled
-                          ? `Next ${String(nextScheduled.start_time || '').slice(0, 5)} · ${nextScheduled.patient_name || '—'}`
-                          : 'No next'}
+                          ? `Próxima ${String(nextScheduled.start_time || '').slice(0, 5)} · ${nextScheduled.patient_name || '—'}`
+                          : 'Sem próxima'}
                     </div>
                     {current?.dentist_name && (
                       <div
@@ -154,7 +154,7 @@ export default function OperatoryPanel({
                             opacity: updatingId === current.id ? 0.7 : 1,
                           }}
                         >
-                          {updatingId === current.id ? 'Updating…' : next ? `→ ${next.replace(/-/g, ' ')}` : '—'}
+                          {updatingId === current.id ? 'A atualizar…' : next ? `→ ${next.replace(/-/g, ' ')}` : '—'}
                         </button>
                         <button
                           type="button"
@@ -174,7 +174,7 @@ export default function OperatoryPanel({
                             opacity: updatingId === current.id ? 0.7 : 1,
                           }}
                         >
-                          No-show
+                          Falta
                         </button>
                       </div>
                     );

@@ -159,7 +159,7 @@ export default function ReceptionAppointmentsPage() {
       setAppts((prev) => prev.map((a) => (a.id === u.id ? { ...a, ...u } : a)));
       setEditing(null);
     } catch (e) {
-      setEditErr(e instanceof Error ? e.message : 'Failed to save.');
+      setEditErr(e instanceof Error ? e.message : 'Falha ao guardar.');
       await load();
     } finally {
       setEditSaving(false);
@@ -228,10 +228,10 @@ export default function ReceptionAppointmentsPage() {
           ))}
         </select>
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
-          Refresh
+          Atualizar
         </GhostBtn>
         <GhostBtn onClick={exportCsv} style={{ padding: '8px 12px' }} disabled={!filtered.length}>
-          Export CSV
+          Exportar CSV
         </GhostBtn>
       </PageHeader>
 
@@ -258,11 +258,11 @@ export default function ReceptionAppointmentsPage() {
             {String(confirm.start_time || '').slice(0, 5)}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-            This removes the appointment from the schedule.
+            Isto remove a consulta da agenda.
           </div>
           <div className="flex gap-3">
             <DangerBtn onClick={() => removeAppointment(confirm)} disabled={removing === confirm.id}>
-              {removing === confirm.id ? 'Removing…' : 'Cancel appointment'}
+              {removing === confirm.id ? 'A cancelar…' : 'Cancelar consulta'}
             </DangerBtn>
             <GhostBtn onClick={() => setConfirm(null)}>Cancelar</GhostBtn>
           </div>

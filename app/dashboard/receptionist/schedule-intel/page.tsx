@@ -149,7 +149,7 @@ export default function ScheduleIntelReceptionistPage() {
         onChange={setTab}
         tabs={[
           { key: 'risk', label: 'Risco', count: highRiskCount || undefined },
-          { key: 'heatmap', label: 'Heatmap' },
+          { key: 'heatmap', label: 'Mapa de calor' },
           { key: 'efficiency', label: 'Eficiência' },
           { key: 'optimizer', label: 'Otimizador', count: optimization?.totals.moves || undefined },
           { key: 'waitlist', label: 'Lista de Espera', count: waitlist?.pendingOffers?.length || undefined },

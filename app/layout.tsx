@@ -16,7 +16,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata = {
-  title: 'Portucale Dental',
+  title: 'Portucale Software',
   description: 'Sistema de Gestão de Clínica Dentária',
 };
 

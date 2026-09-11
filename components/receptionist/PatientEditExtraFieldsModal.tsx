@@ -19,7 +19,7 @@ export default function PatientEditExtraFieldsModal({
   return (
     <Modal title="Editar campos adicionais" onClose={onClose} width={560}>
       {schemaFields.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>No extra fields configured.</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sem campos adicionais configurados.</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {schemaFields.map((f) => (
@@ -35,7 +35,7 @@ export default function PatientEditExtraFieldsModal({
       )}
       <div className="flex gap-3 mt-3">
         <PrimaryBtn onClick={onSave} disabled={saving} style={{ justifyContent: 'center' }}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'A guardar…' : 'Guardar'}
         </PrimaryBtn>
         <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
       </div>

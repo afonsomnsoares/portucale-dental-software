@@ -9,9 +9,9 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
     <div className="card" style={{ padding: '18px 18px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Waiting Room</div>
+          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Sala de Espera</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {waiting.length} patient{waiting.length !== 1 ? 's' : ''} waiting
+            {waiting.length} doente{waiting.length !== 1 ? 's' : ''} em espera
           </div>
         </div>
       </div>
@@ -47,7 +47,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {occupied ? apt.patient_name || '—' : 'Available'}
+                  {occupied ? apt.patient_name || '—' : 'Disponível'}
                 </div>
                 <div
                   style={{
@@ -103,7 +103,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
 
       {waiting.length > WAITING_SEATS && (
         <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
-          +{waiting.length - WAITING_SEATS} waiting (not shown)
+          +{waiting.length - WAITING_SEATS} em espera (não mostrados)
         </div>
       )}
     </div>

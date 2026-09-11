@@ -118,11 +118,11 @@ export default function ReceptionPatientsPage() {
     }
 
     if (!form.name?.trim()) {
-      setCreateErr('Patient name is required.');
+      setCreateErr('O nome do doente é obrigatório.');
       return;
     }
     if (missing.length) {
-      setCreateErr(`Fill the required fields: ${missing.join(', ')}`);
+      setCreateErr(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
       return;
     }
 
@@ -141,7 +141,7 @@ export default function ReceptionPatientsPage() {
       setCustomFields({});
       select(p);
     } catch (e) {
-      setCreateErr(e instanceof Error ? e.message : 'Failed to register patient.');
+      setCreateErr(e instanceof Error ? e.message : 'Falha ao registar o doente.');
     } finally {
       setSaving(false);
     }
@@ -170,11 +170,11 @@ export default function ReceptionPatientsPage() {
 
   const openTaskCount = tasks.filter((t) => t.status === 'pending').length;
   const TABS = [
-    { key: 'profile', label: 'Profile' },
+    { key: 'profile', label: 'Perfil' },
     { key: 'tasks', label: `Tarefas (${openTaskCount})` },
     { key: 'interactions', label: `Interações (${interactions.length})` },
     { key: 'documents', label: `Documentos (${uploads.length})` },
-    { key: 'timeline', label: 'Timeline' },
+    { key: 'timeline', label: 'Linha do tempo' },
   ];
 
   return (
@@ -186,7 +186,7 @@ export default function ReceptionPatientsPage() {
         onAction={() => setModal(true)}
       >
         <GhostBtn onClick={() => setImportOpen(true)} style={{ padding: '8px 12px' }}>
-          Import CSV
+          Importar CSV
         </GhostBtn>
       </PageHeader>
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
@@ -211,12 +211,12 @@ export default function ReceptionPatientsPage() {
               <div style={{ display: 'grid', gap: 12 }}>
                 <PatientOverviewTab
                   fields={[
-                    ['Phone', selected.phone || '—'],
+                    ['Telefone', selected.phone || '—'],
                     ['Email', selected.email || '—'],
-                    ['Last Visit', selected.last_visit?.slice(0, 10) || '—'],
-                    ['Insurance', selected.insurance || '—'],
-                    ['DOB', selected.dob?.slice(0, 10) || '—'],
-                    ['Total Visits', selected.visit_count || 0],
+                    ['Última visita', selected.last_visit?.slice(0, 10) || '—'],
+                    ['Seguro', selected.insurance || '—'],
+                    ['Data de nasc.', selected.dob?.slice(0, 10) || '—'],
+                    ['Total de visitas', selected.visit_count || 0],
                   ]}
                   customFields={selected.custom_fields}
                   schemaFields={schemaFields}
@@ -229,7 +229,7 @@ export default function ReceptionPatientsPage() {
 
             {tab === 'timeline' && (
               <div className="card p-5">
-                <div className="section-label mb-4">MASTER PATIENT TIMELINE — IMMUTABLE · SHA-256 HASHED</div>
+                <div className="section-label mb-4">LINHA DO TEMPO DO DOENTE — IMUTÁVEL · HASH SHA-256</div>
                 {tlLoad ? <Spinner /> : <Timeline events={timeline} />}
               </div>
             )}
@@ -259,7 +259,7 @@ export default function ReceptionPatientsPage() {
             )}
           </div>
         ) : (
-          <Empty message="Select a patient to view their record" />
+          <Empty message="Selecione um doente para ver o registo" />
         )}
       </div>
 

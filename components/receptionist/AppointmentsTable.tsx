@@ -34,14 +34,14 @@ export default function AppointmentsTable({
             <TH>Tipo</TH>
             <TH right>Cadeira</TH>
             <TH>Status</TH>
-            <TH right>Actions</TH>
+            <TH right>Ações</TH>
           </tr>
         </thead>
         <tbody>
           {!rows.length ? (
             <tr>
               <td className="data-td" colSpan={8} style={{ color: 'var(--text-secondary)' }}>
-                No appointments in this range.
+                Sem consultas neste intervalo.
               </td>
             </tr>
           ) : (
@@ -88,7 +88,7 @@ export default function AppointmentsTable({
                   <TD right>
                     <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(a)}>
-                        Edit
+                        Editar
                       </button>
                       <button
                         type="button"
@@ -97,7 +97,7 @@ export default function AppointmentsTable({
                         disabled={removingId === a.id}
                         style={{ opacity: removingId === a.id ? 0.7 : 1 }}
                       >
-                        {removingId === a.id ? 'Removing…' : 'Cancel'}
+                        {removingId === a.id ? 'A cancelar…' : 'Cancelar'}
                       </button>
                     </div>
                   </TD>

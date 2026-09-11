@@ -125,10 +125,10 @@ export default function LiveFloorPage() {
     <div>
       <PageHeader
         title="Sala em tempo real"
-        sub={`${active.length} appointment${active.length !== 1 ? 's' : ''} active · ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}${syncedLabel ? ` · sincronizado ${syncedLabel} (${liveLabel})` : ''}`}
+        sub={`${active.length} consulta${active.length !== 1 ? 's' : ''} ativa${active.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('pt-PT', { weekday: 'long', month: 'short', day: 'numeric' })}${syncedLabel ? ` · sincronizado ${syncedLabel} (${liveLabel})` : ''}`}
       >
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
-          Refresh
+          Atualizar
         </GhostBtn>
       </PageHeader>
 

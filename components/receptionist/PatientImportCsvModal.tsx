@@ -43,10 +43,10 @@ export default function PatientImportCsvModal({
     const text: string = await new Promise<string>((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(String(r.result || ''));
-      r.onerror = () => reject(new Error('Failed to read file.'));
+      r.onerror = () => reject(new Error('Falha ao ler o ficheiro.'));
       r.readAsText(file);
     }).catch((e) => {
-      setErr(e instanceof Error ? e.message : 'Failed to read file.');
+      setErr(e instanceof Error ? e.message : 'Falha ao ler o ficheiro.');
       return '';
     });
     if (!text) return;
@@ -64,11 +64,11 @@ export default function PatientImportCsvModal({
     setErr('');
     setResult(null);
     if (!csv.trim()) {
-      setErr('Upload a CSV file first.');
+      setErr('Envie primeiro um ficheiro CSV.');
       return;
     }
     if (!mapping.name) {
-      setErr('Map the Name column.');
+      setErr('Mapeie a coluna Nome.');
       return;
     }
     setBusy(true);
@@ -86,19 +86,19 @@ export default function PatientImportCsvModal({
       setResult(res || null);
       onImported();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Import failed.');
+      setErr(e instanceof Error ? e.message : 'Importação falhou.');
     } finally {
       setBusy(false);
     }
   }
 
   const columnFields: Array<{ key: keyof ImportMapping; label: string; none: string }> = [
-    { key: 'name', label: 'Name column *', none: '— Select —' },
-    { key: 'dob', label: 'DOB column', none: '— None —' },
-    { key: 'phone', label: 'Phone column', none: '— None —' },
-    { key: 'email', label: 'Email column', none: '— None —' },
-    { key: 'insurance', label: 'Insurance column', none: '— None —' },
-    { key: 'alerts', label: 'Alerts column', none: '— None —' },
+    { key: 'name', label: 'Coluna Nome *', none: '— Selecionar —' },
+    { key: 'dob', label: 'Coluna Data de nasc.', none: '— Nenhuma —' },
+    { key: 'phone', label: 'Coluna Telefone', none: '— Nenhuma —' },
+    { key: 'email', label: 'Coluna Email', none: '— Nenhuma —' },
+    { key: 'insurance', label: 'Coluna Seguro', none: '— Nenhuma —' },
+    { key: 'alerts', label: 'Coluna Alertas', none: '— Nenhuma —' },
   ];
 
   return (
@@ -120,7 +120,10 @@ export default function PatientImportCsvModal({
         </div>
       )}
 
-      <FormField label="Ficheiro CSV" hint="Export from Excel as CSV (UTF-8). Semicolon-separated CSV is supported.">
+      <FormField
+        label="Ficheiro CSV"
+        hint="Exporte do Excel como CSV (UTF-8). CSV separado por ponto e vírgula é suportado."
+      >
         <input type="file" accept=".csv,text/csv" onChange={(e) => onPickFile(e.target.files?.[0])} />
       </FormField>
 
@@ -144,11 +147,11 @@ export default function PatientImportCsvModal({
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-primary)' }}>
           <input type="checkbox" checked={createExtraFields} onChange={(e) => setCreateExtraFields(e.target.checked)} />
-          Auto-create extra fields for this clinic
+          Criar automaticamente campos adicionais para esta clínica
         </label>
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-primary)' }}>
           <input type="checkbox" checked={unmappedAsExtra} onChange={(e) => setUnmappedAsExtra(e.target.checked)} />
-          Import unmapped columns as extra fields
+          Importar colunas não mapeadas como campos adicionais
         </label>
       </div>
 
@@ -165,14 +168,14 @@ export default function PatientImportCsvModal({
             fontWeight: 800,
           }}
         >
-          Imported: {result.created} · Skipped: {result.skipped}
-          {result.errors?.length ? ` · Errors: ${result.errors.length}` : ''}
+          Importados: {result.created} · Ignorados: {result.skipped}
+          {result.errors?.length ? ` · Erros: ${result.errors.length}` : ''}
         </div>
       )}
 
       <div className="flex gap-3 mt-3">
         <PrimaryBtn onClick={runImport} disabled={busy || !csv.trim()} style={{ justifyContent: 'center' }}>
-          {busy ? 'Importing…' : 'Import'}
+          {busy ? 'A importar…' : 'Importar'}
         </PrimaryBtn>
         <GhostBtn onClick={onClose}>Fechar</GhostBtn>
       </div>

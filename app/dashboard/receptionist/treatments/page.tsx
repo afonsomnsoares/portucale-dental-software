@@ -114,9 +114,9 @@ export default function ReceptionTreatmentsPage() {
         </Sel>
         <Sel value={selPhase} onChange={(e) => setSelPhase(e.target.value)} style={{ maxWidth: 180 }}>
           <option value="all">Todas as fases</option>
-          <option value="1">Phase 1 — Emergency</option>
-          <option value="2">Phase 2 — Restorative</option>
-          <option value="3">Phase 3 — Aesthetic</option>
+          <option value="1">Fase 1 — Emergência</option>
+          <option value="2">Fase 2 — Restauradora</option>
+          <option value="3">Fase 3 — Estética</option>
         </Sel>
         <Sel value={selStatus} onChange={(e) => setSelStatus(e.target.value)} style={{ maxWidth: 160 }}>
           <option value="all">Todos os estados</option>
@@ -132,10 +132,10 @@ export default function ReceptionTreatmentsPage() {
               setSelStatus('all');
             }}
           >
-            Clear Filters
+            Limpar filtros
           </GhostBtn>
         )}
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>{visible.length} treatments</div>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>{visible.length} tratamentos</div>
       </div>
 
       <div className="card" style={{ padding: 0 }}>
@@ -146,7 +146,7 @@ export default function ReceptionTreatmentsPage() {
         <Modal title="Novo tratamento" onClose={() => setModal(false)} width={540}>
           <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
-              <option value="">— Select patient —</option>
+              <option value="">— Selecionar doente —</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} #{p.global_seq}
@@ -167,7 +167,7 @@ export default function ReceptionTreatmentsPage() {
                 }));
               }}
             >
-              <option value="">— Select procedure code (optional) —</option>
+              <option value="">— Selecionar código de procedimento (opcional) —</option>
               {TANOMD_CODES.map((a) => (
                 <option key={a.code} value={a.code}>
                   {a.code} · {a.desc} — ${a.fee}
@@ -185,9 +185,9 @@ export default function ReceptionTreatmentsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <FormField label="Fase">
               <Sel value={form.phase} onChange={(e) => setForm((p) => ({ ...p, phase: e.target.value }))}>
-                <option value="1">1 — Emergency</option>
-                <option value="2">2 — Restorative</option>
-                <option value="3">3 — Aesthetic</option>
+                <option value="1">1 — Emergência</option>
+                <option value="2">2 — Restauradora</option>
+                <option value="3">3 — Estética</option>
               </Sel>
             </FormField>
             <FormField label="Valor (€)">
@@ -208,7 +208,7 @@ export default function ReceptionTreatmentsPage() {
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={create} disabled={saving || !form.patientId || !form.description}>
-              {saving ? 'Creating…' : 'Create Treatment'}
+              {saving ? 'A criar…' : 'Criar tratamento'}
             </PrimaryBtn>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>

@@ -40,7 +40,7 @@ export default function FinanceDashboard() {
   function fmtDate(d: string) {
     if (!d) return '—';
     const dt = new Date(`${d}T00:00:00`);
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return dt.toLocaleDateString('pt-PT', { month: 'short', day: 'numeric' });
   }
 
   if (loading) return <Spinner />;
@@ -63,13 +63,13 @@ export default function FinanceDashboard() {
           style={{ width: 140, fontSize: 12, padding: '6px 10px' }}
         />
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
-          Refresh
+          Atualizar
         </GhostBtn>
       </PageHeader>
 
       {!data ? (
         <div className="card p-5">
-          <Empty message="No financial data available" />
+          <Empty message="Sem dados financeiros disponíveis" />
         </div>
       ) : (
         <>
@@ -77,14 +77,14 @@ export default function FinanceDashboard() {
             <MetricCard
               label="RECEITA TOTAL"
               value={fmt(data.totals?.total_paid)}
-              sub={`${data.totals?.total_invoices || 0} invoices`}
+              sub={`${data.totals?.total_invoices || 0} faturas`}
               color="var(--urgency-ok)"
               icon={<TrendingUp />}
             />
             <MetricCard
               label="POR COBRAR"
               value={fmt(data.totals?.total_outstanding)}
-              sub={`${fmt(data.patientBalance)} patient balances`}
+              sub={`${fmt(data.patientBalance)} saldos de doentes`}
               color="var(--urgency-critical)"
               icon={<AlertTriangle />}
             />
@@ -106,9 +106,9 @@ export default function FinanceDashboard() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div className="card p-5">
-              <div className="section-label mb-3">Invoices by Status</div>
+              <div className="section-label mb-3">Faturas por estado</div>
               {!outstandingByStatus.length ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No data</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {outstandingByStatus.map((s) => (
@@ -126,7 +126,7 @@ export default function FinanceDashboard() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Badge s={s.status} />
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                          {s.count} invoice{s.count !== 1 ? 's' : ''}
+                          {s.count} fatura{s.count !== 1 ? 's' : ''}
                         </span>
                       </div>
                       <span
@@ -146,9 +146,9 @@ export default function FinanceDashboard() {
             </div>
 
             <div className="card p-5">
-              <div className="section-label mb-3">Revenue by Dentist</div>
+              <div className="section-label mb-3">Receita por dentista</div>
               {!data.byDentist?.length ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No data</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {data.byDentist.map((d) => (
@@ -168,7 +168,7 @@ export default function FinanceDashboard() {
                           {d.dentist_name}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                          {d.invoice_count} invoice{d.invoice_count !== 1 ? 's' : ''}
+                          {d.invoice_count} fatura{d.invoice_count !== 1 ? 's' : ''}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -185,7 +185,7 @@ export default function FinanceDashboard() {
                         <div
                           style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: 'var(--urgency-ok)' }}
                         >
-                          {fmt(d.total_paid)} collected
+                          {fmt(d.total_paid)} recolhido
                         </div>
                       </div>
                     </div>
@@ -196,9 +196,9 @@ export default function FinanceDashboard() {
           </div>
 
           <div className="card mt-4 p-5">
-            <div className="section-label mb-3">Daily Revenue</div>
+            <div className="section-label mb-3">Receita diária</div>
             {!data.dailyRevenue?.length ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No revenue data for this period</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados de receita para este período</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <div style={{ display: 'flex', gap: 4, minWidth: data.dailyRevenue.length * 40 }}>
@@ -248,18 +248,18 @@ export default function FinanceDashboard() {
           </div>
 
           <div className="card mt-4 p-5">
-            <div className="section-label mb-3">Recent Payments</div>
+            <div className="section-label mb-3">Pagamentos recentes</div>
             {!data.recentPayments?.length ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No payments yet</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem pagamentos ainda</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                    <th className="data-th">Invoice</th>
+                    <th className="data-th">Fatura</th>
                     <th className="data-th">Doente</th>
                     <th className="data-th">Data</th>
                     <th className="data-th" style={{ textAlign: 'right' }}>
-                      Paid
+                      Pago
                     </th>
                     <th className="data-th">Forma</th>
                     <th className="data-th">Status</th>

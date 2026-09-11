@@ -89,7 +89,7 @@ export default function PatientCreateModal({
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, insurance: e.target.value })}
         />
       </FormField>
-      <FormField label="Alertas clínicos" hint="Separate multiple alerts with commas">
+      <FormField label="Alertas clínicos" hint="Separe múltiplos alertas com vírgulas">
         <Inp
           value={form.alerts}
           placeholder="Alergia a penicilina, Diabetes tipo 2"
@@ -100,7 +100,7 @@ export default function PatientCreateModal({
       {schemaFields.length > 0 && (
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--bg-sunken)' }}>
           <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 10 }}>
-            Extra Fields
+            Campos adicionais
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {schemaFields.map((f) => (
@@ -114,14 +114,14 @@ export default function PatientCreateModal({
             ))}
           </div>
           <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
-            Configured by Admin in Schema Fields.
+            Configurado pelo administrador nos campos de schema.
           </div>
         </div>
       )}
 
       <div className="flex gap-3 mt-2">
         <PrimaryBtn onClick={onSave} disabled={saving || !form.name}>
-          {saving ? 'Registering…' : 'Register Patient'}
+          {saving ? 'A registar…' : 'Registar doente'}
         </PrimaryBtn>
         <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
       </div>

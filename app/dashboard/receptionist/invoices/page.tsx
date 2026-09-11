@@ -34,11 +34,11 @@ interface NewInvoiceForm {
 }
 
 const STATUS_FILTERS = [
-  { label: 'All', value: '' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Partial', value: 'partial' },
-  { label: 'Paid', value: 'paid' },
-  { label: 'Cancelled', value: 'cancelled' },
+  { label: 'Todas', value: '' },
+  { label: 'Pendente', value: 'pending' },
+  { label: 'Parcial', value: 'partial' },
+  { label: 'Pago', value: 'paid' },
+  { label: 'Cancelado', value: 'cancelled' },
 ];
 
 export default function InvoicesPage() {
@@ -94,7 +94,7 @@ export default function InvoicesPage() {
   async function handleCreate() {
     setErr('');
     if (!form.patientId || !form.amount) {
-      setErr('Patient and amount are required');
+      setErr('Doente e valor são obrigatórios');
       return;
     }
     setSaving(true);
@@ -118,7 +118,7 @@ export default function InvoicesPage() {
       items: items.length ? items : undefined,
     };
     const res = await api('/invoices', { method: 'POST', body }).catch((e) => {
-      setErr(e instanceof Error ? e.message : 'Failed to create invoice');
+      setErr(e instanceof Error ? e.message : 'Falha ao criar fatura');
       return null;
     });
     setSaving(false);
@@ -153,7 +153,7 @@ export default function InvoicesPage() {
   function fmtDate(d: string | null | undefined) {
     if (!d) return '—';
     const dt = new Date(`${d}T00:00:00`);
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return dt.toLocaleDateString('pt-PT', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   if (loading) return <Spinner />;
@@ -162,7 +162,7 @@ export default function InvoicesPage() {
     <div>
       <PageHeader
         title="Faturas"
-        sub={`${invoices.length} invoice${invoices.length !== 1 ? 's' : ''} · $${totals.amount.toLocaleString()} total · $${totals.paid.toLocaleString()} collected`}
+        sub={`${invoices.length} fatura${invoices.length !== 1 ? 's' : ''} · $${totals.amount.toLocaleString()} total · $${totals.paid.toLocaleString()} recolhido`}
       >
         <div className="flex gap-2 items-center">
           {STATUS_FILTERS.map((s) => (
@@ -188,7 +188,7 @@ export default function InvoicesPage() {
           ))}
         </div>
         <GhostBtn onClick={() => setModal(true)} style={{ padding: '8px 14px' }}>
-          + New Invoice
+          + Nova fatura
         </GhostBtn>
       </PageHeader>
 
@@ -196,29 +196,29 @@ export default function InvoicesPage() {
 
       {!invoices.length ? (
         <div className="card p-5">
-          <Empty message={status ? `No ${status} invoices found` : 'No invoices yet'} />
+          <Empty message={status ? 'Sem faturas encontradas' : 'Sem faturas ainda'} />
         </div>
       ) : (
         <div className="card overflow-x-auto">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--bg-sunken)' }}>
-                <th className="data-th">Invoice</th>
+                <th className="data-th">Fatura</th>
                 <th className="data-th">Doente</th>
                 <th className="data-th">Data</th>
                 <th className="data-th">Dentista</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
-                  Amount
+                  Valor
                 </th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
                   Paid
                 </th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
-                  Balance
+                  Saldo
                 </th>
                 <th className="data-th">Status</th>
                 <th className="data-th" style={{ textAlign: 'right' }}>
-                  Method
+                  Método
                 </th>
               </tr>
             </thead>
@@ -298,7 +298,7 @@ export default function InvoicesPage() {
         <Modal title="Nova fatura" onClose={() => setModal(false)} width={520}>
           <FormField label="Doente *">
             <Sel value={form.patientId} onChange={(e) => setForm((p) => ({ ...p, patientId: e.target.value }))}>
-              <option value="">— Select patient —</option>
+              <option value="">— Selecionar doente —</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -308,7 +308,7 @@ export default function InvoicesPage() {
           </FormField>
           <FormField label="Dentista">
             <Sel value={form.dentistId} onChange={(e) => setForm((p) => ({ ...p, dentistId: e.target.value }))}>
-              <option value="">— Optional —</option>
+              <option value="">— Opcional —</option>
               {dentists.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -346,11 +346,11 @@ export default function InvoicesPage() {
               <option value="cash">Numerário</option>
               <option value="card">Cartão</option>
               <option value="insurance">Seguro</option>
-              <option value="bank transfer">Bank Transfer</option>
+              <option value="bank transfer">Transferência bancária</option>
               <option value="other">Outro</option>
             </Sel>
           </FormField>
-          <FormField label="Linhas (uma por linha: Descrição - Valor)" hint="Optional — for invoice breakdown">
+          <FormField label="Linhas (uma por linha: Descrição - Valor)" hint="Opcional — para detalhamento da fatura">
             <textarea
               className="input"
               value={form.items}
@@ -367,7 +367,7 @@ export default function InvoicesPage() {
           </FormField>
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={handleCreate} disabled={saving || !form.patientId || !form.amount}>
-              {saving ? 'Creating…' : 'Create Invoice'}
+              {saving ? 'A criar…' : 'Criar fatura'}
             </PrimaryBtn>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
