@@ -1,5 +1,5 @@
 'use client';
-import { type ChangeEvent, type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, type Dispatch, type SetStateAction, useCallback, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
@@ -15,6 +15,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import type { Patient } from '@/lib/types';
 
 interface HistoryItem {
@@ -81,9 +82,8 @@ export default function MedicalHistoryPage() {
     setLoading(false);
   }, [api, selected, select]);
 
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
+  useDebouncedEffect(() => {
+    load();
   }, [load]);
 
   function addListItem(

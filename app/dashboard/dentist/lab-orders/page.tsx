@@ -15,6 +15,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import { formatEUR } from '@/lib/constants';
 import type { LabOrder, Patient } from '@/lib/types';
 
@@ -82,9 +83,8 @@ export default function LabOrdersPage() {
     setLoading(false);
   }, [api, selected, select]);
 
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
+  useDebouncedEffect(() => {
+    load();
   }, [load]);
 
   useEffect(() => {

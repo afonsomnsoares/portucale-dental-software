@@ -14,6 +14,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import type { ConsentForm, Patient } from '@/lib/types';
 
 interface NewConsentForm {
@@ -53,9 +54,8 @@ export default function ConsentFormsPage() {
     setLoading(false);
   }, [api, selected, select]);
 
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
+  useDebouncedEffect(() => {
+    load();
   }, [load]);
 
   useEffect(() => {

@@ -16,6 +16,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import type { Patient, Prescription } from '@/lib/types';
 
 interface NewPrescriptionForm {
@@ -61,9 +62,8 @@ export default function PrescriptionsPage() {
     setLoading(false);
   }, [api, selected, select]);
 
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
+  useDebouncedEffect(() => {
+    load();
   }, [load]);
 
   useEffect(() => {

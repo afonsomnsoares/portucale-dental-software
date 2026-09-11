@@ -15,6 +15,7 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
 import type { Patient, Recall } from '@/lib/types';
 
 const RECALL_TYPES = ['checkup', 'prophylaxis', 'follow-up', 'other'];
@@ -54,9 +55,8 @@ export default function RecallsPage() {
     setLoading(false);
   }, [api, selected, select]);
 
-  useEffect(() => {
-    const t = setTimeout(load, 300);
-    return () => clearTimeout(t);
+  useDebouncedEffect(() => {
+    load();
   }, [load]);
 
   useEffect(() => {
