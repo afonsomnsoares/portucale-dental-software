@@ -171,7 +171,7 @@ export default function ClinicInventoryPage() {
       ) : tab === 'orders' ? (
         <PurchaseOrdersTab api={api} tenantId={tenantId} items={items} onReceived={loadInventory} />
       ) : tab === 'stagnant' ? (
-        <StagnantTab api={api} />
+        <StagnantTab />
       ) : tab === 'suppliers' ? (
         <SuppliersTab api={api} />
       ) : (

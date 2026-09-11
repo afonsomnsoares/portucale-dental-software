@@ -1,10 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/app/providers';
 import ChecklistPanel from '@/components/operations/ChecklistPanel';
 import IncidentsPanel from '@/components/operations/IncidentsPanel';
 import TemplateManager from '@/components/operations/TemplateManager';
 import { PageHeader, Tabs } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { DbUser } from '@/lib/types';
 
 // Operações da própria clínica. A versão de plataforma
@@ -15,13 +16,10 @@ import type { DbUser } from '@/lib/types';
 export default function ClinicOperationsPage() {
   const { api } = useAuth();
   const [tab, setTab] = useState('checklists');
-  const [teamUsers, setTeamUsers] = useState<DbUser[]>([]);
-
-  useEffect(() => {
-    api('/users')
-      .then((rows: DbUser[]) => setTeamUsers(rows || []))
-      .catch(() => {});
-  }, [api]);
+  // A equipa serve para atribuir tarefas e turnos. Falhar em silêncio dava um
+  // seletor vazio — e um seletor vazio lê-se como «não há ninguém na clínica».
+  const teamQuery = useQuery<DbUser[]>('/users');
+  const teamUsers = teamQuery.data ?? [];
 
   return (
     <div>

@@ -1,11 +1,12 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   Badge,
   DangerBtn,
   DataTable,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Modal,
@@ -16,6 +17,7 @@ import {
   Tabs,
   TD,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { DbUser, StaffShift, StaffTimeOff } from '@/lib/types';
 
 const WEEKDAYS = [
@@ -44,50 +46,39 @@ const STATUS_META: Record<string, { label: string; bg: string; color: string }> 
 export default function ClinicTeamPage() {
   const { api } = useAuth();
   const [tab, setTab] = useState('schedules');
-  const [users, setUsers] = useState<DbUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [shifts, setShifts] = useState<StaffShift[]>([]);
-  const [timeOff, setTimeOff] = useState<StaffTimeOff[]>([]);
   const [statusFilter, setStatusFilter] = useState('pending');
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ weekday: '1', startTime: '09:00', endTime: '18:00' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const usersQuery = useQuery<DbUser[]>('/users');
+  const users = usersQuery.data ?? [];
+
+  // A primeira pessoa da lista fica escolhida assim que a lista chega. Tem de ser
+  // um efeito e não o valor inicial do useState porque a lista só existe depois
+  // da resposta — e não se sobrepõe a uma escolha já feita.
   useEffect(() => {
-    api('/users')
-      .then((rows) => {
-        setUsers(rows || []);
-        if ((rows || []).length) setSelectedUserId(rows[0].id);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api]);
+    if (!selectedUserId && users.length) setSelectedUserId(users[0].id);
+  }, [users, selectedUserId]);
 
   const selectedUser = users.find((u) => u.id === selectedUserId);
 
-  const loadShifts = useCallback(async () => {
-    if (!selectedUserId) return;
-    const rows = await api(`/staff-schedules?userId=${selectedUserId}`).catch(() => []);
-    setShifts(rows || []);
-  }, [api, selectedUserId]);
+  // `null` enquanto ninguém estiver escolhido: o hook espera em vez de pedir os
+  // turnos de um userId vazio.
+  const shiftsQuery = useQuery<StaffShift[]>(selectedUserId ? `/staff-schedules?userId=${selectedUserId}` : null);
+  const shifts = shiftsQuery.data ?? [];
 
-  const loadTimeOff = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    const qs = params.toString();
-    const rows = await api(`/staff-time-off${qs ? `?${qs}` : ''}`).catch(() => []);
-    setTimeOff(rows || []);
-  }, [api, statusFilter]);
+  const timeOffParams = new URLSearchParams();
+  if (statusFilter !== 'all') timeOffParams.set('status', statusFilter);
+  const timeOffQs = timeOffParams.toString();
+  const timeOffQuery = useQuery<StaffTimeOff[]>(`/staff-time-off${timeOffQs ? `?${timeOffQs}` : ''}`);
+  const timeOff = timeOffQuery.data ?? [];
 
-  useEffect(() => {
-    loadShifts();
-  }, [loadShifts]);
-  useEffect(() => {
-    loadTimeOff();
-  }, [loadTimeOff]);
+  const loadShifts = shiftsQuery.refetch;
+  const loadTimeOff = timeOffQuery.refetch;
 
   async function createShift() {
     setSaving(true);
@@ -113,16 +104,28 @@ export default function ClinicTeamPage() {
 
   async function removeShift(id: string) {
     setBusyId(id);
-    await api(`/staff-schedules/${id}`, { method: 'DELETE' }).catch(() => null);
+    setError('');
+    try {
+      await api(`/staff-schedules/${id}`, { method: 'DELETE' });
+      loadShifts();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível remover o turno.');
+    }
     setBusyId(null);
-    loadShifts();
   }
 
   async function setTimeOffStatus(id: string, status: 'approved' | 'rejected') {
     setBusyId(id);
-    await api(`/staff-time-off/${id}`, { method: 'PUT', body: { status } }).catch(() => null);
+    setError('');
+    try {
+      await api(`/staff-time-off/${id}`, { method: 'PUT', body: { status } });
+      loadTimeOff();
+    } catch (e) {
+      // Aprovar ou recusar férias falhava em silêncio: a linha ficava em
+      // 'pendente' e quem carregou não sabia se tinha sido ignorado.
+      setError(e instanceof Error ? e.message : 'Não foi possível decidir este pedido.');
+    }
     setBusyId(null);
-    loadTimeOff();
   }
 
   return (
@@ -138,7 +141,9 @@ export default function ClinicTeamPage() {
         ]}
       />
 
-      {loading ? (
+      {usersQuery.error ? (
+        <ErrorState error={usersQuery.error} onRetry={usersQuery.refetch} message="Não foi possível ler a equipa." />
+      ) : usersQuery.loading ? (
         <Spinner />
       ) : tab === 'schedules' ? (
         <div>

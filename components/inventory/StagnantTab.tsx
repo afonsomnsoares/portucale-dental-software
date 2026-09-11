@@ -8,15 +8,9 @@
 // perda com data marcada, e «rotação lenta» pode ser perfeitamente normal num material
 // de especialidade. A ordenação vem do servidor (`rankStagnant`): primeiro o que expira,
 // depois o que tem mais capital preso.
-import { useCallback, useEffect, useState } from 'react';
-import type { ApiOptions } from '@/app/providers';
-import { Empty, Spinner } from '@/components/ui';
+import { Empty, ErrorState, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
-
-interface Props {
-  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint
-  api: (path: string, opts?: ApiOptions) => Promise<any>;
-}
 
 interface Item {
   itemId: number;
@@ -44,24 +38,16 @@ const TOM: Record<string, string> = {
   active: 'var(--urgency-ok)',
 };
 
-export default function StagnantTab({ api }: Props) {
-  const [items, setItems] = useState<Item[]>([]);
-  const [totais, setTotais] = useState<{ count: number; tiedUpValue: number; itemsWithoutCost: number } | null>(null);
-  const [aCarregar, setACarregar] = useState(true);
+export default function StagnantTab() {
+  const dados = useQuery<{ items: Item[]; totals: { count: number; tiedUpValue: number; itemsWithoutCost: number } }>(
+    '/inventory/stagnant',
+  );
+  const items = dados.data?.items || [];
+  const totais = dados.data?.totals || null;
 
-  const carregar = useCallback(async () => {
-    setACarregar(true);
-    const r = await api('/inventory/stagnant').catch(() => null);
-    setItems(r?.items || []);
-    setTotais(r?.totals || null);
-    setACarregar(false);
-  }, [api]);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
-
-  if (aCarregar) return <Spinner />;
+  if (dados.loading) return <Spinner />;
+  if (dados.error)
+    return <ErrorState error={dados.error} onRetry={dados.refetch} message="Não foi possível ler o stock parado." />;
   if (!items.length) return <Empty message="Nada parado. Todo o stock com movimento registado está a sair." />;
 
   return (

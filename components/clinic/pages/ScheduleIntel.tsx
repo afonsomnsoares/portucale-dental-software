@@ -1,10 +1,10 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/app/providers';
+import { useCallback, useMemo, useState } from 'react';
 import EfficiencyTab from '@/components/receptionist/EfficiencyTab';
 import OptimizerTab from '@/components/receptionist/OptimizerTab';
 import SlotRiskTab, { type SlotRiskReport } from '@/components/receptionist/SlotRiskTab';
-import { Badge, Empty, GhostBtn, PageHeader, RiskBadge, Spinner, Tabs } from '@/components/ui';
+import { Badge, Empty, ErrorState, GhostBtn, PageHeader, RiskBadge, Spinner, Tabs } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatPhonePT } from '@/lib/constants';
 import type { AgendaEfficiency, RiskData, RiskHeatmapData, ScheduleOptimization, WaitlistData } from '@/lib/types';
 
@@ -42,47 +42,48 @@ function heatColor(rate: number) {
 // /schedule-intel/* e /waitlist já confinam tudo a user.tenantId, por isso não se passa
 // ?tenantId= e a página carrega direta.
 export default function ClinicScheduleIntelPage() {
-  const { api } = useAuth();
   const [tab, setTab] = useState('risk');
 
-  const [risk, setRisk] = useState<RiskData | null>(null);
-  const [heatmap, setHeatmap] = useState<RiskHeatmapData | null>(null);
-  const [efficiency, setEfficiency] = useState<AgendaEfficiency | null>(null);
-  const [waitlist, setWaitlist] = useState<WaitlistData | null>(null);
-  const [optimization, setOptimization] = useState<ScheduleOptimization | null>(null);
+  // ─── Seis leituras, seis separadores, seis destinos ───────────────────────
+  // Estavam num Promise.all com um `loading` e um `err` para todas: qualquer uma
+  // a falhar deixava o ecrã inteiro parado, e cinco a correr bem não valiam nada
+  // se a sexta demorasse. Cada separador é um assunto independente — e a página
+  // existe para os comparar, o que só funciona se os que responderam aparecerem.
+  const riskQuery = useQuery<RiskData>('/schedule-intel/risk?days=14');
+  const heatmapQuery = useQuery<RiskHeatmapData>('/schedule-intel/heatmap');
+  const efficiencyQuery = useQuery<AgendaEfficiency>('/schedule-intel/efficiency?days=14');
+  const waitlistQuery = useQuery<WaitlistData>('/waitlist');
+  const optimizationQuery = useQuery<ScheduleOptimization>('/schedule-intel/optimizer?days=14');
+  // Projeção ao nível do LUGAR — diferente do 'risk' acima, que pontua consultas.
+  // Ver o cabeçalho de SlotRiskTab.
+  const slotRiskQuery = useQuery<SlotRiskReport>('/schedule-intel/slot-risk?days=21');
 
-  const [slotRisk, setSlotRisk] = useState<SlotRiskReport | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
+  const risk = riskQuery.data ?? null;
+  const heatmap = heatmapQuery.data ?? null;
+  const efficiency = efficiencyQuery.data ?? null;
+  const waitlist = waitlistQuery.data ?? null;
+  const optimization = optimizationQuery.data ?? null;
+  const slotRisk = slotRiskQuery.data ?? null;
 
-  const load = useCallback(async () => {
-    setErr('');
-    setLoading(true);
-    const [r, h, e, w, o, sr] = await Promise.all([
-      api('/schedule-intel/risk?days=14').catch((err) => {
-        setErr(err instanceof Error ? err.message : 'Falha ao carregar');
-        return null;
-      }),
-      api('/schedule-intel/heatmap').catch(() => null),
-      api('/schedule-intel/efficiency?days=14').catch(() => null),
-      api('/waitlist').catch(() => null),
-      api('/schedule-intel/optimizer?days=14').catch(() => null),
-      // Projeção ao nível do LUGAR — diferente do 'risk' acima, que pontua consultas.
-      // Ver o cabeçalho de SlotRiskTab.
-      api('/schedule-intel/slot-risk?days=21').catch(() => null),
-    ]);
-    setSlotRisk(sr);
-    setRisk(r);
-    setHeatmap(h);
-    setEfficiency(e);
-    setWaitlist(w);
-    setOptimization(o);
-    setLoading(false);
-  }, [api]);
+  const load = useCallback(() => {
+    riskQuery.refetch();
+    heatmapQuery.refetch();
+    efficiencyQuery.refetch();
+    waitlistQuery.refetch();
+    optimizationQuery.refetch();
+    slotRiskQuery.refetch();
+  }, [riskQuery, heatmapQuery, efficiencyQuery, waitlistQuery, optimizationQuery, slotRiskQuery]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // O ecrã só fica parado enquanto o separador ABERTO não tiver nada. Os outros
+  // cinco carregam por baixo.
+  const queryDoSeparador = {
+    risk: riskQuery,
+    heatmap: heatmapQuery,
+    efficiency: efficiencyQuery,
+    optimizer: optimizationQuery,
+    'slot-risk': slotRiskQuery,
+    waitlist: waitlistQuery,
+  }[tab];
 
   const heatCells = useMemo(() => {
     const map = new Map<string, { total: number; rate: number }>();
@@ -100,21 +101,13 @@ export default function ClinicScheduleIntelPage() {
         </GhostBtn>
       </PageHeader>
 
-      {err && (
-        <div
-          className="card p-4 mb-4"
-          style={{
-            border: '1px solid var(--urgency-critical-border)',
-            background: 'var(--urgency-critical-bg)',
-            color: 'var(--urgency-critical)',
-            fontWeight: 700,
-          }}
-        >
-          {err}
-        </div>
-      )}
-
-      {loading ? (
+      {queryDoSeparador?.error ? (
+        <ErrorState
+          error={queryDoSeparador.error}
+          onRetry={queryDoSeparador.refetch}
+          message="Não foi possível carregar este separador."
+        />
+      ) : queryDoSeparador?.loading ? (
         <div className="card p-5">
           <Spinner />
         </div>
@@ -133,7 +126,7 @@ export default function ClinicScheduleIntelPage() {
             ]}
           />
 
-          {tab === 'slot-risk' && <SlotRiskTab data={slotRisk} loading={loading} />}
+          {tab === 'slot-risk' && <SlotRiskTab data={slotRisk} loading={slotRiskQuery.loading} />}
 
           {tab === 'risk' &&
             (!risk?.appointments?.length ? (

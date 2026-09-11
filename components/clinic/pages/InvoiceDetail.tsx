@@ -1,9 +1,9 @@
 'use client';
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import type { ReactNode } from 'react';
+import { Badge, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatDatePT, formatEUR } from '@/lib/constants';
 import type { Invoice } from '@/lib/types';
 
@@ -12,25 +12,19 @@ import type { Invoice } from '@/lib/types';
 // dólares/en-US. app/api/invoices/[id] já recusa faturas de outro tenant, por isso não há
 // aqui nenhuma verificação de âmbito a fazer.
 export default function ClinicInvoiceDetailPage() {
-  const { api } = useAuth();
   const params = useParams();
   const router = useRouter();
-  const [inv, setInv] = useState<Invoice | null>(null);
-  const [loading, setLoading] = useState(true);
+  // `null` enquanto não houver id no URL: o hook fica em espera em vez de pedir
+  // /invoices/undefined, que era o que a versão anterior evitava com um `return`
+  // a meio do callback — e que deixava o `loading` preso a true para sempre.
+  const id = params?.id;
+  const invQuery = useQuery<Invoice>(id ? `/invoices/${id}` : null);
+  const inv = invQuery.data ?? null;
 
-  const load = useCallback(async () => {
-    const id = params?.id;
-    if (!id) return;
-    const res = await api(`/invoices/${id}`).catch(() => null);
-    setInv(res);
-    setLoading(false);
-  }, [api, params?.id]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  if (loading) return <Spinner />;
+  if (invQuery.loading) return <Spinner />;
+  if (invQuery.error) return <ErrorState error={invQuery.error} onRetry={invQuery.refetch} />;
+  if (invQuery.error)
+    return <ErrorState error={invQuery.error} onRetry={invQuery.refetch} message="Não foi possível ler a fatura." />;
   if (!inv) {
     return (
       <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>
