@@ -59,6 +59,7 @@ async function ensureListener(): Promise<void> {
       try {
         event = JSON.parse(msg.payload) as RealtimeEvent;
       } catch {
+        console.warn('[realtime] payload inválido ignorado:', msg.payload);
         return;
       }
       // Um subscritor que rebente não pode levar os outros atrás — uma ligação SSE que
@@ -66,7 +67,9 @@ async function ensureListener(): Promise<void> {
       for (const fn of subscribers().get(event.tenantId) || []) {
         try {
           fn(event);
-        } catch {}
+        } catch {
+          // intentional — a subscriber throwing must not kill the broadcast loop
+        }
       }
     });
 
@@ -74,15 +77,35 @@ async function ensureListener(): Promise<void> {
       console.error('[realtime] ligação de escuta caiu:', err.message);
       globalThis.__realtimeClient = undefined;
       connecting = null;
-      // Sem reconexão automática agressiva: a próxima ligação SSA a abrir volta a
+      // Sem reconexão automática agressiva: a próxima ligação SSE a abrir volta a
       // chamar ensureListener e reestabelece. Tentar reconectar em ciclo enquanto a
       // base de dados está em baixo só produz ruído no log.
     });
 
-    await client.connect();
-    await client.query('LISTEN portucale_realtime');
-    globalThis.__realtimeClient = client;
-    connecting = null;
+    // ─── O caminho de falha tem de limpar `connecting` ────────────────────────
+    // O handler de 'error' acima só dispara em ligações JÁ ESTABELECIDAS. Uma falha
+    // AQUI — o connect() ou o LISTEN — não passa por lá, e deixava `connecting` a
+    // apontar para uma promessa rejeitada. Como a porta de entrada é
+    // `if (connecting) return connecting`, todas as chamadas seguintes recebiam a
+    // mesma rejeição: o tempo real ficava morto até alguém reiniciar o processo.
+    //
+    // O caso concreto é banal — um Postgres que demore um segundo a mais a aceitar
+    // ligações no arranque — e o sintoma não é um erro, é a sala de espera a deixar
+    // de atualizar sem ninguém reparar porquê.
+    try {
+      await client.connect();
+      await client.query('LISTEN portucale_realtime');
+      globalThis.__realtimeClient = client;
+    } catch (err) {
+      // A ligação pode ter ficado meio-aberta; fechá-la evita deixar sockets pendurados
+      // a cada tentativa falhada.
+      await client.end().catch(() => {});
+      throw err;
+    } finally {
+      // Em ambos os desfechos: a próxima chamada a ensureListener volta a tentar em vez
+      // de receber o resultado desta.
+      connecting = null;
+    }
   })();
 
   return connecting;
