@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { Badge, Empty, FormField, GhostBtn, Modal, PrimaryBtn, Sel, Spinner, TD } from '@/components/ui';
+import { Badge, Empty, ErrorState, FormField, GhostBtn, Modal, PrimaryBtn, Sel, Spinner, TD } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { InventoryItem, PurchaseOrder } from '@/lib/types';
 
@@ -35,8 +36,8 @@ function newLine(itemId = ''): DraftLine {
 // encomendado/recebido continua a ser uma ação humana. Uma encomenda manual segue o mesmo
 // fluxo, só que criada por uma pessoa em vez do job.
 export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: PurchaseOrdersTabProps) {
-  const [orders, setOrders] = useState<PurchaseOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const ordersQuery = useQuery<PurchaseOrder[]>(tenantId ? `/purchase-orders?tenantId=${tenantId}` : null);
+  const orders = ordersQuery.data ?? [];
   const [busyId, setBusyId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [createModal, setCreateModal] = useState(false);
@@ -44,23 +45,18 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    const rows = await api(`/purchase-orders?tenantId=${tenantId}`).catch(() => []);
-    setOrders(rows || []);
-    setLoading(false);
-  }, [api, tenantId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = ordersQuery.refetch;
 
   async function generateSuggestions() {
     setGenerating(true);
-    await api(`/jobs/run?job=reorderSuggestions&tenantId=${tenantId}`, { method: 'POST' }).catch(() => null);
+    setError('');
+    try {
+      await api(`/jobs/run?job=reorderSuggestions&tenantId=${tenantId}`, { method: 'POST' });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível gerar sugestões de reposição.');
+    }
     setGenerating(false);
-    load();
   }
 
   // ─── Reconciliação ────────────────────────────────────────────────────────
@@ -82,24 +78,41 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
       return;
     }
     setReconBusy(id);
-    const r = await api(`/purchase-orders/${id}/reconcile`).catch(() => null);
-    setRecon((prev) => ({ ...prev, [id]: r }));
+    setError('');
+    try {
+      const r = await api(`/purchase-orders/${id}/reconcile`);
+      setRecon((prev) => ({ ...prev, [id]: r }));
+    } catch (e) {
+      // Um `null` no mapa de reconciliação desenhava-se como «nada a apontar»,
+      // que é a leitura oposta de «não consegui comparar».
+      setError(e instanceof Error ? e.message : 'Não foi possível reconciliar esta encomenda.');
+    }
     setReconBusy(null);
   }
 
   async function congelar(id: string) {
     setReconBusy(id);
-    const r = await api(`/purchase-orders/${id}/reconcile`, { method: 'POST' }).catch(() => null);
-    setRecon((prev) => ({ ...prev, [id]: r }));
+    setError('');
+    try {
+      const r = await api(`/purchase-orders/${id}/reconcile`, { method: 'POST' });
+      setRecon((prev) => ({ ...prev, [id]: r }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível congelar a reconciliação.');
+    }
     setReconBusy(null);
   }
 
   async function setStatus(order: PurchaseOrder, status: 'ordered' | 'cancelled' | 'received') {
     setBusyId(order.id);
-    await api(`/purchase-orders/${order.id}`, { method: 'PUT', body: { status } }).catch(() => null);
+    setError('');
+    try {
+      await api(`/purchase-orders/${order.id}`, { method: 'PUT', body: { status } });
+      load();
+      if (status === 'received') onReceived?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível mudar o estado da encomenda.');
+    }
     setBusyId(null);
-    load();
-    if (status === 'received') onReceived?.();
   }
 
   function openCreate() {
@@ -133,7 +146,16 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
     }
   }
 
-  if (loading) return <Spinner />;
+  if (ordersQuery.error)
+    return (
+      <ErrorState
+        error={ordersQuery.error}
+        onRetry={ordersQuery.refetch}
+        message="Não foi possível ler as encomendas."
+      />
+    );
+  if (ordersQuery.loading) return <Spinner />;
+  if (ordersQuery.error) return <ErrorState error={ordersQuery.error} onRetry={ordersQuery.refetch} />;
   if (!tenantId) return <Empty message="Escolha uma clínica." />;
 
   return (

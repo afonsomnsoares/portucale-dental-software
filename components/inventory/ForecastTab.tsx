@@ -1,7 +1,20 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, useCallback, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
-import { Badge, DataTable, Empty, GhostBtn, Inp, MetricCard, PrimaryBtn, Sel, Spinner, TD } from '@/components/ui';
+import {
+  Badge,
+  DataTable,
+  Empty,
+  ErrorState,
+  GhostBtn,
+  Inp,
+  MetricCard,
+  PrimaryBtn,
+  Sel,
+  Spinner,
+  TD,
+} from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { APPOINTMENT_TYPES } from '@/lib/constants';
 import type { InventoryForecastResponse, InventoryItem, ProcedureItemUsage } from '@/lib/types';
 
@@ -25,31 +38,26 @@ const EMPTY_MAPPING_FORM = { appointmentType: APPOINTMENT_TYPES[0]?.label || '',
 // partes do gap "sem previsão" da avaliação original andam sempre juntas na cabeça de
 // quem gere stock.
 export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
-  const [data, setData] = useState<InventoryForecastResponse>({ overview: [], procedureDemand: [] });
-  const [usage, setUsage] = useState<ProcedureItemUsage[]>([]);
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // `null` sem clínica escolhida: era o `if (!tenantId) return` no início do
+  // callback, que deixava o `loading` preso a true e o ecrã num spinner eterno
+  // em vez de chegar ao «Escolha uma clínica» que está lá em baixo.
+  const dataQuery = useQuery<InventoryForecastResponse>(tenantId ? `/inventory/forecast?tenantId=${tenantId}` : null);
+  const usageQuery = useQuery<ProcedureItemUsage[]>(
+    tenantId ? `/inventory/procedure-usage?tenantId=${tenantId}` : null,
+  );
+  const itemsQuery = useQuery<InventoryItem[]>(tenantId ? '/inventory/items' : null);
+
+  const data = dataQuery.data ?? { overview: [], procedureDemand: [] };
+  const usage = usageQuery.data ?? [];
+  const items = itemsQuery.data ?? [];
   const [mappingForm, setMappingForm] = useState(EMPTY_MAPPING_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    const [forecast, usageRows, itemRows] = await Promise.all([
-      api(`/inventory/forecast?tenantId=${tenantId}`).catch(() => ({ overview: [], procedureDemand: [] })),
-      api(`/inventory/procedure-usage?tenantId=${tenantId}`).catch(() => []),
-      api('/inventory/items').catch(() => []),
-    ]);
-    setData(forecast || { overview: [], procedureDemand: [] });
-    setUsage(usageRows || []);
-    setItems(itemRows || []);
-    setLoading(false);
-  }, [api, tenantId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const load = useCallback(() => {
+    dataQuery.refetch();
+    usageQuery.refetch();
+  }, [dataQuery, usageQuery]);
 
   async function addMapping() {
     if (!mappingForm.itemId) {
@@ -78,12 +86,29 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
   }
 
   async function removeMapping(id: string) {
-    await api(`/inventory/procedure-usage/${id}`, { method: 'DELETE' }).catch(() => null);
-    load();
+    setError('');
+    try {
+      await api(`/inventory/procedure-usage/${id}`, { method: 'DELETE' });
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível remover o consumo.');
+    }
   }
 
-  if (loading) return <Spinner />;
+  // A ordem importa: sem clínica escolhida não há nada a carregar, por isso a
+  // mensagem vem ANTES do spinner — ao contrário da versão anterior, em que o
+  // `loading` ficava preso a true e nunca se chegava a esta linha.
   if (!tenantId) return <Empty message="Escolha uma clínica." />;
+  if (dataQuery.error)
+    return (
+      <ErrorState
+        error={dataQuery.error}
+        onRetry={dataQuery.refetch}
+        message="Não foi possível ler a previsão de stock."
+      />
+    );
+  if (dataQuery.loading) return <Spinner />;
+  if (dataQuery.error) return <ErrorState error={dataQuery.error} onRetry={dataQuery.refetch} />;
 
   const rows = data.overview;
   const atRiskCount = rows.filter((r) => r.atRisk).length;

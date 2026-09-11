@@ -1,5 +1,5 @@
 'use client';
-import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import {
@@ -8,6 +8,7 @@ import {
   DangerBtn,
   DataTable,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Inp,
@@ -20,6 +21,7 @@ import {
   TD,
   Textarea,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Appointment, DocumentTemplate, DocumentTemplateType, GeneratedDocument, Patient } from '@/lib/types';
 
 interface DocumentsViewProps {
@@ -42,19 +44,27 @@ const EMPTY_TEMPLATE = { name: '', type: 'declaration' as DocumentTemplateType, 
 
 export default function DocumentsView({ api, canManageTemplates = false }: DocumentsViewProps) {
   const [tab, setTab] = useState('issue');
-  const [loading, setLoading] = useState(true);
-
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Patient | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-
-  const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
-  const [variables, setVariables] = useState<Array<{ key: string; label: string }>>([]);
   const [templateId, setTemplateId] = useState('');
   const [appointmentId, setAppointmentId] = useState('');
 
-  const [documents, setDocuments] = useState<GeneratedDocument[]>([]);
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const templatesQuery = useQuery<{ templates: DocumentTemplate[]; variables: Array<{ key: string; label: string }> }>(
+    '/document-templates',
+  );
+  const documentsQuery = useQuery<GeneratedDocument[]>('/documents');
+  // As consultas do doente escolhido servem para dizer a QUE consulta se refere
+  // a declaração; sem doente não há nada a pedir.
+  const appointmentsQuery = useQuery<Appointment[]>(
+    selected ? `/appointments?patientId=${selected.id}&limit=50` : null,
+  );
+
+  const patients = patientsQuery.data ?? [];
+  const templates = templatesQuery.data?.templates ?? [];
+  const variables = templatesQuery.data?.variables ?? [];
+  const documents = documentsQuery.data ?? [];
+  const appointments = appointmentsQuery.data ?? [];
   const [preview, setPreview] = useState<GeneratedDocument | null>(null);
   const [missing, setMissing] = useState<string[]>([]);
 
@@ -63,34 +73,23 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const loadTemplates = useCallback(async () => {
-    const res = await api('/document-templates').catch(() => null);
-    setTemplates(res?.templates || []);
-    setVariables(res?.variables || []);
-    if (res?.templates?.length) setTemplateId((prev) => prev || res.templates[0].id);
-  }, [api]);
+  const loadTemplates = templatesQuery.refetch;
+  const loadDocuments = documentsQuery.refetch;
 
-  const loadDocuments = useCallback(async () => {
-    const rows = await api('/documents').catch(() => []);
-    setDocuments(rows || []);
-  }, [api]);
-
+  // O primeiro doente e o primeiro modelo ficam escolhidos quando as listas
+  // chegam, sem roubar uma escolha já feita.
   useEffect(() => {
-    (async () => {
-      const [pts] = await Promise.all([api('/patients').catch(() => []), loadTemplates(), loadDocuments()]);
-      setPatients(pts || []);
-      setSelected((prev) => prev || pts?.[0] || null);
-      setLoading(false);
-    })();
-  }, [api, loadTemplates, loadDocuments]);
-
+    if (!selected && patients.length) setSelected(patients[0]);
+  }, [selected, patients]);
   useEffect(() => {
-    if (!selected) return;
+    if (!templateId && templates.length) setTemplateId(templates[0].id);
+  }, [templateId, templates]);
+  // Mudar de doente limpa a consulta escolhida — a do doente anterior não existe
+  // na lista nova, e ficava selecionada em silêncio.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: só o doente reinicia a escolha
+  useEffect(() => {
     setAppointmentId('');
-    api(`/appointments?patientId=${selected.id}&limit=50`)
-      .then((rows: Appointment[]) => setAppointments(rows || []))
-      .catch(() => setAppointments([]));
-  }, [selected, api]);
+  }, [selected?.id]);
 
   const visiblePatients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -112,7 +111,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
       });
       setPreview(res.document);
       setMissing(res.missing || []);
-      setDocuments((prev) => [res.document, ...prev]);
+      loadDocuments();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falha ao emitir documento.');
     } finally {
@@ -172,12 +171,25 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
 
   async function deactivate(t: DocumentTemplate) {
     setBusy(true);
-    await api(`/document-templates/${t.id}`, { method: 'DELETE' }).catch(() => null);
+    setError('');
+    try {
+      await api(`/document-templates/${t.id}`, { method: 'DELETE' });
+      loadTemplates();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível desativar o modelo.');
+    }
     setBusy(false);
-    loadTemplates();
   }
 
-  if (loading) return <Spinner />;
+  if (templatesQuery.error)
+    return (
+      <ErrorState
+        error={templatesQuery.error}
+        onRetry={templatesQuery.refetch}
+        message="Não foi possível ler os modelos de documento."
+      />
+    );
+  if (patientsQuery.loading || templatesQuery.loading) return <Spinner />;
 
   const tabs = [
     { key: 'issue', label: 'Emitir' },

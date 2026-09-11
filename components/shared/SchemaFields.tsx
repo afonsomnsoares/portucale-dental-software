@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers';
 import SchemaFieldFormModal, { type SchemaFieldForm } from '@/components/schema/SchemaFieldFormModal';
 import SchemaFieldsTable, { type SchemaFieldRow } from '@/components/schema/SchemaFieldsTable';
 import { AlertBanner, GhostBtn, PageHeader, Sel } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { PT_PATIENT_FIELDS } from '@/lib/presets/patientFields';
 import type { Tenant } from '@/lib/types';
 
@@ -25,54 +26,40 @@ const EMPTY_FORM: SchemaFieldForm = {
 // o servidor aceita. A versão de clínica não fazia nada de diferente: fazia menos.
 export default function SchemaFields() {
   const { api, user } = useAuth();
-  const [fields, setFields] = useState<SchemaFieldRow[]>([]);
-  const [loading, setLoading] = useState(true);
+
   const [modal, setModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<SchemaFieldForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [erro, setErro] = useState('');
   const [tenantId, setTenantId] = useState(user?.tenantId || '');
 
   useEffect(() => {
     if (user?.tenantId) setTenantId(user.tenantId);
   }, [user?.tenantId]);
 
-  useEffect(() => {
-    // Só o super-admin não tem clínica própria e precisa do seletor abaixo (ver o
-    // guard `!user?.tenantId`) — um admin de clínica já sabe qual é a dele, e o
-    // servidor recusar-lhe-ia este GET de qualquer forma.
-    if (user?.role !== 'super_admin') return;
-    api('/tenants')
-      .then(setTenants)
-      .catch(() => {});
-  }, [api, user]);
+  // Só o super-admin não tem clínica própria e precisa do seletor abaixo (ver o
+  // guard `!user?.tenantId`) — um admin de clínica já sabe qual é a dele, e o
+  // servidor recusar-lhe-ia este GET de qualquer forma.
+  const tenantsQuery = useQuery<Tenant[]>(user?.role === 'super_admin' ? '/tenants' : null);
+  const tenants = tenantsQuery.data ?? [];
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        if (!tenantId) {
-          setFields([]);
-          return;
-        }
-        const res = await api(`/schema?tenantId=${encodeURIComponent(tenantId)}`);
-        if (!cancelled) setFields(res?.rows || res || []);
-      } catch {
-        if (!cancelled) setFields([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [api, tenantId]);
+  // O `cancelled` que aqui estava fazia à mão o que o hook faz: descartar a
+  // resposta que já não é a que interessa quando a clínica muda a meio.
+  const fieldsQuery = useQuery<{ rows?: SchemaFieldRow[] } | SchemaFieldRow[]>(
+    tenantId ? `/schema?tenantId=${encodeURIComponent(tenantId)}` : null,
+  );
+  const fieldsRaw = fieldsQuery.data;
+  const fields: SchemaFieldRow[] = Array.isArray(fieldsRaw) ? fieldsRaw : (fieldsRaw?.rows ?? []);
 
   async function deploy(id: number) {
-    const f = await api(`/schema/${id}/deploy`, { method: 'PUT' }).catch(() => null);
-    if (f) setFields((prev) => prev.map((x) => (x.id === id ? f : x)));
+    setErro('');
+    try {
+      await api(`/schema/${id}/deploy`, { method: 'PUT' });
+      fieldsQuery.refetch();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível publicar este campo.');
+    }
   }
 
   async function addField() {
@@ -93,13 +80,15 @@ export default function SchemaFields() {
       required: form.required,
       tenantId,
     };
-    const res = await api('/schema', { method: 'POST', body: payload }).catch(() => null);
-    const created = res?.rows?.[0] || null;
-    if (created) {
-      setFields((p) => [...p, created]);
+    setErro('');
+    try {
+      await api('/schema', { method: 'POST', body: payload });
+      fieldsQuery.refetch();
       setModal(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível criar o campo.');
     }
     setSaving(false);
   }
@@ -120,12 +109,15 @@ export default function SchemaFields() {
       enumValues,
       required: form.required,
     };
-    const f = await api(`/schema/${editingId}`, { method: 'PUT', body: payload }).catch(() => null);
-    if (f) {
-      setFields((prev) => prev.map((x) => (x.id === f.id ? f : x)));
+    setErro('');
+    try {
+      await api(`/schema/${editingId}`, { method: 'PUT', body: payload });
+      fieldsQuery.refetch();
       setModal(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível guardar o campo.');
     }
     setSaving(false);
   }
@@ -156,9 +148,11 @@ export default function SchemaFields() {
     }
     setSaving(true);
     try {
+      setErro('');
       await api('/schema', { method: 'POST', body: { tenantId, fields: PT_PATIENT_FIELDS } });
-      const res = await api(`/schema?tenantId=${encodeURIComponent(tenantId)}`).catch(() => null);
-      setFields(res?.rows || res || []);
+      fieldsQuery.refetch();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível aplicar o conjunto português.');
     } finally {
       setSaving(false);
     }
@@ -188,10 +182,20 @@ export default function SchemaFields() {
           </GhostBtn>
         )}
       </PageHeader>
+      {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
+      {fieldsQuery.error ? (
+        <AlertBanner type="danger">Não foi possível ler os campos. {fieldsQuery.error.message}</AlertBanner>
+      ) : null}
       <AlertBanner type="warning">
         Os campos são por clínica. Um campo novo só passa a aparecer no registo de doentes depois de Publicar.
       </AlertBanner>
-      <SchemaFieldsTable fields={fields} loading={loading} tenantId={tenantId} onEdit={openEdit} onDeploy={deploy} />
+      <SchemaFieldsTable
+        fields={fields}
+        loading={fieldsQuery.loading}
+        tenantId={tenantId}
+        onEdit={openEdit}
+        onDeploy={deploy}
+      />
       {modal && (
         <SchemaFieldFormModal
           editingId={editingId}
