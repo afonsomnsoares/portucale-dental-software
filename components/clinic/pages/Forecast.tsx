@@ -10,9 +10,9 @@
 // honesta do módulo. Por isso as pouco fiáveis aparecem esbatidas e dizem-no por
 // extenso, em vez de serem escondidas: uma clínica nova tem o direito de ver que o
 // sistema ainda não sabe o suficiente sobre ela.
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
+import { useState } from 'react';
 import { Empty, PageHeader, Sel, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 
 interface ForecastDay {
@@ -101,29 +101,29 @@ function Sparkline({ days, unit }: { days: ForecastDay[]; unit: MetricForecast['
   );
 }
 
-export default function Forecast() {
-  const { api } = useAuth();
-  const [dados, setDados] = useState<MetricForecast[]>([]);
-  const [dias, setDias] = useState('14');
-  const [aCarregar, setACarregar] = useState(true);
-  const [erro, setErro] = useState('');
-
-  const carregar = useCallback(async () => {
-    setACarregar(true);
-    setErro('');
-    try {
-      const r = await api(`/forecast?days=${dias}`);
-      setDados(r?.forecasts || []);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível calcular a previsão.');
-    } finally {
-      setACarregar(false);
-    }
-  }, [api, dias]);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
+/**
+ * `initialData` e `initialDays` vêm da página do servidor
+ * (app/dashboard/admin/forecast/page.tsx), que já leu a previsão de arranque
+ * diretamente da base de dados. São opcionais porque este componente também é
+ * montado sem eles — e aí comporta-se como antes, pedindo no primeiro efeito.
+ *
+ * Mudar o horizonte continua a ser trabalho do cliente: é interação, e uma volta
+ * ao servidor por cada mexida no seletor seria pior do que o problema.
+ */
+export default function Forecast({
+  initialData,
+  initialDays = '14',
+}: {
+  initialData?: { forecasts: MetricForecast[] };
+  initialDays?: string;
+} = {}) {
+  const [dias, setDias] = useState(initialDays);
+  const consulta = useQuery<{ forecasts: MetricForecast[] }>(`/forecast?days=${dias}`, {
+    initialData: dias === initialDays ? initialData : undefined,
+  });
+  const dados = consulta.data?.forecasts ?? [];
+  const aCarregar = consulta.loading;
+  const erro = consulta.error?.message ?? '';
 
   return (
     <div>

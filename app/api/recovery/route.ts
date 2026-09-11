@@ -1,26 +1,8 @@
-import { query, queryOne } from '@/lib/db';
-import { computeRecovery } from '@/lib/recovery';
+import { buildRecoveryPayload } from '@/lib/recovery';
 import { withRoute } from '@/lib/route';
 
 export const GET = withRoute({ permission: 'recovery:read', tenant: 'required' }, async ({ tenantId }) => {
-  const tenant = await queryOne(`SELECT id, name, operatories FROM tenants WHERE id=$1`, [tenantId]);
-  if (!tenant) return Response.json({ error: 'Not found' }, { status: 404 });
-
-  const [recovery, snapshots] = await Promise.all([
-    computeRecovery(tenantId),
-    query(
-      `SELECT snapshot_month, total_estimated
-       FROM recovery_snapshots WHERE tenant_id=$1
-       ORDER BY snapshot_month DESC LIMIT 12`,
-      [tenantId],
-    ),
-  ]);
-
-  return Response.json({
-    tenant: { id: tenant.id, name: tenant.name, operatories: Number(tenant.operatories || 1) },
-    generatedAt: new Date().toISOString(),
-    total: recovery.total,
-    categories: recovery.categories,
-    snapshots,
-  });
+  const payload = await buildRecoveryPayload(tenantId);
+  if (!payload) return Response.json({ error: 'Not found' }, { status: 404 });
+  return Response.json(payload);
 });

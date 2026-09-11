@@ -8,6 +8,7 @@ import {
   recoveryValue,
   roundEUR,
 } from './recoveryCalc';
+import type { RecoveryCategory, RecoveryItem, RecoverySnapshot } from './types/recovery';
 
 const ITEMS_LIMIT = 50;
 
@@ -19,7 +20,28 @@ async function totals(sql: string, params: unknown[]) {
   };
 }
 
-export async function computeRecovery(tenantId: string) {
+// ─── Porque é que o tipo de retorno está declarado ──────────────────────────
+// Estava inferido, e a inferência estava errada: a categoria `empty_slots` tem
+// `items: []`, e o `never[]` dela puxava o tipo do array de categorias inteiro
+// para baixo — as outras nove perdiam o `patient_name` e companhia. Não dava
+// erro nenhum enquanto isto só era lido por uma rota, porque o JSON apaga os
+// tipos a caminho do browser. Apareceu no dia em que uma PÁGINA passou a chamar
+// esta função diretamente, com os tipos intactos dos dois lados.
+// ─── Porque é que este helper existe ────────────────────────────────────────
+// As consultas abaixo devolvem `Record<string, any>` — linhas cruas — e cada
+// categoria monta o seu item com `{ ...linha, value, detail }`. O problema é
+// que o TypeScript DESCARTA a assinatura de índice ao fazer spread: o objeto
+// resultante fica a saber só de `value` e `detail`, e perde o `patient_name`
+// que o RecoveryItem exige e que a linha traz mesmo.
+//
+// Isto diz, num sítio, o que as consultas garantem devolver. Enquanto só a rota
+// lia esta função o JSON apagava tudo isto a caminho do browser e ninguém
+// reparava; deixou de ser assim quando uma página passou a chamá-la direto.
+function comoItem(linha: Record<string, unknown>): RecoveryItem & Record<string, unknown> {
+  return linha as RecoveryItem & Record<string, unknown>;
+}
+
+export async function computeRecovery(tenantId: string): Promise<{ total: number; categories: RecoveryCategory[] }> {
   // Preços por clínica (migração 035) — sem este filtro a tarifa média desta
   // clínica sairia da tabela de preços de outra.
   const codes = await query(
@@ -292,7 +314,7 @@ export async function computeRecovery(tenantId: string) {
   const days = businessDays(slotWindowDays);
   const slots = freeSlots(operatories, Number(bookedRow?.minutes || 0), slotWindowDays);
 
-  const categories = [
+  const categories: RecoveryCategory[] = [
     {
       key: 'proposed_treatments',
       label: 'Orçamentos não aceites',
@@ -301,7 +323,7 @@ export async function computeRecovery(tenantId: string) {
       count: proposedTotals.count,
       estimatedValue: proposedTotals.value,
       items: proposedItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(i.value),
         detail: `${Number(i.items)} tratamento(s) proposto(s)`,
       })),
@@ -314,7 +336,7 @@ export async function computeRecovery(tenantId: string) {
       count: acceptedTotals.count,
       estimatedValue: acceptedTotals.value,
       items: acceptedItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(i.value),
         detail: `${Number(i.items)} tratamento(s) em aberto, sem próxima sessão`,
       })),
@@ -327,7 +349,7 @@ export async function computeRecovery(tenantId: string) {
       count: plansPendingTotals.count,
       estimatedValue: plansPendingTotals.value,
       items: plansPendingItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(i.value),
         daysSince: Number(i.days_since),
         detail: `${i.title} · apresentado há ${Number(i.days_since)} dia(s)`,
@@ -341,7 +363,7 @@ export async function computeRecovery(tenantId: string) {
       count: plansNotStartedTotals.count,
       estimatedValue: plansNotStartedTotals.value,
       items: plansNotStartedItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(i.value),
         daysSince: i.days_since != null ? Number(i.days_since) : null,
         detail: `${i.title} · aceite ${i.days_since != null ? `há ${Number(i.days_since)} dia(s)` : ''}`,
@@ -355,7 +377,7 @@ export async function computeRecovery(tenantId: string) {
       count: recallsTotal.count,
       estimatedValue: recoveryValue(recallsTotal.count, visitFee),
       items: recallItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(visitFee),
         detail: `Recall ${i.recall_type} · vencido a ${String(i.next_due).slice(0, 10)}`,
       })),
@@ -368,7 +390,7 @@ export async function computeRecovery(tenantId: string) {
       count: inactiveTotal.count,
       estimatedValue: recoveryValue(inactiveTotal.count, visitFee),
       items: inactiveItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(visitFee),
         detail: i.last_visit ? `Última visita: ${String(i.last_visit).slice(0, 10)}` : 'Sem visita registada',
       })),
@@ -381,7 +403,7 @@ export async function computeRecovery(tenantId: string) {
       count: neverBookedTotal.count,
       estimatedValue: recoveryValue(neverBookedTotal.count, visitFee),
       items: neverBookedItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(visitFee),
         detail: `Registado a ${String(i.created_at).slice(0, 10)}`,
       })),
@@ -394,7 +416,7 @@ export async function computeRecovery(tenantId: string) {
       count: noShowTotal.count,
       estimatedValue: recoveryValue(noShowTotal.count, apptFee),
       items: noShowItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(apptFee),
         detail: `${i.type || 'Consulta'} · falta a ${String(i.appt_date).slice(0, 10)}`,
       })),
@@ -407,7 +429,7 @@ export async function computeRecovery(tenantId: string) {
       count: cancelledTotal.count,
       estimatedValue: recoveryValue(cancelledTotal.count, apptFee),
       items: cancelledItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(apptFee),
         detail: `${i.type || 'Consulta'} · cancelada a ${String(i.appt_date).slice(0, 10)}`,
       })),
@@ -420,7 +442,7 @@ export async function computeRecovery(tenantId: string) {
       count: leadsTotal.count,
       estimatedValue: roundEUR(leadsTotal.count * visitFee),
       items: leadItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(visitFee),
         detail: `${i.source ? `${i.source} · ` : ''}Lead registado a ${String(i.created_at).slice(0, 10)}`,
       })),
@@ -432,7 +454,7 @@ export async function computeRecovery(tenantId: string) {
       action: 'Preencher agenda com lista de espera',
       count: slots,
       estimatedValue: recoveryValue(slots, apptFee),
-      items: [],
+      items: [] as RecoveryItem[],
     },
     {
       key: 'outstanding_balance',
@@ -442,7 +464,7 @@ export async function computeRecovery(tenantId: string) {
       count: outstandingTotal.count,
       estimatedValue: outstandingTotal.value,
       items: outstandingItems.map((i) => ({
-        ...i,
+        ...comoItem(i),
         value: roundEUR(i.value),
         detail: i.due_date ? `Venceu a ${String(i.due_date).slice(0, 10)}` : 'Sem data de vencimento',
       })),
@@ -475,4 +497,39 @@ export async function saveRecoverySnapshot(tenantId: string, userId?: string | n
     ],
   );
   return { month, total: data.total };
+}
+
+/**
+ * A resposta completa de /api/recovery — o total, as categorias e os doze meses
+ * de histórico — construída num sítio só.
+ *
+ * Estava no corpo da rota. Passou para aqui quando a página deixou de a pedir
+ * por HTTP e passou a lê-la no servidor: a forma da resposta é a mesma dos dois
+ * lados, e uma forma escrita duas vezes é uma forma que diverge à primeira
+ * alteração.
+ *
+ * Devolve null quando a clínica não existe — quem chama decide se isso é um 404
+ * ou um redirecionamento.
+ */
+export async function buildRecoveryPayload(tenantId: string) {
+  const tenant = await queryOne(`SELECT id, name, operatories FROM tenants WHERE id=$1`, [tenantId]);
+  if (!tenant) return null;
+
+  const [recovery, snapshots] = await Promise.all([
+    computeRecovery(tenantId),
+    query(
+      `SELECT snapshot_month, total_estimated
+       FROM recovery_snapshots WHERE tenant_id=$1
+       ORDER BY snapshot_month DESC LIMIT 12`,
+      [tenantId],
+    ) as Promise<RecoverySnapshot[]>,
+  ]);
+
+  return {
+    tenant: { id: tenant.id, name: tenant.name, operatories: Number(tenant.operatories || 1) },
+    generatedAt: new Date().toISOString(),
+    total: recovery.total,
+    categories: recovery.categories,
+    snapshots,
+  };
 }

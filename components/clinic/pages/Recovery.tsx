@@ -1,7 +1,7 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
+import { useState } from 'react';
 import { Empty, GhostBtn, MetricCard, Modal, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { RecoveryCategory, RecoveryData } from '@/lib/types';
 
@@ -12,27 +12,13 @@ function sumCategories(categories: RecoveryCategory[], keys: string[]) {
 // Recuperação de receita da própria clínica. Ao contrário da versão de plataforma
 // (components/super-admin/pages/Recovery.tsx), não há seletor: app/api/recovery/route.ts só
 // aceita ?tenantId= de um super_admin e confina toda a gente ao seu user.tenantId.
-export default function ClinicRecoveryPage() {
-  const { api } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<RecoveryData | null>(null);
-  const [err, setErr] = useState('');
+export default function ClinicRecoveryPage({ initialData }: { initialData?: RecoveryData } = {}) {
   const [openCat, setOpenCat] = useState<RecoveryCategory | null>(null);
-
-  const load = useCallback(async () => {
-    setErr('');
-    setLoading(true);
-    const res = await api('/recovery').catch((e) => {
-      setErr(e instanceof Error ? e.message : 'Falha ao carregar');
-      return null;
-    });
-    setData(res);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const consulta = useQuery<RecoveryData>('/recovery', { initialData });
+  const data = consulta.data ?? null;
+  const loading = consulta.loading;
+  const err = consulta.error?.message ?? '';
+  const load = consulta.refetch;
 
   const maxSnap = Math.max(1, ...(data?.snapshots || []).map((s) => Number(s.total_estimated)));
 

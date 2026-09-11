@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import { AlertBanner, Empty, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 
 interface Margin {
@@ -151,63 +152,59 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
   );
 }
 
-export default function Costing() {
+export default function Costing({
+  initialReport,
+  initialFrom,
+  initialTo,
+}: {
+  initialReport?: Report;
+  initialFrom?: string;
+  initialTo?: string;
+} = {}) {
   const { api } = useAuth();
-  const [rel, setRel] = useState<Report | null>(null);
-  const [metodos, setMetodos] = useState<Metodo[]>([]);
-  const [def, setDef] = useState<Settings | null>(null);
-  const [de, setDe] = useState(inicioDoMes);
-  const [ate, setAte] = useState(() => new Date().toLocaleDateString('en-CA'));
-  const [aCarregar, setACarregar] = useState(true);
+  const [de, setDe] = useState(initialFrom ?? inicioDoMes);
+  const [ate, setAte] = useState(initialTo ?? (() => new Date().toLocaleDateString('en-CA'))());
   const [aGravar, setAGravar] = useState(false);
-  const [erro, setErro] = useState('');
-  const [avisoDefinicoes, setAvisoDefinicoes] = useState('');
+  const [def, setDef] = useState<Settings | null>(null);
 
-  const carregar = useCallback(async () => {
-    setACarregar(true);
-    setErro('');
-    setAvisoDefinicoes('');
-    try {
-      // As definições de custo são opcionais — uma clínica que ainda não as
-      // preencheu vê a margem à mesma, com a ressalva que o ecrã já mostra. Mas
-      // «ainda não preenchidas» e «não consegui ler» não são a mesma coisa, e a
-      // segunda passa a aparecer em vez de se disfarçar da primeira.
-      const [r, c] = await Promise.all([
-        api(`/finance/margin?from=${de}&to=${ate}`),
-        api('/finance/cost-settings').catch((e: unknown) => {
-          setAvisoDefinicoes(e instanceof Error ? e.message : 'Não foi possível ler as definições de custo.');
-          return null;
-        }),
-      ]);
-      setRel(r || null);
-      if (c) {
-        setDef(c.settings);
-        setMetodos(c.methods || []);
-      }
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível calcular a margem.');
-    } finally {
-      setACarregar(false);
-    }
-  }, [api, de, ate]);
+  // As duas leituras são independentes de propósito. As definições de custo são
+  // opcionais — uma clínica que ainda não as preencheu vê a margem à mesma, com a
+  // ressalva que o ecrã já mostra. Mas «ainda não preenchidas» e «não consegui
+  // ler» não são a mesma coisa, e a segunda aparece em vez de se disfarçar da
+  // primeira.
+  const margemInicial = de === (initialFrom ?? '') && ate === (initialTo ?? '') ? initialReport : undefined;
+  const margem = useQuery<Report>(`/finance/margin?from=${de}&to=${ate}`, { initialData: margemInicial });
+  const definicoes = useQuery<{ settings: Settings; methods: Metodo[] }>('/finance/cost-settings');
 
+  const rel = margem.data ?? null;
+  const metodos = definicoes.data?.methods ?? [];
+  const aCarregar = margem.loading;
+  const erro = margem.error?.message ?? '';
+  const avisoDefinicoes = definicoes.error?.message ?? '';
+  const carregar = margem.refetch;
+
+  // O formulário das definições é editável, por isso tem estado próprio — mas
+  // parte sempre do que o servidor gravou.
   useEffect(() => {
-    void carregar();
-  }, [carregar]);
+    if (definicoes.data?.settings) setDef(definicoes.data.settings);
+  }, [definicoes.data]);
 
+  const [erroGravar, setErroGravar] = useState('');
   const gravarDef = useCallback(async () => {
     if (!def) return;
     setAGravar(true);
-    setErro('');
+    setErroGravar('');
     try {
       await api('/finance/cost-settings', { method: 'PUT', body: def });
-      await carregar();
+      // Mudar a base de imputação muda a margem: revalidar as duas.
+      definicoes.refetch();
+      carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível guardar a base de imputação.');
+      setErroGravar(e instanceof Error ? e.message : 'Não foi possível guardar a base de imputação.');
     } finally {
       setAGravar(false);
     }
-  }, [api, def, carregar]);
+  }, [api, def, carregar, definicoes]);
 
   return (
     <div>
@@ -228,6 +225,7 @@ export default function Costing() {
       </PageHeader>
 
       {avisoDefinicoes ? <AlertBanner type="warning">{avisoDefinicoes}</AlertBanner> : null}
+      {erroGravar ? <AlertBanner type="danger">{erroGravar}</AlertBanner> : null}
       {erro && (
         <div
           style={{

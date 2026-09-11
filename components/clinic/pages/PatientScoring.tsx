@@ -12,9 +12,9 @@
 // A ordenação por omissão é a `priority` que o próprio lib/patientScoring.ts calcula:
 // risco × probabilidade de marcação, ou seja a ordem por que vale a pena telefonar. Não
 // é ordenar por risco — o doente com 95 de risco e 5 de probabilidade é tempo perdido.
-import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
+import { useState } from 'react';
 import { Empty, PageHeader, Sel, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 type Band = 'baixo' | 'medio' | 'alto';
 interface Driver {
@@ -67,27 +67,14 @@ function Medidor({ s, invertido = false }: { s: Score; invertido?: boolean }) {
   );
 }
 
-export default function PatientScoring() {
-  const { api } = useAuth();
-  const [doentes, setDoentes] = useState<ScoredPatient[]>([]);
+// `initialData` vem da página do servidor, que já calculou os scores. Ordenar é
+// interação e fica no cliente: é reordenar um array que já está na memória.
+export default function PatientScoring({ initialData }: { initialData?: { patients: ScoredPatient[] } } = {}) {
   const [ordem, setOrdem] = useState<'priority' | 'churnRisk' | 'engagement' | 'bookingPropensity'>('priority');
-  const [aCarregar, setACarregar] = useState(true);
-  const [erro, setErro] = useState('');
-
-  const carregar = useCallback(async () => {
-    try {
-      const r = await api('/patient-scoring?limit=200');
-      setDoentes(r?.patients || []);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível calcular os scores.');
-    } finally {
-      setACarregar(false);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    void carregar();
-  }, [carregar]);
+  const consulta = useQuery<{ patients: ScoredPatient[] }>('/patient-scoring?limit=200', { initialData });
+  const doentes = consulta.data?.patients ?? [];
+  const aCarregar = consulta.loading;
+  const erro = consulta.error?.message ?? '';
 
   const ordenados = [...doentes].sort((a, b) =>
     ordem === 'priority' ? b.priority - a.priority : b.scores[ordem].score - a.scores[ordem].score,

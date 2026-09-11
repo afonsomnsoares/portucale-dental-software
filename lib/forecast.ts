@@ -17,6 +17,21 @@ import { WORK_MINUTES_PER_DAY } from './scheduleIntel';
 export const LOOKBACK_DAYS = 84;
 export const DEFAULT_HORIZON_DAYS = 14;
 
+/**
+ * O horizonte pedido, limitado ao que a previsão consegue sustentar.
+ *
+ * Teto de 90 dias: acima disso o método sazonal está a extrapolar 13 semanas a
+ * partir de 12 de histórico, e o número deixa de significar o que aparenta.
+ *
+ * Vive aqui, e não na rota, porque deixou de haver um só caminho até esta
+ * previsão: a rota /api/forecast e a página que a rende no servidor têm de
+ * limitar o mesmo, e uma regra escrita duas vezes é uma regra que diverge.
+ */
+export function clampHorizon(raw: unknown): number {
+  const n = Number(raw ?? DEFAULT_HORIZON_DAYS);
+  return Number.isFinite(n) ? Math.max(1, Math.min(90, Math.floor(n))) : DEFAULT_HORIZON_DAYS;
+}
+
 export type ForecastMetric = 'revenue' | 'occupancy' | 'demand' | 'cancellations' | 'noShows' | 'freeCapacity';
 
 export interface MetricForecast extends ForecastResult {

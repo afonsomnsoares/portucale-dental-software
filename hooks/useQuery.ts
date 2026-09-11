@@ -40,6 +40,19 @@ export interface QueryOptions {
   enabled?: boolean;
   /** Quanto tempo os dados contam como frescos. Ver DEFAULT_STALE_MS. */
   staleMs?: number;
+  /**
+   * Os dados que o SERVIDOR já leu para esta chave.
+   *
+   * É isto que torna um Server Component útil em vez de decorativo: sem ele, a
+   * página chega ao browser com o HTML preenchido e o hook pede tudo outra vez
+   * no primeiro efeito — o mesmo waterfall de antes, agora com um pedido a
+   * mais. Com ele, a cache já está quente à chegada e o primeiro render do
+   * cliente é igual ao do servidor.
+   *
+   * Entra na cache como se tivesse sido lido agora, e por isso envelhece pelas
+   * mesmas regras: passados os staleMs, a primeira interação revalida.
+   */
+  initialData?: unknown;
 }
 
 /**
@@ -50,15 +63,38 @@ export interface QueryOptions {
  */
 export function useQuery<T = unknown>(path: string | null, options: QueryOptions = {}): QueryResult<T> {
   const { api } = useAuth();
-  const { enabled = true, staleMs = DEFAULT_STALE_MS } = options;
+  const { enabled = true, staleMs = DEFAULT_STALE_MS, initialData } = options;
   const active = path !== null && enabled;
 
+  // Antes do primeiro render, não dentro de um efeito: o efeito corre DEPOIS de
+  // pintar, e nesse intervalo o componente já teria decidido que estava a
+  // carregar. Semeada aqui, a primeira leitura de `queryCache.read` já a encontra.
+  //
+  // ─── E SÓ no browser ──────────────────────────────────────────────────────
+  // Um componente 'use client' também corre no servidor: é assim que o HTML
+  // inicial é gerado. Mas o `queryCache` é um singleton de MÓDULO, e no servidor
+  // os módulos são partilhados por todos os pedidos do processo — escrever-lhe
+  // durante o SSR deixaria os dados de uma clínica em memória para o pedido
+  // seguinte os ler. Seria uma fuga entre inquilinos abaixo de tudo o que a RLS
+  // e o lib/route.ts protegem, aberta do lado que ninguém está a olhar.
+  //
+  // No servidor não é preciso: o HTML sai preenchido pelo `useState` abaixo, e
+  // é no browser que a cache existe para evitar o segundo pedido.
+  if (
+    typeof window !== 'undefined' &&
+    path !== null &&
+    initialData !== undefined &&
+    queryCache.read(path, staleMs).status === 'miss'
+  ) {
+    queryCache.write(path, initialData);
+  }
+
   const [, forceRender] = useState(0);
-  const [state, setState] = useState<{ data: T | undefined; error: Error | null; validating: boolean }>({
-    data: undefined,
+  const [state, setState] = useState<{ data: T | undefined; error: Error | null; validating: boolean }>(() => ({
+    data: (initialData as T | undefined) ?? undefined,
     error: null,
     validating: false,
-  });
+  }));
 
   // Identifica o pedido em curso deste hook. Uma resposta que chegue quando já
   // não é a que interessa — porque o caminho mudou, ou porque o componente foi
