@@ -17,6 +17,7 @@
 
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
+import { BCRYPT_COST } from '@/lib/constants';
 
 const { Pool } = pg;
 
@@ -57,7 +58,7 @@ async function main() {
     const { rows: clash } = await client.query(`SELECT id FROM users WHERE email = $1`, [email]);
     if (clash.length) fail(`Já existe uma conta com este e-mail: ${email}.`);
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, BCRYPT_COST);
     await client.query(
       `INSERT INTO users (email, password, name, role, clinic, tenant_id)
        VALUES ($1, $2, $3, 'super_admin', 'System', NULL)`,

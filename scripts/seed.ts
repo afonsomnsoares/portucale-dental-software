@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
+import { BCRYPT_COST } from '@/lib/constants';
 
 const { Pool } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -235,7 +236,7 @@ async function seed() {
       ];
 
       for (const u of users) {
-        const hashed = await bcrypt.hash(u.password, 10);
+        const hashed = await bcrypt.hash(u.password, BCRYPT_COST);
         await client.query(
           `INSERT INTO users (email, password, name, role, clinic, tenant_id)
            VALUES ($1,$2,$3,$4,$5,$6)
@@ -788,7 +789,7 @@ async function seed() {
       // ── RGPD: PRIVACY NOTICE ───────────────────────────────
       await client.query(
         `INSERT INTO privacy_notices (tenant_id, version, title, content, effective_date, active)
-         VALUES ($1, '1.0', 'Política de Privacidade Portucale Dental', 'Esta política descreve como a Clínica Portucale recolhe, utiliza e protege os dados pessoais dos seus doentes, em conformidade com o Regulamento Geral sobre a Proteção de Dados (RGPD).', '2026-01-01', TRUE) ON CONFLICT DO NOTHING`,
+         VALUES ($1, '1.0', 'Política de Privacidade Portucale Software', 'Esta política descreve como a Clínica Portucale recolhe, utiliza e protege os dados pessoais dos seus doentes, em conformidade com o Regulamento Geral sobre a Proteção de Dados (RGPD).', '2026-01-01', TRUE) ON CONFLICT DO NOTHING`,
         [tenantId],
       );
       console.log('  ✓ Política de privacidade');
