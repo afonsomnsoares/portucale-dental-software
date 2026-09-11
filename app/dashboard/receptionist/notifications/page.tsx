@@ -1,8 +1,8 @@
 'use client';
 import type { ChangeEvent } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, Inp, PageHeader, Sel, Spinner } from '@/components/ui';
+import { useMemo, useState } from 'react';
+import { Badge, Empty, ErrorState, Inp, PageHeader, Sel, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Notification } from '@/lib/types';
 
 const KIND_LABEL: Record<string, string> = {
@@ -44,27 +44,16 @@ function fmtDateTime(v: string | null) {
 }
 
 export default function ReceptionistNotificationsPage() {
-  const { api } = useAuth();
-  const [items, setItems] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [kindFilter, setKindFilter] = useState('');
   const [search, setSearch] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (statusFilter) params.set('status', statusFilter);
-    if (kindFilter) params.set('kind', kindFilter);
-    const qs = params.toString();
-    const r = await api(`/notifications${qs ? `?${qs}` : ''}`).catch(() => []);
-    setItems(r || []);
-    setLoading(false);
-  }, [api, statusFilter, kindFilter]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const params = new URLSearchParams();
+  if (statusFilter) params.set('status', statusFilter);
+  if (kindFilter) params.set('kind', kindFilter);
+  const qs = params.toString();
+  const itemsQuery = useQuery<Notification[]>(`/notifications${qs ? `?${qs}` : ''}`);
+  const items = itemsQuery.data ?? [];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -106,7 +95,13 @@ export default function ReceptionistNotificationsPage() {
         </span>
       </div>
 
-      {loading ? (
+      {itemsQuery.error ? (
+        <ErrorState
+          error={itemsQuery.error}
+          onRetry={itemsQuery.refetch}
+          message="Não foi possível ler as notificações."
+        />
+      ) : itemsQuery.loading ? (
         <Spinner />
       ) : !filtered.length ? (
         <Empty message="Sem mensagens para os filtros selecionados." />

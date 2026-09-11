@@ -5,6 +5,7 @@ import { useAuth } from '@/app/providers';
 import DayCalendar from '@/components/DayCalendar';
 import DailyBriefingPanel from '@/components/patient/DailyBriefingPanel';
 import {
+  ErrorState,
   FormField,
   GhostBtn,
   MetricCard,
@@ -15,6 +16,7 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import { APPOINTMENT_TYPES, getDefaultDuration } from '@/lib/constants';
 import type { Appointment, DailyBriefingRow, Patient, SuggestedSlot } from '@/lib/types';
 
@@ -43,10 +45,7 @@ const EMPTY_BOOK_FORM: BookForm = {
 
 export default function ReceptionDashboard() {
   const { api, user } = useAuth();
-  const [appts, setAppts] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [dentists, setDentists] = useState<Dentist[]>([]);
-  const [loading, setLoading] = useState(true);
+
   // ─── O que falta fazer a cada doente de hoje ──────────────────────────────
   // lib/dailyBriefing.ts e DailyBriefingPanel existiam e nenhuma página os chamava. As
   // métricas acima dizem QUANTOS; isto diz QUEM e O QUÊ — dados em falta, consentimento
@@ -54,7 +53,6 @@ export default function ReceptionDashboard() {
   //
   // Falha em silêncio de propósito: um briefing que não carrega não deve impedir a
   // receção de ver a agenda do dia.
-  const [briefing, setBriefing] = useState<DailyBriefingRow[]>([]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<BookForm>(EMPTY_BOOK_FORM);
@@ -99,24 +97,19 @@ export default function ReceptionDashboard() {
     return 1;
   }
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [a, p, d, b] = await Promise.all([
-      api(`/appointments?date=${date}`).catch(() => []),
-      api('/patients').catch(() => []),
-      api('/dentists').catch(() => []),
-      api(`/daily-briefing?date=${date}`).catch(() => null),
-    ]);
-    setAppts(a || []);
-    setPatients(p || []);
-    setDentists(d || []);
-    setBriefing(b?.rows || []);
-    setLoading(false);
-  }, [api, date]);
+  // A agenda é o ecrã de onde a recepção trabalha o dia inteiro, e era o que
+  // tinha a pior ligação entre as quatro leituras: um Promise.all com um só
+  // `loading`. O briefing a demorar atrasava a agenda, e qualquer uma a falhar
+  // saía como lista vazia — «não há consultas hoje» quando ninguém foi ver.
+  const apptsQuery = useQuery<Appointment[]>(`/appointments?date=${date}`);
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const dentistsQuery = useQuery<Dentist[]>('/dentists');
+  const briefingQuery = useQuery<{ rows: DailyBriefingRow[] }>(`/daily-briefing?date=${date}`);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const appts = apptsQuery.data ?? [];
+  const patients = patientsQuery.data ?? [];
+  const dentists = dentistsQuery.data ?? [];
+  const briefing = briefingQuery.data?.rows ?? [];
 
   const fetchSlots = useCallback(async () => {
     if (!form.patientId || !form.type) {
@@ -162,8 +155,15 @@ export default function ReceptionDashboard() {
   }
 
   async function handleStatusChange(aptId: string, status: string) {
-    const u = await api(`/appointments/${aptId}/status`, { method: 'PUT', body: { status } }).catch(() => null);
-    if (u) setAppts((prev) => prev.map((a) => (a.id === aptId ? { ...a, status } : a)));
+    setBookErr('');
+    try {
+      await api(`/appointments/${aptId}/status`, { method: 'PUT', body: { status } });
+      apptsQuery.refetch();
+    } catch (e) {
+      // Marcar alguém como «chegou» ou «faltou» falhava sem sinal nenhum — e é
+      // a ação mais repetida deste ecrã.
+      setBookErr(e instanceof Error ? e.message : 'Não foi possível mudar o estado da consulta.');
+    }
   }
 
   async function handleBook() {
@@ -195,7 +195,7 @@ export default function ReceptionDashboard() {
     setSaving(true);
     const patient = patients.find((p) => p.id === form.patientId);
     try {
-      const apt = await api('/appointments', {
+      await api('/appointments', {
         method: 'POST',
         body: {
           patientId: form.patientId,
@@ -209,11 +209,9 @@ export default function ReceptionDashboard() {
           notes: form.notes,
         },
       });
-      // The suggestion engine looks up to a week ahead — only splice the new
-      // appointment into today's on-screen calendar if it actually landed on
-      // the day currently being viewed, otherwise it would show up floating
-      // on the wrong day.
-      if (bookDate === date) setAppts((prev) => [...prev, apt]);
+      // O motor de sugestões procura até uma semana à frente; só vale a pena
+      // revalidar a agenda se a consulta caiu no dia que está no ecrã.
+      if (bookDate === date) apptsQuery.refetch();
       setModal(false);
     } catch (e) {
       setBookErr(e instanceof Error ? e.message : 'Falha ao marcar a consulta.');
@@ -357,13 +355,19 @@ export default function ReceptionDashboard() {
 
       {/* O que falta fazer, antes do calendário: a agenda diz quem vem, isto diz o que
           é preciso ter tratado antes de a pessoa chegar. */}
-      {!loading && briefing.length > 0 && (
+      {!briefingQuery.loading && briefing.length > 0 && (
         <div style={{ marginBottom: 18 }}>
           <DailyBriefingPanel api={api} rows={briefing} />
         </div>
       )}
 
-      {loading ? <Spinner /> : <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />}
+      {apptsQuery.error ? (
+        <ErrorState error={apptsQuery.error} onRetry={apptsQuery.refetch} message="Não foi possível ler a agenda." />
+      ) : apptsQuery.loading ? (
+        <Spinner />
+      ) : (
+        <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />
+      )}
 
       {/* Book modal */}
       {modal && (

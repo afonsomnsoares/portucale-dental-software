@@ -1,7 +1,8 @@
 'use client';
-import { type ChangeEvent, type FormEvent, Fragment, useCallback, useEffect, useState } from 'react';
+import { type ChangeEvent, type FormEvent, Fragment, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, Empty, GhostBtn, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, GhostBtn, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Lead } from '@/lib/types';
 
 const QUALIFICATION_BADGE: Record<string, { label: string; bg: string; color: string }> = {
@@ -22,22 +23,14 @@ const emptyForm: LeadForm = { name: '', phone: '', email: '', source: '', notes:
 
 export default function ReceptionLeadsPage() {
   const { api } = useAuth();
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [form, setForm] = useState<LeadForm>(emptyForm);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const rows = await api('/leads').catch(() => []);
-    setLeads(rows || []);
-    setLoading(false);
-  }, [api]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const leadsQuery = useQuery<Lead[]>('/leads');
+  const leads = leadsQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro já chamavam `load()`.
+  const load = leadsQuery.refetch;
 
   function update(field: keyof LeadForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -128,7 +121,13 @@ export default function ReceptionLeadsPage() {
         )}
       </form>
 
-      {loading ? (
+      {leadsQuery.error ? (
+        <ErrorState
+          error={leadsQuery.error}
+          onRetry={leadsQuery.refetch}
+          message="Não foi possível ler os contactos."
+        />
+      ) : leadsQuery.loading ? (
         <Spinner />
       ) : leads.length === 0 ? (
         <Empty message="Não existem leads abertos." />

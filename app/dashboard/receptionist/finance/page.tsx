@@ -1,15 +1,12 @@
 'use client';
 import { AlertTriangle, CreditCard, DollarSign, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, GhostBtn, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useMemo, useState } from 'react';
+import { Badge, Empty, ErrorState, GhostBtn, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { FinanceData } from '@/lib/types';
 
 export default function FinanceDashboard() {
-  const { api } = useAuth();
-  const [data, setData] = useState<FinanceData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -17,17 +14,11 @@ export default function FinanceDashboard() {
   });
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ from, to });
-    const res = await api(`/finance/stats?${params.toString()}`).catch(() => null);
-    setData(res);
-    setLoading(false);
-  }, [api, from, to]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const params = new URLSearchParams({ from, to });
+  const dataQuery = useQuery<FinanceData>(`/finance/stats?${params.toString()}`);
+  const data = dataQuery.data ?? null;
+  // Alias do refetch: as escritas deste ficheiro já chamavam `load()`.
+  const load = dataQuery.refetch;
 
   const outstandingByStatus = useMemo(() => {
     if (!data?.statusCounts) return [];
@@ -43,7 +34,8 @@ export default function FinanceDashboard() {
     return dt.toLocaleDateString('pt-PT', { month: 'short', day: 'numeric' });
   }
 
-  if (loading) return <Spinner />;
+  if (dataQuery.loading) return <Spinner />;
+  if (dataQuery.error) return <ErrorState error={dataQuery.error} onRetry={dataQuery.refetch} />;
 
   return (
     <div>

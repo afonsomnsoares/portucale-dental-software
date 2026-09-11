@@ -1,9 +1,10 @@
 'use client';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import AppointmentEditModal, { type AppointmentEditForm } from '@/components/receptionist/AppointmentEditModal';
 import AppointmentsTable from '@/components/receptionist/AppointmentsTable';
-import { DangerBtn, GhostBtn, Modal, PageHeader, Spinner } from '@/components/ui';
+import { DangerBtn, ErrorState, GhostBtn, Modal, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { Appointment } from '@/lib/types';
 
 interface Dentist {
@@ -24,9 +25,7 @@ export default function ReceptionAppointmentsPage() {
   const [to, setTo] = useState(() => addDays(new Date().toISOString().slice(0, 10), 30));
   const [q, setQ] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [appts, setAppts] = useState<Appointment[]>([]);
   const [dentists, setDentists] = useState<Dentist[]>([]);
-  const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Appointment | null>(null);
   const [editing, setEditing] = useState<Appointment | null>(null);
@@ -43,20 +42,16 @@ export default function ReceptionAppointmentsPage() {
   const [editErr, setEditErr] = useState('');
   const [statusPending, setStatusPending] = useState<Record<string, boolean>>({});
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    params.set('from', from);
-    params.set('to', to);
-    params.set('limit', '1000');
-    const rows = await api(`/appointments?${params.toString()}`).catch(() => []);
-    setAppts(rows || []);
-    setLoading(false);
-  }, [api, from, to]);
+  const params = new URLSearchParams();
+  params.set('from', from);
+  params.set('to', to);
+  params.set('limit', '1000');
+  const apptsQuery = useQuery<Appointment[]>(`/appointments?${params.toString()}`);
+  const appts = apptsQuery.data ?? [];
+  // Alias do refetch: as escritas deste ficheiro chamavam `load()` depois de
+  // gravar, e continuam a poder fazê-lo.
+  const load = apptsQuery.refetch;
 
-  useEffect(() => {
-    load();
-  }, [load]);
   useEffect(() => {
     api('/dentists')
       .then((d) => setDentists(d || []))
@@ -83,16 +78,19 @@ export default function ReceptionAppointmentsPage() {
     });
   }, [appts, q, statusFilter]);
 
+  // Este era o único sítio da aplicação com rollback otimista — e revertia sem
+  // dizer porquê: a linha voltava ao estado anterior e quem mudou ficava a achar
+  // que tinha carregado mal. O `statusPending` já marca a linha enquanto corre,
+  // por isso a revalidação chega, e a falha passa a ter palavras.
   async function changeStatus(apt: Appointment, nextStatus: string) {
     if (!nextStatus || nextStatus === apt.status) return;
-    const prevStatus = apt.status;
     setStatusPending((p) => ({ ...p, [apt.id]: true }));
-    setAppts((prev) => prev.map((a) => (a.id === apt.id ? { ...a, status: nextStatus } : a)));
+    setEditErr('');
     try {
-      const u = await api(`/appointments/${apt.id}/status`, { method: 'PUT', body: { status: nextStatus } });
-      setAppts((prev) => prev.map((a) => (a.id === apt.id ? { ...a, ...u } : a)));
-    } catch {
-      setAppts((prev) => prev.map((a) => (a.id === apt.id ? { ...a, status: prevStatus } : a)));
+      await api(`/appointments/${apt.id}/status`, { method: 'PUT', body: { status: nextStatus } });
+      apptsQuery.refetch();
+    } catch (e) {
+      setEditErr(e instanceof Error ? e.message : 'Não foi possível mudar o estado desta consulta.');
     } finally {
       setStatusPending((p) => {
         const next = { ...p };
@@ -104,12 +102,15 @@ export default function ReceptionAppointmentsPage() {
 
   async function removeAppointment(apt: Appointment) {
     setRemoving(apt.id);
+    setEditErr('');
     try {
-      const res = await api(`/appointments/${apt.id}`, { method: 'DELETE' }).catch(() => null);
-      if (res?.deleted) setAppts((prev) => prev.filter((a) => a.id !== apt.id));
+      await api(`/appointments/${apt.id}`, { method: 'DELETE' });
+      apptsQuery.refetch();
+      setConfirm(null);
+    } catch (e) {
+      setEditErr(e instanceof Error ? e.message : 'Não foi possível cancelar a consulta.');
     } finally {
       setRemoving(null);
-      setConfirm(null);
     }
   }
 
@@ -132,19 +133,13 @@ export default function ReceptionAppointmentsPage() {
     setEditErr('');
     setEditSaving(true);
     try {
-      const optimistic = {
-        ...editing,
-        appt_date: editForm.date,
-        start_time: editForm.startTime,
-        duration: Number(editForm.duration || 30),
-        chair: Number(editForm.chair || 1),
-        dentist_id: editForm.dentistId || null,
-        dentist_name: dentists.find((d) => d.id === editForm.dentistId)?.name || editing.dentist_name,
-        type: editForm.type,
-        notes: editForm.notes,
-      };
-      setAppts((prev) => prev.map((a) => (a.id === editing.id ? optimistic : a)));
-      const u = await api(`/appointments/${editing.id}`, {
+      // O remendo otimista que aqui estava recalculava a linha inteira no cliente
+      // — incluindo o `dentist_name`, que ia buscar à lista local. Mas guardar uma
+      // consulta pode ser RECUSADO por sobreposição (o advisory lock em
+      // app/api/appointments/route.ts), e nesse caso a linha otimista já estava
+      // no ecrã e era desfeita com um `load()` no catch. Revalidar sempre é a
+      // mesma coisa com metade do código e sem o estado intermédio errado.
+      await api(`/appointments/${editing.id}`, {
         method: 'PUT',
         body: {
           date: editForm.date,
@@ -156,11 +151,10 @@ export default function ReceptionAppointmentsPage() {
           notes: editForm.notes,
         },
       });
-      setAppts((prev) => prev.map((a) => (a.id === u.id ? { ...a, ...u } : a)));
+      apptsQuery.refetch();
       setEditing(null);
     } catch (e) {
       setEditErr(e instanceof Error ? e.message : 'Falha ao guardar.');
-      await load();
     } finally {
       setEditSaving(false);
     }
@@ -236,7 +230,13 @@ export default function ReceptionAppointmentsPage() {
       </PageHeader>
 
       <div className="card" style={{ padding: 0 }}>
-        {loading ? (
+        {apptsQuery.error ? (
+          <ErrorState
+            error={apptsQuery.error}
+            onRetry={apptsQuery.refetch}
+            message="Não foi possível ler as consultas."
+          />
+        ) : apptsQuery.loading ? (
           <Spinner />
         ) : (
           <AppointmentsTable
