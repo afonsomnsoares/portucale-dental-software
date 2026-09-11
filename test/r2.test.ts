@@ -1,66 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getR2Config, presignPutObjectR2 } from '../lib/r2.ts';
+import { getR2Config } from '../lib/r2.ts';
 
 test('r2 config is null when env vars are missing', () => {
   const cfg = getR2Config();
   assert.equal(cfg, null);
 });
 
-test('presign returns null when r2 is not configured', () => {
-  const res = presignPutObjectR2({ key: 'x.bin', contentType: 'image/png', contentLength: 1024 });
-  assert.equal(res, null);
-});
-
-// The presign path used to sign only `host`, which meant the Content-Type it handed
-// back was a suggestion the caller could ignore and the size was unbounded — the two
-// limits app/api/uploads/route.ts enforces did not exist on this route at all. These
-// tests pin the signature down to both headers, since that is what makes R2 (rather
-// than a cooperative client) do the rejecting.
-test('presign signs content-type and content-length, not just host', () => {
-  process.env.R2_ENDPOINT = 'https://accountid.r2.cloudflarestorage.com';
-  process.env.R2_BUCKET = 'test-bucket';
-  process.env.R2_ACCESS_KEY_ID = 'AKIAtest';
-  process.env.R2_SECRET_ACCESS_KEY = 'secrettest';
-  try {
-    const res = presignPutObjectR2({ key: 'tenant/file.png', contentType: 'image/png', contentLength: 2048 });
-    assert.ok(res, 'expected a presigned result');
-
-    const signedHeaders = new URL(res.uploadUrl).searchParams.get('X-Amz-SignedHeaders');
-    assert.equal(signedHeaders, 'content-length;content-type;host');
-
-    // Returned verbatim so the caller sends exactly what was signed — anything else
-    // and the PUT fails the signature check.
-    assert.equal(res.headers['Content-Type'], 'image/png');
-    assert.equal(res.headers['Content-Length'], '2048');
-  } finally {
-    // `= undefined` would store the literal string "undefined" and leave R2 looking
-    // configured for every test that runs after this one.
-    delete process.env.R2_ENDPOINT;
-    delete process.env.R2_BUCKET;
-    delete process.env.R2_ACCESS_KEY_ID;
-    delete process.env.R2_SECRET_ACCESS_KEY;
-  }
-});
-
-test('a different content-length produces a different signature', () => {
-  process.env.R2_ENDPOINT = 'https://accountid.r2.cloudflarestorage.com';
-  process.env.R2_BUCKET = 'test-bucket';
-  process.env.R2_ACCESS_KEY_ID = 'AKIAtest';
-  process.env.R2_SECRET_ACCESS_KEY = 'secrettest';
-  try {
-    const small = presignPutObjectR2({ key: 'tenant/f.png', contentType: 'image/png', contentLength: 1000 });
-    const large = presignPutObjectR2({ key: 'tenant/f.png', contentType: 'image/png', contentLength: 9_000_000 });
-    assert.ok(small && large);
-
-    const sigOf = (url: string) => new URL(url).searchParams.get('X-Amz-Signature');
-    assert.notEqual(sigOf(small.uploadUrl), sigOf(large.uploadUrl));
-  } finally {
-    // `= undefined` would store the literal string "undefined" and leave R2 looking
-    // configured for every test that runs after this one.
-    delete process.env.R2_ENDPOINT;
-    delete process.env.R2_BUCKET;
-    delete process.env.R2_ACCESS_KEY_ID;
-    delete process.env.R2_SECRET_ACCESS_KEY;
-  }
-});
+// ─── O caminho direto para o R2 foi removido ────────────────────────────────
+// Existia um `presignPutObjectR2` e uma rota GET /api/uploads/presign que emitiam um URL
+// assinado para o browser fazer PUT direto ao bucket. Saíram, e a razão vale a pena
+// ficar escrita aqui, que é onde alguém vai procurar antes de os reintroduzir:
+//
+//   1. O servidor nunca via os bytes, por isso o caminho direto NÃO PODIA correr o
+//      checkUploadType de lib/uploadsCalc.ts — a confrontação da assinatura do ficheiro
+//      com o tipo declarado. É a defesa que existe porque o portal do doente deixa
+//      alguém sem sessão nenhuma escrever um ficheiro no armazenamento da clínica.
+//   2. Não havia rota nenhuma para registar o ficheiro depois do PUT: ele ficava no
+//      bucket e invisível para a aplicação.
+//   3. A justificação («ficheiros grandes demais para passar pelo servidor») não se
+//      aplica com UPLOAD_MAX_BYTES em 6 MB.
+//
+// Se um dia fizer falta, a forma correta é: presign → PUT → uma rota de confirmação que
+// leia os primeiros bytes do objeto por um GET com Range, corra o checkUploadType, e só
+// então registe a linha — apagando o objeto se falhar. Sem esse passo, é uma porta que
+// contorna a única verificação que o produto tem sobre o conteúdo de um ficheiro.
