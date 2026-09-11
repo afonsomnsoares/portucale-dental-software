@@ -2,6 +2,7 @@
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
+  AlertBanner,
   Badge,
   DataTable,
   Empty,
@@ -15,7 +16,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
-import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { LabOrder, Patient } from '@/lib/types';
 
@@ -55,13 +56,13 @@ interface NewLabOrderForm {
 
 export default function LabOrdersPage() {
   const { api } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<LabOrder[]>([]);
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Guardar falhava em silêncio: o modal fechava-se na mesma e a linha nova
+  // não aparecia. Quem escreveu não sabia se tinha ficado gravado.
+  const [erroEscrita, setErroEscrita] = useState('');
   const [form, setForm] = useState<NewLabOrderForm>({
     labName: '',
     caseType: 'crown',
@@ -75,35 +76,30 @@ export default function LabOrdersPage() {
     setSelected(p);
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const pts = await api('/patients').catch(() => []);
-    setPatients(pts || []);
-    if (!selected && pts?.length) select(pts[0]);
-    setLoading(false);
-  }, [api, selected, select]);
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const patients = patientsQuery.data ?? [];
 
-  useDebouncedEffect(() => {
-    load();
-  }, [load]);
-
+  // O primeiro doente abre sozinho, e só enquanto ninguém tiver escolhido.
   useEffect(() => {
-    if (selected) {
-      api(`/lab-orders?patientId=${selected.id}`)
-        .then(setOrders)
-        .catch(() => setOrders([]));
-    }
-  }, [selected, api]);
+    if (!selected && patients.length) select(patients[0]);
+  }, [selected, patients, select]);
+
+  // `null` enquanto não houver doente escolhido: o hook espera em vez de
+  // pedir um caminho com `undefined` lá dentro.
+  const pid = selected?.id ?? null;
+  const ordersQuery = useQuery<LabOrder[]>(pid ? `/lab-orders?patientId=${pid}` : null);
+  const orders = ordersQuery.data ?? [];
 
   async function create() {
     if (!form.labName || !form.description || !selected) return;
     setSaving(true);
-    const o = await api('/lab-orders', {
-      method: 'POST',
-      body: { patientId: selected.id, ...form, fee: Number(form.fee) || 0 },
-    }).catch(() => null);
-    if (o) {
-      setOrders((prev) => [o, ...prev]);
+    setErroEscrita('');
+    try {
+      await api('/lab-orders', {
+        method: 'POST',
+        body: { patientId: selected.id, ...form, fee: Number(form.fee) || 0 },
+      });
+      ordersQuery.refetch();
       setModal(false);
       setForm({
         labName: '',
@@ -113,6 +109,8 @@ export default function LabOrdersPage() {
         dueDate: '',
         fee: '',
       });
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível criar o pedido ao laboratório.');
     }
     setSaving(false);
   }
@@ -121,8 +119,13 @@ export default function LabOrdersPage() {
     const idx = STATUS_FLOW.indexOf(order.status);
     if (idx < 0 || idx >= STATUS_FLOW.length - 1) return;
     const next = STATUS_FLOW[idx + 1];
-    const u = await api(`/lab-orders/${order.id}`, { method: 'PUT', body: { status: next } }).catch(() => null);
-    if (u) setOrders((prev) => prev.map((o) => (o.id === order.id ? u : o)));
+    setErroEscrita('');
+    try {
+      await api(`/lab-orders/${order.id}`, { method: 'PUT', body: { status: next } });
+      ordersQuery.refetch();
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível atualizar.');
+    }
   }
 
   function renderStatusBadge(s: string) {
@@ -135,6 +138,12 @@ export default function LabOrdersPage() {
   return (
     <div>
       <PageHeader title="Encomendas de Laboratório" sub="Trabalhos protéticos, do envio à receção" />
+      {erroEscrita ? <AlertBanner type="danger">{erroEscrita}</AlertBanner> : null}
+      {ordersQuery.error ? (
+        <AlertBanner type="danger">
+          Não foi possível ler as encomendas deste doente. {ordersQuery.error.message}
+        </AlertBanner>
+      ) : null}
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
@@ -146,7 +155,7 @@ export default function LabOrdersPage() {
             />
           </div>
           <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
-            {loading ? (
+            {patientsQuery.loading ? (
               <Spinner />
             ) : !patients.length ? (
               <Empty message="Sem doentes" />

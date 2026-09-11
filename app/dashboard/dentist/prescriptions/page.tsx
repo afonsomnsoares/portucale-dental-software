@@ -2,6 +2,7 @@
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
+  AlertBanner,
   Badge,
   DangerBtn,
   DataTable,
@@ -16,7 +17,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
-import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { useQuery } from '@/hooks/useQuery';
 import type { Patient, Prescription } from '@/lib/types';
 
 interface NewPrescriptionForm {
@@ -32,13 +33,13 @@ interface NewPrescriptionForm {
 
 export default function PrescriptionsPage() {
   const { api } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Guardar falhava em silêncio: o modal fechava-se na mesma e a linha nova
+  // não aparecia. Quem escreveu não sabia se tinha ficado gravado.
+  const [erroEscrita, setErroEscrita] = useState('');
   const [form, setForm] = useState<NewPrescriptionForm>({
     medication: '',
     dosage: '',
@@ -54,35 +55,30 @@ export default function PrescriptionsPage() {
     setSelected(p);
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const pts = await api('/patients').catch(() => []);
-    setPatients(pts || []);
-    if (!selected && pts?.length) select(pts[0]);
-    setLoading(false);
-  }, [api, selected, select]);
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const patients = patientsQuery.data ?? [];
 
-  useDebouncedEffect(() => {
-    load();
-  }, [load]);
-
+  // O primeiro doente abre sozinho, e só enquanto ninguém tiver escolhido.
   useEffect(() => {
-    if (selected) {
-      api(`/prescriptions?patientId=${selected.id}`)
-        .then(setPrescriptions)
-        .catch(() => setPrescriptions([]));
-    }
-  }, [selected, api]);
+    if (!selected && patients.length) select(patients[0]);
+  }, [selected, patients, select]);
+
+  // `null` enquanto não houver doente escolhido: o hook espera em vez de
+  // pedir um caminho com `undefined` lá dentro.
+  const pid = selected?.id ?? null;
+  const prescriptionsQuery = useQuery<Prescription[]>(pid ? `/prescriptions?patientId=${pid}` : null);
+  const prescriptions = prescriptionsQuery.data ?? [];
 
   async function create() {
     if (!form.medication || !form.dosage || !form.frequency || !selected) return;
     setSaving(true);
-    const p = await api('/prescriptions', {
-      method: 'POST',
-      body: { patientId: selected.id, ...form, refills: Number(form.refills) },
-    }).catch(() => null);
-    if (p) {
-      setPrescriptions((prev) => [p, ...prev]);
+    setErroEscrita('');
+    try {
+      await api('/prescriptions', {
+        method: 'POST',
+        body: { patientId: selected.id, ...form, refills: Number(form.refills) },
+      });
+      prescriptionsQuery.refetch();
       setModal(false);
       setForm({
         medication: '',
@@ -94,13 +90,20 @@ export default function PrescriptionsPage() {
         refills: 0,
         instructions: '',
       });
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível emitir a receita.');
     }
     setSaving(false);
   }
 
   async function cancel(id: string) {
-    const u = await api(`/prescriptions/${id}`, { method: 'PUT', body: { status: 'cancelled' } }).catch(() => null);
-    if (u) setPrescriptions((prev) => prev.map((p) => (p.id === id ? u : p)));
+    setErroEscrita('');
+    try {
+      await api(`/prescriptions/${id}`, { method: 'PUT', body: { status: 'cancelled' } });
+      prescriptionsQuery.refetch();
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível atualizar.');
+    }
   }
 
   const cols = ['Medicamento', 'Dosagem', 'Frequência', 'Estado', 'Data', 'Ações'];
@@ -108,6 +111,12 @@ export default function PrescriptionsPage() {
   return (
     <div>
       <PageHeader title="Prescrições" sub="Prescrições do doente — emitir e acompanhar" />
+      {erroEscrita ? <AlertBanner type="danger">{erroEscrita}</AlertBanner> : null}
+      {prescriptionsQuery.error ? (
+        <AlertBanner type="danger">
+          Não foi possível ler as prescrições deste doente. {prescriptionsQuery.error.message}
+        </AlertBanner>
+      ) : null}
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
@@ -119,7 +128,7 @@ export default function PrescriptionsPage() {
             />
           </div>
           <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
-            {loading ? (
+            {patientsQuery.loading ? (
               <Spinner />
             ) : !patients.length ? (
               <Empty message="Sem doentes" />

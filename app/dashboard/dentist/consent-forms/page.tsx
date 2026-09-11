@@ -2,6 +2,7 @@
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
+  AlertBanner,
   Badge,
   DataTable,
   Empty,
@@ -14,7 +15,7 @@ import {
   Spinner,
   Textarea,
 } from '@/components/ui';
-import { useDebouncedEffect } from '@/hooks/useDebouncedEffect';
+import { useQuery } from '@/hooks/useQuery';
 import type { ConsentForm, Patient } from '@/lib/types';
 
 interface NewConsentForm {
@@ -26,14 +27,14 @@ interface NewConsentForm {
 
 export default function ConsentFormsPage() {
   const { api } = useAuth();
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [selected, setSelected] = useState<Patient | null>(null);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [forms, setForms] = useState<ConsentForm[]>([]);
   const [modal, setModal] = useState(false);
   const [detailModal, setDetailModal] = useState<ConsentForm | null>(null);
   const [saving, setSaving] = useState(false);
+  // Guardar falhava em silêncio: o modal fechava-se na mesma e a linha nova
+  // não aparecia. Quem escreveu não sabia se tinha ficado gravado.
+  const [erroEscrita, setErroEscrita] = useState('');
   const [form, setForm] = useState<NewConsentForm>({
     procedureName: '',
     description: '',
@@ -46,25 +47,19 @@ export default function ConsentFormsPage() {
     setForm((prev) => ({ ...prev, signedBy: p.name || '' }));
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const pts = await api('/patients').catch(() => []);
-    setPatients(pts || []);
-    if (!selected && pts?.length) select(pts[0]);
-    setLoading(false);
-  }, [api, selected, select]);
+  const patientsQuery = useQuery<Patient[]>('/patients');
+  const patients = patientsQuery.data ?? [];
 
-  useDebouncedEffect(() => {
-    load();
-  }, [load]);
-
+  // O primeiro doente abre sozinho, e só enquanto ninguém tiver escolhido.
   useEffect(() => {
-    if (selected) {
-      api(`/consent-forms?patientId=${selected.id}`)
-        .then(setForms)
-        .catch(() => setForms([]));
-    }
-  }, [selected, api]);
+    if (!selected && patients.length) select(patients[0]);
+  }, [selected, patients, select]);
+
+  // `null` enquanto não houver doente escolhido: o hook espera em vez de
+  // pedir um caminho com `undefined` lá dentro.
+  const pid = selected?.id ?? null;
+  const formsQuery = useQuery<ConsentForm[]>(pid ? `/consent-forms?patientId=${pid}` : null);
+  const forms = formsQuery.data ?? [];
 
   useEffect(() => {
     if (selected) setForm((prev) => ({ ...prev, signedBy: selected.name || prev.signedBy }));
@@ -73,14 +68,17 @@ export default function ConsentFormsPage() {
   async function create() {
     if (!form.procedureName || !form.signedBy || !selected) return;
     setSaving(true);
-    const f = await api('/consent-forms', {
-      method: 'POST',
-      body: { patientId: selected.id, ...form },
-    }).catch(() => null);
-    if (f) {
-      setForms((prev) => [f, ...prev]);
+    setErroEscrita('');
+    try {
+      await api('/consent-forms', {
+        method: 'POST',
+        body: { patientId: selected.id, ...form },
+      });
+      formsQuery.refetch();
       setModal(false);
       setForm({ procedureName: '', description: '', signedBy: selected?.name || '', signatureUrl: '' });
+    } catch (e) {
+      setErroEscrita(e instanceof Error ? e.message : 'Não foi possível registar o consentimento.');
     }
     setSaving(false);
   }
@@ -90,6 +88,12 @@ export default function ConsentFormsPage() {
   return (
     <div>
       <PageHeader title="Consentimentos" sub="Consentimento informado por procedimento, com registo da assinatura" />
+      {erroEscrita ? <AlertBanner type="danger">{erroEscrita}</AlertBanner> : null}
+      {formsQuery.error ? (
+        <AlertBanner type="danger">
+          Não foi possível ler os consentimentos deste doente. {formsQuery.error.message}
+        </AlertBanner>
+      ) : null}
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
@@ -101,7 +105,7 @@ export default function ConsentFormsPage() {
             />
           </div>
           <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
-            {loading ? (
+            {patientsQuery.loading ? (
               <Spinner />
             ) : !patients.length ? (
               <Empty message="Sem doentes" />
