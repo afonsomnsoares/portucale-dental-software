@@ -158,12 +158,15 @@ export default function LiveFloorPage() {
           </FormField>
 
           {closing.error && (
-            <div className="text-sm" style={{ color: 'var(--urgency-critical)', fontWeight: 700, marginTop: 10 }}>
+            <div
+              className="text-sm"
+              style={{ color: 'var(--urgency-critical)', fontWeight: 'var(--weight-bold)', marginTop: 12 }}
+            >
               {closing.error}
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
             <SecondaryBtn onClick={() => confirmClose(false)} disabled={updatingId === closing.apt.id}>
               Sem cobrança
             </SecondaryBtn>

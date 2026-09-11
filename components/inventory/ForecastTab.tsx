@@ -119,7 +119,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
 
   return (
     <div>
-      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
         <MetricCard label="ITENS EM RISCO DE RUTURA" value={atRiskCount} color="var(--urgency-critical)" />
         <MetricCard label="LOTES A EXPIRAR / EXPIRADOS" value={expiringCount} color="var(--urgency-soon)" />
         <MetricCard label="ITENS RASTREADOS" value={rows.length} color="var(--accent)" />
@@ -134,7 +134,10 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
             rows={rows.map((r) => (
               <tr key={r.item.id}>
                 <TD bold>
-                  {r.item.item} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({r.item.unit})</span>
+                  {r.item.item}{' '}
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 'var(--weight-normal)' }}>
+                    ({r.item.unit})
+                  </span>
                 </TD>
                 <TD>{r.currentQty}</TD>
                 <TD muted>{r.dailyRate > 0 ? r.dailyRate.toFixed(1) : '—'}</TD>
@@ -192,7 +195,8 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
             rows={data.procedureDemand.map((d) => (
               <tr key={d.itemId}>
                 <TD bold>
-                  {d.item} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>({d.unit})</span>
+                  {d.item}{' '}
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 'var(--weight-normal)' }}>({d.unit})</span>
                 </TD>
                 <TD>{d.currentQty}</TD>
                 <TD>{d.projectedDemand}</TD>
@@ -215,7 +219,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
 
       <div className="section-label mb-3">CONSUMO POR TIPO DE CONSULTA</div>
       <div className="card p-4 mb-3">
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <Sel
             value={mappingForm.appointmentType}
             onChange={(e) => setMappingForm((f) => ({ ...f, appointmentType: e.target.value }))}
@@ -252,7 +256,16 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
           </PrimaryBtn>
         </div>
         {error && (
-          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginTop: 8 }}>{error}</div>
+          <div
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--urgency-critical)',
+              fontWeight: 'var(--weight-bold)',
+              marginTop: 8,
+            }}
+          >
+            {error}
+          </div>
         )}
       </div>
       {usage.length > 0 && (
@@ -267,7 +280,10 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
                   {u.qty_per_procedure} {u.unit}
                 </TD>
                 <TD right>
-                  <GhostBtn onClick={() => removeMapping(u.id)} style={{ padding: '5px 10px', fontSize: 12 }}>
+                  <GhostBtn
+                    onClick={() => removeMapping(u.id)}
+                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                  >
                     Remover
                   </GhostBtn>
                 </TD>

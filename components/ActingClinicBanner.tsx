@@ -34,7 +34,7 @@ export default function ActingClinicBanner() {
         background: 'var(--urgency-soon-bg)',
         borderBottom: `1px solid var(--urgency-soon-border)`,
         color: 'var(--text-primary)',
-        fontSize: 13,
+        fontSize: 'var(--text-sm)',
       }}
     >
       <span>
@@ -50,7 +50,7 @@ export default function ActingClinicBanner() {
           background: 'var(--bg-surface)',
           borderRadius: 'var(--radius-control)',
           padding: '5px 12px',
-          fontSize: 13,
+          fontSize: 'var(--text-sm)',
           cursor: leaving ? 'default' : 'pointer',
           whiteSpace: 'nowrap',
         }}

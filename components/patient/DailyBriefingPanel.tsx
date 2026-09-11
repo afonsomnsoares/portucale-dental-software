@@ -65,7 +65,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
       <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
         Dados em falta, tarefas pendentes e o que fazer a seguir, por paciente — sem tocar em nada clínico.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {rows.map((r) => {
           const needsFollowUp =
             r.appointmentStatus === 'departed' && !r.hasUpcomingAppointment && r.nextAction.code !== 'UP_TO_DATE';
@@ -89,11 +89,19 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
             >
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>{String(r.startTime).slice(0, 5)}</span>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{r.patientName}</span>
+                  <span style={{ fontWeight: 'var(--weight-bold)', fontSize: 'var(--text-sm)' }}>
+                    {String(r.startTime).slice(0, 5)}
+                  </span>
+                  <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
+                    {r.patientName}
+                  </span>
                   <span
                     className="badge"
-                    style={{ background: 'var(--bg-sunken)', color: 'var(--text-secondary)', fontSize: 10 }}
+                    style={{
+                      background: 'var(--bg-sunken)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 'var(--text-2xs)',
+                    }}
                   >
                     {STATUS_LABEL[r.appointmentStatus] || r.appointmentStatus}
                   </span>
@@ -107,7 +115,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                         color: 'var(--urgency-soon)',
                         borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
-                        fontWeight: 600,
+                        fontWeight: 'var(--weight-semibold)',
                       }}
                     >
                       Dados em falta: {r.missingFields.map((f) => f.label).join(', ')}
@@ -121,7 +129,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                         color: 'var(--accent)',
                         borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
-                        fontWeight: 600,
+                        fontWeight: 'var(--weight-semibold)',
                       }}
                     >
                       {r.openTaskCount} tarefa{r.openTaskCount > 1 ? 's' : ''} em aberto
@@ -135,7 +143,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                         color: actionColor.color,
                         borderRadius: 'var(--radius-control)',
                         padding: '2px 8px',
-                        fontWeight: 600,
+                        fontWeight: 'var(--weight-semibold)',
                       }}
                     >
                       {r.nextAction.label}
@@ -146,14 +154,17 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
 
               {needsFollowUp &&
                 (taskCreatedFor.has(r.appointmentId) ? (
-                  <span className="text-xs" style={{ color: 'var(--urgency-ok)', fontWeight: 700, flexShrink: 0 }}>
+                  <span
+                    className="text-xs"
+                    style={{ color: 'var(--urgency-ok)', fontWeight: 'var(--weight-bold)', flexShrink: 0 }}
+                  >
                     Tarefa criada
                   </span>
                 ) : (
                   <GhostBtn
                     disabled={busyId === r.appointmentId}
                     onClick={() => createFollowUp(r)}
-                    style={{ padding: '5px 10px', fontSize: 12, flexShrink: 0 }}
+                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)', flexShrink: 0 }}
                   >
                     {busyId === r.appointmentId ? '…' : 'Criar follow-up'}
                   </GhostBtn>

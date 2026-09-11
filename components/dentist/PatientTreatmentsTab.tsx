@@ -29,21 +29,29 @@ export default function PatientTreatmentsTab({ treatments }: { treatments: Treat
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 11,
-                fontWeight: 700,
+                fontSize: 'var(--text-2xs)',
+                fontWeight: 'var(--weight-bold)',
                 color: 'var(--accent)',
               }}
             >
               {t.treatment_code || '—'}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t.description}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 'var(--weight-semibold)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {t.description}
+              </div>
+              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                 {t.treatment_code || '—'} · Fase {t.phase}
               </div>
             </div>
             <Badge s={t.status} />
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
               ${Number(t.fee).toLocaleString()}
             </div>
           </div>

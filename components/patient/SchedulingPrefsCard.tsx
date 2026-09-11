@@ -139,7 +139,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
           </div>
         </div>
         {!editing && (
-          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '4px 12px', fontSize: 12 }}>
+          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}>
             Editar
           </GhostBtn>
         )}
@@ -157,7 +157,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
       ) : (
         <div>
           <div className="section-label mb-2">DIAS PREFERIDOS</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             {WEEKDAY_ORDER.map((d) => {
               const on = form.preferredDays.includes(d);
               return (
@@ -171,7 +171,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
                     color: on ? 'var(--accent)' : 'var(--text-secondary)',
                     borderRadius: 'var(--radius-control)',
                     padding: '4px 10px',
-                    fontSize: 12,
+                    fontSize: 'var(--text-xs)',
                     fontWeight: on ? 700 : 500,
                     cursor: 'pointer',
                   }}
@@ -227,7 +227,14 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
           />
 
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}

@@ -80,7 +80,14 @@ export default function PatientInteractionsTab({
           />
         </FormField>
         {error && (
-          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--urgency-critical)',
+              fontWeight: 'var(--weight-bold)',
+              marginBottom: 12,
+            }}
+          >
             {error}
           </div>
         )}
@@ -94,22 +101,30 @@ export default function PatientInteractionsTab({
         {!interactions.length ? (
           <Empty message="Sem interações registadas." />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {interactions.map((i) => (
               <div key={i.id} style={{ borderBottom: '1px solid var(--bg-page)', paddingBottom: 12 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
                   <Badge bg="var(--cat-teal-bg)" color="var(--cat-teal)" label={CHANNEL_LABELS[i.channel]} />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     {i.direction === 'inbound' ? 'Recebida' : 'Efetuada'}
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     {new Date(i.occurred_at).toLocaleString('pt-PT')}
                   </span>
                   {i.created_by_name && (
-                    <span style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>{i.created_by_name}</span>
+                    <span
+                      style={{
+                        fontSize: 'var(--text-2xs)',
+                        color: 'var(--accent)',
+                        fontWeight: 'var(--weight-semibold)',
+                      }}
+                    >
+                      {i.created_by_name}
+                    </span>
                   )}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{i.summary}</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{i.summary}</div>
               </div>
             ))}
           </div>

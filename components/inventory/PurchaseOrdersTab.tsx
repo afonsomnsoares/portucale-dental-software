@@ -173,7 +173,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
       {!orders.length ? (
         <Empty message="Sem encomendas. Gere sugestões automáticas ou crie uma manualmente." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {orders.map((o) => {
             const meta = STATUS_META[o.status];
             return (
@@ -196,14 +196,14 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         <GhostBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'cancelled')}
-                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Cancelar
                         </GhostBtn>
                         <PrimaryBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'ordered')}
-                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Marcar como encomendado
                         </PrimaryBtn>
@@ -213,7 +213,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                       <GhostBtn
                         disabled={reconBusy === o.id}
                         onClick={() => verReconciliacao(o.id)}
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
                         {recon[o.id] ? 'Fechar reconciliação' : 'Reconciliar'}
                       </GhostBtn>
@@ -223,14 +223,14 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         <GhostBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'cancelled')}
-                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Cancelar
                         </GhostBtn>
                         <PrimaryBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'received')}
-                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Marcar como recebido
                         </PrimaryBtn>
@@ -256,14 +256,14 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                 {recon[o.id] && (
                   <div
                     style={{
-                      marginTop: 10,
+                      marginTop: 12,
                       padding: '11px 13px',
                       borderRadius: 'var(--radius-control)',
                       background: recon[o.id].clean ? 'var(--urgency-ok-bg)' : 'var(--urgency-soon-bg)',
-                      fontSize: 12.5,
+                      fontSize: 'var(--text-xs)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                       <b style={{ color: recon[o.id].clean ? 'var(--urgency-ok)' : 'var(--urgency-soon)' }}>
                         {recon[o.id].clean ? 'Bate certo' : `${recon[o.id].discrepancies?.length || 0} discrepância(s)`}
                         {recon[o.id].frozen ? ' · congelada' : ''}
@@ -276,7 +276,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                     {(recon[o.id].discrepancies || []).map(
                       // biome-ignore lint/suspicious/noExplicitAny: linha do relatório, tipada em lib/inventoryCalc.ts
                       (d: any) => (
-                        <div key={`${d.itemId}-${d.kind}`} style={{ marginTop: 5, color: 'var(--text-secondary)' }}>
+                        <div key={`${d.itemId}-${d.kind}`} style={{ marginTop: 4, color: 'var(--text-secondary)' }}>
                           <b>{d.item}</b> — {d.detail}
                           {d.valueDelta !== null ? ` (${formatEUR(d.valueDelta)})` : ''}
                         </div>
@@ -287,7 +287,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         <GhostBtn
                           disabled={reconBusy === o.id}
                           onClick={() => congelar(o.id)}
-                          style={{ padding: '4px 10px', fontSize: 12 }}
+                          style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Congelar reconciliação
                         </GhostBtn>
@@ -306,7 +306,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
           {lines.map((line, i) => (
             <div
               key={line.key}
-              style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 10, marginBottom: 10 }}
+              style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 12, marginBottom: 12 }}
             >
               <FormField label={i === 0 ? 'Item' : ''}>
                 <Sel
@@ -345,15 +345,22 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
               </div>
             </div>
           ))}
-          <GhostBtn onClick={() => setLines((ls) => [...ls, newLine()])} style={{ marginBottom: 14 }}>
+          <GhostBtn onClick={() => setLines((ls) => [...ls, newLine()])} style={{ marginBottom: 12 }}>
             + Adicionar item
           </GhostBtn>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setCreateModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveOrder} disabled={saving}>
               {saving ? 'A criar…' : 'Criar encomenda'}

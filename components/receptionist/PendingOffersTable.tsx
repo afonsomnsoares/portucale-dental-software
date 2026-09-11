@@ -34,7 +34,7 @@ export default function PendingOffersTable({
             <tbody>
               {offers.map((o) => (
                 <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                  <td className="data-td" style={{ fontWeight: 600 }}>
+                  <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                     {o.patient_name || patientName(o.patient_id || '')}
                   </td>
                   <td className="data-td">{o.phone ? <a href={`tel:${o.phone}`}>{formatPhonePT(o.phone)}</a> : '—'}</td>
@@ -43,7 +43,7 @@ export default function PendingOffersTable({
                     {String(o.offered_date).slice(0, 10)} · {String(o.offered_start_time).slice(0, 5)}
                   </td>
                   <td className="data-td" style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <PrimaryBtn
                         disabled={busyId === o.id}
                         onClick={() => onRespond(o, 'book')}

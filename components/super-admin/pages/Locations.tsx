@@ -54,9 +54,13 @@ export default function Locations({ initialData }: { initialData?: UsageRow[] } 
       ) : (
         cities.map(([city, clinics]) => (
           <div key={city} className="card p-5" style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{city}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 12 }}>
+              <span
+                style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}
+              >
+                {city}
+              </span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 {clinics.length} {clinics.length === 1 ? 'clínica' : 'clínicas'} ·{' '}
                 {clinics.reduce((a, c) => a + c.operatories, 0)} gabinetes ·{' '}
                 {clinics.reduce((a, c) => a + c.patients, 0).toLocaleString('pt-PT')} doentes
@@ -75,9 +79,20 @@ export default function Locations({ initialData }: { initialData?: UsageRow[] } 
                     borderBottom: '1px solid var(--bg-page)',
                   }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', flex: 1 }}>{c.name}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{c.operatories} gab.</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-medium)',
+                      color: 'var(--text-primary)',
+                      flex: 1,
+                    }}
+                  >
+                    {c.name}
+                  </span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                    {c.operatories} gab.
+                  </span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                     {c.patients.toLocaleString('pt-PT')} doentes
                   </span>
                   <Badge label={band.label} bg={band.bg} color={band.color} />
@@ -89,7 +104,15 @@ export default function Locations({ initialData }: { initialData?: UsageRow[] } 
         ))
       )}
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         Agrupado por cidade porque é a única geografia que o schema tem: `tenants` é ao mesmo tempo a organização e o
         sítio. Para esta página ser mesmo «localizações de uma organização» faltaria uma tabela de organizações acima de
         `tenants`, com as clínicas a apontar para ela — uma decisão de modelo de dados, não de ecrã.

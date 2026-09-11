@@ -122,10 +122,16 @@ export default function EquipmentTab({ api }: EquipmentTabProps) {
                 <TD muted>{it.tags.join(', ') || '—'}</TD>
                 <TD>{it.active ? 'Ativo' : 'Inativo'}</TD>
                 <TD right>
-                  <GhostBtn onClick={() => openEdit(it)} style={{ padding: '5px 10px', fontSize: 12, marginRight: 6 }}>
+                  <GhostBtn
+                    onClick={() => openEdit(it)}
+                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)', marginRight: 8 }}
+                  >
                     Editar
                   </GhostBtn>
-                  <GhostBtn onClick={() => toggleActive(it)} style={{ padding: '5px 10px', fontSize: 12 }}>
+                  <GhostBtn
+                    onClick={() => toggleActive(it)}
+                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                  >
                     {it.active ? 'Desativar' : 'Ativar'}
                   </GhostBtn>
                 </TD>
@@ -159,7 +165,14 @@ export default function EquipmentTab({ api }: EquipmentTabProps) {
             />
           </FormField>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}

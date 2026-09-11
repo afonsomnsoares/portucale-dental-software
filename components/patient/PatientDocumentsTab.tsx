@@ -110,21 +110,28 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
   return (
     <div>
       <div className="card p-5" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div className="section-label">PEDIDOS PENDENTES ({pendingRequests.length})</div>
-          <GhostBtn onClick={() => setRequestOpen(true)} style={{ padding: '6px 12px', fontSize: 12 }}>
+          <GhostBtn onClick={() => setRequestOpen(true)} style={{ padding: '6px 12px', fontSize: 'var(--text-xs)' }}>
             + Pedir documento
           </GhostBtn>
         </div>
         {error && (
-          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--urgency-critical)',
+              fontWeight: 'var(--weight-bold)',
+              marginBottom: 12,
+            }}
+          >
             {error}
           </div>
         )}
         {!pendingRequests.length ? (
           <Empty message="Sem pedidos pendentes." />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {pendingRequests.map((t) => (
               <div
                 key={t.id}
@@ -140,7 +147,14 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
               >
                 <div>
                   <Badge label="Pendente" bg="var(--urgency-soon-bg)" color="var(--urgency-soon)" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginLeft: 8 }}>
+                  <span
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                      marginLeft: 8,
+                    }}
+                  >
                     {t.title}
                   </span>
                 </div>
@@ -149,7 +163,7 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
                   disabled={uploadingFor === t.id}
                   onChange={(e) => handleUpload(e.target.files?.[0] || null, t.notes || 'other', t.id)}
                   accept="image/png,image/jpeg,image/webp,application/pdf"
-                  style={{ fontSize: 12, maxWidth: 220 }}
+                  style={{ fontSize: 'var(--text-xs)', maxWidth: 220 }}
                 />
               </div>
             ))}
@@ -158,17 +172,17 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
       </div>
 
       <div className="card p-5">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div className="section-label">DOCUMENTOS ({uploads.length})</div>
           <label
             style={{
-              fontSize: 12,
+              fontSize: 'var(--text-xs)',
               color: 'var(--accent)',
-              fontWeight: 700,
+              fontWeight: 'var(--weight-bold)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 8,
             }}
           >
             {uploadingFor === 'general' ? 'A carregar…' : '+ Carregar documento'}
@@ -185,9 +199,9 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
           <Empty message="Sem documentos carregados." />
         ) : (
           Object.entries(grouped).map(([category, rows]) => (
-            <div key={category} style={{ marginBottom: 18 }}>
+            <div key={category} style={{ marginBottom: 20 }}>
               <div className="section-label mb-2">{CATEGORY_LABELS[category] || category}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {rows.map((u) => (
                   <div
                     key={u.id}
@@ -205,11 +219,11 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
                       href={u.url}
                       target="_blank"
                       rel="noreferrer"
-                      style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}
+                      style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 'var(--weight-bold)' }}
                     >
                       {u.url.split('/').pop()}
                     </a>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                       {new Date(u.created_at).toLocaleDateString('pt-PT')} · Recebido
                     </span>
                   </div>
@@ -231,7 +245,7 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
               ))}
             </Sel>
           </FormField>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
             <GhostBtn onClick={() => setRequestOpen(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={requestDocument} disabled={requestSaving}>
               {requestSaving ? 'A pedir…' : 'Pedir'}

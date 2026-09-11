@@ -16,14 +16,29 @@ export default function NotFound() {
     >
       <div style={{ textAlign: 'center', maxWidth: 420 }}>
         <div
-          style={{ fontFamily: FONTS.display, fontSize: 48, fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}
+          style={{
+            fontFamily: FONTS.display,
+            fontSize: 'var(--text-3xl)',
+            fontWeight: 'var(--weight-bold)',
+            color: 'var(--accent)',
+            lineHeight: 1,
+          }}
         >
           404
         </div>
-        <h1 style={{ fontFamily: FONTS.display, fontSize: 20, color: 'var(--text-primary)', margin: '14px 0 8px' }}>
+        <h1
+          style={{
+            fontFamily: FONTS.display,
+            fontSize: 'var(--text-lg)',
+            color: 'var(--text-primary)',
+            margin: '14px 0 8px',
+          }}
+        >
           Página não encontrada
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>
+        <p
+          style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.55, margin: '0 0 20px' }}
+        >
           O endereço que abriu não existe ou deixou de estar disponível.
         </p>
         <a
@@ -34,8 +49,8 @@ export default function NotFound() {
             color: 'var(--bg-surface)',
             borderRadius: 'var(--radius-control)',
             padding: '10px 18px',
-            fontSize: 14,
-            fontWeight: 600,
+            fontSize: 'var(--text-base)',
+            fontWeight: 'var(--weight-semibold)',
             textDecoration: 'none',
           }}
         >

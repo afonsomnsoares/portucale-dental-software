@@ -75,7 +75,7 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
           <div key={t.id} className="card p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</span>
+                <span style={{ fontWeight: 'var(--weight-bold)', fontSize: 'var(--text-base)' }}>{t.name}</span>
                 <Badge label={TYPE_LABEL[t.type]} bg="var(--bg-sunken)" color="var(--text-secondary)" />
               </div>
               {run ? (
@@ -91,19 +91,19 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
                 <PrimaryBtn
                   onClick={() => startRun(t.id)}
                   disabled={busyId === t.id}
-                  style={{ padding: '5px 12px', fontSize: 12 }}
+                  style={{ padding: '5px 12px', fontSize: 'var(--text-xs)' }}
                 >
                   Iniciar
                 </PrimaryBtn>
               )}
             </div>
             {run && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {run.items.map((item, i) => (
                   <label
                     key={`${run.id}-${item.label}`}
                     className="flex items-center gap-2"
-                    style={{ fontSize: 13, cursor: run.status === 'completed' ? 'default' : 'pointer' }}
+                    style={{ fontSize: 'var(--text-sm)', cursor: run.status === 'completed' ? 'default' : 'pointer' }}
                   >
                     <input
                       type="checkbox"

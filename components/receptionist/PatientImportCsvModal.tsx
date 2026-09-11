@@ -111,9 +111,9 @@ export default function PatientImportCsvModal({
             color: 'var(--urgency-critical)',
             borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
-            fontSize: 12,
+            fontSize: 'var(--text-xs)',
             marginBottom: 12,
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -144,12 +144,28 @@ export default function PatientImportCsvModal({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 }}>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-primary)' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}>
+        <label
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-primary)',
+          }}
+        >
           <input type="checkbox" checked={createExtraFields} onChange={(e) => setCreateExtraFields(e.target.checked)} />
           Criar automaticamente campos adicionais para esta clínica
         </label>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: 'var(--text-primary)' }}>
+        <label
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-primary)',
+          }}
+        >
           <input type="checkbox" checked={unmappedAsExtra} onChange={(e) => setUnmappedAsExtra(e.target.checked)} />
           Importar colunas não mapeadas como campos adicionais
         </label>
@@ -164,8 +180,8 @@ export default function PatientImportCsvModal({
             color: 'var(--urgency-ok)',
             borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
-            fontSize: 12,
-            fontWeight: 800,
+            fontSize: 'var(--text-xs)',
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           Importados: {result.created} · Ignorados: {result.skipped}

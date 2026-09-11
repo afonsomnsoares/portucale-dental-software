@@ -86,7 +86,7 @@ export default function TreatmentTable({
             {treatments.map((t) => (
               <tr key={t.id}>
                 {showPatient && (
-                  <td className="data-td" style={{ fontWeight: 600 }}>
+                  <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                     {t.patient_name}
                   </td>
                 )}
@@ -95,12 +95,12 @@ export default function TreatmentTable({
                     <span
                       style={{
                         fontFamily: '"JetBrains Mono",monospace',
-                        fontSize: 11,
+                        fontSize: 'var(--text-2xs)',
                         background: 'var(--cat-purple-bg)',
                         color: 'var(--cat-purple)',
                         borderRadius: 'var(--radius-control)',
                         padding: '2px 7px',
-                        fontWeight: 600,
+                        fontWeight: 'var(--weight-semibold)',
                       }}
                     >
                       {t.treatment_code}
@@ -109,7 +109,7 @@ export default function TreatmentTable({
                     '—'
                   )}
                 </td>
-                <td className="data-td" style={{ fontWeight: 500 }}>
+                <td className="data-td" style={{ fontWeight: 'var(--weight-medium)' }}>
                   {t.description}
                 </td>
                 <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
@@ -118,7 +118,7 @@ export default function TreatmentTable({
                 <td className="data-td">
                   <Badge s={t.status} />
                 </td>
-                <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>
+                <td className="data-td" style={{ textAlign: 'right', fontWeight: 'var(--weight-bold)' }}>
                   €{Number(t.fee).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
                 </td>
                 <td className="data-td">

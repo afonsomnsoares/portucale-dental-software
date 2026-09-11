@@ -97,7 +97,7 @@ export default function WaitlistCreateModal({
                 className="btn"
                 style={{
                   padding: '5px 10px',
-                  fontSize: 12,
+                  fontSize: 'var(--text-xs)',
                   borderRadius: 'var(--radius-control)',
                   border: '1px solid var(--border-subtle)',
                   background: form.preferredDays.includes(d.key) ? 'var(--accent-bg)' : 'transparent',

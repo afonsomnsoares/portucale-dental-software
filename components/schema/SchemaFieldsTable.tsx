@@ -31,7 +31,7 @@ export default function SchemaFieldsTable({
       {loading ? (
         <Spinner />
       ) : !tenantId ? (
-        <div style={{ padding: 18, fontSize: 13, color: 'var(--text-muted)' }}>
+        <div style={{ padding: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
           Select a clinic to manage its schema fields.
         </div>
       ) : (
@@ -52,7 +52,13 @@ export default function SchemaFieldsTable({
                 <tr key={f.id}>
                   <td className="data-td">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)' }}>
+                      <div
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 'var(--weight-bold)',
+                          color: 'var(--text-primary)',
+                        }}
+                      >
                         {f.label || f.field_name}
                       </div>
                       <code
@@ -61,22 +67,24 @@ export default function SchemaFieldsTable({
                           color: 'var(--cat-purple)',
                           borderRadius: 'var(--radius-control)',
                           padding: '2px 8px',
-                          fontSize: 11,
+                          fontSize: 'var(--text-2xs)',
                           fontFamily: '"JetBrains Mono",monospace',
-                          fontWeight: 600,
+                          fontWeight: 'var(--weight-semibold)',
                           width: 'fit-content',
                         }}
                       >
                         {f.field_name}
                       </code>
-                      {f.description && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{f.description}</div>}
+                      {f.description && (
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{f.description}</div>
+                      )}
                     </div>
                   </td>
                   <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                     {f.field_type}
                   </td>
                   <td className="data-td">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
                         style={{
                           width: 80,
@@ -97,7 +105,7 @@ export default function SchemaFieldsTable({
                       </div>
                       <span
                         style={{
-                          fontSize: 11,
+                          fontSize: 'var(--text-2xs)',
                           color: 'var(--text-secondary)',
                           fontFamily: '"JetBrains Mono",monospace',
                         }}
@@ -113,7 +121,7 @@ export default function SchemaFieldsTable({
                     {f.pushed_at?.slice(0, 10) || '—'}
                   </td>
                   <td className="data-td">
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
                       <button type="button" onClick={() => onEdit(f)} className="btn btn-secondary btn-sm">
                         Edit
                       </button>
@@ -122,7 +130,13 @@ export default function SchemaFieldsTable({
                           Publish
                         </button>
                       ) : (
-                        <span style={{ fontSize: 12, color: 'var(--urgency-ok)', fontWeight: 700 }}>
+                        <span
+                          style={{
+                            fontSize: 'var(--text-xs)',
+                            color: 'var(--urgency-ok)',
+                            fontWeight: 'var(--weight-bold)',
+                          }}
+                        >
                           <Check size={12} style={{ display: 'inline' }} /> Live
                         </span>
                       )}

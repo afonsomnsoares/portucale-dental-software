@@ -166,8 +166,16 @@ export default function TreatmentPlansPage() {
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -189,10 +197,10 @@ export default function TreatmentPlansPage() {
                   cols={cols}
                   rows={plans.map((p) => (
                     <tr key={p.id}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {p.title}
                       </td>
-                      <td className="data-td" style={{ fontWeight: 700 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-bold)' }}>
                         {formatEUR(Number(p.total_fee || 0))}
                       </td>
                       <td className="data-td">
@@ -201,13 +209,16 @@ export default function TreatmentPlansPage() {
                       <td className="data-td">{p.created_at?.slice(0, 10)}</td>
                       <td className="data-td">
                         <GhostBtn
-                          style={{ padding: '4px 12px', fontSize: 11, marginRight: 6 }}
+                          style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)', marginRight: 8 }}
                           onClick={() => setDetailModal(p)}
                         >
                           Ver
                         </GhostBtn>
                         {p.status === 'draft' && (
-                          <PrimaryBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => approve(p.id)}>
+                          <PrimaryBtn
+                            style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
+                            onClick={() => approve(p.id)}
+                          >
                             Aprovar
                           </PrimaryBtn>
                         )}
@@ -246,7 +257,13 @@ export default function TreatmentPlansPage() {
             // biome-ignore lint/suspicious/noArrayIndexKey: phases have no id; index matches updatePhase/removePhase's own indexing
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
               <div
-                style={{ width: 60, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', paddingBottom: 10 }}
+                style={{
+                  width: 60,
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 'var(--weight-semibold)',
+                  color: 'var(--text-secondary)',
+                  paddingBottom: 12,
+                }}
               >
                 Fase {ph.phase}
               </div>
@@ -264,16 +281,23 @@ export default function TreatmentPlansPage() {
                 style={{ width: 100 }}
               />
               {form.phases.length > 1 && (
-                <GhostBtn style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => removePhase(i)}>
+                <GhostBtn style={{ padding: '4px 10px', fontSize: 'var(--text-2xs)' }} onClick={() => removePhase(i)}>
                   ×
                 </GhostBtn>
               )}
             </div>
           ))}
-          <GhostBtn onClick={addPhase} style={{ fontSize: 12, marginBottom: 12 }}>
+          <GhostBtn onClick={addPhase} style={{ fontSize: 'var(--text-xs)', marginBottom: 12 }}>
             + Acrescentar fase
           </GhostBtn>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-base)',
+              fontWeight: 'var(--weight-bold)',
+              color: 'var(--text-primary)',
+              marginBottom: 16,
+            }}
+          >
             Valor total: {formatEUR(totalFee)}
           </div>
           <div className="flex gap-3 mt-2">
@@ -288,7 +312,9 @@ export default function TreatmentPlansPage() {
       {detailModal && (
         <Modal title={detailModal.title} onClose={() => setDetailModal(null)} width={560}>
           {detailModal.description && (
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>{detailModal.description}</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 16 }}>
+              {detailModal.description}
+            </p>
           )}
           <div className="section-label mb-2">Fases</div>
           {(detailModal.phases || []).map((ph, i) => (
@@ -303,12 +329,21 @@ export default function TreatmentPlansPage() {
               }}
             >
               <div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginRight: 8 }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-2xs)',
+                    fontWeight: 'var(--weight-bold)',
+                    color: 'var(--text-muted)',
+                    marginRight: 8,
+                  }}
+                >
                   FASE {ph.phase}
                 </span>
-                <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ph.description}</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{ph.description}</span>
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span
+                style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}
+              >
                 {formatEUR(Number(ph.fee || 0))}
               </span>
             </div>
@@ -318,8 +353,8 @@ export default function TreatmentPlansPage() {
               display: 'flex',
               justifyContent: 'space-between',
               padding: '12px 0',
-              fontSize: 15,
-              fontWeight: 800,
+              fontSize: 'var(--text-base)',
+              fontWeight: 'var(--weight-bold)',
               color: 'var(--text-primary)',
               borderTop: '2px solid var(--border-subtle)',
               marginTop: 8,

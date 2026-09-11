@@ -178,7 +178,7 @@ export default function Recalls() {
                   const sm = statusMeta(r);
                   return (
                     <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {patientName(r.patient_id)}
                       </td>
                       <td className="data-td" style={{ textTransform: 'capitalize' }}>
@@ -201,17 +201,17 @@ export default function Recalls() {
                               borderRadius: '50%',
                               background: sm.color,
                               display: 'inline-block',
-                              marginRight: 5,
+                              marginRight: 4,
                             }}
                           />
                           {sm.label}
                         </span>
                       </td>
-                      <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                      <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
                         {r.last_notified_at ? new Date(r.last_notified_at).toLocaleDateString('pt-PT') : '—'}
                       </td>
                       <td className="data-td" style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                           {patientPhone(r.patient_id) && (
                             <GhostBtn onClick={() => window.open(`tel:${patientPhone(r.patient_id)}`)}>Ligar</GhostBtn>
                           )}

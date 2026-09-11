@@ -120,7 +120,7 @@ export default function ReceptionLeadsPage() {
           </PrimaryBtn>
         </div>
         {error && (
-          <div className="text-sm mt-3" style={{ color: 'var(--urgency-critical)', fontWeight: 700 }}>
+          <div className="text-sm mt-3" style={{ color: 'var(--urgency-critical)', fontWeight: 'var(--weight-bold)' }}>
             {error}
           </div>
         )}
@@ -159,7 +159,7 @@ export default function ReceptionLeadsPage() {
                   return (
                     <Fragment key={lead.id}>
                       <tr>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
+                        <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {lead.name}
                         </td>
                         <td className="data-td">{lead.phone || lead.email || '—'}</td>
@@ -180,7 +180,7 @@ export default function ReceptionLeadsPage() {
                           </GhostBtn>
                           <GhostBtn
                             onClick={() => updateStatus(lead.id, 'lost')}
-                            style={{ padding: '5px 10px', marginLeft: 6 }}
+                            style={{ padding: '5px 10px', marginLeft: 8 }}
                           >
                             Fechar
                           </GhostBtn>
@@ -189,7 +189,7 @@ export default function ReceptionLeadsPage() {
                       {hasDraft && (
                         <tr>
                           <td className="data-td" colSpan={6} style={{ background: 'var(--bg-page)' }}>
-                            <div className="text-xs" style={{ color: 'var(--text-secondary)', marginBottom: 6 }}>
+                            <div className="text-xs" style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>
                               {lead.ai_intent ? `Intenção: ${lead.ai_intent} — ` : ''}Rascunho de resposta (SMS):
                             </div>
                             <div className="text-sm" style={{ marginBottom: 8 }}>

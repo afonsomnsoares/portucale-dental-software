@@ -347,7 +347,7 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
     >
       {/* ── Brand ── */}
       <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{ width: 32, height: 32, borderRadius: 'var(--radius-control)', overflow: 'hidden', flexShrink: 0 }}
           >
@@ -356,8 +356,8 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
           <div>
             <div
               style={{
-                fontSize: 16,
-                fontWeight: 800,
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--weight-bold)',
                 color: 'var(--accent)',
                 letterSpacing: '-0.5px',
                 fontFamily: '"Plus Jakarta Sans",sans-serif',
@@ -453,7 +453,7 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
 
       {/* ── User ── */}
       <div className="p-4">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <Avatar name={user?.name || ''} size={34} color="var(--accent)" />
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
@@ -476,8 +476,8 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
             border: '1.5px solid var(--border-subtle)',
             borderRadius: 'var(--radius-control)',
             padding: '6px 12px',
-            fontSize: 12,
-            fontWeight: 500,
+            fontSize: 'var(--text-xs)',
+            fontWeight: 'var(--weight-medium)',
             color: 'var(--urgency-critical)',
             cursor: 'pointer',
             fontFamily: 'inherit',

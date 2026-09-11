@@ -184,7 +184,7 @@ export default function UsersAndAccess() {
         onAction={openCreate}
       />
 
-      <div style={{ marginBottom: 14, display: 'flex', gap: 10, alignItems: 'center' }}>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
         <Inp
           value={search}
           onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
@@ -196,7 +196,14 @@ export default function UsersAndAccess() {
             Limpar
           </GhostBtn>
         )}
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
+        <div
+          style={{
+            marginLeft: 'auto',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-muted)',
+            fontWeight: 'var(--weight-bold)',
+          }}
+        >
           {filtered.length} / {users.length}
         </div>
       </div>
@@ -214,8 +221,8 @@ export default function UsersAndAccess() {
                 <TD>
                   <span
                     style={{
-                      fontSize: 11,
-                      fontWeight: 700,
+                      fontSize: 'var(--text-2xs)',
+                      fontWeight: 'var(--weight-bold)',
                       padding: '3px 8px',
                       borderRadius: 'var(--radius-card)',
                       background: `${roleColors[u.role]}15`,
@@ -232,7 +239,7 @@ export default function UsersAndAccess() {
                   <Badge s={u.active ? 'active' : 'suspended'} />
                 </TD>
                 <TD right>
-                  <GhostBtn onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 12 }}>
+                  <GhostBtn onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 'var(--text-xs)' }}>
                     Editar
                   </GhostBtn>
                 </TD>
@@ -369,7 +376,14 @@ export default function UsersAndAccess() {
             )}
 
             {err && (
-              <div style={{ color: 'var(--urgency-critical)', fontSize: 13, marginBottom: 16, textAlign: 'center' }}>
+              <div
+                style={{
+                  color: 'var(--urgency-critical)',
+                  fontSize: 'var(--text-sm)',
+                  marginBottom: 16,
+                  textAlign: 'center',
+                }}
+              >
                 {err}
               </div>
             )}

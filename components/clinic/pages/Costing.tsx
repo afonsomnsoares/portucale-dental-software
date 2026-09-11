@@ -79,8 +79,8 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
       <div
         style={{
           padding: '11px 14px',
-          fontSize: 11,
-          fontWeight: 700,
+          fontSize: 'var(--text-2xs)',
+          fontWeight: 'var(--weight-bold)',
           letterSpacing: '.06em',
           textTransform: 'uppercase',
           color: 'var(--text-muted)',
@@ -97,11 +97,11 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
                 style={{
                   textAlign: h ? 'right' : 'left',
                   padding: '7px 14px',
-                  fontSize: 10,
+                  fontSize: 'var(--text-2xs)',
                   letterSpacing: '.07em',
                   textTransform: 'uppercase',
                   color: 'var(--text-muted)',
-                  fontWeight: 500,
+                  fontWeight: 'var(--weight-medium)',
                   borderBottom: '1px solid var(--border-strong)',
                   whiteSpace: 'nowrap',
                 }}
@@ -114,7 +114,9 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
         <tbody>
           {linhas.map((b) => (
             <tr key={b.key} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-              <td style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 600 }}>{b.label}</td>
+              <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
+                {b.label}
+              </td>
               {[
                 { k: 'consultas', v: String(b.appointments) },
                 { k: 'receita', v: formatEUR(b.margin.revenue) },
@@ -134,7 +136,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
                   key={c.k}
                   style={{
                     padding: '9px 14px',
-                    fontSize: 12.5,
+                    fontSize: 'var(--text-xs)',
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
                     whiteSpace: 'nowrap',
@@ -234,7 +236,7 @@ export default function Costing({
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -256,7 +258,7 @@ export default function Costing({
                 padding: '11px 15px',
                 borderRadius: 'var(--radius-card)',
                 marginBottom: 16,
-                fontSize: 12.5,
+                fontSize: 'var(--text-xs)',
                 lineHeight: 1.55,
               }}
             >
@@ -278,7 +280,7 @@ export default function Costing({
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: 14,
+              gap: 12,
               marginBottom: 20,
             }}
           >
@@ -306,11 +308,11 @@ export default function Costing({
                   padding: '12px 14px',
                 }}
               >
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.l}</div>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{m.l}</div>
                 <div
                   style={{
-                    fontSize: 17,
-                    fontWeight: 700,
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-bold)',
                     marginTop: 3,
                     color: m.cor || 'var(--text-primary)',
                     fontVariantNumeric: 'tabular-nums',
@@ -322,7 +324,7 @@ export default function Costing({
             ))}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 22 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
             <Tabela titulo="Por dentista" linhas={rel.byDentist} />
             <Tabela titulo="Por cadeira" linhas={rel.byChair} />
             <Tabela titulo="Por tipo de tratamento" linhas={rel.byTreatmentType} />
@@ -339,13 +341,15 @@ export default function Costing({
                 maxWidth: '46rem',
               }}
             >
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Base de imputação</div>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px' }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', marginBottom: 4 }}>
+                Base de imputação
+              </div>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: '0 0 12px' }}>
                 Como é que o custo fixo mensal se reparte pelas consultas. Mudar isto muda todos os números acima, e
                 todos os relatórios já emitidos — é retroativo por natureza.
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                 {metodos.map((m) => (
                   <button
                     key={m.value}
@@ -361,15 +365,17 @@ export default function Costing({
                       font: 'inherit',
                     }}
                   >
-                    <div style={{ fontWeight: 600, fontSize: 12.5 }}>{m.label}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>{m.note}</div>
+                    <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-xs)' }}>{m.label}</div>
+                    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-secondary)', marginTop: 2 }}>
+                      {m.note}
+                    </div>
                   </button>
                 ))}
               </div>
 
               <div className="grid-pair" style={{ gap: 12 }}>
                 {/* biome-ignore lint/a11y/noLabelWithoutControl: o Inp abaixo É o controlo deste label */}
-                <label style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                <label style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   Custo fixo mensal (€)
                   <Inp
                     type="number"
@@ -378,7 +384,7 @@ export default function Costing({
                   />
                 </label>
                 {/* biome-ignore lint/a11y/noLabelWithoutControl: o Inp abaixo É o controlo deste label */}
-                <label style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                <label style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   Custo de trabalho por hora (€)
                   <Inp
                     type="number"
@@ -388,7 +394,7 @@ export default function Costing({
                 </label>
               </div>
 
-              <div style={{ marginTop: 14 }}>
+              <div style={{ marginTop: 12 }}>
                 <PrimaryBtn onClick={gravarDef} disabled={aGravar}>
                   {aGravar ? 'A guardar…' : 'Guardar base de imputação'}
                 </PrimaryBtn>

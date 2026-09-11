@@ -412,8 +412,11 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                       zIndex: isSel ? 3 : 2,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
-                      <span className="text-2xs font-mono" style={{ color, flexShrink: 0, fontWeight: 700 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                      <span
+                        className="text-2xs font-mono"
+                        style={{ color, flexShrink: 0, fontWeight: 'var(--weight-bold)' }}
+                      >
                         {hhmm(s)}
                       </span>
                       <span
@@ -443,7 +446,10 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                       </div>
                     )}
                     {height > 62 && (
-                      <div className="text-2xs truncate" style={{ color, marginTop: 3, fontWeight: 600 }}>
+                      <div
+                        className="text-2xs truncate"
+                        style={{ color, marginTop: 3, fontWeight: 'var(--weight-semibold)' }}
+                      >
                         {statusLabel(apt.status)}
                       </div>
                     )}
@@ -473,7 +479,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                     width: GUTTER - 6,
                     textAlign: 'right',
                     color: 'var(--urgency-critical)',
-                    fontWeight: 700,
+                    fontWeight: 'var(--weight-bold)',
                   }}
                 >
                   {hhmm(nowMins)}
@@ -510,12 +516,12 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
           style={{
             flex: '0 1 280px',
             minWidth: 240,
-            padding: 18,
+            padding: 20,
             alignSelf: 'flex-start',
             borderTop: `3px solid ${statusColor(selected.status)}`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
               {selected.patient_name || selected.patient || 'Marcação'}
             </div>
@@ -559,7 +565,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
             </div>
           ))}
 
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
             <Badge s={selected.status} />
             {(selected.risk_score || 0) > 0 && <RiskBadge score={selected.risk_score || 0} />}
           </div>
@@ -569,7 +575,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
               className="text-xs"
               style={{
                 marginTop: 12,
-                padding: 10,
+                padding: 12,
                 borderRadius: 'var(--radius-control)',
                 background: 'var(--urgency-critical-bg)',
                 color: 'var(--urgency-critical)',
@@ -587,7 +593,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
               onClick={() => advance(selected)}
               disabled={loading}
               className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', marginTop: 14 }}
+              style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
             >
               {loading ? 'A atualizar…' : `Passar a ${statusLabel(nextStatus[selected.status]).toLowerCase()}`}
             </button>

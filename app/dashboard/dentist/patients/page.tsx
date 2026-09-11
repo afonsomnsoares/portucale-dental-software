@@ -78,9 +78,9 @@ function Sintese({
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: 26,
+        gap: 24,
         padding: '12px 16px',
-        marginBottom: 14,
+        marginBottom: 12,
         background: 'var(--bg-sunken)',
         borderRadius: 'var(--radius-card)',
       }}
@@ -89,8 +89,8 @@ function Sintese({
         <div key={c.t}>
           <div
             style={{
-              fontSize: 19,
-              fontWeight: 700,
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-bold)',
               lineHeight: 1.1,
               color: c.cor || 'var(--text-primary)',
               fontVariantNumeric: 'tabular-nums',
@@ -98,11 +98,13 @@ function Sintese({
           >
             {c.n}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.t}</div>
+          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{c.t}</div>
         </div>
       ))}
       {nextAction && nextAction.code === 'UP_TO_DATE' && (
-        <div style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 12, color: 'var(--urgency-ok)' }}>
+        <div
+          style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 'var(--text-xs)', color: 'var(--urgency-ok)' }}
+        >
           Nada pendente deste lado.
         </div>
       )}

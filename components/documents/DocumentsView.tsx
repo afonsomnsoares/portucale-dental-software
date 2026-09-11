@@ -256,8 +256,8 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                       border: '1px solid var(--border-subtle)',
                       borderRadius: 'var(--radius-control)',
                       padding: 12,
-                      marginBottom: 14,
-                      fontSize: 12,
+                      marginBottom: 12,
+                      fontSize: 'var(--text-xs)',
                       whiteSpace: 'pre-wrap',
                       color: 'var(--text-secondary)',
                       maxHeight: 260,
@@ -294,17 +294,20 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                   <TD>{d.issued_by_name || '—'}</TD>
                   <TD>{new Date(d.created_at).toLocaleDateString('pt-PT')}</TD>
                   <TD right>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <GhostBtn
                         onClick={() => {
                           setMissing([]);
                           setPreview(d);
                         }}
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
                         Ver
                       </GhostBtn>
-                      <GhostBtn onClick={() => printDocument(d)} style={{ padding: '5px 10px', fontSize: 12 }}>
+                      <GhostBtn
+                        onClick={() => printDocument(d)}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      >
                         Imprimir
                       </GhostBtn>
                     </div>
@@ -318,7 +321,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
 
       {tab === 'templates' && canManageTemplates && (
         <div style={{ marginTop: 16 }}>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
             <PrimaryBtn
               onClick={() => {
                 setTemplateForm(EMPTY_TEMPLATE);
@@ -345,20 +348,20 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                   </TD>
                   <TD>{t.subject}</TD>
                   <TD right>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <GhostBtn
                         onClick={() => {
                           setTemplateForm({ name: t.name, type: t.type, subject: t.subject, body: t.body });
                           setTemplateModal(t);
                         }}
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
                         Editar
                       </GhostBtn>
                       <DangerBtn
                         onClick={() => deactivate(t)}
                         disabled={busy}
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
                         Desativar
                       </DangerBtn>
@@ -386,7 +389,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
               padding: 20,
               whiteSpace: 'pre-wrap',
               fontFamily: 'Georgia, serif',
-              fontSize: 13,
+              fontSize: 'var(--text-sm)',
               lineHeight: 1.7,
               maxHeight: '55vh',
               overflowY: 'auto',
@@ -394,7 +397,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
           >
             {preview.body}
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 14 }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
             <GhostBtn onClick={() => setPreview(null)}>Fechar</GhostBtn>
             <PrimaryBtn onClick={() => printDocument(preview)}>Imprimir</PrimaryBtn>
           </div>
@@ -439,11 +442,11 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                 setTemplateForm((f) => ({ ...f, body: e.target.value }))
               }
-              style={{ minHeight: 240, fontFamily: 'ui-monospace, monospace', fontSize: 12 }}
+              style={{ minHeight: 240, fontFamily: 'ui-monospace, monospace', fontSize: 'var(--text-xs)' }}
             />
           </FormField>
           <div className="section-label mb-2">MARCADORES DISPONÍVEIS</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
             {variables.map((v) => (
               <button
                 type="button"
@@ -454,7 +457,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-control)',
                   padding: '3px 8px',
-                  fontSize: 11,
+                  fontSize: 'var(--text-2xs)',
                   fontFamily: 'ui-monospace, monospace',
                   background: 'var(--bg-sunken)',
                   cursor: 'pointer',
@@ -464,7 +467,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setTemplateModal(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveTemplate} disabled={busy || !templateForm.name || !templateForm.body}>
               {busy ? 'A gravar…' : 'Gravar'}

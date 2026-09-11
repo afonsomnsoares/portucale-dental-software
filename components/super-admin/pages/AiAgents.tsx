@@ -82,19 +82,27 @@ export default function AiAgents() {
           const cost = mine.reduce((s, u) => s + (u.costEur || 0), 0);
           const m = AI_META[a.ai] || AI_META.none;
           return (
-            <div key={a.id} className="card p-5" style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 20 }}>{a.icon}</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</span>
+            <div key={a.id} className="card p-5" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 'var(--text-lg)' }}>{a.icon}</span>
+                <span
+                  style={{
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-bold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {a.name}
+                </span>
                 <Badge label={m.label} bg={m.bg} color={m.color} />
                 {a.failed > 0 && (
                   <Badge label={`${a.failed} FALHAS`} bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />
                 )}
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {a.lastAt ? `última passagem ${new Date(a.lastAt).toLocaleString('pt-PT')}` : 'nunca correu'}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 24, fontSize: 12, color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', gap: 24, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 <span>
                   <strong style={{ color: 'var(--text-primary)' }}>{a.total}</strong> execuções
                 </span>
@@ -112,7 +120,15 @@ export default function AiAgents() {
         })
       )}
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         «Regra fixa» não é um agente por construir: é um agente determinístico, que decide por cálculo em vez de por
         modelo. Para a maioria destas decisões isso é a escolha certa — é auditável, testável sem rede e não custa nada
         por execução.

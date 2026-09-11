@@ -29,7 +29,7 @@ export default function ClinicInvoiceDetailPage() {
     return (
       <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>
         <GhostBtn onClick={() => router.back()} style={{ marginBottom: 16 }}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
+          <ArrowLeft size={16} style={{ marginRight: 8 }} /> Voltar
         </GhostBtn>
         Fatura não encontrada.
       </div>
@@ -45,7 +45,7 @@ export default function ClinicInvoiceDetailPage() {
     <div>
       <PageHeader title={`Fatura ${fmtId(inv.id)}`} sub={`${inv.patient_name} · ${fmtDate(inv.invoice_date)}`}>
         <GhostBtn onClick={() => router.back()} style={{ padding: '8px 12px' }}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
+          <ArrowLeft size={16} style={{ marginRight: 8 }} /> Voltar
         </GhostBtn>
       </PageHeader>
 
@@ -70,13 +70,22 @@ export default function ClinicInvoiceDetailPage() {
         </div>
         <div className="card p-5">
           <div className="section-label mb-4">DOENTE</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-bold)',
+              color: 'var(--text-primary)',
+              marginBottom: 8,
+            }}
+          >
             {inv.patient_name || '—'}
           </div>
           {inv.notes && (
             <>
               <div className="section-label mt-4 mb-2">NOTAS</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{inv.notes}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                {inv.notes}
+              </div>
             </>
           )}
         </div>
@@ -102,23 +111,27 @@ export default function ClinicInvoiceDetailPage() {
                     <td className="data-td">{item.description || '—'}</td>
                     <td
                       className="data-td"
-                      style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: '"JetBrains Mono",monospace',
+                        fontSize: 'var(--text-xs)',
+                      }}
                     >
                       {formatEUR(Number(item.amount || 0))}
                     </td>
                   </tr>
                 ))}
                 <tr>
-                  <td className="data-td" style={{ fontWeight: 700 }}>
+                  <td className="data-td" style={{ fontWeight: 'var(--weight-bold)' }}>
                     Total
                   </td>
                   <td
                     className="data-td"
                     style={{
                       textAlign: 'right',
-                      fontWeight: 700,
+                      fontWeight: 'var(--weight-bold)',
                       fontFamily: '"JetBrains Mono",monospace',
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                     }}
                   >
                     {formatEUR(Number(inv.amount))}
@@ -136,8 +149,12 @@ export default function ClinicInvoiceDetailPage() {
 function Row({ label, value, color, bold }: { label: string; value: ReactNode; color?: string; bold?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || 'var(--text-primary)' }}>{value}</span>
+      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-medium)' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 'var(--text-sm)', fontWeight: bold ? 700 : 500, color: color || 'var(--text-primary)' }}>
+        {value}
+      </span>
     </div>
   );
 }

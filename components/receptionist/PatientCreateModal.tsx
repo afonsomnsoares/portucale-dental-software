@@ -42,9 +42,9 @@ export default function PatientCreateModal({
             color: 'var(--urgency-critical)',
             borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
-            fontSize: 12,
+            fontSize: 'var(--text-xs)',
             marginBottom: 12,
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {error}
@@ -98,8 +98,15 @@ export default function PatientCreateModal({
       </FormField>
 
       {schemaFields.length > 0 && (
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--bg-sunken)' }}>
-          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 10 }}>
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--bg-sunken)' }}>
+          <div
+            style={{
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--weight-bold)',
+              color: 'var(--text-primary)',
+              marginBottom: 12,
+            }}
+          >
             Campos adicionais
           </div>
           <div className="grid-pair" style={{ gap: 12 }}>
@@ -113,7 +120,7 @@ export default function PatientCreateModal({
               </FormField>
             ))}
           </div>
-          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+          <div style={{ marginTop: 12, fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
             Configurado pelo administrador nos campos de schema.
           </div>
         </div>

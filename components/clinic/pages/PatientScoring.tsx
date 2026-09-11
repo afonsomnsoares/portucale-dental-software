@@ -53,14 +53,23 @@ function Medidor({ s, invertido = false }: { s: Score; invertido?: boolean }) {
   const cor = (invertido ? TOM_INVERSO : TOM)[s.band];
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span style={{ fontSize: 19, fontWeight: 700, color: cor, fontVariantNumeric: 'tabular-nums' }}>{s.score}</span>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>/100</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <span
+          style={{
+            fontSize: 'var(--text-lg)',
+            fontWeight: 'var(--weight-bold)',
+            color: cor,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {s.score}
+        </span>
+        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>/100</span>
       </div>
       <div style={{ height: 3, background: 'var(--bg-sunken)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
         <div style={{ width: `${s.score}%`, height: '100%', background: cor }} />
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 5, lineHeight: 1.45 }}>
+      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
         {s.suppressed ? s.suppressed : s.drivers.length ? s.drivers.map((d) => d.label).join(' · ') : 'Sem sinal forte'}
       </div>
     </div>
@@ -102,7 +111,7 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -116,7 +125,9 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
       ) : (
         <>
           {ordem === 'priority' && (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', maxWidth: '46rem' }}>
+            <p
+              style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: '0 0 12px', maxWidth: '46rem' }}
+            >
               A ordem é risco de abandono × probabilidade de marcar. Quem tem risco altíssimo e nenhuma probabilidade de
               voltar não está no topo de propósito: é tempo de telefone gasto sem retorno.
             </p>
@@ -138,11 +149,11 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
                       style={{
                         textAlign: 'left',
                         padding: '9px 14px',
-                        fontSize: 10.5,
+                        fontSize: 'var(--text-2xs)',
                         letterSpacing: '.08em',
                         textTransform: 'uppercase',
                         color: 'var(--text-muted)',
-                        fontWeight: 500,
+                        fontWeight: 'var(--weight-medium)',
                         borderBottom: '1px solid var(--border-strong)',
                         whiteSpace: 'nowrap',
                       }}
@@ -156,8 +167,10 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
                 {ordenados.map((p) => (
                   <tr key={p.patientId} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                     <td style={{ padding: '11px 14px', verticalAlign: 'top', minWidth: 170 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
-                      {p.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.phone}</div>}
+                      <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{p.name}</div>
+                      {p.phone && (
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{p.phone}</div>
+                      )}
                     </td>
                     <td style={{ padding: '11px 14px', verticalAlign: 'top', minWidth: 175 }}>
                       <Medidor s={p.scores.engagement} />

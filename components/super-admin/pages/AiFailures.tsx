@@ -82,23 +82,25 @@ export default function AiFailures() {
                 <Badge label="FALHOU" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />
                 <span
                   style={{
-                    fontSize: 13,
-                    fontWeight: 600,
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 'var(--weight-semibold)',
                     color: 'var(--text-primary)',
                     fontFamily: '"JetBrains Mono",monospace',
                   }}
                 >
                   {r.job_name}
                 </span>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{r.tenant_name || 'Plataforma'}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  {r.tenant_name || 'Plataforma'}
+                </span>
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {r.started_at ? new Date(r.started_at).toLocaleString('pt-PT') : '—'} · #{r.id}
                 </span>
               </div>
               {r.error && (
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 'var(--text-2xs)',
                     fontFamily: '"JetBrains Mono",monospace',
                     color: 'var(--urgency-critical)',
                     background: 'var(--urgency-critical-bg)',
@@ -131,17 +133,23 @@ export default function AiFailures() {
                 borderBottom: '1px solid var(--bg-page)',
               }}
             >
-              <span style={{ fontSize: 13, fontFamily: '"JetBrains Mono",monospace', color: 'var(--text-primary)' }}>
+              <span
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: '"JetBrains Mono",monospace',
+                  color: 'var(--text-primary)',
+                }}
+              >
                 {m.agent}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 <strong style={{ color: 'var(--urgency-critical)' }}>{m.failed}</strong> de {m.calls} chamadas ·{' '}
                 {Math.round((m.failed / m.calls) * 100)}%
               </span>
             </div>
           ))
         )}
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '14px 0 0' }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '14px 0 0' }}>
           Estas falhas não aparecem em lado nenhum para a clínica: quando o modelo não responde, o agente cai para a
           regra fixa e o trabalho é feito à mesma. É por isso que uma taxa a subir aqui é o aviso antecipado — a
           qualidade das decisões degrada-se sem nada avariar.

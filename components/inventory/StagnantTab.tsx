@@ -52,23 +52,27 @@ export default function StagnantTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 21, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{totais?.count ?? 0}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>itens sem rotação</div>
+          <div
+            style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', fontVariantNumeric: 'tabular-nums' }}
+          >
+            {totais?.count ?? 0}
+          </div>
+          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>itens sem rotação</div>
         </div>
         <div>
           <div
             style={{
-              fontSize: 21,
-              fontWeight: 700,
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-bold)',
               color: 'var(--urgency-soon)',
               fontVariantNumeric: 'tabular-nums',
             }}
           >
             {formatEUR(totais?.tiedUpValue ?? 0)}
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
             de capital imobilizado
             {totais?.itemsWithoutCost
               ? ` · ${totais.itemsWithoutCost} ${totais.itemsWithoutCost === 1 ? 'item sem preço' : 'itens sem preço'}, fora da conta`
@@ -94,11 +98,11 @@ export default function StagnantTab() {
                   style={{
                     textAlign: i >= 2 ? 'right' : 'left',
                     padding: '9px 14px',
-                    fontSize: 10.5,
+                    fontSize: 'var(--text-2xs)',
                     letterSpacing: '.08em',
                     textTransform: 'uppercase',
                     color: 'var(--text-muted)',
-                    fontWeight: 500,
+                    fontWeight: 'var(--weight-medium)',
                     borderBottom: '1px solid var(--border-strong)',
                     whiteSpace: 'nowrap',
                   }}
@@ -111,14 +115,23 @@ export default function StagnantTab() {
           <tbody>
             {items.map((i) => (
               <tr key={i.itemId} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600 }}>{i.item}</td>
-                <td style={{ padding: '10px 14px', fontSize: 12, color: TOM[i.status], fontWeight: 600 }}>
+                <td style={{ padding: '10px 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}>
+                  {i.item}
+                </td>
+                <td
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: 'var(--text-xs)',
+                    color: TOM[i.status],
+                    fontWeight: 'var(--weight-semibold)',
+                  }}
+                >
                   {LABELS[i.status] || i.status}
                 </td>
                 <td
                   style={{
                     padding: '10px 14px',
-                    fontSize: 12.5,
+                    fontSize: 'var(--text-xs)',
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
                   }}
@@ -128,7 +141,7 @@ export default function StagnantTab() {
                 <td
                   style={{
                     padding: '10px 14px',
-                    fontSize: 12.5,
+                    fontSize: 'var(--text-xs)',
                     textAlign: 'right',
                     color: 'var(--text-muted)',
                     whiteSpace: 'nowrap',
@@ -139,7 +152,7 @@ export default function StagnantTab() {
                 <td
                   style={{
                     padding: '10px 14px',
-                    fontSize: 12.5,
+                    fontSize: 'var(--text-xs)',
                     textAlign: 'right',
                     color: i.status === 'expiring_dead' ? 'var(--urgency-critical)' : 'var(--text-muted)',
                     whiteSpace: 'nowrap',
@@ -150,7 +163,7 @@ export default function StagnantTab() {
                 <td
                   style={{
                     padding: '10px 14px',
-                    fontSize: 12.5,
+                    fontSize: 'var(--text-xs)',
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
                   }}

@@ -19,7 +19,9 @@ export default function PatientEditExtraFieldsModal({
   return (
     <Modal title="Editar campos adicionais" onClose={onClose} width={560}>
       {schemaFields.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sem campos adicionais configurados.</div>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+          Sem campos adicionais configurados.
+        </div>
       ) : (
         <div className="grid-pair" style={{ gap: 12 }}>
           {schemaFields.map((f) => (

@@ -142,7 +142,7 @@ export default function PermissionsMatrix() {
             border: '1px solid var(--urgency-critical-border)',
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -174,9 +174,9 @@ export default function PermissionsMatrix() {
                       className="data-td"
                       style={{
                         fontFamily: '"JetBrains Mono",monospace',
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                         color: 'var(--text-primary)',
-                        fontWeight: 700,
+                        fontWeight: 'var(--weight-bold)',
                       }}
                     >
                       {action}

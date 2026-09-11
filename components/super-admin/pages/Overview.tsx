@@ -99,8 +99,8 @@ export default function AdminOverview() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: 13,
-                        fontWeight: 500,
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 'var(--weight-medium)',
                         color: 'var(--text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -109,13 +109,13 @@ export default function AdminOverview() {
                     >
                       {l.resource}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                       {l.user_name} · {l.clinic} · {new Date(l.created_at).toLocaleTimeString('pt-PT')}
                     </div>
                   </div>
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: 'var(--text-2xs)',
                       color: 'var(--text-muted)',
                       fontFamily: '"JetBrains Mono",monospace',
                       flexShrink: 0,
@@ -142,10 +142,16 @@ export default function AdminOverview() {
               }}
             >
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 'var(--weight-medium)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {t.city?.split(',')[0]}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {Number(t.patients || 0).toLocaleString('pt-PT')} doentes
                 </div>
               </div>

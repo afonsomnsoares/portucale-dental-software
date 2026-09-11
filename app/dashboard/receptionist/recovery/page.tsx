@@ -130,7 +130,7 @@ export default function RecoveryReceptionistPage() {
             border: '1px solid var(--urgency-critical-border)',
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -166,7 +166,7 @@ export default function RecoveryReceptionistPage() {
 
           <div className="card p-4 mb-4 flex items-center gap-4 flex-wrap">
             <span className="section-label">Receita potencial total</span>
-            <strong style={{ fontSize: 20, color: 'var(--urgency-ok)' }}>{formatEUR(data.total)}</strong>
+            <strong style={{ fontSize: 'var(--text-lg)', color: 'var(--urgency-ok)' }}>{formatEUR(data.total)}</strong>
             <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {rows.length} contactos na lista
             </span>
@@ -205,7 +205,7 @@ export default function RecoveryReceptionistPage() {
                   <tbody>
                     {filtered.map((r) => (
                       <tr key={rowKey(r)} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
+                        <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {r.patient_name}
                         </td>
                         <td className="data-td">
@@ -224,7 +224,7 @@ export default function RecoveryReceptionistPage() {
                               style={{
                                 background: 'var(--urgency-critical-bg)',
                                 color: 'var(--urgency-critical)',
-                                fontSize: 10,
+                                fontSize: 'var(--text-2xs)',
                               }}
                             >
                               atrasado
@@ -236,7 +236,7 @@ export default function RecoveryReceptionistPage() {
                             {r.categoryLabel}
                           </span>
                         </td>
-                        <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>
+                        <td className="data-td" style={{ textAlign: 'right', fontWeight: 'var(--weight-bold)' }}>
                           {formatEUR(r.value)}
                         </td>
                         <td className="data-td" style={{ textAlign: 'right' }}>
@@ -252,7 +252,10 @@ export default function RecoveryReceptionistPage() {
                             <div className="flex items-center justify-end gap-2">
                               {r.patient_id &&
                                 (tasksCreated.has(rowKey(r)) ? (
-                                  <span className="text-xs" style={{ color: 'var(--urgency-ok)', fontWeight: 700 }}>
+                                  <span
+                                    className="text-xs"
+                                    style={{ color: 'var(--urgency-ok)', fontWeight: 'var(--weight-bold)' }}
+                                  >
                                     Tarefa criada
                                   </span>
                                 ) : (

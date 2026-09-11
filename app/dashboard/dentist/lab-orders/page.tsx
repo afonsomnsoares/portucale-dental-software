@@ -184,8 +184,16 @@ export default function LabOrdersPage() {
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -207,18 +215,21 @@ export default function LabOrdersPage() {
                   cols={cols}
                   rows={orders.map((o) => (
                     <tr key={o.id}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {o.lab_name}
                       </td>
                       <td className="data-td">{CASE_TYPE_LABELS[o.case_type] || o.case_type}</td>
                       <td className="data-td">{renderStatusBadge(o.status)}</td>
                       <td className="data-td">{o.due_date ? o.due_date.slice(0, 10) : '—'}</td>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {formatEUR(Number(o.fee || 0))}
                       </td>
                       <td className="data-td">
                         {o.status !== 'received' && (
-                          <GhostBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => advanceStatus(o)}>
+                          <GhostBtn
+                            style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
+                            onClick={() => advanceStatus(o)}
+                          >
                             {o.status === 'ordered'
                               ? 'Marcar enviado'
                               : o.status === 'sent'

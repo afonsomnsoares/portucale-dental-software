@@ -134,8 +134,16 @@ export default function ConsentFormsPage() {
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -157,7 +165,7 @@ export default function ConsentFormsPage() {
                   cols={cols}
                   rows={forms.map((f) => (
                     <tr key={f.id}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {f.procedure_name}
                       </td>
                       <td className="data-td">{f.signed_by}</td>
@@ -165,7 +173,10 @@ export default function ConsentFormsPage() {
                         <Badge s="signed" />
                       </td>
                       <td className="data-td">
-                        <GhostBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => setDetailModal(f)}>
+                        <GhostBtn
+                          style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
+                          onClick={() => setDetailModal(f)}
+                        >
                           Ver
                         </GhostBtn>
                       </td>
@@ -223,23 +234,35 @@ export default function ConsentFormsPage() {
 
       {detailModal && (
         <Modal title={detailModal.procedure_name} onClose={() => setDetailModal(null)} width={540}>
-          <div style={{ display: 'grid', gap: 14 }}>
+          <div style={{ display: 'grid', gap: 12 }}>
             {detailModal.description && (
               <div>
                 <div className="section-label mb-1">Descrição</div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{detailModal.description}</p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{detailModal.description}</p>
               </div>
             )}
             <div className="grid-pair" style={{ gap: 12 }}>
               <div>
                 <div className="section-label mb-1">Assinado por</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-semibold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {detailModal.signed_by}
                 </div>
               </div>
               <div>
                 <div className="section-label mb-1">Data da assinatura</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-semibold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
                   {detailModal.created_at ? new Date(detailModal.created_at).toLocaleDateString('pt-PT') : '—'}
                 </div>
               </div>
@@ -251,7 +274,12 @@ export default function ConsentFormsPage() {
                   href={detailModal.signature_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--accent)',
+                    fontWeight: 'var(--weight-semibold)',
+                    textDecoration: 'none',
+                  }}
                 >
                   Abrir PDF da assinatura ↗
                 </a>

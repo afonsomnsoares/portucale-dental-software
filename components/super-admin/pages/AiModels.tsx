@@ -23,11 +23,11 @@ export default function AiModels({ initialData }: { initialData?: AiUsage } = {}
 
       <div className="card p-5" style={{ marginBottom: 16 }}>
         <div className="section-label mb-3">MODELO EM VIGOR</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <span
             style={{
-              fontSize: 18,
-              fontWeight: 700,
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-bold)',
               color: 'var(--text-primary)',
               fontFamily: '"JetBrains Mono",monospace',
             }}
@@ -37,12 +37,12 @@ export default function AiModels({ initialData }: { initialData?: AiUsage } = {}
           <Badge label="TODOS OS AGENTES" bg="var(--cat-purple-bg)" color="var(--cat-purple)" />
         </div>
         {d.pricePerMTok[d.configuredModel] && (
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             {d.pricePerMTok[d.configuredModel].input} € por milhão de tokens de entrada ·{' '}
             {d.pricePerMTok[d.configuredModel].output} € por milhão de saída
           </div>
         )}
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '12px 0 0' }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '12px 0 0' }}>
           Definido em <code>AGENT_MODEL</code> (lib/agents/aiClient.ts), igual para toda a rede. As chamadas dos agentes
           correm em segundo plano, uma por clínica por passagem do cron, e são decisões estruturadas e limitadas — o
           custo por corrida pesa mais aqui do que a capacidade bruta.
@@ -58,7 +58,15 @@ export default function AiModels({ initialData }: { initialData?: AiUsage } = {}
             cols={['Modelo', 'Chamadas', 'Última utilização', '']}
             rows={d.byModel.map((m) => (
               <tr key={m.model}>
-                <td style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12, fontWeight: 600 }}>{m.model}</td>
+                <td
+                  style={{
+                    fontFamily: '"JetBrains Mono",monospace',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--weight-semibold)',
+                  }}
+                >
+                  {m.model}
+                </td>
                 <td>{m.calls.toLocaleString('pt-PT')}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>
                   {m.last_at ? new Date(m.last_at).toLocaleString('pt-PT') : '—'}
@@ -85,8 +93,8 @@ export default function AiModels({ initialData }: { initialData?: AiUsage } = {}
             cols={['Agente', 'Modelo', 'Chamadas', 'Falhas', 'Duração média']}
             rows={d.byAgent.map((a) => (
               <tr key={`${a.agent}${a.model}`}>
-                <td style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>{a.agent}</td>
-                <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{a.model}</td>
+                <td style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 'var(--text-xs)' }}>{a.agent}</td>
+                <td style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}>{a.model}</td>
                 <td>{a.calls}</td>
                 <td style={{ color: a.failed ? 'var(--urgency-critical)' : 'var(--text-secondary)' }}>{a.failed}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{a.avg_ms ? `${a.avg_ms} ms` : '—'}</td>

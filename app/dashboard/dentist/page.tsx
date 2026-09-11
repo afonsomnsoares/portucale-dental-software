@@ -50,14 +50,14 @@ export default function DentistDashboard() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         />
       </PageHeader>
       {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
       {apptsQuery.error ? (
         <AlertBanner type="danger">Não foi possível ler a agenda de hoje. {apptsQuery.error.message}</AlertBanner>
       ) : null}
-      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
         <MetricCard label="CONSULTAS DE HOJE" value={appts.length} sub="marcadas" color="var(--accent)" />
         <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
         <MetricCard
@@ -75,7 +75,7 @@ export default function DentistDashboard() {
             border: '1px solid var(--urgency-ok-border)',
             borderRadius: 'var(--radius-control)',
             padding: '12px 18px',
-            marginBottom: 18,
+            marginBottom: 20,
             display: 'flex',
             gap: 12,
             alignItems: 'center',
@@ -83,7 +83,7 @@ export default function DentistDashboard() {
           }}
         >
           <Check size={14} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
+          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-ok)' }}>
             Patients ready for dismissal:
           </span>
           {ready.map((a) => (
@@ -93,8 +93,8 @@ export default function DentistDashboard() {
                 background: 'white',
                 borderRadius: 'var(--radius-control)',
                 padding: '4px 12px',
-                fontSize: 12,
-                fontWeight: 600,
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
                 color: 'var(--text-primary)',
               }}
             >

@@ -32,7 +32,7 @@ export default function WaitlistEntriesTable({
           <tbody>
             {entries.map((w) => (
               <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                <td className="data-td" style={{ fontWeight: 600 }}>
+                <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                   {w.patient_name}
                 </td>
                 <td className="data-td">{w.phone ? <a href={`tel:${w.phone}`}>{formatPhonePT(w.phone)}</a> : '—'}</td>

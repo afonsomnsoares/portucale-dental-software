@@ -64,7 +64,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
             <option key={a}>{a}</option>
           ))}
         </select>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
           {logs.length} {logs.length === 1 ? 'entrada' : 'entradas'}
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                     border: 'none',
                     font: 'inherit',
                     textAlign: 'left',
-                    gap: 14,
+                    gap: 12,
                     alignItems: 'center',
                     padding: '13px 20px',
                     cursor: 'pointer',
@@ -107,7 +107,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                 >
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: 'var(--text-2xs)',
                       color: 'var(--text-muted)',
                       whiteSpace: 'nowrap',
                       minWidth: 148,
@@ -120,8 +120,8 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                   <div
                     style={{
                       flex: 1,
-                      fontSize: 13,
-                      fontWeight: 500,
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-medium)',
                       color: 'var(--text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -131,13 +131,17 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                     {l.resource}
                   </div>
                   <Badge label={l.user_role} bg={rm.bg} color={rm.color} />
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', minWidth: 100 }}>{l.user_name}</div>
+                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', minWidth: 100 }}>
+                    {l.user_name}
+                  </div>
                   {scope === 'platform' && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 72 }}>{l.clinic}</div>
+                    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', minWidth: 72 }}>
+                      {l.clinic}
+                    </div>
                   )}
                   <div
                     style={{
-                      fontSize: 10,
+                      fontSize: 'var(--text-2xs)',
                       color: 'var(--text-muted)',
                       fontFamily: '"JetBrains Mono",monospace',
                       minWidth: 90,
@@ -145,7 +149,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                   >
                     #{l.hash}
                   </div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{open ? '▲' : '▼'}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{open ? '▲' : '▼'}</div>
                 </button>
                 {open && (
                   <div
@@ -165,7 +169,13 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                     ).map(([lbl, val, col]) => (
                       <div key={lbl}>
                         <div
-                          style={{ fontSize: 10, fontWeight: 700, color: col, letterSpacing: '.1em', marginBottom: 8 }}
+                          style={{
+                            fontSize: 'var(--text-2xs)',
+                            fontWeight: 'var(--weight-bold)',
+                            color: col,
+                            letterSpacing: '.1em',
+                            marginBottom: 8,
+                          }}
                         >
                           {lbl}
                         </div>
@@ -175,7 +185,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                             border: '1px solid var(--border-subtle)',
                             borderRadius: 'var(--radius-control)',
                             padding: '12px 14px',
-                            fontSize: 12,
+                            fontSize: 'var(--text-xs)',
                             fontFamily: '"JetBrains Mono",monospace',
                             color: 'var(--text-primary)',
                             minHeight: 44,

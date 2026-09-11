@@ -107,7 +107,7 @@ export default function Cancellations() {
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -120,7 +120,7 @@ export default function Cancellations() {
         <Empty message="Nenhum cancelamento no período. É uma boa notícia." />
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 22, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
             {[
               { n: rows.length, t: 'cancelamentos' },
               { n: resumo.curtos, t: 'com menos de 24h de aviso', cor: 'var(--urgency-critical)' },
@@ -130,15 +130,15 @@ export default function Cancellations() {
               <div key={m.t}>
                 <div
                   style={{
-                    fontSize: 22,
-                    fontWeight: 700,
+                    fontSize: 'var(--text-xl)',
+                    fontWeight: 'var(--weight-bold)',
                     color: m.cor || 'var(--text-primary)',
                     fontVariantNumeric: 'tabular-nums',
                   }}
                 >
                   {m.n}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{m.t}</div>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{m.t}</div>
               </div>
             ))}
           </div>
@@ -160,11 +160,11 @@ export default function Cancellations() {
                       style={{
                         textAlign: 'left',
                         padding: '9px 14px',
-                        fontSize: 10.5,
+                        fontSize: 'var(--text-2xs)',
                         letterSpacing: '.08em',
                         textTransform: 'uppercase',
                         color: 'var(--text-muted)',
-                        fontWeight: 500,
+                        fontWeight: 'var(--weight-medium)',
                         borderBottom: '1px solid var(--border-strong)',
                         whiteSpace: 'nowrap',
                       }}
@@ -179,30 +179,36 @@ export default function Cancellations() {
                   const f = faixa(antecedenciaHoras(c));
                   return (
                     <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                      <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600 }}>
+                      <td
+                        style={{
+                          padding: '10px 14px',
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 'var(--weight-semibold)',
+                        }}
+                      >
                         {c.patient_name || 'Doente removido'}
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 12.5, whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
                         {dataHora(c)}
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                           {c.type || 'Consulta'} · {c.duration} min
                         </div>
                       </td>
                       <td
                         style={{
                           padding: '10px 14px',
-                          fontSize: 12.5,
+                          fontSize: 'var(--text-xs)',
                           color: f.color,
-                          fontWeight: 600,
+                          fontWeight: 'var(--weight-semibold)',
                           whiteSpace: 'nowrap',
                         }}
                       >
                         {f.label}
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                      <td style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                         {c.dentist_name || '—'}
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 12.5, whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
                         {c.rebooked ? (
                           <span style={{ color: 'var(--urgency-ok)' }}>Sim</span>
                         ) : (

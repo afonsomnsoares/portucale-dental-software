@@ -39,8 +39,8 @@ export default function NotInstrumented({
             borderRadius: 'var(--radius-pill)',
             background: 'var(--urgency-soon-bg)',
             color: 'var(--urgency-soon)',
-            fontSize: 11,
-            fontWeight: 700,
+            fontSize: 'var(--text-2xs)',
+            fontWeight: 'var(--weight-bold)',
             letterSpacing: '0.04em',
             marginBottom: 16,
           }}
@@ -51,12 +51,14 @@ export default function NotInstrumented({
           SEM INSTRUMENTAÇÃO
         </div>
 
-        <p style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6, margin: '0 0 20px' }}>{purpose}</p>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', lineHeight: 1.55, margin: '0 0 20px' }}>
+          {purpose}
+        </p>
 
         <div className="section-label mb-2">O QUE FALTA PARA ESTA PÁGINA TER DADOS</div>
-        <ul style={{ margin: '0 0 4px', paddingLeft: 18 }}>
+        <ul style={{ margin: '0 0 4px', paddingLeft: 20 }}>
           {needs.map((n) => (
-            <li key={n} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+            <li key={n} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
               {n}
             </li>
           ))}
@@ -65,11 +67,11 @@ export default function NotInstrumented({
         {note && (
           <p
             style={{
-              fontSize: 12,
+              fontSize: 'var(--text-xs)',
               color: 'var(--text-secondary)',
-              lineHeight: 1.6,
+              lineHeight: 1.55,
               margin: '18px 0 0',
-              paddingTop: 14,
+              paddingTop: 12,
               borderTop: '1px solid var(--bg-sunken)',
             }}
           >

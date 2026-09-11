@@ -174,7 +174,7 @@ export default function InvoicesPage() {
               onClick={() => setStatus(s.value)}
               style={{
                 padding: '6px 14px',
-                fontSize: 12,
+                fontSize: 'var(--text-xs)',
                 fontWeight: status === s.value ? 700 : 500,
                 border: '1px solid',
                 borderColor: status === s.value ? 'var(--accent)' : 'var(--border-subtle)',
@@ -237,16 +237,16 @@ export default function InvoicesPage() {
                       href={`/dashboard/receptionist/invoices/${inv.id}`}
                       style={{
                         color: 'var(--accent)',
-                        fontWeight: 600,
+                        fontWeight: 'var(--weight-semibold)',
                         textDecoration: 'none',
                         fontFamily: '"JetBrains Mono",monospace',
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                       }}
                     >
                       {fmtId(inv.id)}
                     </Link>
                   </td>
-                  <td className="data-td" style={{ fontWeight: 600 }}>
+                  <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                     {inv.patient_name || '—'}
                   </td>
                   <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
@@ -257,7 +257,7 @@ export default function InvoicesPage() {
                   </td>
                   <td
                     className="data-td"
-                    style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                    style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 'var(--text-xs)' }}
                   >
                     {invTotal(inv)}
                   </td>
@@ -266,7 +266,7 @@ export default function InvoicesPage() {
                     style={{
                       textAlign: 'right',
                       fontFamily: '"JetBrains Mono",monospace',
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       color: Number(inv.paid) > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)',
                     }}
                   >
@@ -277,7 +277,7 @@ export default function InvoicesPage() {
                     style={{
                       textAlign: 'right',
                       fontFamily: '"JetBrains Mono",monospace',
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       color: Number(inv.amount) > Number(inv.paid) ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
                     }}
                   >
@@ -286,7 +286,10 @@ export default function InvoicesPage() {
                   <td className="data-td">
                     <Badge s={inv.status} />
                   </td>
-                  <td className="data-td" style={{ textAlign: 'right', color: 'var(--text-secondary)', fontSize: 12 }}>
+                  <td
+                    className="data-td"
+                    style={{ textAlign: 'right', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}
+                  >
                     {inv.method}
                   </td>
                 </tr>
@@ -357,7 +360,12 @@ export default function InvoicesPage() {
               className="input"
               value={form.items}
               onChange={(e) => setForm((p) => ({ ...p, items: e.target.value }))}
-              style={{ resize: 'vertical', minHeight: 60, fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+              style={{
+                resize: 'vertical',
+                minHeight: 60,
+                fontFamily: '"JetBrains Mono",monospace',
+                fontSize: 'var(--text-xs)',
+              }}
               placeholder="Coroa 14 - 1800&#x0a;Destartarização - 280"
             />
           </FormField>

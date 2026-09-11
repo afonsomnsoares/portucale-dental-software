@@ -90,12 +90,12 @@ export default function CommsSettings() {
           background: 'var(--bg-sunken)',
           borderRadius: 'var(--radius-card)',
           padding: '12px 16px',
-          marginBottom: 18,
-          fontSize: 12.5,
-          lineHeight: 1.6,
+          marginBottom: 20,
+          fontSize: 'var(--text-xs)',
+          lineHeight: 1.55,
         }}
       >
-        <div style={{ fontWeight: 700, marginBottom: 4 }}>Duas coisas não dependem desta página</div>
+        <div style={{ fontWeight: 'var(--weight-bold)', marginBottom: 4 }}>Duas coisas não dependem desta página</div>
         Um pedido para não voltar a ser contactado é <b>sempre</b> processado, em qualquer degrau — é retirada de
         consentimento, não uma funcionalidade. E qualquer assunto clínico (dor, inchaço, sangramento, febre, um dente
         partido) <b>escala sempre</b> para uma pessoa, sem resposta automática.
@@ -131,9 +131,11 @@ export default function CommsSettings() {
                     background: escolhido ? 'var(--accent)' : 'transparent',
                   }}
                 />
-                <span style={{ fontWeight: 600, fontSize: 13 }}>{n.label}</span>
+                <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{n.label}</span>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 5, paddingLeft: 17 }}>
+              <div
+                style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 4, paddingLeft: 17 }}
+              >
                 {n.note}
               </div>
             </button>
@@ -142,7 +144,7 @@ export default function CommsSettings() {
       </div>
 
       {/* ── Os factos que a IA pode citar ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <FormField
           label="Horário de funcionamento"
           hint="Citado tal e qual numa resposta automática. Se estiver vazio, o sistema não responde a «a que horas abrem?» — prefere não saber a inventar."
@@ -196,7 +198,7 @@ export default function CommsSettings() {
             color: 'var(--urgency-soon)',
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
-            fontSize: 12.5,
+            fontSize: 'var(--text-xs)',
           }}
         >
           Este degrau responde a perguntas de facto — precisa do horário e da morada preenchidos para ter o que
@@ -204,10 +206,12 @@ export default function CommsSettings() {
         </div>
       )}
 
-      {erro && <div style={{ marginTop: 14, color: 'var(--urgency-critical)', fontSize: 13 }}>{erro}</div>}
-      {ok && <div style={{ marginTop: 14, color: 'var(--urgency-ok)', fontSize: 13 }}>{ok}</div>}
+      {erro && (
+        <div style={{ marginTop: 12, color: 'var(--urgency-critical)', fontSize: 'var(--text-sm)' }}>{erro}</div>
+      )}
+      {ok && <div style={{ marginTop: 12, color: 'var(--urgency-ok)', fontSize: 'var(--text-sm)' }}>{ok}</div>}
 
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: 20 }}>
         <PrimaryBtn onClick={gravar} disabled={aGravar || faltamFactos}>
           {aGravar ? 'A guardar…' : 'Guardar'}
         </PrimaryBtn>

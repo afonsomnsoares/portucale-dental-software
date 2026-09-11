@@ -118,7 +118,7 @@ export default function ReceptionTreatmentsPage() {
       {treatmentsQuery.error ? (
         <AlertBanner type="danger">Não foi possível ler os tratamentos. {treatmentsQuery.error.message}</AlertBanner>
       ) : null}
-      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
         <MetricCard label="VALOR TOTAL" value={`$${totalFee.toLocaleString()}`} color="var(--accent)" />
         <MetricCard label="PROPOSTOS" value={proposed} sub="à espera de aceitação" color="var(--urgency-soon)" />
         <MetricCard label="ACEITES" value={accepted} sub="marcadas" color="var(--cat-teal)" />
@@ -126,7 +126,7 @@ export default function ReceptionTreatmentsPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <Sel value={selPat} onChange={(e) => setSelPat(e.target.value)} style={{ maxWidth: 220 }}>
           <option value="all">Todos os doentes</option>
           {ptOptions.map((p) => (
@@ -158,7 +158,9 @@ export default function ReceptionTreatmentsPage() {
             Limpar filtros
           </GhostBtn>
         )}
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>{visible.length} tratamentos</div>
+        <div style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+          {visible.length} tratamentos
+        </div>
       </div>
 
       <div className="card" style={{ padding: 0 }}>

@@ -45,14 +45,14 @@ export default function FinanceDashboard() {
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="input"
-          style={{ width: 140, fontSize: 12, padding: '6px 10px' }}
+          style={{ width: 140, fontSize: 'var(--text-xs)', padding: '6px 10px' }}
         />
         <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="input"
-          style={{ width: 140, fontSize: 12, padding: '6px 10px' }}
+          style={{ width: 140, fontSize: 'var(--text-xs)', padding: '6px 10px' }}
         />
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
@@ -65,7 +65,7 @@ export default function FinanceDashboard() {
         </div>
       ) : (
         <>
-          <div className="grid-cards" style={{ gap: 14, marginBottom: 16 }}>
+          <div className="grid-cards" style={{ gap: 12, marginBottom: 16 }}>
             <MetricCard
               label="RECEITA TOTAL"
               value={fmt(data.totals?.total_paid)}
@@ -100,7 +100,7 @@ export default function FinanceDashboard() {
             <div className="card p-5">
               <div className="section-label mb-3">Faturas por estado</div>
               {!outstandingByStatus.length ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Sem dados</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {outstandingByStatus.map((s) => (
@@ -117,15 +117,15 @@ export default function FinanceDashboard() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Badge s={s.status} />
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                           {s.count} fatura{s.count !== 1 ? 's' : ''}
                         </span>
                       </div>
                       <span
                         style={{
                           fontFamily: '"JetBrains Mono",monospace',
-                          fontSize: 13,
-                          fontWeight: 700,
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 'var(--weight-bold)',
                           color: 'var(--text-primary)',
                         }}
                       >
@@ -140,7 +140,7 @@ export default function FinanceDashboard() {
             <div className="card p-5">
               <div className="section-label mb-3">Receita por dentista</div>
               {!data.byDentist?.length ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Sem dados</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {data.byDentist.map((d) => (
@@ -156,10 +156,16 @@ export default function FinanceDashboard() {
                       }}
                     >
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <div
+                          style={{
+                            fontSize: 'var(--text-sm)',
+                            fontWeight: 'var(--weight-semibold)',
+                            color: 'var(--text-primary)',
+                          }}
+                        >
                           {d.dentist_name}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                           {d.invoice_count} fatura{d.invoice_count !== 1 ? 's' : ''}
                         </div>
                       </div>
@@ -167,15 +173,19 @@ export default function FinanceDashboard() {
                         <div
                           style={{
                             fontFamily: '"JetBrains Mono",monospace',
-                            fontSize: 13,
-                            fontWeight: 700,
+                            fontSize: 'var(--text-sm)',
+                            fontWeight: 'var(--weight-bold)',
                             color: 'var(--text-primary)',
                           }}
                         >
                           {fmt(d.total_amount)}
                         </div>
                         <div
-                          style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 11, color: 'var(--urgency-ok)' }}
+                          style={{
+                            fontFamily: '"JetBrains Mono",monospace',
+                            fontSize: 'var(--text-2xs)',
+                            color: 'var(--urgency-ok)',
+                          }}
                         >
                           {fmt(d.total_paid)} recolhido
                         </div>
@@ -190,7 +200,9 @@ export default function FinanceDashboard() {
           <div className="card mt-4 p-5">
             <div className="section-label mb-3">Receita diária</div>
             {!data.dailyRevenue?.length ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem dados de receita para este período</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+                Sem dados de receita para este período
+              </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <div style={{ display: 'flex', gap: 4, minWidth: data.dailyRevenue.length * 40 }}>
@@ -222,7 +234,7 @@ export default function FinanceDashboard() {
                         />
                         <div
                           style={{
-                            fontSize: 9,
+                            fontSize: 'var(--text-2xs)',
                             color: 'var(--text-muted)',
                             fontFamily: '"JetBrains Mono",monospace',
                             transform: 'rotate(-45deg)',
@@ -242,7 +254,7 @@ export default function FinanceDashboard() {
           <div className="card mt-4 p-5">
             <div className="section-label mb-3">Pagamentos recentes</div>
             {!data.recentPayments?.length ? (
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Sem pagamentos ainda</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Sem pagamentos ainda</div>
             ) : (
               <div className="table-scroll">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -261,15 +273,22 @@ export default function FinanceDashboard() {
                   <tbody>
                     {data.recentPayments.map((p) => (
                       <tr key={p.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                        <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
+                        <td
+                          className="data-td"
+                          style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 'var(--text-xs)' }}
+                        >
                           <Link
                             href={`/dashboard/receptionist/invoices/${p.id}`}
-                            style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                            style={{
+                              color: 'var(--accent)',
+                              fontWeight: 'var(--weight-semibold)',
+                              textDecoration: 'none',
+                            }}
                           >
                             #{p.id.slice(0, 8).toUpperCase()}
                           </Link>
                         </td>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
+                        <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {p.patient_name}
                         </td>
                         <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
@@ -280,13 +299,13 @@ export default function FinanceDashboard() {
                           style={{
                             textAlign: 'right',
                             fontFamily: '"JetBrains Mono",monospace',
-                            fontSize: 12,
+                            fontSize: 'var(--text-xs)',
                             color: 'var(--urgency-ok)',
                           }}
                         >
                           ${Number(p.paid).toLocaleString()}
                         </td>
-                        <td className="data-td" style={{ fontSize: 12 }}>
+                        <td className="data-td" style={{ fontSize: 'var(--text-xs)' }}>
                           {p.method}
                         </td>
                         <td className="data-td">

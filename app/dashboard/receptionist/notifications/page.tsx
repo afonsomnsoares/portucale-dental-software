@@ -130,7 +130,7 @@ export default function ReceptionistNotificationsPage() {
                   const kind = n.payload?.kind || '';
                   return (
                     <tr key={n.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {n.patient_name || n.patient_id?.slice(0, 8) || '—'}
                       </td>
                       <td className="data-td">{KIND_LABEL[kind] || kind || '—'}</td>
@@ -145,7 +145,13 @@ export default function ReceptionistNotificationsPage() {
                       <td className="data-td">
                         <Badge label={sm.label} bg={sm.bg} color={sm.color} />
                         {n.status === 'failed' && n.last_error && (
-                          <div style={{ fontSize: 12, color: 'var(--red, var(--urgency-critical))', marginTop: 4 }}>
+                          <div
+                            style={{
+                              fontSize: 'var(--text-xs)',
+                              color: 'var(--red, var(--urgency-critical))',
+                              marginTop: 4,
+                            }}
+                          >
                             {n.last_error}
                           </div>
                         )}

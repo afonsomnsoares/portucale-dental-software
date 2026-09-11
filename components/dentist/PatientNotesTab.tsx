@@ -130,7 +130,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
     <div className="grid-pair" style={{ gap: 16 }}>
       <div className="card p-5">
         <div className="section-label mb-3">NOTA NOVA</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 12 }}>
           {user?.name || 'Dentist'} · {new Date().toLocaleString()}
         </div>
         <div className="grid-pair" style={{ gap: 12, marginBottom: 12 }}>
@@ -151,24 +151,37 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
         </div>
         <div style={{ marginBottom: 12 }}>
           <div className="section-label mb-1.5">Anexos (opcional)</div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               type="file"
               onChange={(e) => uploadAttachment(e.target.files?.[0] || null)}
               disabled={uploading}
               className="input"
-              style={{ width: 280, padding: '7px 12px', fontSize: 13 }}
+              style={{ width: 280, padding: '7px 12px', fontSize: 'var(--text-sm)' }}
               accept="image/png,image/jpeg,image/webp,application/pdf"
             />
-            {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>A enviar…</span>}
+            {uploading && (
+              <span
+                style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-bold)' }}
+              >
+                A enviar…
+              </span>
+            )}
           </div>
           {uploadErr && (
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700 }}>
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+              }}
+            >
               {uploadErr}
             </div>
           )}
           {attachments.length > 0 && (
-            <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {attachments.map((a, i) => (
                 <div
                   key={a.url}
@@ -188,9 +201,9 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                     target="_blank"
                     rel="noreferrer"
                     style={{
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       color: 'var(--accent)',
-                      fontWeight: 700,
+                      fontWeight: 'var(--weight-bold)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -206,7 +219,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                       border: 'none',
                       color: 'var(--text-muted)',
                       cursor: 'pointer',
-                      fontSize: 18,
+                      fontSize: 'var(--text-lg)',
                       lineHeight: 1,
                       padding: '0 6px',
                     }}
@@ -241,12 +254,12 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              gap: 8,
               padding: '6px 14px',
               borderRadius: 'var(--radius-control)',
               border: 'none',
-              fontSize: 12,
-              fontWeight: 700,
+              fontSize: 'var(--text-xs)',
+              fontWeight: 'var(--weight-bold)',
               cursor: !isSupported ? 'not-allowed' : 'pointer',
               background: isRecording
                 ? 'var(--urgency-critical)'
@@ -263,9 +276,9 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
           {isRecording && (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 'var(--text-2xs)',
                 color: 'var(--urgency-critical)',
-                fontWeight: 700,
+                fontWeight: 'var(--weight-bold)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,
@@ -285,10 +298,20 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
             </span>
           )}
           {speechError && !isRecording && (
-            <span style={{ fontSize: 11, color: 'var(--urgency-critical)', fontWeight: 600 }}>{speechError}</span>
+            <span
+              style={{
+                fontSize: 'var(--text-2xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-semibold)',
+              }}
+            >
+              {speechError}
+            </span>
           )}
           {!isSupported && (
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Utilize Chrome ou Edge para dictar</span>
+            <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+              Utilize Chrome ou Edge para dictar
+            </span>
           )}
         </div>
         <Textarea
@@ -300,9 +323,14 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
             }
           }}
           placeholder={isRecording ? 'A ouvir…' : 'Escreva a sua nota clínica…'}
-          style={{ minHeight: 220, fontFamily: '"JetBrains Mono",monospace', fontSize: 12.5, lineHeight: 1.65 }}
+          style={{
+            minHeight: 220,
+            fontFamily: '"JetBrains Mono",monospace',
+            fontSize: 'var(--text-xs)',
+            lineHeight: 1.7,
+          }}
         />
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
           <PrimaryBtn onClick={saveNote} disabled={saving || !noteText.trim()} style={{ justifyContent: 'center' }}>
             {saving ? 'A guardar…' : 'Guardar nota'}
           </PrimaryBtn>
@@ -317,7 +345,14 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
           </GhostBtn>
         </div>
         {saved && (
-          <div style={{ marginTop: 10, fontSize: 12, color: 'var(--urgency-ok)', fontWeight: 600 }}>
+          <div
+            style={{
+              marginTop: 12,
+              fontSize: 'var(--text-xs)',
+              color: 'var(--urgency-ok)',
+              fontWeight: 'var(--weight-semibold)',
+            }}
+          >
             Nota guardada no histórico.
           </div>
         )}
@@ -329,22 +364,32 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
           <Empty message="Sem notas para este doente." />
         ) : (
           notes.map((n, i) => (
-            <div key={n.id} style={{ marginBottom: 22 }}>
+            <div key={n.id} style={{ marginBottom: 24 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Badge bg="var(--cat-purple-bg)" color="var(--cat-purple)" label="NOTA" />
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                     {new Date(n.created_at).toLocaleString()}
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{n.user_name}</span>
+                  <span
+                    style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 'var(--weight-semibold)' }}
+                  >
+                    {n.user_name}
+                  </span>
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: '"JetBrains Mono",monospace' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-2xs)',
+                    color: 'var(--text-muted)',
+                    fontFamily: '"JetBrains Mono",monospace',
+                  }}
+                >
                   #{n.hash}
                 </div>
               </div>
               <pre
                 style={{
-                  fontSize: 11,
+                  fontSize: 'var(--text-2xs)',
                   color: 'var(--text-secondary)',
                   fontFamily: '"JetBrains Mono",monospace',
                   background: 'var(--bg-page)',
@@ -359,7 +404,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
               >
                 {n.event}
               </pre>
-              {i < notes.length - 1 && <div style={{ borderBottom: '1px solid var(--bg-page)', marginTop: 18 }} />}
+              {i < notes.length - 1 && <div style={{ borderBottom: '1px solid var(--bg-page)', marginTop: 20 }} />}
             </div>
           ))
         )}

@@ -125,7 +125,7 @@ export default function DataSubjectRequests() {
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -154,11 +154,11 @@ export default function DataSubjectRequests() {
                     style={{
                       textAlign: 'left',
                       padding: '9px 14px',
-                      fontSize: 10.5,
+                      fontSize: 'var(--text-2xs)',
                       letterSpacing: '.08em',
                       textTransform: 'uppercase',
                       color: 'var(--text-muted)',
-                      fontWeight: 500,
+                      fontWeight: 'var(--weight-medium)',
                       borderBottom: '1px solid var(--border-strong)',
                       whiteSpace: 'nowrap',
                     }}
@@ -175,20 +175,27 @@ export default function DataSubjectRequests() {
                 const atrasado = dias !== null && dias > 30;
                 return (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600 }}>
+                    <td
+                      style={{ padding: '11px 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}
+                    >
                       {p.patient_name || 'Doente removido'}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: 13 }}>
+                    <td style={{ padding: '11px 14px', fontSize: 'var(--text-sm)' }}>
                       {TIPO_LABEL[p.request_type] || p.request_type}
                       {p.notes && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{p.notes}</div>
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>
+                          {p.notes}
+                        </div>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '11px 14px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
                       {data(p.created_at)}
                       {dias !== null && (
                         <div
-                          style={{ fontSize: 11, color: atrasado ? 'var(--urgency-critical)' : 'var(--text-muted)' }}
+                          style={{
+                            fontSize: 'var(--text-2xs)',
+                            color: atrasado ? 'var(--urgency-critical)' : 'var(--text-muted)',
+                          }}
                         >
                           {atrasado ? `${dias} dias — prazo de um mês ultrapassado` : `há ${dias} dias`}
                         </div>
@@ -197,8 +204,8 @@ export default function DataSubjectRequests() {
                     <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>
                       <span
                         style={{
-                          fontSize: 11,
-                          fontWeight: 700,
+                          fontSize: 'var(--text-2xs)',
+                          fontWeight: 'var(--weight-bold)',
                           padding: '2px 8px',
                           borderRadius: 'var(--radius-pill)',
                           background: e.bg,
@@ -208,7 +215,7 @@ export default function DataSubjectRequests() {
                         {e.label}
                       </span>
                       {p.resolved_by_name && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>
                           {p.resolved_by_name} · {data(p.resolved_at)}
                         </div>
                       )}
@@ -220,7 +227,7 @@ export default function DataSubjectRequests() {
                           onClick={() => executar(p)}
                           disabled={aExecutar === p.id}
                           style={{
-                            fontSize: 12,
+                            fontSize: 'var(--text-xs)',
                             padding: '4px 11px',
                             borderRadius: 'var(--radius-control)',
                             border: `1px solid ${p.request_type === 'erasure' ? 'var(--urgency-critical)' : 'var(--border-strong)'}`,

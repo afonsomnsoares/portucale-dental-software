@@ -25,17 +25,24 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
         fontFamily: FONTS.body,
       }}
     >
-      <h2 style={{ fontFamily: FONTS.display, fontSize: 17, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+      <h2
+        style={{
+          fontFamily: FONTS.display,
+          fontSize: 'var(--text-base)',
+          color: 'var(--text-primary)',
+          margin: '0 0 8px',
+        }}
+      >
         Não foi possível carregar esta página
       </h2>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6, margin: '0 0 18px' }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.55, margin: '0 0 18px' }}>
         Ocorreu um erro ao mostrar esta secção. As outras secções continuam acessíveis pelo menu lateral.
       </p>
       {error.digest && (
         <p
           style={{
             color: 'var(--text-muted)',
-            fontSize: 12,
+            fontSize: 'var(--text-xs)',
             fontFamily: 'var(--font-jetbrains-mono), monospace',
             margin: '0 0 18px',
           }}
@@ -52,8 +59,8 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
           border: 'none',
           borderRadius: 'var(--radius-control)',
           padding: '9px 16px',
-          fontSize: 14,
-          fontWeight: 600,
+          fontSize: 'var(--text-base)',
+          fontWeight: 'var(--weight-semibold)',
           cursor: 'pointer',
           fontFamily: 'inherit',
         }}

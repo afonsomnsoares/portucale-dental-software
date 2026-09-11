@@ -56,7 +56,7 @@ export default function LifecycleReceptionistPage() {
             border: '1px solid var(--urgency-critical-border)',
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -75,14 +75,14 @@ export default function LifecycleReceptionistPage() {
               <GhostBtn
                 disabled={busyId === lead.id}
                 onClick={() => updateLeadStatus(lead, 'converted')}
-                style={{ padding: '4px 8px', fontSize: 11 }}
+                style={{ padding: '4px 8px', fontSize: 'var(--text-2xs)' }}
               >
                 {busyId === lead.id ? '…' : 'Marcação feita'}
               </GhostBtn>
               <GhostBtn
                 disabled={busyId === lead.id}
                 onClick={() => updateLeadStatus(lead, 'lost')}
-                style={{ padding: '4px 8px', fontSize: 11 }}
+                style={{ padding: '4px 8px', fontSize: 'var(--text-2xs)' }}
               >
                 Fechar
               </GhostBtn>

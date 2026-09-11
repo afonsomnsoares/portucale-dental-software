@@ -64,7 +64,7 @@ export default function ClinicAgentsPage() {
             border: '1px solid var(--urgency-critical-border)',
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -96,7 +96,7 @@ export default function ClinicAgentsPage() {
                 sem ANTHROPIC_API_KEY configurada, não correm de todo e esta lista fica sempre vazia.
               </p>
             ) : (
-              <div style={{ display: 'grid', gap: 10 }}>
+              <div style={{ display: 'grid', gap: 12 }}>
                 {insights.map((insight) => (
                   <InsightRow key={insight.id} insight={insight} onResolve={() => resolveInsight(insight.id)} />
                 ))}
@@ -106,7 +106,7 @@ export default function ClinicAgentsPage() {
 
           <div className="card p-5 mt-4" style={{ borderLeft: '4px solid var(--cat-purple)' }}>
             <div className="section-label mb-2">💬 COMUNICAÇÃO — CAMADA DE POLÍTICA</div>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
               Comunicar não é um agente, é o canal por onde todos passam. O consentimento do doente, o canal preferido,
               o limite de mensagens por semana, as horas de silêncio e a deduplicação entre agentes vivem num sítio só —
               senão os seis escrevem à mesma pessoa na mesma manhã.
@@ -133,10 +133,12 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
         borderLeft: `4px solid ${falhou ? 'var(--urgency-critical)' : run ? 'var(--urgency-ok)' : 'var(--border-subtle)'}`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-        <span style={{ fontSize: 20, lineHeight: 1 }}>{agent.icon}</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+        <span style={{ fontSize: 'var(--text-lg)', lineHeight: 1 }}>{agent.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>{agent.name}</div>
+          <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
+            {agent.name}
+          </div>
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
             {agent.jobs.length} {agent.jobs.length === 1 ? 'tarefa' : 'tarefas'}
           </div>
@@ -160,13 +162,13 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
       </p>
 
       <div className="section-label mb-2">TAREFAS QUE GOVERNA</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         {agent.jobs.map((job) => (
           <span
             key={job}
             style={{
               fontFamily: '"JetBrains Mono",monospace',
-              fontSize: 11,
+              fontSize: 'var(--text-2xs)',
               background: 'var(--bg-page)',
               color: 'var(--text-secondary)',
               borderRadius: 'var(--radius-control)',
@@ -178,7 +180,7 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--bg-page)', paddingTop: 10 }}>
+      <div style={{ borderTop: '1px solid var(--bg-page)', paddingTop: 12 }}>
         {!run ? (
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Sem execuções registadas nesta clínica.
@@ -223,20 +225,22 @@ function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: 
         background: style.bg,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <Badge label={style.label} bg="var(--bg-surface)" color={style.color} />
-            <span className="text-xs" style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>
+            <span className="text-xs" style={{ color: 'var(--text-secondary)', fontWeight: 'var(--weight-bold)' }}>
               {insight.agent_id}
             </span>
             {impact != null && impact > 0 && (
-              <span className="text-xs" style={{ color: style.color, fontWeight: 800 }}>
+              <span className="text-xs" style={{ color: style.color, fontWeight: 'var(--weight-bold)' }}>
                 {formatEUR(impact)}
               </span>
             )}
           </div>
-          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14 }}>{insight.title}</div>
+          <div style={{ fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>
+            {insight.title}
+          </div>
           {insight.body && (
             <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.5 }}>
               {insight.body}

@@ -9,8 +9,10 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
     <div className="card" style={{ padding: '18px 18px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Sala de Espera</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
+            Sala de Espera
+          </div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
             {waiting.length} doente{waiting.length !== 1 ? 's' : ''} em espera
           </div>
         </div>
@@ -31,7 +33,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                 padding: '12px 12px 10px',
                 background: 'white',
                 display: 'flex',
-                gap: 10,
+                gap: 12,
                 alignItems: 'center',
               }}
             >
@@ -39,8 +41,8 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    fontSize: 12,
-                    fontWeight: 900,
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--weight-bold)',
                     color: occupied ? 'var(--text-primary)' : 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -51,7 +53,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                 </div>
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 'var(--text-2xs)',
                     color: 'var(--text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -63,7 +65,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                 {occupied && apt.dentist_name && (
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: 'var(--text-2xs)',
                       color: 'var(--text-muted)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -76,7 +78,7 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
                 {occupied && (
                   <div
                     style={{
-                      marginTop: 6,
+                      marginTop: 8,
                       display: 'flex',
                       gap: 8,
                       alignItems: 'center',
@@ -102,7 +104,14 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
       </div>
 
       {waiting.length > WAITING_SEATS && (
-        <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
+        <div
+          style={{
+            marginTop: 12,
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-muted)',
+            fontWeight: 'var(--weight-bold)',
+          }}
+        >
           +{waiting.length - WAITING_SEATS} em espera (não mostrados)
         </div>
       )}

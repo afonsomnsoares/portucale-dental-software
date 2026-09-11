@@ -185,27 +185,27 @@ export default function ReceptionAppointmentsPage() {
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         />
         <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Procurar doente, tipo, dentista…"
           className="input"
-          style={{ width: 260, padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 260, padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         />
         <select
           className="select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         >
           <option value="">Todos os estados</option>
           {Object.keys(settings?.STATUS_META || {}).map((s) => (
@@ -246,11 +246,18 @@ export default function ReceptionAppointmentsPage() {
 
       {confirm && (
         <Modal title="Cancelar consulta" onClose={() => setConfirm(null)} width={520}>
-          <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 8, fontWeight: 700 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-primary)',
+              marginBottom: 8,
+              fontWeight: 'var(--weight-bold)',
+            }}
+          >
             {confirm.patient_name || '—'} · {String(confirm.appt_date || '').slice(0, 10)}{' '}
             {String(confirm.start_time || '').slice(0, 5)}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 16 }}>
             Isto remove a consulta da agenda.
           </div>
           <div className="flex gap-3">

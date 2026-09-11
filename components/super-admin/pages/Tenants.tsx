@@ -104,13 +104,13 @@ export default function TenantsPage() {
             cols={['Clínica', 'Cidade', 'Doentes', 'Estado', 'Disponibilidade', 'Criada', '']}
             rows={filtered.map((t) => (
               <tr key={t.id}>
-                <td className="data-td" style={{ fontWeight: 600 }}>
+                <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                   {t.name}
                 </td>
                 <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                   {t.city}
                 </td>
-                <td className="data-td" style={{ color: 'var(--accent)', fontWeight: 600 }}>
+                <td className="data-td" style={{ color: 'var(--accent)', fontWeight: 'var(--weight-semibold)' }}>
                   {Number(t.patients || 0).toLocaleString()}
                 </td>
                 <td className="data-td">
@@ -118,7 +118,10 @@ export default function TenantsPage() {
                 </td>
                 <td
                   className="data-td"
-                  style={{ color: t.uptime === '—' ? 'var(--text-muted)' : 'var(--urgency-ok)', fontWeight: 600 }}
+                  style={{
+                    color: t.uptime === '—' ? 'var(--text-muted)' : 'var(--urgency-ok)',
+                    fontWeight: 'var(--weight-semibold)',
+                  }}
                 >
                   {t.uptime}
                 </td>

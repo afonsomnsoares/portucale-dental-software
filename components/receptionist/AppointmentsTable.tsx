@@ -54,7 +54,7 @@ export default function AppointmentsTable({
                   <TD bold>
                     {a.patient_name || '—'}
                     {(a.risk_score || 0) >= 30 ? (
-                      <span style={{ marginLeft: 10 }}>
+                      <span style={{ marginLeft: 12 }}>
                         <RiskBadge score={a.risk_score || 0} />
                       </span>
                     ) : null}
@@ -65,14 +65,19 @@ export default function AppointmentsTable({
                     {a.chair ?? '—'}
                   </TD>
                   <TD>
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
                       <Badge s={a.status} />
                       <select
                         className="select"
                         value={a.status}
                         onChange={(e) => onChangeStatus(a, e.target.value)}
                         disabled={pending}
-                        style={{ width: 'auto', padding: '6px 10px', fontSize: 12, opacity: pending ? 0.6 : 1 }}
+                        style={{
+                          width: 'auto',
+                          padding: '6px 10px',
+                          fontSize: 'var(--text-xs)',
+                          opacity: pending ? 0.6 : 1,
+                        }}
                       >
                         <option value={a.status}>{a.status}</option>
                         {Array.from(new Set((settings?.STATUS_TRANSITIONS?.[a.status] || []) as string[])).map(
@@ -86,7 +91,7 @@ export default function AppointmentsTable({
                     </div>
                   </TD>
                   <TD right>
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(a)}>
                         Editar
                       </button>

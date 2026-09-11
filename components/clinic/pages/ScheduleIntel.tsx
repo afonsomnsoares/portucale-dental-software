@@ -146,7 +146,7 @@ export default function ClinicScheduleIntelPage() {
                     <tbody>
                       {risk.appointments.map((a) => (
                         <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                          <td className="data-td" style={{ fontWeight: 600 }}>
+                          <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                             {a.patient_name}
                           </td>
                           <td className="data-td">{a.phone ? formatPhonePT(a.phone) : '—'}</td>
@@ -188,7 +188,10 @@ export default function ClinicScheduleIntelPage() {
                     <tbody>
                       {BUCKETS.map((b) => (
                         <tr key={b.key}>
-                          <td className="data-td" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          <td
+                            className="data-td"
+                            style={{ fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap' }}
+                          >
                             {b.label}
                           </td>
                           {WEEKDAYS.map((w) => {
@@ -196,15 +199,15 @@ export default function ClinicScheduleIntelPage() {
                             const rate = cell?.rate || 0;
                             const cfg = heatColor(rate);
                             return (
-                              <td key={w.key} className="data-td" style={{ textAlign: 'center', padding: 6 }}>
+                              <td key={w.key} className="data-td" style={{ textAlign: 'center', padding: 8 }}>
                                 <div
                                   style={{
                                     background: cfg.bg,
                                     color: cfg.color,
                                     borderRadius: 'var(--radius-control)',
                                     padding: '8px 4px',
-                                    fontWeight: 700,
-                                    fontSize: 13,
+                                    fontWeight: 'var(--weight-bold)',
+                                    fontSize: 'var(--text-sm)',
                                   }}
                                 >
                                   {cell?.total ? `${Math.round(rate * 100)}%` : '—'}
@@ -246,7 +249,7 @@ export default function ClinicScheduleIntelPage() {
                         <tbody>
                           {(waitlist?.pendingOffers || []).map((o) => (
                             <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                              <td className="data-td" style={{ fontWeight: 600 }}>
+                              <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                                 {o.patient_name || '—'}
                               </td>
                               <td className="data-td">{o.treatment_type}</td>
@@ -279,7 +282,7 @@ export default function ClinicScheduleIntelPage() {
                       <tbody>
                         {waitlist.entries.map((w) => (
                           <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                            <td className="data-td" style={{ fontWeight: 600 }}>
+                            <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                               {w.patient_name}
                             </td>
                             <td className="data-td">{w.treatment_type}</td>

@@ -61,9 +61,9 @@ export default function AppointmentEditModal({
             color: 'var(--urgency-critical)',
             borderRadius: 'var(--radius-control)',
             padding: '10px 12px',
-            fontSize: 12,
+            fontSize: 'var(--text-xs)',
             marginBottom: 12,
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {error}

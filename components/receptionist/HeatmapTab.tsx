@@ -35,7 +35,7 @@ export default function HeatmapTab({ heatmap }: { heatmap: RiskHeatmapData | nul
           <tbody>
             {BUCKETS.map((b) => (
               <tr key={b.key}>
-                <td className="data-td" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)', whiteSpace: 'nowrap' }}>
                   {b.label}
                 </td>
                 {WEEKDAYS.map((w) => {
@@ -43,15 +43,15 @@ export default function HeatmapTab({ heatmap }: { heatmap: RiskHeatmapData | nul
                   const rate = cell?.rate || 0;
                   const cfg = heatColor(rate);
                   return (
-                    <td key={w.key} className="data-td" style={{ textAlign: 'center', padding: 6 }}>
+                    <td key={w.key} className="data-td" style={{ textAlign: 'center', padding: 8 }}>
                       <div
                         style={{
                           background: cfg.bg,
                           color: cfg.color,
                           borderRadius: 'var(--radius-control)',
                           padding: '8px 4px',
-                          fontWeight: 700,
-                          fontSize: 13,
+                          fontWeight: 'var(--weight-bold)',
+                          fontSize: 'var(--text-sm)',
                         }}
                       >
                         {cell?.total ? `${Math.round(rate * 100)}%` : '—'}

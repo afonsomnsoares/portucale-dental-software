@@ -37,7 +37,7 @@ function ActionChip({ action }: { action: JourneyPatient['next_action'] }) {
         color: c.color,
         borderRadius: 'var(--radius-control)',
         padding: '3px 7px',
-        fontWeight: 600,
+        fontWeight: 'var(--weight-semibold)',
       }}
     >
       {action.label}
@@ -64,7 +64,7 @@ function SegmentBadge({ segment }: { segment: { dormancyBand: string; valueTier:
         color: isHighValue ? 'var(--urgency-critical)' : 'var(--text-secondary)',
         borderRadius: 'var(--radius-control)',
         padding: '3px 7px',
-        fontWeight: 600,
+        fontWeight: 'var(--weight-semibold)',
         display: 'inline-block',
       }}
     >
@@ -80,7 +80,7 @@ function PatientCard({ p }: { p: JourneyPatient }) {
     : `Registado: ${String(p.created_at).slice(0, 10)}`;
   return (
     <div className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
-      <div style={{ fontWeight: 600, fontSize: 13 }}>{p.name}</div>
+      <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{p.name}</div>
       <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
         {p.phone ? formatPhonePT(p.phone) : p.email || '—'}
       </div>
@@ -112,7 +112,7 @@ function Column({
     >
       <div
         className="flex items-center justify-between mb-1"
-        style={{ borderTop: `3px solid ${color}`, marginTop: -12, paddingTop: 10 }}
+        style={{ borderTop: `3px solid ${color}`, marginTop: -12, paddingTop: 12 }}
       >
         <span className="section-label">{title}</span>
         <span className="badge" style={{ background: 'var(--bg-sunken)', color: 'var(--text-secondary)' }}>
@@ -148,7 +148,7 @@ export default function JourneyBoard({ data, leadActions }: JourneyBoardProps) {
         ) : (
           data.leads.map((lead) => (
             <div key={lead.id} className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{lead.name}</div>
+              <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{lead.name}</div>
               <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 {lead.phone ? formatPhonePT(lead.phone) : lead.email || '—'}
               </div>
@@ -188,7 +188,7 @@ export default function JourneyBoard({ data, leadActions }: JourneyBoardProps) {
         ) : (
           data.reactivationCandidates.map((c) => (
             <div key={c.patientId} className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
+              <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{c.name}</div>
               <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
                 {c.phone ? formatPhonePT(c.phone) : '—'}
               </div>

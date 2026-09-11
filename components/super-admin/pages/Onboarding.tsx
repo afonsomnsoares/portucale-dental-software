@@ -59,11 +59,26 @@ export default function Onboarding({ initialData }: { initialData?: UsageRow[] }
           const p = progress(r);
           return (
             <div key={r.id} className="card p-5" style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{r.name}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.city}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-bold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {r.name}
+                </span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{r.city}</span>
                 <Badge s={r.status} />
-                <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)' }}>
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 'var(--weight-bold)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
                   {p}/{STEPS.length}
                 </span>
               </div>
@@ -74,7 +89,7 @@ export default function Onboarding({ initialData }: { initialData?: UsageRow[] }
                   height: 5,
                   background: 'var(--bg-sunken)',
                   borderRadius: 'var(--radius-pill)',
-                  marginBottom: 14,
+                  marginBottom: 12,
                 }}
               >
                 <div
@@ -97,8 +112,8 @@ export default function Onboarding({ initialData }: { initialData?: UsageRow[] }
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
+                        gap: 8,
+                        fontSize: 'var(--text-xs)',
                         padding: '4px 10px',
                         borderRadius: 'var(--radius-control)',
                         background: ok ? 'var(--urgency-ok-bg)' : 'var(--bg-page)',
@@ -116,7 +131,15 @@ export default function Onboarding({ initialData }: { initialData?: UsageRow[] }
         })
       )}
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         Cada passo é medido no estado real da clínica, não marcado à mão. Não há processo formal de onboarding no
         sistema — quando houver, com passos próprios e responsáveis, esta página passa a lê-lo.
       </p>

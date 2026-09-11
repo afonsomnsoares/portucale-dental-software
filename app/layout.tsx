@@ -5,7 +5,10 @@ import { AuthProvider } from './providers';
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  // Os quatro pesos da escala de app/globals.css, e mais nenhum. Carregar o 300
+  // e o 800 descarregava dois ficheiros que nada usava — e tê-los disponíveis é
+  // parte de como se chegou a nove pesos diferentes no código.
+  weight: ['400', '500', '600', '700'],
   variable: '--font-plus-jakarta',
 });
 

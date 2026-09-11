@@ -44,21 +44,29 @@ export default function DentistAppointmentsPage() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         />
       </PageHeader>
-      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
         <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
           <div className="section-label">Consultas Hoje</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{appts.length}</div>
+          <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--accent)' }}>
+            {appts.length}
+          </div>
         </div>
         <div className="card" style={{ borderLeft: '4px solid var(--urgency-ok)' }}>
           <div className="section-label">Em Consultório</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-ok)' }}>{inChair}</div>
+          <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-ok)' }}>
+            {inChair}
+          </div>
         </div>
         <div className="card" style={{ borderLeft: '4px solid var(--urgency-critical)' }}>
           <div className="section-label">Risco Alto</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-critical)' }}>{highRisk}</div>
+          <div
+            style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-critical)' }}
+          >
+            {highRisk}
+          </div>
         </div>
       </div>
       {apptsQuery.loading ? (
@@ -68,7 +76,14 @@ export default function DentistAppointmentsPage() {
           <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />
           {appts.filter((a) => a.status === 'confirmed' || a.status === 'registered').length > 0 && (
             <div className="mt-5">
-              <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)', marginBottom: 10 }}>
+              <h3
+                style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 'var(--weight-bold)',
+                  color: 'var(--text-primary)',
+                  marginBottom: 12,
+                }}
+              >
                 Próximas Consultas
               </h3>
               <div className="table-scroll">
@@ -98,7 +113,7 @@ export default function DentistAppointmentsPage() {
                               <button
                                 type="button"
                                 className="btn btn-primary"
-                                style={{ padding: '4px 12px', fontSize: 12 }}
+                                style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}
                                 onClick={() => handleStatusChange(a.id, 'in-operatory')}
                               >
                                 Iniciar

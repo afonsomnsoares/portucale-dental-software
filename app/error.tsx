@@ -37,18 +37,27 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-        <h1 style={{ fontFamily: FONTS.display, fontSize: 20, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+        <div style={{ fontSize: 'var(--text-2xl)', marginBottom: 12 }}>⚠️</div>
+        <h1
+          style={{
+            fontFamily: FONTS.display,
+            fontSize: 'var(--text-lg)',
+            color: 'var(--text-primary)',
+            margin: '0 0 8px',
+          }}
+        >
           Algo correu mal
         </h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>
+        <p
+          style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.55, margin: '0 0 20px' }}
+        >
           Ocorreu um erro inesperado. Os dados não foram perdidos — pode tentar novamente.
         </p>
         {error.digest && (
           <p
             style={{
               color: 'var(--text-muted)',
-              fontSize: 12,
+              fontSize: 'var(--text-xs)',
               fontFamily: 'var(--font-jetbrains-mono), monospace',
               margin: '0 0 20px',
             }}
@@ -66,8 +75,8 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
               border: 'none',
               borderRadius: 'var(--radius-control)',
               padding: '10px 18px',
-              fontSize: 14,
-              fontWeight: 600,
+              fontSize: 'var(--text-base)',
+              fontWeight: 'var(--weight-semibold)',
               cursor: 'pointer',
               fontFamily: 'inherit',
             }}
@@ -82,8 +91,8 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
               border: `1px solid var(--border-subtle)`,
               borderRadius: 'var(--radius-control)',
               padding: '10px 18px',
-              fontSize: 14,
-              fontWeight: 600,
+              fontSize: 'var(--text-base)',
+              fontWeight: 'var(--weight-semibold)',
               textDecoration: 'none',
               fontFamily: 'inherit',
             }}

@@ -138,8 +138,8 @@ export default function CarePathways() {
             color: 'var(--urgency-critical)',
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
-            marginBottom: 14,
-            fontSize: 13,
+            marginBottom: 12,
+            fontSize: 'var(--text-sm)',
             whiteSpace: 'pre-wrap',
           }}
         >
@@ -158,7 +158,7 @@ export default function CarePathways() {
             marginBottom: 20,
           }}
         >
-          <div className="grid-pair" style={{ gap: 12, marginBottom: 14 }}>
+          <div className="grid-pair" style={{ gap: 12, marginBottom: 12 }}>
             <Sel
               value={rascunho.appointmentType}
               onChange={(e) => setRascunho({ ...rascunho, appointmentType: e.target.value })}
@@ -210,7 +210,15 @@ export default function CarePathways() {
                 onChange={(e) => mudarPasso(i, { offsetDays: Number(e.target.value) })}
                 aria-label="Dias relativos à consulta"
               />
-              <label style={{ fontSize: 11.5, display: 'flex', gap: 5, alignItems: 'center', whiteSpace: 'nowrap' }}>
+              <label
+                style={{
+                  fontSize: 'var(--text-2xs)',
+                  display: 'flex',
+                  gap: 4,
+                  alignItems: 'center',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={s.blocking}
@@ -221,7 +229,7 @@ export default function CarePathways() {
             </div>
           ))}
 
-          <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '4px 0 12px' }}>
+          <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', margin: '4px 0 12px' }}>
             Dias negativos são antes da consulta, positivos depois, zero no próprio dia. Um passo bloqueante é um que,
             por não estar feito, torna a consulta problemática — um implante sem consentimento assinado.
           </p>
@@ -236,7 +244,7 @@ export default function CarePathways() {
                 setRascunho({ ...rascunho, steps: [...rascunho.steps, PASSO_NOVO(rascunho.steps.length)] })
               }
               style={{
-                fontSize: 12.5,
+                fontSize: 'var(--text-xs)',
                 padding: '6px 12px',
                 borderRadius: 'var(--radius-control)',
                 border: '1px solid var(--border-subtle)',
@@ -250,7 +258,7 @@ export default function CarePathways() {
               type="button"
               onClick={() => setRascunho(null)}
               style={{
-                fontSize: 12.5,
+                fontSize: 'var(--text-xs)',
                 padding: '6px 12px',
                 borderRadius: 'var(--radius-control)',
                 border: 'none',
@@ -264,7 +272,7 @@ export default function CarePathways() {
           </div>
         </div>
       ) : (
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 20 }}>
           <PrimaryBtn onClick={() => setRascunho({ appointmentType: '', name: '', steps: [PASSO_NOVO(0)] })}>
             Novo percurso
           </PrimaryBtn>
@@ -277,7 +285,7 @@ export default function CarePathways() {
       ) : templates.length === 0 ? (
         <Empty message="Nenhum percurso configurado. Sem eles, o motor corre e não encontra nada para fazer — os passos são o protocolo da clínica, e só a clínica os sabe." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {templates.map((t) => (
             <div
               key={t.id}
@@ -289,34 +297,37 @@ export default function CarePathways() {
                 opacity: t.active ? 1 : 0.6,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline' }}>
                 <div>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}> · {t.appointmentType}</span>
+                  <span style={{ fontWeight: 'var(--weight-bold)', fontSize: 'var(--text-base)' }}>{t.name}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}> · {t.appointmentType}</span>
                 </div>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {t.steps.length} {t.steps.length === 1 ? 'passo' : 'passos'}
                 </span>
               </div>
 
-              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(t.preview || t.steps.map((step) => ({ step, date: '', relative: '' }))).map((p) => (
                   <div
                     key={p.step.id}
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'minmax(0,1fr) 120px 110px',
-                      gap: 10,
-                      fontSize: 12.5,
+                      gap: 12,
+                      fontSize: 'var(--text-xs)',
                       alignItems: 'baseline',
-                      paddingLeft: 10,
+                      paddingLeft: 12,
                       borderLeft: `2px solid ${p.step.blocking ? 'var(--urgency-critical)' : 'var(--border-subtle)'}`,
                     }}
                   >
                     <span>
                       {p.step.title}
                       {p.step.blocking && (
-                        <span style={{ fontSize: 10.5, color: 'var(--urgency-critical)' }}> · bloqueante</span>
+                        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--urgency-critical)' }}>
+                          {' '}
+                          · bloqueante
+                        </span>
                       )}
                     </span>
                     <span style={{ color: 'var(--text-muted)' }}>

@@ -88,12 +88,14 @@ export default function SuppliersTab({ api }: Props) {
           border: '1px solid var(--border-subtle)',
           borderRadius: 'var(--radius-card)',
           background: 'var(--bg-surface)',
-          padding: 14,
+          padding: 12,
           marginBottom: 16,
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>Novo fornecedor</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', marginBottom: 12 }}>
+          Novo fornecedor
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
           <Inp
             value={novo.name}
             onChange={(e) => setNovo({ ...novo, name: e.target.value })}
@@ -106,7 +108,7 @@ export default function SuppliersTab({ api }: Props) {
             placeholder="Telefone"
           />
         </div>
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 12 }}>
           <Textarea
             value={novo.notes}
             onChange={(e) => setNovo({ ...novo, notes: e.target.value })}
@@ -114,7 +116,7 @@ export default function SuppliersTab({ api }: Props) {
             placeholder="Notas — prazos de entrega, condições, pessoa de contacto…"
           />
         </div>
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 12 }}>
           <PrimaryBtn onClick={criar} disabled={aGravar || !novo.name.trim()}>
             {aGravar ? 'A criar…' : 'Adicionar'}
           </PrimaryBtn>
@@ -129,7 +131,7 @@ export default function SuppliersTab({ api }: Props) {
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -140,10 +142,10 @@ export default function SuppliersTab({ api }: Props) {
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 7,
-          fontSize: 12.5,
+          gap: 8,
+          fontSize: 'var(--text-xs)',
           color: 'var(--text-muted)',
-          marginBottom: 10,
+          marginBottom: 12,
           cursor: 'pointer',
         }}
       >
@@ -178,11 +180,11 @@ export default function SuppliersTab({ api }: Props) {
                     style={{
                       textAlign: 'left',
                       padding: '9px 14px',
-                      fontSize: 10.5,
+                      fontSize: 'var(--text-2xs)',
                       letterSpacing: '.08em',
                       textTransform: 'uppercase',
                       color: 'var(--text-muted)',
-                      fontWeight: 500,
+                      fontWeight: 'var(--weight-medium)',
                       borderBottom: '1px solid var(--border-strong)',
                       whiteSpace: 'nowrap',
                     }}
@@ -195,23 +197,38 @@ export default function SuppliersTab({ api }: Props) {
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid var(--border-subtle)', opacity: s.active ? 1 : 0.55 }}>
-                  <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600 }}>
+                  <td
+                    style={{ padding: '11px 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}
+                  >
                     {s.name}
                     {!s.active && (
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400 }}> · desativado</span>
+                      <span
+                        style={{
+                          fontSize: 'var(--text-2xs)',
+                          color: 'var(--text-muted)',
+                          fontWeight: 'var(--weight-normal)',
+                        }}
+                      >
+                        {' '}
+                        · desativado
+                      </span>
                     )}
                   </td>
-                  <td style={{ padding: '11px 14px', fontSize: 12.5, color: 'var(--text-secondary)' }}>
+                  <td style={{ padding: '11px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                     {s.email || '—'}
-                    {s.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.phone}</div>}
+                    {s.phone && (
+                      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{s.phone}</div>
+                    )}
                   </td>
-                  <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--text-muted)' }}>{s.notes || '—'}</td>
+                  <td style={{ padding: '11px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                    {s.notes || '—'}
+                  </td>
                   <td style={{ padding: '11px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
                       onClick={() => alternarAtivo(s)}
                       style={{
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                         padding: '4px 10px',
                         borderRadius: 'var(--radius-control)',
                         border: '1px solid var(--border-subtle)',

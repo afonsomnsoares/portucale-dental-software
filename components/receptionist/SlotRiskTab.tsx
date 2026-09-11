@@ -60,7 +60,7 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', marginBottom: 18 }}>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 20 }}>
         {[
           { n: String(data.totals.atRisk), t: 'lugares em risco' },
           { n: `${Math.round(data.totals.expectedEmptyMinutes / 60)} h`, t: 'de cadeira que se espera perder' },
@@ -73,15 +73,15 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
           <div key={m.t}>
             <div
               style={{
-                fontSize: 21,
-                fontWeight: 700,
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--weight-bold)',
                 color: m.cor || 'var(--text-primary)',
                 fontVariantNumeric: 'tabular-nums',
               }}
             >
               {m.n}
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>{m.t}</div>
+            <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{m.t}</div>
           </div>
         ))}
       </div>
@@ -89,7 +89,7 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
       {comRisco.length === 0 ? (
         <Empty message="Nenhum lugar acima do limiar de risco nos próximos dias." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {comRisco.map((d) => (
             <div
               key={d.date}
@@ -100,15 +100,15 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                 padding: '12px 14px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-                <span style={{ fontWeight: 700, fontSize: 13 }}>{dia(d.date)}</span>
-                <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+                <span style={{ fontWeight: 'var(--weight-bold)', fontSize: 'var(--text-sm)' }}>{dia(d.date)}</span>
+                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   espera-se perder {Math.round(d.expectedLossRate * 100)}% do dia · {Math.round(d.expectedEmptyMinutes)}{' '}
                   min
                 </span>
               </div>
 
-              <div style={{ marginTop: 9, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ marginTop: 9, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {d.atRisk.map((s) => {
                   const p = Math.round(s.risk.emptyProbability * 100);
                   return (
@@ -117,9 +117,9 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                       style={{
                         display: 'grid',
                         gridTemplateColumns: '58px minmax(0,1fr) 62px',
-                        gap: 10,
+                        gap: 12,
                         alignItems: 'baseline',
-                        fontSize: 12.5,
+                        fontSize: 'var(--text-xs)',
                         paddingLeft: 9,
                         borderLeft: `2px solid ${p >= 55 ? 'var(--urgency-critical)' : 'var(--urgency-soon)'}`,
                       }}
@@ -131,13 +131,15 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                         {s.patientName}
                         {s.chair ? <span style={{ color: 'var(--text-muted)' }}> · cadeira {s.chair}</span> : null}
                         {s.reason && (
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{s.reason}</div>
+                          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 1 }}>
+                            {s.reason}
+                          </div>
                         )}
                       </span>
                       <span
                         style={{
                           textAlign: 'right',
-                          fontWeight: 700,
+                          fontWeight: 'var(--weight-bold)',
                           fontVariantNumeric: 'tabular-nums',
                           color: p >= 55 ? 'var(--urgency-critical)' : 'var(--urgency-soon)',
                         }}
@@ -153,7 +155,7 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
         </div>
       )}
 
-      <p style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 14, maxWidth: '44rem' }}>
+      <p style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 12, maxWidth: '44rem' }}>
         A percentagem é a probabilidade de o lugar ficar <b>mesmo vazio</b> — já descontada a hipótese de o doente
         avisar a tempo e de alguém da lista de espera o ocupar. É por isso que é menor do que o risco de falta do
         doente, e é este o número que decide se vale um telefonema.

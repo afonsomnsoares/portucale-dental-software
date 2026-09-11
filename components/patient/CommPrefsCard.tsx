@@ -63,17 +63,25 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
         gridColumn: '1 / -1',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div className="section-label">Preferências de Comunicação</div>
         {!editing && (
-          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '6px 10px', fontSize: 12 }}>
+          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}>
             Editar
           </GhostBtn>
         )}
       </div>
 
       {!editing ? (
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: 'var(--text-primary)' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: 20,
+            flexWrap: 'wrap',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--text-primary)',
+          }}
+        >
           <div>
             Canal preferido:{' '}
             <strong>{CHANNELS.find((c) => c.value === (prefs.preferredChannel || ''))?.label || '—'}</strong>
@@ -91,7 +99,9 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
         <div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 12 }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Canal preferido</div>
+              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginBottom: 4 }}>
+                Canal preferido
+              </div>
               <Sel
                 value={prefs.preferredChannel || ''}
                 onChange={(e) =>
@@ -109,10 +119,15 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
               </Sel>
             </div>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Não contactar por</div>
+              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginBottom: 4 }}>
+                Não contactar por
+              </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 {DO_NOT_CONTACT_OPTIONS.map((o) => (
-                  <label key={o.value} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+                  <label
+                    key={o.value}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)' }}
+                  >
                     <input
                       type="checkbox"
                       checked={!!prefs.doNotContact?.includes(o.value)}
@@ -125,10 +140,10 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <PrimaryBtn onClick={save} disabled={saving} style={{ padding: '6px 14px', fontSize: 12 }}>
+            <PrimaryBtn onClick={save} disabled={saving} style={{ padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
               {saving ? 'A guardar…' : 'Guardar'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setEditing(false)} style={{ padding: '6px 14px', fontSize: 12 }}>
+            <GhostBtn onClick={() => setEditing(false)} style={{ padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
               Cancelar
             </GhostBtn>
           </div>

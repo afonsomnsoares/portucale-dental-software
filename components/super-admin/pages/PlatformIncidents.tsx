@@ -79,7 +79,7 @@ export default function PlatformIncidents() {
             const widespread = clinics.size > 1;
             return (
               <div key={job} style={{ padding: '12px 0', borderBottom: '1px solid var(--bg-page)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                   <Badge
                     label={widespread ? 'TRANSVERSAL' : 'UMA CLÍNICA'}
                     bg={widespread ? 'var(--urgency-critical-bg)' : 'var(--urgency-soon-bg)'}
@@ -87,35 +87,35 @@ export default function PlatformIncidents() {
                   />
                   <span
                     style={{
-                      fontSize: 14,
-                      fontWeight: 700,
+                      fontSize: 'var(--text-base)',
+                      fontWeight: 'var(--weight-bold)',
                       color: 'var(--text-primary)',
                       fontFamily: '"JetBrains Mono",monospace',
                     }}
                   >
                     {job}
                   </span>
-                  <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                     {occurrences.length} ocorrências · {clinics.size} {clinics.size === 1 ? 'clínica' : 'clínicas'}
                   </span>
                 </div>
                 {occurrences[0]?.error && (
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: 'var(--text-2xs)',
                       fontFamily: '"JetBrains Mono",monospace',
                       color: 'var(--urgency-critical)',
                       background: 'var(--urgency-critical-bg)',
                       padding: '6px 10px',
                       borderRadius: 'var(--radius-control)',
-                      marginBottom: 6,
+                      marginBottom: 8,
                       overflowX: 'auto',
                     }}
                   >
                     {occurrences[0].error}
                   </div>
                 )}
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {[...clinics].join(' · ')} · mais recente{' '}
                   {occurrences[0]?.started_at ? new Date(occurrences[0].started_at).toLocaleString('pt-PT') : '—'}
                 </div>
@@ -134,20 +134,38 @@ export default function PlatformIncidents() {
             <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--bg-page)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                 <Badge label="CRÍTICO" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{c.title}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 'var(--weight-semibold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {c.title}
+                </span>
+                <span style={{ marginLeft: 'auto', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {c.tenant_name || 'Plataforma'} · {new Date(c.created_at).toLocaleDateString('pt-PT')}
                 </span>
               </div>
               {c.body && (
-                <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>{c.body}</p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>
+                  {c.body}
+                </p>
               )}
             </div>
           ))
         )}
       </div>
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         Derivado do que avariou, não de uma fila de incidentes: não há tabela de incidentes de plataforma, e uma fila
         vazia que alguém tem de alimentar à mão seria menos verdadeira do que isto. Os incidentes de cada clínica
         (equipamento, ocorrências) vivem na clínica, em Operações.

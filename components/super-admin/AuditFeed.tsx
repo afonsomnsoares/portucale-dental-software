@@ -89,7 +89,13 @@ export default function AuditFeed({
               <td style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                 {new Date(r.created_at).toLocaleString('pt-PT')}
               </td>
-              <td style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 10, color: 'var(--text-muted)' }}>
+              <td
+                style={{
+                  fontFamily: '"JetBrains Mono",monospace',
+                  fontSize: 'var(--text-2xs)',
+                  color: 'var(--text-muted)',
+                }}
+              >
                 {r.hash}
               </td>
             </tr>
@@ -98,7 +104,9 @@ export default function AuditFeed({
       )}
 
       {footnote && (
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 16 }}>{footnote}</p>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.55, marginTop: 16 }}>
+          {footnote}
+        </p>
       )}
     </div>
   );

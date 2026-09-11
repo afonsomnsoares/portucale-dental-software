@@ -186,7 +186,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
                         value={i.assigned_to || ''}
                         onChange={(e) => assign(i, e.target.value)}
                         disabled={busyId === i.id}
-                        style={{ fontSize: 12, padding: '3px 6px' }}
+                        style={{ fontSize: 'var(--text-xs)', padding: '3px 6px' }}
                       >
                         <option value="">Ninguém</option>
                         {teamUsers.map((u) => (
@@ -209,7 +209,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
                           <GhostBtn
                             disabled={busyId === i.id}
                             onClick={() => setStatus(i, 'in_progress')}
-                            style={{ padding: '5px 10px', fontSize: 12 }}
+                            style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                           >
                             Em curso
                           </GhostBtn>
@@ -220,7 +220,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
                             setResolveTarget(i);
                             setResolutionNotes('');
                           }}
-                          style={{ padding: '5px 10px', fontSize: 12 }}
+                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Resolver
                         </GhostBtn>
@@ -277,11 +277,18 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
             />
           </FormField>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setReportModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={reportIncident} disabled={saving || !form.title.trim()}>
               {saving ? 'A reportar…' : 'Reportar'}
@@ -300,7 +307,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
               placeholder="O que foi feito para resolver este incidente?"
             />
           </FormField>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setResolveTarget(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={resolve} disabled={busyId === resolveTarget.id}>
               Marcar como resolvido

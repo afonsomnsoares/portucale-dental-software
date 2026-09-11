@@ -22,7 +22,7 @@ export default function RiskTab({ appointments }: { appointments: RiskAppointmen
           <tbody>
             {appointments.map((a) => (
               <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                <td className="data-td" style={{ fontWeight: 600 }}>
+                <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                   {a.patient_name}
                 </td>
                 <td className="data-td">{a.phone ? <a href={`tel:${a.phone}`}>{formatPhonePT(a.phone)}</a> : '—'}</td>

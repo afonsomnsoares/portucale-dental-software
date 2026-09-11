@@ -131,7 +131,7 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
               }}
             >
               <div>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>{t.name}</span>
+                <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{t.name}</span>
                 <Badge label={TYPE_LABEL[t.type]} bg="var(--bg-sunken)" color="var(--text-secondary)" />
                 <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                   {t.items.length} itens
@@ -139,13 +139,13 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
                 {!t.active && <Badge label="Inativa" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />}
               </div>
               <div className="flex items-center gap-2">
-                <GhostBtn onClick={() => openEdit(t)} style={{ padding: '5px 10px', fontSize: 12 }}>
+                <GhostBtn onClick={() => openEdit(t)} style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}>
                   Editar
                 </GhostBtn>
                 <GhostBtn
                   disabled={busyId === t.id}
                   onClick={() => toggleActive(t)}
-                  style={{ padding: '5px 10px', fontSize: 12 }}
+                  style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                 >
                   {t.active ? 'Desativar' : 'Ativar'}
                 </GhostBtn>
@@ -181,11 +181,18 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
             />
           </FormField>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setModal(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={save} disabled={saving}>
               {saving ? 'A guardar…' : 'Guardar'}

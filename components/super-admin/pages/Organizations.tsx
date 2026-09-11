@@ -51,7 +51,7 @@ export default function Organizations({ initialData }: { initialData?: UsageRow[
               const band = retentionBand(r);
               return (
                 <tr key={r.id}>
-                  <td style={{ fontWeight: 600 }}>{r.name}</td>
+                  <td style={{ fontWeight: 'var(--weight-semibold)' }}>{r.name}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>{r.city}</td>
                   <td>
                     <Badge s={r.status} />

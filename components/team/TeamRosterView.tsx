@@ -131,7 +131,9 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
                   }}
                 >
                   <div>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>{r.userName}</span>
+                    <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
+                      {r.userName}
+                    </span>
                     <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                       {r.role}
                     </span>
@@ -181,7 +183,9 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
                     }}
                   >
                     <div>
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>{TYPE_LABEL[t.type]}</span>
+                      <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
+                        {TYPE_LABEL[t.type]}
+                      </span>
                       <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>
                         {t.start_date.slice(0, 10)} → {t.end_date.slice(0, 10)}
                       </span>
@@ -197,7 +201,7 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
                         <GhostBtn
                           disabled={busyId === t.id}
                           onClick={() => cancelRequest(t.id)}
-                          style={{ padding: '4px 10px', fontSize: 12 }}
+                          style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
                         >
                           Cancelar
                         </GhostBtn>
@@ -249,11 +253,18 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
             />
           </FormField>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={requestTimeOff} disabled={saving || !form.startDate || !form.endDate}>
               {saving ? 'A pedir…' : 'Pedir'}

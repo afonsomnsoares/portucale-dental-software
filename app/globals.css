@@ -110,6 +110,83 @@
   --ring-focus: 0 0 0 3px rgba(37, 99, 235, 0.22); /* foco — nunca é elevação   */
   --overlay:    rgba(15, 23, 42, 0.54);            /* fundo por trás do modal   */
 
+  /* ---------- Medida ----------
+     A cor deste ficheiro tinha escala, nomes e contraste verificado. O tamanho
+     não tinha nada: vinte tamanhos de letra, nove pesos, treze espaçamentos e
+     oito alturas de linha, cada um escolhido no sítio onde foi preciso.
+
+     É isso — e não a paleta — que faz uma interface parecer montada em vez de
+     desenhada. Três tamanhos a um pixel de distância a fazer o mesmo trabalho
+     não se distinguem a olho; garantem só que nada alinha com nada.
+
+     ─── Tipo ───────────────────────────────────────────────────────────────
+     Sete degraus, cada um com um papel que os outros não fazem. O 11/12/13
+     continua junto de propósito: numa aplicação densa esses três pixels são a
+     diferença entre etiqueta, meta e corpo, e essa distinção usa-se o dia
+     inteiro. O que não se defende é escolher entre eles caso a caso.
+
+     Cada degrau traz a sua altura de linha e o seu tracking. Texto grande
+     precisa de menos entrelinha e de tracking negativo; maiúsculas pequenas
+     precisam do contrário. Emparelhados aqui, deixam de ser decisões. */
+  --text-2xs:          11px;   /* SÓ maiúsculas: etiquetas, cabeçalho de tabela */
+  --text-2xs-leading:  1.4;
+  --text-2xs-tracking: 0.08em;
+
+  --text-xs:           12px;   /* meta, legendas, texto de ajuda                */
+  --text-xs-leading:   1.5;
+  --text-xs-tracking:  0;
+
+  --text-sm:           13px;   /* corpo, controlos, células — a omissão         */
+  --text-sm-leading:   1.55;
+  --text-sm-tracking:  0;
+
+  --text-base:         15px;   /* ênfase, título de cartão                      */
+  --text-base-leading: 1.5;
+  --text-base-tracking: 0;
+
+  --text-lg:           18px;   /* cabeçalho de secção                           */
+  --text-lg-leading:   1.4;
+  --text-lg-tracking:  -0.01em;
+
+  --text-xl:           22px;   /* título de página                              */
+  --text-xl-leading:   1.25;
+  --text-xl-tracking:  -0.015em;
+
+  --text-2xl:          30px;   /* número de métrica                             */
+  --text-2xl-leading:  1.1;
+  --text-2xl-tracking: -0.02em;
+
+  --text-3xl:          44px;   /* só ecrãs inteiros: 404, erro                   */
+  --text-3xl-leading:  1;
+  --text-3xl-tracking: -0.025em;
+
+  /* ─── Peso ───────────────────────────────────────────────────────────────
+     Quatro, e todos existem na fonte carregada em app/layout.tsx. Os `550`,
+     `650`, `750` e `900` que andavam pelo código não estão lá: o browser
+     encosta ao vizinho e a intenção («um pouco mais forte aqui») não chega ao
+     ecrã.
+
+     Numa UI densa não há espaço para variar tamanho. A hierarquia faz-se com
+     PESO e COR, e é por isso que quatro pesos chegam para tudo. */
+  --weight-normal:   400;
+  --weight-medium:   500;   /* navegação, sub-ênfase          */
+  --weight-semibold: 600;   /* botões, títulos, ênfase        */
+  --weight-bold:     700;   /* micro-etiquetas, números       */
+
+  /* ─── Espaço ─────────────────────────────────────────────────────────────
+     Grelha de 4px. É EXATAMENTE a escala do Tailwind (`gap-3` = 12px =
+     var(--space-3)), e isso não é coincidência: é o que faz as duas formas de
+     escrever espaçamento neste projeto darem o mesmo valor por construção, em
+     vez de se aproximarem por acaso. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
   /* Forma — três valores, e não há um quarto.
      O rácio de 2:1 entre controlo e cartão é o que mantém um input dentro de
      um cartão a parecer encaixado em vez de colado. */
@@ -169,26 +246,26 @@
 }
 
 @layer components {
-  .btn         { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: 600; font-size: 13px; border-radius: var(--radius-control); border: none; transition: transform 0.12s, background 0.12s, box-shadow 0.12s, border-color 0.12s; white-space: nowrap; cursor: pointer; }
-  .btn-primary { background: var(--accent); color: var(--text-onAccent); padding: 9px 16px; box-shadow: var(--elev-0); }
+  .btn         { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: var(--weight-semibold); font-size: var(--text-sm); line-height: var(--text-sm-leading); border-radius: var(--radius-control); border: none; transition: transform 0.12s, background 0.12s, box-shadow 0.12s, border-color 0.12s; white-space: nowrap; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: var(--text-onAccent); padding: var(--space-2) var(--space-4); box-shadow: var(--elev-0); }
   .btn-primary:hover { background: var(--accent-hover); }
   .btn-primary:active { transform: translateY(1px); }
-  .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); padding: 9px 16px; border: 1px solid var(--border-subtle); }
+  .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); padding: var(--space-2) var(--space-4); border: 1px solid var(--border-subtle); }
   .btn-secondary:hover { background: var(--bg-sunken); color: var(--text-primary); }
-  .btn-ghost { background: var(--bg-surface); color: var(--accent); padding: 9px 16px; border: 1px solid var(--border-subtle); }
+  .btn-ghost { background: var(--bg-surface); color: var(--accent); padding: var(--space-2) var(--space-4); border: 1px solid var(--border-subtle); }
   .btn-ghost:hover { background: var(--accent-bg); }
-  .btn-danger { background: var(--urgency-critical-bg); color: var(--urgency-critical); padding: 9px 16px; border: 1px solid var(--urgency-critical-border); }
+  .btn-danger { background: var(--urgency-critical-bg); color: var(--urgency-critical); padding: var(--space-2) var(--space-4); border: 1px solid var(--urgency-critical-border); }
   .btn-danger:hover { background: rgba(185, 28, 28, 0.10); }
-  .btn-sm  { padding: 5px 12px; font-size: 11px; }
-  .btn-lg  { padding: 10px 20px; font-size: 14px; }
+  .btn-sm  { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
+  .btn-lg  { padding: var(--space-3) var(--space-5); font-size: var(--text-base); }
   .btn-icon { padding: 7px; border-radius: var(--radius-control); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .input { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+  .input { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: var(--space-3); font-size: var(--text-sm); font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
   .input:focus { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
   .input::placeholder { color: var(--text-muted); }
 
-  .select { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: 10px 12px; font-size: 13px; font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+  .select { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: var(--space-3); font-size: var(--text-sm); font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
   .select:focus { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
 
   .card { background: var(--bg-surface); border-radius: var(--radius-card); border: 1px solid var(--border-subtle); box-shadow: var(--elev-0); }
@@ -196,17 +273,54 @@
   .card-interactive { transition: box-shadow 0.12s, border-color 0.12s; cursor: pointer; }
   .card-interactive:hover { box-shadow: var(--elev-1); border-color: var(--border-strong); }
 
-  .data-th { padding: 12px 16px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: left; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; letter-spacing: 0.10em; text-transform: uppercase; background: var(--bg-surface); }
-  .data-td { padding: 14px 16px; font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); }
+  .data-th { padding: var(--space-3) var(--space-4); font-size: var(--text-2xs); line-height: var(--text-2xs-leading); letter-spacing: var(--text-2xs-tracking); font-weight: var(--weight-bold); color: var(--text-muted); text-align: left; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; text-transform: uppercase; background: var(--bg-surface); }
+  .data-td { padding: var(--space-3) var(--space-4); font-size: var(--text-sm); line-height: var(--text-sm-leading); color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); }
   tr:hover .data-td { background: var(--bg-sunken); }
 
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-control); font-size: 13px; font-weight: 550; color: var(--text-secondary); transition: background 0.12s, color 0.12s; cursor: pointer; text-decoration: none; border: none; background: transparent; width: 100%; }
+  .nav-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-secondary); transition: background 0.12s, color 0.12s; cursor: pointer; text-decoration: none; border: none; background: transparent; width: 100%; }
   .nav-item:hover { background: var(--bg-sunken); color: var(--text-primary); }
-  .nav-item-active { background: var(--accent-bg); color: var(--accent); font-weight: 650; border-left: none; border-radius: var(--radius-control); padding-left: 12px; }
+  .nav-item-active { background: var(--accent-bg); color: var(--accent); font-weight: var(--weight-semibold); border-left: none; border-radius: var(--radius-control); padding-left: 12px; }
 
-  .badge { display: inline-flex; align-items: center; border-radius: var(--radius-pill); padding: 3px 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; border: 1px solid var(--border-subtle); }
+  .badge { display: inline-flex; align-items: center; border-radius: var(--radius-pill); padding: 3px var(--space-2); font-size: var(--text-2xs); line-height: var(--text-2xs-leading); font-weight: var(--weight-bold); letter-spacing: 0.02em; white-space: nowrap; border: 1px solid var(--border-subtle); }
 
-  .section-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px; }
+  /* ─── Os sete degraus, aplicáveis ────────────────────────────────────────
+     Cada classe traz o tamanho COM a sua entrelinha e o seu tracking. É a
+     diferença entre ter uma escala e ter uma lista de tamanhos: escolher o
+     degrau passa a ser uma decisão, e as outras duas deixam de existir.
+
+     Quem precisar só do tamanho tem os tokens `--text-*` — mas então também
+     leva a responsabilidade de emparelhar o resto. */
+  .t-2xs   { font-size: var(--text-2xs);   line-height: var(--text-2xs-leading);   letter-spacing: var(--text-2xs-tracking);   text-transform: uppercase; }
+  .t-xs    { font-size: var(--text-xs);    line-height: var(--text-xs-leading);    letter-spacing: var(--text-xs-tracking); }
+  .t-sm    { font-size: var(--text-sm);    line-height: var(--text-sm-leading);    letter-spacing: var(--text-sm-tracking); }
+  .t-base  { font-size: var(--text-base);  line-height: var(--text-base-leading);  letter-spacing: var(--text-base-tracking); }
+  .t-lg    { font-size: var(--text-lg);    line-height: var(--text-lg-leading);    letter-spacing: var(--text-lg-tracking); }
+  .t-xl    { font-size: var(--text-xl);    line-height: var(--text-xl-leading);    letter-spacing: var(--text-xl-tracking); }
+  .t-2xl   { font-size: var(--text-2xl);   line-height: var(--text-2xl-leading);   letter-spacing: var(--text-2xl-tracking); }
+  .t-3xl   { font-size: var(--text-3xl);   line-height: var(--text-3xl-leading);   letter-spacing: var(--text-3xl-tracking); }
+
+  /* ─── Números que não saltam ─────────────────────────────────────────────
+     Numa fonte proporcional o `1` é mais estreito que o `8`. Numa coluna de
+     valores isso faz as casas decimais dançarem de linha para linha, e é o
+     sinal mais visível de que ninguém olhou para a tabela.
+
+     Aplicado por omissão onde há números em coluna — célula de tabela, valor
+     de métrica, moeda — em vez de depender de alguém se lembrar. Estava em
+     nove ficheiros de mais de duzentos. */
+  .tnum,
+  .data-td,
+  .metric-value { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+  /* O número grande de um cartão de métrica. Junta o degrau, o peso e os
+     numerais tabulares — é sempre a mesma coisa, em vinte e três sítios. */
+  .metric-value {
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl-leading);
+    letter-spacing: var(--text-2xl-tracking);
+    font-weight: var(--weight-bold);
+  }
+
+  .section-label { font-size: var(--text-2xs); line-height: var(--text-2xs-leading); font-weight: var(--weight-bold); color: var(--text-muted); letter-spacing: var(--text-2xs-tracking); text-transform: uppercase; margin-bottom: var(--space-2); }
 }
 
 @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }

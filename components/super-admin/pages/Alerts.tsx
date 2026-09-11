@@ -66,22 +66,44 @@ export default function Alerts() {
         items.map((i) => {
           const m = SEV[i.severity] || SEV.info;
           return (
-            <div key={i.id} className="card p-4" style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div key={i.id} className="card p-4" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                 <Badge label={m.label} bg={m.bg} color={m.color} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{i.title}</span>
+                <span
+                  style={{
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-semibold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {i.title}
+                </span>
                 {i.impact_eur && (
-                  <span style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--urgency-critical)' }}>
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-bold)',
+                      color: 'var(--urgency-critical)',
+                    }}
+                  >
                     {Math.round(Number(i.impact_eur)).toLocaleString('pt-PT')} €
                   </span>
                 )}
               </div>
               {i.body && (
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 8px' }}>
+                <p
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.55,
+                    margin: '0 0 8px',
+                  }}
+                >
                   {i.body}
                 </p>
               )}
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                 {/* tenant_id NULL = insight do agente Grupo, que compara clínicas. */}
                 {i.tenant_name || 'Plataforma (toda a rede)'}
                 {i.tenant_city ? ` · ${i.tenant_city}` : ''} · agente {i.agent_id} · {i.kind} ·{' '}

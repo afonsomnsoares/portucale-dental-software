@@ -91,7 +91,7 @@ export default function InvoiceDetailPage() {
     return (
       <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>
         <GhostBtn onClick={() => router.back()} style={{ marginBottom: 16 }}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
+          <ArrowLeft size={16} style={{ marginRight: 8 }} /> Voltar
         </GhostBtn>
         Fatura não encontrada.
       </div>
@@ -102,11 +102,11 @@ export default function InvoiceDetailPage() {
     <div>
       <PageHeader title={`Fatura ${fmtId(inv.id)}`} sub={`${inv.patient_name} · ${fmtDate(inv.invoice_date)}`}>
         <GhostBtn onClick={() => router.back()} style={{ padding: '8px 12px' }}>
-          <ArrowLeft size={16} style={{ marginRight: 6 }} /> Voltar
+          <ArrowLeft size={16} style={{ marginRight: 8 }} /> Voltar
         </GhostBtn>
         {balance > 0 && (
           <PrimaryBtn onClick={() => setPayModal(true)} style={{ padding: '8px 14px' }}>
-            <Check size={16} style={{ marginRight: 6 }} /> Registar pagamento
+            <Check size={16} style={{ marginRight: 8 }} /> Registar pagamento
           </PrimaryBtn>
         )}
       </PageHeader>
@@ -136,13 +136,22 @@ export default function InvoiceDetailPage() {
 
         <div className="card p-5">
           <div className="section-label mb-4">Doente</div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-lg)',
+              fontWeight: 'var(--weight-bold)',
+              color: 'var(--text-primary)',
+              marginBottom: 8,
+            }}
+          >
             {inv.patient_name || '—'}
           </div>
           {inv.notes && (
             <>
               <div className="section-label mt-4 mb-2">Notas</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{inv.notes}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                {inv.notes}
+              </div>
             </>
           )}
         </div>
@@ -168,23 +177,27 @@ export default function InvoiceDetailPage() {
                     <td className="data-td">{item.description || '—'}</td>
                     <td
                       className="data-td"
-                      style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: '"JetBrains Mono",monospace',
+                        fontSize: 'var(--text-xs)',
+                      }}
                     >
                       ${Number(item.amount || 0).toLocaleString()}
                     </td>
                   </tr>
                 ))}
                 <tr>
-                  <td className="data-td" style={{ fontWeight: 700 }}>
+                  <td className="data-td" style={{ fontWeight: 'var(--weight-bold)' }}>
                     Total
                   </td>
                   <td
                     className="data-td"
                     style={{
                       textAlign: 'right',
-                      fontWeight: 700,
+                      fontWeight: 'var(--weight-bold)',
                       fontFamily: '"JetBrains Mono",monospace',
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                     }}
                   >
                     ${Number(inv.amount).toLocaleString()}
@@ -200,13 +213,15 @@ export default function InvoiceDetailPage() {
         <Modal title="Registar pagamento" onClose={() => setPayModal(false)} width={400}>
           <div style={{ marginBottom: 16 }}>
             <div className="section-label mb-1">Total da fatura</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
               ${Number(inv.amount).toLocaleString()}
             </div>
           </div>
           <div style={{ marginBottom: 16 }}>
             <div className="section-label mb-1">Já pago</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--urgency-ok)' }}>
+            <div
+              style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-semibold)', color: 'var(--urgency-ok)' }}
+            >
               ${Number(inv.paid).toLocaleString()}
             </div>
           </div>
@@ -214,8 +229,8 @@ export default function InvoiceDetailPage() {
             <div className="section-label mb-1">Saldo remanescente</div>
             <div
               style={{
-                fontSize: 16,
-                fontWeight: 600,
+                fontSize: 'var(--text-base)',
+                fontWeight: 'var(--weight-semibold)',
                 color: balance > 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
               }}
             >
@@ -258,8 +273,12 @@ export default function InvoiceDetailPage() {
 function Row({ label, value, color, bold }: { label: string; value: ReactNode; color?: string; bold?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || 'var(--text-primary)' }}>{value}</span>
+      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 'var(--weight-medium)' }}>
+        {label}
+      </span>
+      <span style={{ fontSize: 'var(--text-sm)', fontWeight: bold ? 700 : 500, color: color || 'var(--text-primary)' }}>
+        {value}
+      </span>
     </div>
   );
 }

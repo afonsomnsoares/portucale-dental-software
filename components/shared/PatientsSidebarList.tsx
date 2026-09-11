@@ -64,18 +64,26 @@ export default function PatientsSidebarList({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                <div
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 'var(--weight-semibold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {p.name}
+                </div>
                 {(alwaysShowRiskBadge || (p.no_show_score || 0) >= 30) && <RiskBadge score={p.no_show_score || 0} />}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 3 }}>
+              <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginBottom: 3 }}>
                 #{p.global_seq} · <Badge s={p.status} />
               </div>
               {p.alerts?.filter(Boolean).length > 0 && (
                 <div
                   style={{
-                    fontSize: 11,
+                    fontSize: 'var(--text-2xs)',
                     color: 'var(--urgency-critical)',
-                    fontWeight: 600,
+                    fontWeight: 'var(--weight-semibold)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,

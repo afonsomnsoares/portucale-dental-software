@@ -51,10 +51,10 @@ function totalDe(f: MetricForecast) {
 
 function Tendencia({ trend }: { trend: number }) {
   const pct = Math.round((trend - 1) * 100);
-  if (pct === 0) return <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>estável</span>;
+  if (pct === 0) return <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>estável</span>;
   const sobe = pct > 0;
   return (
-    <span style={{ fontSize: 11, color: sobe ? 'var(--urgency-ok)' : 'var(--urgency-soon)' }}>
+    <span style={{ fontSize: 'var(--text-2xs)', color: sobe ? 'var(--urgency-ok)' : 'var(--urgency-soon)' }}>
       {sobe ? '↑' : '↓'} {Math.abs(pct)}% de tendência
     </span>
   );
@@ -72,7 +72,7 @@ function Sparkline({ days, unit }: { days: ForecastDay[]; unit: MetricForecast['
     <svg
       viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
-      style={{ width: '100%', height: 40, display: 'block', marginTop: 10 }}
+      style={{ width: '100%', height: 40, display: 'block', marginTop: 12 }}
       role="img"
       aria-label={`Projeção diária, máximo ${fmt(max, unit)}`}
     >
@@ -147,7 +147,7 @@ export default function Forecast({
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -163,7 +163,7 @@ export default function Forecast({
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 14,
+            gap: 12,
           }}
         >
           {dados.map((f) => (
@@ -178,14 +178,31 @@ export default function Forecast({
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{f.label}</span>
+                <span
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--text-muted)',
+                    fontWeight: 'var(--weight-semibold)',
+                  }}
+                >
+                  {f.label}
+                </span>
                 <Tendencia trend={f.trend} />
               </div>
 
-              <div style={{ fontSize: 26, fontWeight: 700, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-xl)',
+                  fontWeight: 'var(--weight-bold)',
+                  marginTop: 4,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
                 {fmt(totalDe(f), f.unit)}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              <div
+                style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}
+              >
                 entre {fmt(f.unit === 'pct' ? f.totalLow / Math.max(1, f.days.length) : f.totalLow, f.unit)} e{' '}
                 {fmt(f.unit === 'pct' ? f.totalHigh / Math.max(1, f.days.length) : f.totalHigh, f.unit)}
               </div>
@@ -193,7 +210,7 @@ export default function Forecast({
               <Sparkline days={f.days} unit={f.unit} />
 
               {!f.reliable && (
-                <div style={{ fontSize: 11, color: 'var(--urgency-soon)', marginTop: 8 }}>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--urgency-soon)', marginTop: 8 }}>
                   Base fraca — só {f.confidentDays} de {f.days.length} dias têm histórico que chegue. Lê isto como uma
                   ordem de grandeza, não como um número.
                 </div>

@@ -123,7 +123,7 @@ export default function ClinicLeadSourcesPage() {
                   <GhostBtn
                     disabled={busyId === s.id}
                     onClick={() => toggleActive(s)}
-                    style={{ padding: '5px 10px', fontSize: 12 }}
+                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                   >
                     {busyId === s.id ? '…' : s.active ? 'Desativar' : 'Ativar'}
                   </GhostBtn>
@@ -144,11 +144,18 @@ export default function ClinicLeadSourcesPage() {
             />
           </FormField>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setCreateOpen(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={create} disabled={saving || !label.trim()}>
               {saving ? 'A criar…' : 'Criar'}
@@ -184,8 +191,8 @@ export default function ClinicLeadSourcesPage() {
               marginBottom: 16,
             }}
           >
-            <code style={{ fontSize: 12, wordBreak: 'break-all', flex: 1 }}>{revealed.token}</code>
-            <GhostBtn onClick={copyToken} style={{ padding: '5px 10px', fontSize: 12, flexShrink: 0 }}>
+            <code style={{ fontSize: 'var(--text-xs)', wordBreak: 'break-all', flex: 1 }}>{revealed.token}</code>
+            <GhostBtn onClick={copyToken} style={{ padding: '5px 10px', fontSize: 'var(--text-xs)', flexShrink: 0 }}>
               {copied ? 'Copiado ✓' : 'Copiar'}
             </GhostBtn>
           </div>
@@ -193,14 +200,14 @@ export default function ClinicLeadSourcesPage() {
           <div className="section-label mb-1.5">Como usar (exemplo)</div>
           <pre
             style={{
-              fontSize: 11,
+              fontSize: 'var(--text-2xs)',
               background: 'var(--text-primary)',
               color: 'var(--bg-sunken)',
               padding: '12px 14px',
               borderRadius: 'var(--radius-control)',
               overflowX: 'auto',
               whiteSpace: 'pre',
-              lineHeight: 1.6,
+              lineHeight: 1.55,
             }}
           >
             {`fetch("${endpoint}", {

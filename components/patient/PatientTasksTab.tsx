@@ -142,12 +142,19 @@ export default function PatientTasksTab({ api, user, patientId, tasks, onChanged
             style={{ minHeight: 60 }}
           />
         </FormField>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-sm)', marginBottom: 12 }}>
           <input type="checkbox" checked={assignToMe} onChange={(e) => setAssignToMe(e.target.checked)} />
           Atribuir a mim
         </label>
         {error && (
-          <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 'var(--text-xs)',
+              color: 'var(--urgency-critical)',
+              fontWeight: 'var(--weight-bold)',
+              marginBottom: 12,
+            }}
+          >
             {error}
           </div>
         )}
@@ -176,43 +183,60 @@ export default function PatientTasksTab({ api, user, patientId, tasks, onChanged
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
                       <Badge bg="var(--accent-bg)" color="var(--accent)" label={TYPE_LABELS[t.type]} />
                       {t.due_at && (
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                           Prazo: {new Date(t.due_at).toLocaleDateString('pt-PT')}
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t.title}</div>
+                    <div
+                      style={{
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 'var(--weight-semibold)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      {t.title}
+                    </div>
                     {t.notes && (
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{t.notes}</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 4 }}>
+                        {t.notes}
+                      </div>
                     )}
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 4 }}>
                       {t.assigned_to_name ? `Atribuído a ${t.assigned_to_name}` : 'Fila da equipa'}
                     </div>
                     {linkByTask[t.id] && (
-                      <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 6, wordBreak: 'break-all' }}>
+                      <div
+                        style={{
+                          fontSize: 'var(--text-2xs)',
+                          color: 'var(--accent)',
+                          marginTop: 8,
+                          wordBreak: 'break-all',
+                        }}
+                      >
                         Link copiado: {linkByTask[t.id]}
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                     {PORTAL_PURPOSE[t.type] && (
                       <GhostBtn
                         onClick={() => generatePortalLink(t)}
                         disabled={linkBusyId === t.id}
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
                         {linkBusyId === t.id ? '…' : 'Gerar link'}
                       </GhostBtn>
                     )}
                     <GhostBtn
                       onClick={() => setStatus(t.id, { complete: true })}
-                      style={{ padding: '5px 10px', fontSize: 12 }}
+                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                     >
                       Concluir
                     </GhostBtn>
                     <DangerBtn
                       onClick={() => setStatus(t.id, { cancel: true })}
-                      style={{ padding: '5px 10px', fontSize: 12 }}
+                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                     >
                       Cancelar
                     </DangerBtn>
@@ -233,7 +257,7 @@ export default function PatientTasksTab({ api, user, patientId, tasks, onChanged
                     bg={t.status === 'done' ? 'var(--urgency-ok-bg)' : 'var(--bg-sunken)'}
                     color={t.status === 'done' ? 'var(--urgency-ok)' : 'var(--text-secondary)'}
                   />
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t.title}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{t.title}</span>
                 </div>
               ))}
             </div>

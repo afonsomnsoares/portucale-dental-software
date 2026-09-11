@@ -112,7 +112,7 @@ export default function DentistTreatmentsPage() {
         action="+ Novo tratamento"
         onAction={() => setModal(true)}
       >
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           {['roadmap', 'table'].map((m) => (
             <button
               type="button"
@@ -120,8 +120,8 @@ export default function DentistTreatmentsPage() {
               onClick={() => setViewMode(m)}
               style={{
                 padding: '7px 14px',
-                fontSize: 12,
-                fontWeight: 600,
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--weight-semibold)',
                 borderRadius: 'var(--radius-control)',
                 cursor: 'pointer',
                 border: 'none',
@@ -141,7 +141,7 @@ export default function DentistTreatmentsPage() {
         <AlertBanner type="danger">Não foi possível ler os tratamentos. {treatmentsQuery.error.message}</AlertBanner>
       ) : null}
 
-      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
         <MetricCard
           label="VALOR TOTAL"
           value={`$${visible.reduce((a, t) => a + Number(t.fee), 0).toLocaleString()}`}
@@ -164,7 +164,7 @@ export default function DentistTreatmentsPage() {
         />
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <Sel value={selPat} onChange={(e) => setSelPat(e.target.value)} style={{ maxWidth: 240 }}>
           <option value="all">Todos os doentes</option>
           {ptOptions.map((p) => (
@@ -201,8 +201,8 @@ export default function DentistTreatmentsPage() {
                     <div>
                       <div
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
+                          fontSize: 'var(--text-2xs)',
+                          fontWeight: 'var(--weight-bold)',
                           color: ph.color,
                           letterSpacing: '.08em',
                           marginBottom: 2,
@@ -212,8 +212,8 @@ export default function DentistTreatmentsPage() {
                       </div>
                       <div
                         style={{
-                          fontSize: 15,
-                          fontWeight: 700,
+                          fontSize: 'var(--text-base)',
+                          fontWeight: 'var(--weight-bold)',
                           color: 'var(--text-primary)',
                           fontFamily: '"Plus Jakarta Sans",sans-serif',
                         }}
@@ -222,8 +222,10 @@ export default function DentistTreatmentsPage() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{items.length} items</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: ph.color }}>
+                      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+                        {items.length} items
+                      </div>
+                      <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: ph.color }}>
                         ${items.reduce((a, t) => a + Number(t.fee), 0).toLocaleString()}
                       </div>
                     </div>
@@ -245,25 +247,32 @@ export default function DentistTreatmentsPage() {
                       className="card mb-2"
                       style={{ padding: '12px 14px', border: '1px solid var(--border-subtle)' }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <span
                           style={{
                             background: ph.bg,
                             color: ph.color,
                             borderRadius: 'var(--radius-control)',
                             padding: '2px 8px',
-                            fontSize: 11,
-                            fontWeight: 700,
+                            fontSize: 'var(--text-2xs)',
+                            fontWeight: 'var(--weight-bold)',
                           }}
                         >
                           {t.treatment_code || 'Geral'}
                         </span>
                         <Badge s={t.status} />
                       </div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3 }}>
+                      <div
+                        style={{
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 'var(--weight-semibold)',
+                          color: 'var(--text-primary)',
+                          marginBottom: 3,
+                        }}
+                      >
                         {t.description}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
                         {t.treatment_code || '—'} ·{' '}
                         <strong style={{ color: 'var(--text-primary)' }}>${Number(t.fee).toLocaleString()}</strong>
                         {t.patient_name && <span style={{ color: 'var(--cat-teal)' }}> · {t.patient_name}</span>}
@@ -276,7 +285,7 @@ export default function DentistTreatmentsPage() {
                           border: '1px solid var(--border-subtle)',
                           borderRadius: 'var(--radius-control)',
                           padding: '5px 8px',
-                          fontSize: 11,
+                          fontSize: 'var(--text-2xs)',
                           fontFamily: 'inherit',
                           color: 'var(--text-primary)',
                           background: 'white',
@@ -296,7 +305,7 @@ export default function DentistTreatmentsPage() {
                         borderRadius: 'var(--radius-control)',
                         padding: '24px 0',
                         textAlign: 'center',
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                         color: 'var(--text-muted)',
                         margin: 4,
                       }}

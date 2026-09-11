@@ -26,8 +26,12 @@ export default function OperatoryPanel({
     <div className="card" style={{ padding: '18px 18px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>Gabinete</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cadeiras de tratamento em tempo real</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
+            Gabinete
+          </div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+            Cadeiras de tratamento em tempo real
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {chairs.slice(0, 6).map((_, i) => (
@@ -45,7 +49,7 @@ export default function OperatoryPanel({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
         {chairs.map((chair, index) => {
           const color = CHAIR_COLORS[index % CHAIR_COLORS.length];
           const chairAppts = todays.filter((a) => Number(a.chair) === chair);
@@ -66,16 +70,22 @@ export default function OperatoryPanel({
                 background: 'white',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <ChairGraphic color={color} occupied={!!current} />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 900, color: 'var(--text-primary)' }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--text-xs)',
+                        fontWeight: 'var(--weight-bold)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
                       {current ? current.patient_name || '—' : 'Disponível'}
                     </div>
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: 'var(--text-2xs)',
                         color: 'var(--text-muted)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -92,7 +102,7 @@ export default function OperatoryPanel({
                     {current?.dentist_name && (
                       <div
                         style={{
-                          fontSize: 11,
+                          fontSize: 'var(--text-2xs)',
                           color: 'var(--text-muted)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -122,8 +132,8 @@ export default function OperatoryPanel({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      gap: 10,
-                      marginBottom: 10,
+                      gap: 12,
+                      marginBottom: 12,
                     }}
                   >
                     <Badge s={current.status} />
@@ -135,7 +145,7 @@ export default function OperatoryPanel({
                     const next = transitions[0] || null;
                     const canNoShow = transitions.includes('no-show');
                     return (
-                      <div className="grid-pair" style={{ gap: 10 }}>
+                      <div className="grid-pair" style={{ gap: 12 }}>
                         <button
                           type="button"
                           disabled={!next || updatingId === current.id}
@@ -147,8 +157,8 @@ export default function OperatoryPanel({
                             border: 'none',
                             borderRadius: 'var(--radius-control)',
                             padding: '9px 0',
-                            fontSize: 11,
-                            fontWeight: 900,
+                            fontSize: 'var(--text-2xs)',
+                            fontWeight: 'var(--weight-bold)',
                             cursor: !next || updatingId === current.id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit',
                             opacity: updatingId === current.id ? 0.7 : 1,
@@ -167,8 +177,8 @@ export default function OperatoryPanel({
                             border: `1px solid ${canNoShow ? 'var(--urgency-critical-border)' : 'var(--bg-sunken)'}`,
                             borderRadius: 'var(--radius-control)',
                             padding: '9px 0',
-                            fontSize: 11,
-                            fontWeight: 900,
+                            fontSize: 'var(--text-2xs)',
+                            fontWeight: 'var(--weight-bold)',
                             cursor: !canNoShow || updatingId === current.id ? 'not-allowed' : 'pointer',
                             fontFamily: 'inherit',
                             opacity: updatingId === current.id ? 0.7 : 1,

@@ -249,12 +249,12 @@ export default function ReceptionDashboard() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 13 }}
+          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
         />
       </PageHeader>
 
       {/* KPIs */}
-      <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
         <MetricCard label="MARCADAS PARA HOJE" value={appts.length} sub="consultas no total" color="var(--accent)" />
         <MetricCard label="SALA DE ESPERA" value={waiting} sub="com entrada registada" color="var(--urgency-soon)" />
         <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
@@ -276,13 +276,15 @@ export default function ReceptionDashboard() {
             padding: '12px 18px',
             marginBottom: 16,
             display: 'flex',
-            gap: 14,
+            gap: 12,
             alignItems: 'center',
             flexWrap: 'wrap',
           }}
         >
           <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-critical)' }}>
+          <div
+            style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-critical)' }}
+          >
             {highRisk.length} consulta{highRisk.length > 1 ? 's' : ''} com alto risco de falta hoje
           </div>
           {highRisk.map((a) => (
@@ -295,7 +297,7 @@ export default function ReceptionDashboard() {
                 background: 'white',
                 borderRadius: 'var(--radius-control)',
                 padding: '5px 12px',
-                fontSize: 12,
+                fontSize: 'var(--text-xs)',
               }}
             >
               <strong style={{ color: 'var(--text-primary)' }}>{a.patient_name}</strong>
@@ -315,13 +317,13 @@ export default function ReceptionDashboard() {
             padding: '12px 18px',
             marginBottom: 16,
             display: 'flex',
-            gap: 14,
+            gap: 12,
             alignItems: 'center',
             flexWrap: 'wrap',
           }}
         >
           <Check size={14} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-ok)' }}>
             {ready} doente{ready > 1 ? 's' : ''} pronto{ready > 1 ? 's' : ''} para alta
           </div>
           {appts
@@ -336,7 +338,7 @@ export default function ReceptionDashboard() {
                   background: 'white',
                   borderRadius: 'var(--radius-control)',
                   padding: '5px 12px',
-                  fontSize: 12,
+                  fontSize: 'var(--text-xs)',
                 }}
               >
                 <strong style={{ color: 'var(--text-primary)' }}>{a.patient_name}</strong>
@@ -349,8 +351,8 @@ export default function ReceptionDashboard() {
                     border: 'none',
                     borderRadius: 'var(--radius-control)',
                     padding: '3px 10px',
-                    fontSize: 11,
-                    fontWeight: 700,
+                    fontSize: 'var(--text-2xs)',
+                    fontWeight: 'var(--weight-bold)',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                   }}
@@ -365,7 +367,7 @@ export default function ReceptionDashboard() {
       {/* O que falta fazer, antes do calendário: a agenda diz quem vem, isto diz o que
           é preciso ter tratado antes de a pessoa chegar. */}
       {!briefingQuery.loading && briefing.length > 0 && (
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginBottom: 20 }}>
           <DailyBriefingPanel api={api} rows={briefing} />
         </div>
       )}
@@ -403,11 +405,11 @@ export default function ReceptionDashboard() {
             </Sel>
           </FormField>
 
-          <div className="flex items-center justify-between" style={{ marginTop: 4, marginBottom: 10 }}>
+          <div className="flex items-center justify-between" style={{ marginTop: 4, marginBottom: 12 }}>
             <span className="section-label">{mode === 'suggest' ? 'Horários sugeridos' : 'Marcação manual'}</span>
             <GhostBtn
               onClick={() => setMode((m) => (m === 'suggest' ? 'manual' : 'suggest'))}
-              style={{ padding: '4px 10px', fontSize: 11 }}
+              style={{ padding: '4px 10px', fontSize: 'var(--text-2xs)' }}
             >
               {mode === 'suggest' ? 'Marcação manual (avançado)' : 'Voltar às sugestões'}
             </GhostBtn>
@@ -427,17 +429,17 @@ export default function ReceptionDashboard() {
               </FormField>
 
               {!form.patientId || !form.type ? (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 0' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '10px 0' }}>
                   Escolha o paciente e o tipo de consulta para ver horários disponíveis.
                 </div>
               ) : slotsLoading ? (
                 <Spinner />
               ) : !slots.length ? (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '10px 0' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '10px 0' }}>
                   Sem horários disponíveis nos próximos dias.
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                   {slots.map((s) => {
                     const isSelected =
                       selectedSlot &&
@@ -462,7 +464,13 @@ export default function ReceptionDashboard() {
                           fontFamily: 'inherit',
                         }}
                       >
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <span
+                          style={{
+                            fontSize: 'var(--text-sm)',
+                            fontWeight: 'var(--weight-semibold)',
+                            color: 'var(--text-primary)',
+                          }}
+                        >
                           {new Date(`${s.date}T12:00:00`).toLocaleDateString('pt-PT', {
                             weekday: 'short',
                             day: '2-digit',
@@ -470,7 +478,7 @@ export default function ReceptionDashboard() {
                           })}{' '}
                           · {s.startTime}
                         </span>
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                           {s.dentistName} · Gabinete {s.chair}
                         </span>
                       </button>
@@ -479,7 +487,11 @@ export default function ReceptionDashboard() {
                 </div>
               )}
 
-              <GhostBtn onClick={moreSlots} style={{ marginTop: 10, fontSize: 12 }} disabled={slotsLoading}>
+              <GhostBtn
+                onClick={moreSlots}
+                style={{ marginTop: 12, fontSize: 'var(--text-xs)' }}
+                disabled={slotsLoading}
+              >
                 Ver mais horários
               </GhostBtn>
             </div>
@@ -512,7 +524,7 @@ export default function ReceptionDashboard() {
                   </Sel>
                 </FormField>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, marginBottom: 8 }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2, marginBottom: 8 }}>
                 Cadeira atribuída automaticamente com base na disponibilidade. Marca para o dia atualmente aberto no
                 calendário ({date}).
               </div>
@@ -529,7 +541,14 @@ export default function ReceptionDashboard() {
           </FormField>
 
           {bookErr && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {bookErr}
             </div>
           )}

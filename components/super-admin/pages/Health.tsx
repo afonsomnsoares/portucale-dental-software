@@ -70,8 +70,16 @@ export default function Health({ initialData }: { initialData?: PlatformHealth }
                   borderBottom: '1px solid var(--bg-page)',
                 }}
               >
-                <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{r.status}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{r.n}</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{r.status}</span>
+                <span
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 'var(--weight-semibold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {r.n}
+                </span>
               </div>
             ))
           )}
@@ -94,10 +102,16 @@ export default function Health({ initialData }: { initialData?: PlatformHealth }
                   borderBottom: '1px solid var(--bg-page)',
                 }}
               >
-                <span style={{ fontSize: 13, color: 'var(--text-primary)', fontFamily: '"JetBrains Mono",monospace' }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    color: 'var(--text-primary)',
+                    fontFamily: '"JetBrains Mono",monospace',
+                  }}
+                >
                   {j.job_name}
                 </span>
-                <span style={{ fontSize: 12, color: 'var(--urgency-critical)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--urgency-critical)' }}>
                   {new Date(j.last_at).toLocaleDateString('pt-PT')}
                 </span>
               </div>
@@ -108,7 +122,7 @@ export default function Health({ initialData }: { initialData?: PlatformHealth }
 
       <div className="card p-5" style={{ marginTop: 16 }}>
         <div className="section-label mb-2">O QUE ESTA PÁGINA AINDA NÃO MEDE</div>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
           {h.notInstrumented.join(' · ')} — precisam de monitorização fora da aplicação (a app não se consegue medir a
           si própria quando está em baixo). O que está acima é tudo medido, nada é estimado.
         </p>

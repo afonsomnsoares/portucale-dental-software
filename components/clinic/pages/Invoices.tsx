@@ -47,7 +47,7 @@ export default function ClinicInvoicesPage() {
               onClick={() => setStatus(value)}
               style={{
                 padding: '6px 12px',
-                fontSize: 12,
+                fontSize: 'var(--text-xs)',
                 fontWeight: status === value ? 700 : 500,
                 border: '1px solid',
                 borderColor: status === value ? 'var(--accent)' : 'var(--border-subtle)',
@@ -67,16 +67,24 @@ export default function ClinicInvoicesPage() {
       <div className="card overflow-x-auto p-5">
         <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
           <div>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total</span>
-            <div style={{ fontWeight: 700 }}>{totals.count}</div>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Total</span>
+            <div style={{ fontWeight: 'var(--weight-bold)' }}>{totals.count}</div>
           </div>
           <div>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Faturado</span>
-            <div style={{ fontWeight: 700, fontFamily: '"JetBrains Mono",monospace' }}>{formatEUR(totals.amount)}</div>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Faturado</span>
+            <div style={{ fontWeight: 'var(--weight-bold)', fontFamily: '"JetBrains Mono",monospace' }}>
+              {formatEUR(totals.amount)}
+            </div>
           </div>
           <div>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cobrado</span>
-            <div style={{ fontWeight: 700, fontFamily: '"JetBrains Mono",monospace', color: 'var(--urgency-ok)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Cobrado</span>
+            <div
+              style={{
+                fontWeight: 'var(--weight-bold)',
+                fontFamily: '"JetBrains Mono",monospace',
+                color: 'var(--urgency-ok)',
+              }}
+            >
               {formatEUR(totals.paid)}
             </div>
           </div>
@@ -115,15 +123,18 @@ export default function ClinicInvoicesPage() {
               <tbody>
                 {invoices.map((inv) => (
                   <tr key={inv.id} style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
-                    <td className="data-td" style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}>
+                    <td
+                      className="data-td"
+                      style={{ fontFamily: '"JetBrains Mono",monospace', fontSize: 'var(--text-xs)' }}
+                    >
                       <Link
                         href={`/dashboard/admin/invoices/${inv.id}`}
-                        style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                        style={{ color: 'var(--accent)', fontWeight: 'var(--weight-semibold)', textDecoration: 'none' }}
                       >
                         #{inv.id.slice(0, 8).toUpperCase()}
                       </Link>
                     </td>
-                    <td className="data-td" style={{ fontWeight: 600 }}>
+                    <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                       {inv.patient_name}
                     </td>
                     <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
@@ -131,7 +142,11 @@ export default function ClinicInvoicesPage() {
                     </td>
                     <td
                       className="data-td"
-                      style={{ textAlign: 'right', fontFamily: '"JetBrains Mono",monospace', fontSize: 12 }}
+                      style={{
+                        textAlign: 'right',
+                        fontFamily: '"JetBrains Mono",monospace',
+                        fontSize: 'var(--text-xs)',
+                      }}
                     >
                       {formatEUR(Number(inv.amount))}
                     </td>
@@ -140,7 +155,7 @@ export default function ClinicInvoicesPage() {
                       style={{
                         textAlign: 'right',
                         fontFamily: '"JetBrains Mono",monospace',
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                         color: Number(inv.paid) > 0 ? 'var(--urgency-ok)' : 'var(--text-muted)',
                       }}
                     >
@@ -151,7 +166,7 @@ export default function ClinicInvoicesPage() {
                       style={{
                         textAlign: 'right',
                         fontFamily: '"JetBrains Mono",monospace',
-                        fontSize: 12,
+                        fontSize: 'var(--text-xs)',
                         color: Number(inv.amount) > Number(inv.paid) ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
                       }}
                     >

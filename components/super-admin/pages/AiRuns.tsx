@@ -144,17 +144,19 @@ export default function AiRuns() {
                     <Badge label={r.status} {...m} />
                     <span
                       style={{
-                        fontSize: 13,
-                        fontWeight: 600,
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 'var(--weight-semibold)',
                         color: 'var(--text-primary)',
                         fontFamily: '"JetBrains Mono",monospace',
                       }}
                     >
                       {r.job_name}
                     </span>
-                    <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>#{r.id}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+                      #{r.id}
+                    </span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     {r.tenant_name || 'Plataforma'} ·{' '}
                     {r.started_at ? new Date(r.started_at).toLocaleString('pt-PT') : '—'}
                     {r.durationMs !== null ? ` · ${(r.durationMs / 1000).toFixed(1)}s` : ''}
@@ -173,15 +175,21 @@ export default function AiRuns() {
               <Spinner />
             ) : (
               <>
-                <div style={{ marginBottom: 4, fontSize: 11, color: 'var(--text-muted)' }}>
+                <div style={{ marginBottom: 4, fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {detail.run.tenantName || 'Plataforma (todas as clínicas)'} · Execução #{detail.run.id}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                  <span
+                    style={{
+                      fontSize: 'var(--text-base)',
+                      fontWeight: 'var(--weight-bold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
                     {detail.run.jobName}
                   </span>
                   <Badge label={detail.run.status} {...(STATUS_META[detail.run.status] || STATUS_META.completed)} />
-                  <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                     {new Date(detail.run.startedAt).toLocaleString('pt-PT')}
                     {detail.run.durationMs !== null ? ` · ${(detail.run.durationMs / 1000).toFixed(1)}s` : ''}
                   </span>
@@ -196,7 +204,7 @@ export default function AiRuns() {
                           width: 10,
                           height: 10,
                           borderRadius: 'var(--radius-pill)',
-                          marginTop: 5,
+                          marginTop: 4,
                           background: s.recorded ? 'var(--accent)' : 'transparent',
                           border: s.recorded ? 'none' : '2px dashed var(--text-muted)',
                         }}
@@ -208,15 +216,22 @@ export default function AiRuns() {
                     <div style={{ flex: 1, paddingBottom: 16, minWidth: 0 }}>
                       <div
                         style={{
-                          fontSize: 13,
-                          fontWeight: 600,
+                          fontSize: 'var(--text-sm)',
+                          fontWeight: 'var(--weight-semibold)',
                           color: s.recorded ? 'var(--text-primary)' : 'var(--text-muted)',
                           marginBottom: 4,
                         }}
                       >
                         {s.label}
                         {!s.recorded && (
-                          <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 8 }}>
+                          <span
+                            style={{
+                              fontSize: 'var(--text-2xs)',
+                              fontWeight: 'var(--weight-semibold)',
+                              color: 'var(--text-muted)',
+                              marginLeft: 8,
+                            }}
+                          >
                             NÃO GRAVADO
                           </span>
                         )}
@@ -224,10 +239,10 @@ export default function AiRuns() {
                       {s.recorded ? (
                         <pre
                           style={{
-                            fontSize: 11,
+                            fontSize: 'var(--text-2xs)',
                             fontFamily: '"JetBrains Mono",monospace',
                             background: 'var(--bg-page)',
-                            padding: 10,
+                            padding: 12,
                             borderRadius: 'var(--radius-control)',
                             margin: 0,
                             maxHeight: 220,
@@ -240,7 +255,7 @@ export default function AiRuns() {
                           {JSON.stringify(s.value, null, 2)}
                         </pre>
                       ) : (
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                           Nenhum código escreve este estágio hoje.
                         </div>
                       )}
@@ -250,9 +265,9 @@ export default function AiRuns() {
 
                 <p
                   style={{
-                    fontSize: 12,
+                    fontSize: 'var(--text-xs)',
                     color: 'var(--text-secondary)',
-                    lineHeight: 1.6,
+                    lineHeight: 1.55,
                     margin: 0,
                     paddingTop: 12,
                     borderTop: '1px solid var(--bg-sunken)',

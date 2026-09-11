@@ -128,7 +128,7 @@ export default function Reports() {
             border: '1px solid var(--urgency-critical-border)',
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -220,7 +220,14 @@ export default function Reports() {
                       }}
                     />
                   </div>
-                  <span style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 700 }}>
+                  <span
+                    style={{
+                      width: 100,
+                      textAlign: 'right',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-bold)',
+                    }}
+                  >
                     {formatEUR(Number(d.revenue))}
                   </span>
                 </div>
@@ -260,7 +267,7 @@ export default function Reports() {
                   <tbody>
                     {comparison.clinics.map((c) => (
                       <tr key={c.tenantId} style={{ borderBottom: '1px solid var(--bg-page)' }}>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
+                        <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {c.name}
                           {c.tenantId === comparison.gap?.bestTenantId && (
                             <span
@@ -282,7 +289,7 @@ export default function Reports() {
                         <td className="data-td" style={{ textAlign: 'right' }}>
                           {formatEUR(c.revenue)}
                         </td>
-                        <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>
+                        <td className="data-td" style={{ textAlign: 'right', fontWeight: 'var(--weight-bold)' }}>
                           {pct(c.conversionRate)}
                         </td>
                         <td className="data-td" style={{ textAlign: 'right' }}>
@@ -335,7 +342,7 @@ export default function Reports() {
                 {insight.error}
               </p>
             ) : (
-              <p className="text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.6 }}>
+              <p className="text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.55 }}>
                 {insight.insight}
               </p>
             )}

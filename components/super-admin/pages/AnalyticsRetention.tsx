@@ -55,7 +55,7 @@ export default function AnalyticsRetention({ initialData }: { initialData?: Usag
               const d = daysSinceActivity(r);
               return (
                 <tr key={r.id}>
-                  <td style={{ fontWeight: 600 }}>{r.name}</td>
+                  <td style={{ fontWeight: 'var(--weight-semibold)' }}>{r.name}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>{r.city}</td>
                   <td>
                     <Badge label={band.label} bg={band.bg} color={band.color} />
@@ -63,7 +63,7 @@ export default function AnalyticsRetention({ initialData }: { initialData?: Usag
                   <td style={{ color: 'var(--text-secondary)' }}>
                     {r.last_appointment ? new Date(r.last_appointment).toLocaleDateString('pt-PT') : '—'}
                   </td>
-                  <td style={{ fontWeight: 600, color: band.color }}>{d === null ? '—' : d}</td>
+                  <td style={{ fontWeight: 'var(--weight-semibold)', color: band.color }}>{d === null ? '—' : d}</td>
                   <td>{r.patients.toLocaleString('pt-PT')}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>
                     {new Date(r.created_at).toLocaleDateString('pt-PT')}
@@ -74,7 +74,15 @@ export default function AnalyticsRetention({ initialData }: { initialData?: Usag
         />
       )}
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         Para haver churn e coortes no sentido comercial faltaria a tabela de subscrições (ver Faturação → Subscrições):
         quando cada clínica assinou, por quanto, e quando cancelou. Isto mede o sinal que aparece primeiro.
       </p>

@@ -86,7 +86,7 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
       {tasksQuery.error ? (
         <AlertBanner type="danger">Não foi possível ler a fila de tarefas. {tasksQuery.error.message}</AlertBanner>
       ) : null}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <Sel value={scope} onChange={(e) => setScope(e.target.value as typeof scope)} style={{ width: 200 }}>
           <option value="all">Todas</option>
           <option value="mine">Atribuídas a mim</option>
@@ -125,7 +125,7 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
                 </TD>
                 <TD>
                   {t.assigned_to_name ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                       {t.assigned_to_name}
                       {t.auto_assigned && <Badge label="auto" bg="var(--accent-bg)" color="var(--accent)" />}
                     </span>
@@ -134,25 +134,25 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
                   )}
                 </TD>
                 <TD right>
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     {!t.assigned_to && (
                       <GhostBtn
                         onClick={() => autoAssign(t.id)}
                         disabled={assigning === t.id}
-                        style={{ padding: '5px 10px', fontSize: 12 }}
+                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
                         {assigning === t.id ? 'A atribuir…' : 'Atribuir automaticamente'}
                       </GhostBtn>
                     )}
                     <GhostBtn
                       onClick={() => setStatus(t.id, { complete: true })}
-                      style={{ padding: '5px 10px', fontSize: 12 }}
+                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                     >
                       Concluir
                     </GhostBtn>
                     <DangerBtn
                       onClick={() => setStatus(t.id, { cancel: true })}
-                      style={{ padding: '5px 10px', fontSize: 12 }}
+                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                     >
                       Cancelar
                     </DangerBtn>

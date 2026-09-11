@@ -61,15 +61,15 @@ export default function AnalyticsUsage({ initialData }: { initialData?: UsageRow
                 : null;
               return (
                 <tr key={r.id}>
-                  <td style={{ fontWeight: 600 }}>{r.name}</td>
+                  <td style={{ fontWeight: 'var(--weight-semibold)' }}>{r.name}</td>
                   <td>{r.patients.toLocaleString('pt-PT')}</td>
                   <td>{r.active_users}</td>
-                  <td style={{ fontWeight: 600 }}>{r.appts_30d}</td>
+                  <td style={{ fontWeight: 'var(--weight-semibold)' }}>{r.appts_30d}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>{r.appts_prev_30d}</td>
                   <td
                     style={{
                       color: d === null ? 'var(--text-muted)' : d < 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
-                      fontWeight: 600,
+                      fontWeight: 'var(--weight-semibold)',
                     }}
                   >
                     {d === null ? '—' : `${d > 0 ? '+' : ''}${d}%`}
@@ -83,7 +83,15 @@ export default function AnalyticsUsage({ initialData }: { initialData?: UsageRow
         />
       )}
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         Uma clínica com marcações e zero execuções de agentes na coluna final é o caso a investigar: está a usar o
         sistema como registo e não como camada de decisão, que é exatamente o que este produto não quer ser.
       </p>

@@ -180,8 +180,8 @@ export default function ClinicTeamPage() {
                           color: 'var(--accent)',
                           borderRadius: 'var(--radius-control)',
                           padding: '4px 8px',
-                          fontSize: 12,
-                          fontWeight: 600,
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 'var(--weight-semibold)',
                         }}
                       >
                         <span>
@@ -240,14 +240,14 @@ export default function ClinicTeamPage() {
                             <GhostBtn
                               disabled={busyId === t.id}
                               onClick={() => setTimeOffStatus(t.id, 'approved')}
-                              style={{ padding: '5px 10px', fontSize: 12 }}
+                              style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                             >
                               Aprovar
                             </GhostBtn>
                             <DangerBtn
                               disabled={busyId === t.id}
                               onClick={() => setTimeOffStatus(t.id, 'rejected')}
-                              style={{ padding: '5px 10px', fontSize: 12 }}
+                              style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                             >
                               Rejeitar
                             </DangerBtn>
@@ -293,11 +293,18 @@ export default function ClinicTeamPage() {
             </FormField>
           </div>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={createShift} disabled={saving}>
               {saving ? 'A criar…' : 'Criar turno'}

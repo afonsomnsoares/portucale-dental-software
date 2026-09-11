@@ -70,7 +70,7 @@ export function Badge({ s, label, color, bg }: { s?: string; label?: string; col
           borderRadius: '50%',
           background: m.color,
           display: 'inline-block',
-          marginRight: 5,
+          marginRight: 4,
           flexShrink: 0,
         }}
       />
@@ -95,7 +95,7 @@ export function RiskBadge({ score = 0 }) {
           borderRadius: '50%',
           background: cfg[1],
           display: 'inline-block',
-          marginRight: 5,
+          marginRight: 4,
         }}
       />
       {score}% {cfg[2]}
@@ -159,15 +159,10 @@ export function MetricCard({
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <div className="section-label mb-2">{label}</div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color,
-              lineHeight: 1.05,
-              fontFamily: '"Plus Jakarta Sans",sans-serif',
-            }}
-          >
+          {/* `.metric-value` traz o degrau, a entrelinha, o tracking, o peso e os
+              numerais tabulares — que é sempre o mesmo conjunto, em cada métrica
+              da aplicação. A cor fica inline porque essa muda com o significado. */}
+          <div className="metric-value" style={{ color }}>
             {value ?? '—'}
           </div>
           {sub && (
@@ -176,7 +171,7 @@ export function MetricCard({
             </div>
           )}
         </div>
-        {icon && <div style={{ fontSize: 22, opacity: 0.28 }}>{icon}</div>}
+        {icon && <div style={{ fontSize: 'var(--text-xl)', opacity: 0.28 }}>{icon}</div>}
       </div>
     </div>
   );
@@ -200,8 +195,8 @@ export function PageHeader({
       <div>
         <h1
           style={{
-            fontSize: 24,
-            fontWeight: 800,
+            fontSize: 'var(--text-xl)',
+            fontWeight: 'var(--weight-bold)',
             color: 'var(--text-primary)',
             lineHeight: 1.15,
             fontFamily: '"Plus Jakarta Sans",sans-serif',
@@ -446,7 +441,10 @@ export function Modal({
           className="flex items-center justify-between px-6 py-4"
           style={{ borderBottom: '1px solid var(--border-subtle)' }}
         >
-          <h2 id="modal-title" style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)' }}>
+          <h2
+            id="modal-title"
+            style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}
+          >
             {title}
           </h2>
           <button
@@ -456,7 +454,7 @@ export function Modal({
             style={{
               background: 'transparent',
               border: 'none',
-              fontSize: 20,
+              fontSize: 'var(--text-lg)',
               color: 'var(--text-muted)',
               cursor: 'pointer',
               lineHeight: 1,
@@ -495,7 +493,11 @@ export function Spinner() {
 export function Empty({ message = 'Sem dados', icon }: { message?: string; icon?: ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
-      {icon ? <div style={{ fontSize: 32, opacity: 0.3 }}>{icon}</div> : <Inbox size={32} opacity={0.3} />}
+      {icon ? (
+        <div style={{ fontSize: 'var(--text-2xl)', opacity: 0.3 }}>{icon}</div>
+      ) : (
+        <Inbox size={32} opacity={0.3} />
+      )}
       <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
         {message}
       </p>
@@ -526,7 +528,7 @@ export function ErrorState({
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-3" role="alert">
       <AlertTriangle size={32} style={{ color: 'var(--urgency-critical)', opacity: 0.7 }} />
-      <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 650 }}>
+      <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 'var(--weight-semibold)' }}>
         {message}
       </p>
       {/* A frase do servidor, quando existe. O ApiError já a limpa do prefixo
@@ -629,13 +631,13 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
                   minute: '2-digit',
                 })}
               </span>
-              <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>·</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-2xs)' }}>·</span>
               <span className="text-xs font-semibold" style={{ color: col }}>
                 {e.user_name}
               </span>
               <span
                 className="badge"
-                style={{ background: tint(col, 8), color: col, fontSize: 10, padding: '1px 6px' }}
+                style={{ background: tint(col, 8), color: col, fontSize: 'var(--text-2xs)', padding: '1px 6px' }}
               >
                 {e.event_type}
               </span>
@@ -715,7 +717,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
           onClick={() => onChange(t.key)}
           style={{
             padding: '8px 16px',
-            fontSize: 12,
+            fontSize: 'var(--text-xs)',
             fontWeight: active === t.key ? 650 : 550,
             borderRadius: 'var(--radius-control)',
             border: '1px solid transparent',
@@ -748,7 +750,15 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
 export function ErrorText({ children }: { children?: ReactNode }) {
   if (!children) return null;
   return (
-    <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }} role="alert">
+    <div
+      style={{
+        fontSize: 'var(--text-xs)',
+        color: 'var(--urgency-critical)',
+        fontWeight: 'var(--weight-bold)',
+        marginBottom: 12,
+      }}
+      role="alert"
+    >
       {children}
     </div>
   );

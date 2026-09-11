@@ -91,14 +91,14 @@ export default function ClinicInventoryPage() {
 
       {tab === 'ledger' ? (
         <div>
-          <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+          <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
             <MetricCard label="SEM STOCK" value={outCount} color="var(--urgency-critical)" />
             <MetricCard label="STOCK BAIXO" value={lowCount} color="var(--urgency-soon)" />
             <MetricCard label="ITENS SEGUIDOS" value={items.length} color="var(--accent)" />
           </div>
           <div className="card" style={{ padding: 0 }}>
             {!rows.length ? (
-              <div style={{ padding: '18px 16px', color: 'var(--text-muted)', fontSize: 13 }}>
+              <div style={{ padding: '18px 16px', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
                 {/* Sem esta distinção, uma falha de carregamento passava-se por catálogo
                     vazio e convidava a criar um item que já existe. */}
                 {error
@@ -119,7 +119,7 @@ export default function ClinicInventoryPage() {
                   <tbody>
                     {rows.map(({ item, qty, reorderAt, out, low }) => (
                       <tr key={item.id}>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
+                        <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {item.item}
                         </td>
                         <td className="data-td" style={{ color: 'var(--text-muted)' }}>
@@ -128,7 +128,7 @@ export default function ClinicInventoryPage() {
                         <td
                           className="data-td"
                           style={{
-                            fontWeight: 700,
+                            fontWeight: 'var(--weight-bold)',
                             color: out ? 'var(--urgency-critical)' : low ? 'var(--urgency-soon)' : 'var(--urgency-ok)',
                           }}
                         >
@@ -139,7 +139,7 @@ export default function ClinicInventoryPage() {
                                 color: 'var(--urgency-critical)',
                                 borderRadius: 'var(--radius-control)',
                                 padding: '2px 8px',
-                                fontSize: 11,
+                                fontSize: 'var(--text-2xs)',
                               }}
                             >
                               ESGOTADO

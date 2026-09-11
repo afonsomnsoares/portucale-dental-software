@@ -127,12 +127,25 @@ export default function MedicalHistoryPage() {
             }}
           >
             <div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{it.name}</span>
+              <span
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 'var(--weight-semibold)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {it.name}
+              </span>
               {it.notes && (
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 8 }}>— {it.notes}</span>
+                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginLeft: 8 }}>
+                  — {it.notes}
+                </span>
               )}
             </div>
-            <DangerBtn style={{ padding: '3px 10px', fontSize: 11 }} onClick={() => removeListItem(listKey, i)}>
+            <DangerBtn
+              style={{ padding: '3px 10px', fontSize: 'var(--text-2xs)' }}
+              onClick={() => removeListItem(listKey, i)}
+            >
               Retirar
             </DangerBtn>
           </div>
@@ -218,8 +231,16 @@ export default function MedicalHistoryPage() {
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>

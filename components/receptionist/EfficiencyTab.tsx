@@ -15,8 +15,8 @@ function UtilizationBar({ label, pct, sub }: { label: string; sub: string; pct: 
   const color = pct >= 85 ? 'var(--urgency-critical)' : pct >= 60 ? 'var(--urgency-ok)' : 'var(--urgency-soon)';
   return (
     <div className="mb-3">
-      <div className="flex items-center justify-between mb-1" style={{ fontSize: 12 }}>
-        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{label}</span>
+      <div className="flex items-center justify-between mb-1" style={{ fontSize: 'var(--text-xs)' }}>
+        <span style={{ fontWeight: 'var(--weight-semibold)', color: 'var(--text-primary)' }}>{label}</span>
         <span style={{ color: 'var(--text-muted)' }}>
           {sub} · <strong style={{ color }}>{pct}%</strong>
         </span>
@@ -130,7 +130,10 @@ export default function EfficiencyTab({ efficiency }: { efficiency: AgendaEffici
                   borderRadius: 'var(--radius-control)',
                 }}
               />
-              <div className="text-xs mt-2" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+              <div
+                className="text-xs mt-2"
+                style={{ color: 'var(--text-secondary)', fontWeight: 'var(--weight-semibold)' }}
+              >
                 {d.demand}
               </div>
               <div className="text-xs" style={{ color: 'var(--text-muted)' }}>

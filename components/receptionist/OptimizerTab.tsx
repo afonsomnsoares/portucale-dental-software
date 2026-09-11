@@ -79,11 +79,25 @@ export default function OptimizerTab({
                 className="card"
                 style={{ padding: '12px 14px', border: '1px solid var(--border-subtle)' }}
               >
-                <div className="flex items-center justify-between mb-1" style={{ gap: 10 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{m.title}</span>
+                <div className="flex items-center justify-between mb-1" style={{ gap: 12 }}>
+                  <span
+                    style={{
+                      fontWeight: 'var(--weight-semibold)',
+                      fontSize: 'var(--text-sm)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {m.title}
+                  </span>
                   <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                     {m.gainMinutes > 0 && (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--urgency-ok)' }}>
+                      <span
+                        style={{
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: 'var(--weight-bold)',
+                          color: 'var(--urgency-ok)',
+                        }}
+                      >
                         +{formatHours(m.gainMinutes)}
                       </span>
                     )}

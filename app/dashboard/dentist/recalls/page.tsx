@@ -159,8 +159,16 @@ export default function RecallsPage() {
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -184,7 +192,7 @@ export default function RecallsPage() {
                     const s = recallStatus(r);
                     return (
                       <tr key={r.id}>
-                        <td className="data-td" style={{ fontWeight: 600 }}>
+                        <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {RECALL_TYPE_LABELS[r.recall_type] || r.recall_type}
                         </td>
                         <td className="data-td">{r.interval_months} meses</td>
@@ -193,19 +201,22 @@ export default function RecallsPage() {
                         <td className="data-td">
                           <Badge label={s.label} bg={s.bg} color={s.color} />
                         </td>
-                        <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                        <td className="data-td" style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
                           {r.last_notified_at ? r.last_notified_at.slice(0, 10) : '—'}
                         </td>
                         <td className="data-td">
                           {r.active && (
                             <>
                               <GhostBtn
-                                style={{ padding: '4px 12px', fontSize: 11, marginRight: 4 }}
+                                style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)', marginRight: 4 }}
                                 onClick={() => complete(r.id)}
                               >
                                 Marcar feito
                               </GhostBtn>
-                              <DangerBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => deactivate(r.id)}>
+                              <DangerBtn
+                                style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
+                                onClick={() => deactivate(r.id)}
+                              >
                                 Desativar
                               </DangerBtn>
                             </>

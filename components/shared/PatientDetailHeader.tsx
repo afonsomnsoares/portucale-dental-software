@@ -16,27 +16,29 @@ export default function PatientDetailHeader({
   return (
     <div className="card p-5 mb-4">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Avatar name={patient.name} size={avatarSize} color="var(--accent)" />
           <div>
             <div
               style={{
-                fontSize: 20,
-                fontWeight: 800,
+                fontSize: 'var(--text-lg)',
+                fontWeight: 'var(--weight-bold)',
                 color: 'var(--text-primary)',
                 fontFamily: '"Plus Jakarta Sans",sans-serif',
               }}
             >
               {patient.name}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
               Global ID #{patient.global_seq} · {patient.dob?.slice(0, 10) || '—'} · {patient.insurance || '—'}
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <Badge s={patient.status} />
               <RiskBadge score={patient.no_show_score || 0} />
               {showVisitCount && (
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{patient.visit_count || 0} visits</span>
+                <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+                  {patient.visit_count || 0} visits
+                </span>
               )}
             </div>
           </div>
@@ -44,15 +46,15 @@ export default function PatientDetailHeader({
         <div style={{ textAlign: 'right' }}>
           <div
             style={{
-              fontSize: 22,
-              fontWeight: 800,
+              fontSize: 'var(--text-xl)',
+              fontWeight: 'var(--weight-bold)',
               color: Number(patient.balance) > 0 ? 'var(--urgency-soon)' : 'var(--urgency-ok)',
               fontFamily: '"Plus Jakarta Sans",sans-serif',
             }}
           >
             ${Number(patient.balance || 0).toLocaleString()}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{balanceLabel}</div>
+          <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{balanceLabel}</div>
         </div>
       </div>
       {patient.alerts?.filter(Boolean).length > 0 && (
@@ -72,9 +74,9 @@ export default function PatientDetailHeader({
             <span
               key={a}
               style={{
-                fontSize: 12,
+                fontSize: 'var(--text-xs)',
                 color: 'var(--urgency-critical)',
-                fontWeight: 700,
+                fontWeight: 'var(--weight-bold)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 4,

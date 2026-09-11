@@ -160,13 +160,16 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
                 <TD>{it.reorder_at}</TD>
                 <TD right>
                   <div className="flex items-center justify-end gap-2">
-                    <GhostBtn onClick={() => openEditItem(it)} style={{ padding: '5px 10px', fontSize: 12 }}>
+                    <GhostBtn
+                      onClick={() => openEditItem(it)}
+                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                    >
                       Editar
                     </GhostBtn>
                     <PrimaryBtn
                       onClick={() => openMove(it)}
                       disabled={!tenantId}
-                      style={{ padding: '5px 10px', fontSize: 12 }}
+                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                     >
                       Registar movimento
                     </PrimaryBtn>
@@ -211,11 +214,18 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
             </FormField>
           </div>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setItemModal(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveItem} disabled={saving}>
               {saving ? 'A guardar…' : 'Guardar'}
@@ -274,11 +284,18 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
             />
           </FormField>
           {error && (
-            <div style={{ fontSize: 12, color: 'var(--urgency-critical)', fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--urgency-critical)',
+                fontWeight: 'var(--weight-bold)',
+                marginBottom: 12,
+              }}
+            >
               {error}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
             <GhostBtn onClick={() => setMoveTarget(null)}>Cancelar</GhostBtn>
             <PrimaryBtn onClick={saveMove} disabled={saving}>
               {saving ? 'A registar…' : 'Registar'}

@@ -23,7 +23,7 @@ export default function NextActionBanner({
     <AlertBanner type={BANNER_TYPE[nextAction.code]}>
       <strong>Próxima ação:</strong> {nextAction.label}
       {missingFields.length > 0 && nextAction.code !== 'MISSING_DATA' && (
-        <div style={{ marginTop: 4, fontSize: 12, opacity: 0.85 }}>
+        <div style={{ marginTop: 4, fontSize: 'var(--text-xs)', opacity: 0.85 }}>
           Também em falta: {missingFields.map((f) => f.label).join(', ')}
         </div>
       )}

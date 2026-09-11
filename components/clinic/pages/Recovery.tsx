@@ -37,7 +37,7 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
             border: '1px solid var(--urgency-critical-border)',
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            fontWeight: 700,
+            fontWeight: 'var(--weight-bold)',
           }}
         >
           {err}
@@ -77,7 +77,14 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
           >
             <div>
               <div className="section-label mb-2">Receita potencial identificada</div>
-              <div style={{ fontSize: 40, fontWeight: 800, color: 'var(--urgency-ok)', lineHeight: 1 }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-3xl)',
+                  fontWeight: 'var(--weight-bold)',
+                  color: 'var(--urgency-ok)',
+                  lineHeight: 1,
+                }}
+              >
                 {formatEUR(data.total)}
               </div>
               <div className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
@@ -109,7 +116,14 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
                       }}
                     />
                   </div>
-                  <span style={{ width: 110, textAlign: 'right', fontSize: 13, fontWeight: 700 }}>
+                  <span
+                    style={{
+                      width: 110,
+                      textAlign: 'right',
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-bold)',
+                    }}
+                  >
                     {formatEUR(Number(s.total_estimated))}
                   </span>
                 </div>
@@ -135,7 +149,13 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="section-label mb-1">{c.label}</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--text-xl)',
+                        fontWeight: 'var(--weight-bold)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
                       {formatEUR(c.estimatedValue)}
                     </div>
                     <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -183,14 +203,14 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
                     <tbody>
                       {openCat.items.map((i) => (
                         <tr key={i.patient_id || i.id}>
-                          <td className="data-td" style={{ fontWeight: 600 }}>
+                          <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                             {i.patient_name}
                           </td>
                           <td className="data-td">{i.phone || '—'}</td>
                           <td className="data-td" style={{ color: 'var(--text-secondary)' }}>
                             {i.detail}
                           </td>
-                          <td className="data-td" style={{ textAlign: 'right', fontWeight: 700 }}>
+                          <td className="data-td" style={{ textAlign: 'right', fontWeight: 'var(--weight-bold)' }}>
                             {formatEUR(i.value)}
                           </td>
                         </tr>

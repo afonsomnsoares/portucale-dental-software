@@ -39,31 +39,55 @@ export default function Roles() {
 
         return (
           <div key={r.role} className="card p-5" style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>{r.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: '"JetBrains Mono",monospace' }}>
+                <div
+                  style={{
+                    fontSize: 'var(--text-base)',
+                    fontWeight: 'var(--weight-bold)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  {r.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--text-muted)',
+                    fontFamily: '"JetBrains Mono",monospace',
+                  }}
+                >
                   {r.role} · {r.sub}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{r.activeUsers}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                <div
+                  style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}
+                >
+                  {r.activeUsers}
+                </div>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   {r.users === r.activeUsers ? 'pessoas' : `ativas de ${r.users}`}
                 </div>
               </div>
               <div style={{ textAlign: 'right', minWidth: 90 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{r.defaultActions}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>ações por omissão</div>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--accent)' }}>
+                  {r.defaultActions}
+                </div>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>ações por omissão</div>
               </div>
               <div style={{ textAlign: 'right', minWidth: 80 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--cat-purple)' }}>{r.clinics}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>clínicas</div>
+                <div
+                  style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-bold)', color: 'var(--cat-purple)' }}
+                >
+                  {r.clinics}
+                </div>
+                <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>clínicas</div>
               </div>
             </div>
 
             {!byClinic.size ? (
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
                 Nenhuma clínica alterou as permissões deste papel — todas correm com a omissão.
               </div>
             ) : (
@@ -73,10 +97,17 @@ export default function Roles() {
                 </div>
                 {[...byClinic.entries()].map(([clinic, items]) => (
                   <div key={clinic} style={{ padding: '8px 0', borderBottom: '1px solid var(--bg-page)' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 5 }}>
+                    <div
+                      style={{
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 'var(--weight-semibold)',
+                        color: 'var(--text-primary)',
+                        marginBottom: 4,
+                      }}
+                    >
                       {clinic}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {items.map((d) => (
                         <Badge
                           key={d.action}
@@ -96,7 +127,15 @@ export default function Roles() {
 
       {!data.roles.length && <Empty message="Sem papéis" />}
 
-      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 16, maxWidth: 720 }}>
+      <p
+        style={{
+          fontSize: 'var(--text-xs)',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          marginTop: 16,
+          maxWidth: 720,
+        }}
+      >
         Os quatro papéis são fixos: estão no tipo (lib/constants.ts), na restrição CHECK da base de dados e no
         middleware, e os três têm de concordar. O que cada clínica pode mudar é o que cada papel FAZ — é isso que está
         acima como desvio, e edita-se em Permissões.

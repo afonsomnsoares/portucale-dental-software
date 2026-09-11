@@ -157,8 +157,16 @@ export default function PrescriptionsPage() {
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div
+                    style={{
+                      fontSize: 'var(--text-sm)',
+                      fontWeight: 'var(--weight-semibold)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                     #{p.global_seq} · <Badge s={p.status} />
                   </div>
                 </button>
@@ -180,7 +188,7 @@ export default function PrescriptionsPage() {
                   cols={cols}
                   rows={prescriptions.map((p) => (
                     <tr key={p.id}>
-                      <td className="data-td" style={{ fontWeight: 600 }}>
+                      <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {p.medication}
                       </td>
                       <td className="data-td">{p.dosage}</td>
@@ -191,7 +199,10 @@ export default function PrescriptionsPage() {
                       <td className="data-td">{p.created_at?.slice(0, 10)}</td>
                       <td className="data-td">
                         {p.status !== 'cancelled' && (
-                          <DangerBtn style={{ padding: '4px 12px', fontSize: 11 }} onClick={() => cancel(p.id)}>
+                          <DangerBtn
+                            style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
+                            onClick={() => cancel(p.id)}
+                          >
                             Anular
                           </DangerBtn>
                         )}

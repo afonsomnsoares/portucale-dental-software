@@ -159,7 +159,7 @@ export default function Inbox() {
             padding: '10px 14px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
           }}
         >
           {erro}
@@ -204,16 +204,16 @@ export default function Inbox() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>
+                    <span style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>
                       {c.patient_name || c.from_addr || 'Contacto não identificado'}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', flexShrink: 0 }}>
                       {quando(c.last_message_at)}
                     </span>
                   </div>
                   <div
                     style={{
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       color: 'var(--text-muted)',
                       marginTop: 3,
                       overflow: 'hidden',
@@ -223,12 +223,12 @@ export default function Inbox() {
                   >
                     {c.last_body || '—'}
                   </div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     {tom && (
                       <span
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
+                          fontSize: 'var(--text-2xs)',
+                          fontWeight: 'var(--weight-bold)',
                           padding: '1px 6px',
                           borderRadius: 'var(--radius-pill)',
                           background: tom.bg,
@@ -238,9 +238,11 @@ export default function Inbox() {
                         {CONVERSATION_STATE_LABELS[c.state]}
                       </span>
                     )}
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{CHANNEL_LABELS[c.channel]}</span>
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+                      {CHANNEL_LABELS[c.channel]}
+                    </span>
                     {c.last_intent && INTENT_LABELS[c.last_intent as keyof typeof INTENT_LABELS] && (
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                         · {INTENT_LABELS[c.last_intent as keyof typeof INTENT_LABELS]}
                       </span>
                     )}
@@ -271,27 +273,27 @@ export default function Inbox() {
                     alignItems: 'baseline',
                     gap: 12,
                     flexWrap: 'wrap',
-                    paddingBottom: 10,
+                    paddingBottom: 12,
                     borderBottom: '1px solid var(--border-subtle)',
                     marginBottom: 12,
                   }}
                 >
                   <div>
-                    <div style={{ fontWeight: 700 }}>
+                    <div style={{ fontWeight: 'var(--weight-bold)' }}>
                       {detalhe?.patient_name || detalhe?.from_addr || 'Contacto não identificado'}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                       {detalhe ? CHANNEL_LABELS[detalhe.channel] : ''}
                       {detalhe?.state ? ` · ${CONVERSATION_STATE_LABELS[detalhe.state]}` : ''}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
                     {detalhe?.state !== 'resolved' && (
                       <button
                         type="button"
                         onClick={() => marcar('resolved')}
                         style={{
-                          fontSize: 12,
+                          fontSize: 'var(--text-xs)',
                           padding: '4px 10px',
                           borderRadius: 'var(--radius-control)',
                           border: '1px solid var(--border-subtle)',
@@ -305,7 +307,7 @@ export default function Inbox() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
                   {mensagens.map((m) => {
                     const doDoente = m.direction === 'inbound';
                     return (
@@ -319,8 +321,8 @@ export default function Inbox() {
                           borderRadius: 'var(--radius-card)',
                         }}
                       >
-                        <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{m.body}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                        <div style={{ fontSize: 'var(--text-sm)', whiteSpace: 'pre-wrap' }}>{m.body}</div>
+                        <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 4 }}>
                           {quemFala(m)} · {quando(m.created_at)}
                           {m.intent && INTENT_LABELS[m.intent as keyof typeof INTENT_LABELS]
                             ? ` · ${INTENT_LABELS[m.intent as keyof typeof INTENT_LABELS]}`
@@ -347,8 +349,8 @@ export default function Inbox() {
                       placeholder="Escrever resposta…"
                       rows={3}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                         Sai como SMS assinada pela clínica. Máximo 4000 caracteres.
                       </span>
                       <PrimaryBtn onClick={responder} disabled={aEnviar || !rascunho.trim()}>

@@ -30,20 +30,30 @@ export default function DentistScheduleIntelPage() {
         <Spinner />
       ) : (
         <>
-          <div className="grid-cards" style={{ gap: 14, marginBottom: 20 }}>
+          <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
             <div className="card" style={{ borderLeft: '4px solid var(--accent)' }}>
               <div className="section-label">Consultas Agendadas</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{upcomingAppts.length}</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--accent)' }}>
+                {upcomingAppts.length}
+              </div>
             </div>
             <div className="card" style={{ borderLeft: '4px solid var(--urgency-critical)' }}>
               <div className="section-label">Risco Alto (≥60%)</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-critical)' }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-2xl)',
+                  fontWeight: 'var(--weight-bold)',
+                  color: 'var(--urgency-critical)',
+                }}
+              >
                 {highRiskAppts.length}
               </div>
             </div>
             <div className="card" style={{ borderLeft: '4px solid var(--urgency-soon)' }}>
               <div className="section-label">Taxa de No-Show</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--urgency-soon)' }}>
+              <div
+                style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-soon)' }}
+              >
                 {noShowData.total > 0 ? Math.round((noShowData.noShow / noShowData.total) * 100) : 0}%
               </div>
             </div>
@@ -51,7 +61,14 @@ export default function DentistScheduleIntelPage() {
 
           {highRiskAppts.length > 0 && (
             <div className="mt-5">
-              <h3 style={{ fontSize: 16, fontWeight: 750, color: 'var(--text-primary)', marginBottom: 10 }}>
+              <h3
+                style={{
+                  fontSize: 'var(--text-base)',
+                  fontWeight: 'var(--weight-bold)',
+                  color: 'var(--text-primary)',
+                  marginBottom: 12,
+                }}
+              >
                 Consultas de Risco Elevado — Próximos 14 dias
               </h3>
               <div style={{ overflowX: 'auto' }}>
@@ -81,7 +98,7 @@ export default function DentistScheduleIntelPage() {
                           <button
                             type="button"
                             className="btn btn-primary"
-                            style={{ padding: '4px 12px', fontSize: 12 }}
+                            style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}
                           >
                             Confirmar
                           </button>
