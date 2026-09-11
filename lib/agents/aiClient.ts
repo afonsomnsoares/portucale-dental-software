@@ -40,7 +40,13 @@ export interface AgentToolSpec {
 // Nunca deixa rebentar a chamada que está a medir: se a tabela ainda não existe (base
 // de dados por migrar) ou a escrita falha, avisa uma vez e segue. Observabilidade que
 // derruba o que observa é pior do que observabilidade nenhuma.
-async function recordAiCall(row: {
+// Exportada porque deixou de haver um só caminho até à Anthropic. `callAgentTool`
+// abaixo cobre os agentes, mas app/api/reports/insight/route.ts chama a API
+// diretamente — precisa de texto livre, e callAgentTool força uma tool. Enquanto isto
+// foi privado, essa rota não registava nada: o painel de plataforma que existe para
+// responder a «que clínica está a consumir» omitia por completo o modelo mais caro em
+// uso, e apresentava a diferença como se fosse consumo a menos.
+export async function recordAiCall(row: {
   tenantId: string | null;
   agent: string;
   model: string;

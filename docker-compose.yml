@@ -135,6 +135,14 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+      # Sem isto a camada de agentes está desligada em Docker, e desligada em silêncio.
+      # Os 15 módulos de lib/agents/ correm TODOS dentro deste pipeline — nenhum é
+      # chamado a partir de uma rota HTTP — por isso a chave estar só no serviço `app`
+      # acima não os alcançava. E o callAgentTool trata a chave em falta com elegância
+      # (regista status:'unconfigured' e segue), que é precisamente o que escondia o
+      # problema: não havia erro nenhum, havia um painel de agentes permanentemente
+      # vazio, indistinguível de «os agentes correram e não encontraram nada».
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       UPLOAD_RETENTION_DAYS: ${UPLOAD_RETENTION_DAYS:-90}
       JOB_INTERVAL_SECONDS: ${JOB_INTERVAL_SECONDS:-900}
     entrypoint:
