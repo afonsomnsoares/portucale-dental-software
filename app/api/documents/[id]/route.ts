@@ -1,4 +1,3 @@
-import { forbidden } from '@/lib/auth';
 import { getDocument } from '@/lib/documents';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -9,12 +8,9 @@ import { withRoute } from '@/lib/route';
 // none: the trail of what the clinic declared is not something staff should be able to
 // quietly remove.
 export const GET = withRoute<{ id: string }>(
-  { permission: 'documents:read', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'documents:read', tenant: 'resolved' },
+  async ({ params, tenantId }) => {
     const { id } = params;
-
-    const tenantId = user.tenantId || new URL(request.url).searchParams.get('tenantId');
-    if (!tenantId) return forbidden();
 
     const row = await getDocument(tenantId, id);
     if (!row) return notFound('Document not found');

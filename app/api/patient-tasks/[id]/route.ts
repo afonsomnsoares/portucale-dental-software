@@ -1,5 +1,4 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { badRequest, notFound } from '@/lib/http';
 import { getTask, updateTask } from '@/lib/patientTasks';
 import { withRoute } from '@/lib/route';
@@ -9,12 +8,11 @@ import { asEnum, sanitizeString } from '@/lib/validate';
 const TASK_STATUSES = ['pending', 'done', 'cancelled'] as const;
 
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'patient-tasks:update', tenant: 'optional' },
-  async ({ request, user, params }) => {
-    if (!user.tenantId) return forbidden();
+  { permission: 'patient-tasks:update', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
 
-    const prev = await getTask(user.tenantId, id);
+    const prev = await getTask(tenantId, id);
     if (!prev) return notFound('Task not found');
 
     const body = await request.json();
@@ -36,13 +34,13 @@ export const PUT = withRoute<{ id: string }>(
       if (body.assignedTo === null || body.assignedTo === '') {
         assignedTo = null;
       } else {
-        const assignee = await getOwnedUser(body.assignedTo, user);
+        const assignee = await getOwnedUser(body.assignedTo, { tenantId });
         if (!assignee) return badRequest('assignedTo is not a user in this clinic');
         assignedTo = assignee.id;
       }
     }
 
-    const row = await updateTask(user.tenantId, id, {
+    const row = await updateTask(tenantId, id, {
       title: body.title !== undefined ? sanitizeString(body.title, 200) || prev.title : undefined,
       notes: body.notes !== undefined ? sanitizeString(body.notes, 2000) : undefined,
       dueAt: body.dueAt !== undefined ? body.dueAt : undefined,

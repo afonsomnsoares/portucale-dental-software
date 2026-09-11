@@ -1,18 +1,16 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { formatEUR } from '@/lib/constants';
-import { query, queryOne } from '@/lib/db';
+import { query, queryOne, queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, asFee, asString, requireFields } from '@/lib/validate';
 
-export const GET = withRoute({ permission: 'invoices:read', tenant: 'optional' }, async ({ request, user }) => {
+export const GET = withRoute({ permission: 'invoices:read', tenant: 'resolved' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
   // tenant via the query string; everyone else is confined to their own,
   // matching the pattern used everywhere else (e.g. app/api/patients/route.ts).
-  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
-  if (!tenantId) return forbidden();
 
   const status = searchParams.get('status');
   const patientId = searchParams.get('patientId');
@@ -49,59 +47,59 @@ export const GET = withRoute({ permission: 'invoices:read', tenant: 'optional' }
   sql += ` ORDER BY i.invoice_date DESC, i.created_at DESC LIMIT $${idx}`;
   params.push(limit);
 
-  const rows = await query(sql, params);
+  const rows = await queryRead(sql, params);
   return Response.json(rows);
 });
 
-export const POST = withRoute({ permission: 'invoices:create', tenant: 'optional' }, async ({ request, user }) => {
-  const tenantId = scopeTenant(user, request);
-  if (!tenantId) return forbidden();
+export const POST = withRoute(
+  { permission: 'invoices:create', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json();
+    const missing = requireFields(body, ['patientId', 'amount']);
+    if (missing.length)
+      return Response.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
 
-  const body = await request.json();
-  const missing = requireFields(body, ['patientId', 'amount']);
-  if (missing.length)
-    return Response.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
+    const patient = await queryOne(`SELECT id, name, tenant_id FROM patients WHERE id=$1`, [body.patientId]);
+    if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
+    if (patient.tenant_id !== tenantId) return forbidden();
 
-  const patient = await queryOne(`SELECT id, name, tenant_id FROM patients WHERE id=$1`, [body.patientId]);
-  if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
-  if (patient.tenant_id !== tenantId) return forbidden();
+    const amount = asFee(body.amount);
+    if (amount === null) return Response.json({ error: 'Invalid amount' }, { status: 400 });
 
-  const amount = asFee(body.amount);
-  if (amount === null) return Response.json({ error: 'Invalid amount' }, { status: 400 });
+    // Era validado sem filtro de tenant, o que permitia emitir uma fatura desta
+    // clínica em nome de um dentista de outra. getOwnedUser aplica o mesmo
+    // critério que as rotas de marcações já usavam inline.
+    let dentistId = body.dentistId || null;
+    if (dentistId) {
+      const dentist = await getOwnedUser(dentistId, { tenantId }, { role: 'dentist' });
+      if (!dentist) dentistId = null;
+    }
 
-  // Era validado sem filtro de tenant, o que permitia emitir uma fatura desta
-  // clínica em nome de um dentista de outra. getOwnedUser aplica o mesmo
-  // critério que as rotas de marcações já usavam inline.
-  let dentistId = body.dentistId || null;
-  if (dentistId) {
-    const dentist = await getOwnedUser(dentistId, user, { role: 'dentist' });
-    if (!dentist) dentistId = null;
-  }
+    const items = Array.isArray(body.items) ? JSON.stringify(body.items) : '[]';
+    const notes = asString(body.notes, { max: 2000 });
+    const invoiceDate = asDate(body.invoiceDate) || new Date().toISOString().slice(0, 10);
+    const dueDate = asDate(body.dueDate) || null;
 
-  const items = Array.isArray(body.items) ? JSON.stringify(body.items) : '[]';
-  const notes = asString(body.notes, { max: 2000 });
-  const invoiceDate = asDate(body.invoiceDate) || new Date().toISOString().slice(0, 10);
-  const dueDate = asDate(body.dueDate) || null;
-
-  const [inv] = await query(
-    `INSERT INTO invoices (tenant_id, patient_id, patient_name, dentist_id, amount, items, notes, invoice_date, due_date, status, created_by)
+    const [inv] = await query(
+      `INSERT INTO invoices (tenant_id, patient_id, patient_name, dentist_id, amount, items, notes, invoice_date, due_date, status, created_by)
      VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8::date,$9::date,'pending',$10)
      RETURNING *`,
-    [tenantId, patient.id, patient.name, dentistId, amount, items, notes, invoiceDate, dueDate, user.id],
-  );
+      [tenantId, patient.id, patient.name, dentistId, amount, items, notes, invoiceDate, dueDate, user.id],
+    );
 
-  await appendAudit(
-    user,
-    'CREATE',
-    `Fatura ${formatId(inv.id)} — ${formatEUR(amount)} · ${patient.name}`,
-    null,
-    'pending',
-    user.clinic,
-  );
-  await appendTimeline(patient.id, user, 'financial', `Fatura ${formatId(inv.id)} criada — €${amount}`);
+    await appendAudit(
+      user,
+      'CREATE',
+      `Fatura ${formatId(inv.id)} — ${formatEUR(amount)} · ${patient.name}`,
+      null,
+      'pending',
+      user.clinic,
+    );
+    await appendTimeline(patient.id, user, 'financial', `Fatura ${formatId(inv.id)} criada — €${amount}`);
 
-  return Response.json(inv, { status: 201 });
-});
+    return Response.json(inv, { status: 201 });
+  },
+);
 
 function formatId(uuid: string) {
   return uuid ? uuid.slice(0, 8).toUpperCase() : '—';

@@ -1,5 +1,4 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { badRequest, created } from '@/lib/http';
 import { listInteractions, logInteraction } from '@/lib/patientInteractions';
 import { withRoute } from '@/lib/route';
@@ -13,27 +12,23 @@ const CHANNELS = ['phone', 'email', 'sms', 'in_person', 'other'] as const;
 const DIRECTIONS = ['inbound', 'outbound'] as const;
 
 export const GET = withRoute(
-  { permission: 'patient-interactions:read', tenant: 'optional' },
-  async ({ request, user }) => {
-    if (!user.tenantId) return forbidden();
-
+  { permission: 'patient-interactions:read', tenant: 'required' },
+  async ({ request, tenantId }) => {
     const { searchParams } = new URL(request.url);
     const patientId = searchParams.get('patientId');
     if (!patientId) return badRequest('patientId is required');
-    if (!(await getOwnedPatient(patientId, user))) {
+    if (!(await getOwnedPatient(patientId, { tenantId }))) {
       return Response.json({ error: 'Patient not found' }, { status: 404 });
     }
 
-    const rows = await listInteractions(user.tenantId, patientId);
+    const rows = await listInteractions(tenantId, patientId);
     return Response.json(rows);
   },
 );
 
 export const POST = withRoute(
-  { permission: 'patient-interactions:create', tenant: 'optional' },
-  async ({ request, user }) => {
-    if (!user.tenantId) return forbidden();
-
+  { permission: 'patient-interactions:create', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
     const body = await request.json();
     if (!body.patientId) return badRequest('patientId is required');
 
@@ -45,11 +40,11 @@ export const POST = withRoute(
     const direction = body.direction ? asEnum(body.direction, DIRECTIONS) : 'outbound';
     if (body.direction && !direction) return badRequest(`direction must be one of: ${DIRECTIONS.join(', ')}`);
 
-    if (!(await getOwnedPatient(body.patientId, user))) {
+    if (!(await getOwnedPatient(body.patientId, { tenantId }))) {
       return Response.json({ error: 'Patient not found' }, { status: 404 });
     }
 
-    const row = await logInteraction(user.tenantId, user.id, {
+    const row = await logInteraction(tenantId, user.id, {
       patientId: body.patientId,
       channel,
       direction: direction || 'outbound',

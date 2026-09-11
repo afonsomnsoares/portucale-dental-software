@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { withTransaction } from '@/lib/db';
 import { badRequest, conflict, notFound, ok } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -17,10 +16,8 @@ import { toE164 } from '@/lib/validate';
 // rascunho pronto mas sem botão de envio automático — limitação de âmbito, não de
 // desenho, até existir esse canal.
 export const POST = withRoute<{ id: string }>(
-  { permission: 'leads:respond', tenant: 'optional' },
-  async ({ request, user, params }) => {
-    if (!user.tenantId) return forbidden();
-
+  { permission: 'leads:respond', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json().catch(() => ({}));
     // Uma pessoa pode editar o rascunho antes de enviar — nunca é obrigada a mandar
@@ -30,7 +27,7 @@ export const POST = withRoute<{ id: string }>(
     const result = await withTransaction(async (client) => {
       const { rows } = await client.query(`SELECT * FROM leads WHERE id=$1 AND tenant_id=$2 FOR UPDATE`, [
         id,
-        user.tenantId,
+        tenantId,
       ]);
       const lead = rows[0];
       if (!lead) return { error: 'not_found' as const };

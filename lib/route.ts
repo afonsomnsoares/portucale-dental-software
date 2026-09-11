@@ -8,8 +8,21 @@ import { rateLimitGlobal } from './rateLimitGlobal';
 //   'required' — a rota precisa de uma clínica concreta (o caso por omissão).
 //   'optional' — o super-admin lê sem clínica (tenantId null = todas).
 //   'resolved' — como 'required', mas o super-admin fora de uma clínica pode
-//                escolhê-la por ?tenantId= ou no body. Substitui os 11
-//                `resolveTenantId` locais que estavam copiados entre rotas.
+//                escolhê-la por ?tenantId= ou no body.
+//
+// ─── Declarar a política não chega: é preciso USAR o que ela resolve ────────
+// A primeira passagem por aqui converteu a FORMA das rotas e deixou o conteúdo:
+// 48 delas declaravam 'optional' e voltavam a derivar o âmbito de `user.tenantId`,
+// que vem do token. Para quem tem clínica própria os dois valores coincidem, e por
+// isso nada parecia partido. Para o super-admin DENTRO de uma clínica (cookie
+// acting_tenant) não coincidem — o `user.tenantId` dele é sempre null, por
+// construção — e o resultado eram rotas de leitura a devolver os dados de todas as
+// clínicas com o banner a dizer que ele estava numa, e 26 rotas de escrita a
+// barrá-lo das páginas que a Fase 3 desenhou para ele usar.
+//
+// Hoje nenhuma rota lê `user.tenantId` para saber o âmbito, e test/routeScoping.test.ts
+// falha o build se alguma voltar a fazê-lo. As 30 cópias locais de `scopeTenant` que
+// existiam por app/api/ passaram todas a declarar a política em vez de a reimplementar.
 type TenantPolicy = 'required' | 'optional' | 'resolved';
 
 export interface RouteContext<P> {
@@ -115,13 +128,18 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // `acting_tenant` — o "entrar na clínica" do super-admin, POST /api/tenants/enter
 // — e a implementação local aqui não o lia. Uma rota migrada para withRoute
 // deixava portanto de funcionar para um super-admin dentro de uma clínica, ao
-// contrário das 36 rotas que chamavam scopeTenant diretamente. Os 11
-// `resolveTenantId` copiados por app/api/ tinham o mesmo buraco.
+// contrário das rotas que chamavam scopeTenant diretamente. As cópias locais
+// espalhadas por app/api/ tinham o mesmo buraco — já não existem nenhumas.
 //
 // A precedência é a de scopeTenant, e é a única segura: quem tem clínica própria
 // usa sempre a sua e o `?tenantId=` é ignorado — deixá-lo escolher outra seria um
 // IDOR entre clínicas.
-function resolveTenantId(
+//
+// Exportada — como o `canOverride` de lib/permissions.ts, e pela mesma razão. O resto
+// de withRoute precisa de uma sessão viva e de uma base de dados para correr; esta
+// função é pura, e é ela que decide de que clínica fala cada um dos 191 handlers. Uma
+// regra dessas testa-se, e testa-se sem infraestrutura nenhuma.
+export function resolveTenantId(
   request: NextRequest,
   user: SessionUser,
   policy: TenantPolicy,

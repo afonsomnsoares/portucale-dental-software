@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -17,10 +16,9 @@ function normalizeTags(v: unknown): string[] {
 // checklist_templates: retiring a piece of equipment is `active: false`, not removing the
 // row, so past scheduling decisions that referenced it stay explainable.
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'equipment:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'equipment:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT * FROM clinic_equipment WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,

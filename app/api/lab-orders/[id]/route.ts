@@ -10,11 +10,10 @@ const VALID_TRANSITIONS = {
 
 export const PUT = withRoute<{ id: string }>(
   { permission: 'lab-orders:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
 
-    const tenantId = user.tenantId;
     const prev = await queryOne(`SELECT * FROM lab_orders WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
       id,
       tenantId,

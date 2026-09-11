@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { type ChecklistRunItem, countChecked, isRunComplete, toggleItem } from '@/lib/checklistCalc';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, notFound } from '@/lib/http';
@@ -12,10 +11,9 @@ import { asInt } from '@/lib/validate';
 // taken from the request body; the rest of the item (label) always comes from the stored
 // row, so a caller can't rewrite what a checklist item says.
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'checklists:run', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'checklists:run', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT * FROM checklist_runs WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,

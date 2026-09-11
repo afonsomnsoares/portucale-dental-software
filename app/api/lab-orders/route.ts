@@ -1,11 +1,10 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asDate, asFee, sanitizeString } from '@/lib/validate';
 
-export const GET = withRoute({ permission: 'lab-orders:read', tenant: 'optional' }, async ({ request, user }) => {
+export const GET = withRoute({ permission: 'lab-orders:read', tenant: 'optional' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const status = searchParams.get('status');
@@ -23,54 +22,56 @@ export const GET = withRoute({ permission: 'lab-orders:read', tenant: 'optional'
     vals.push(status);
     sql += ` AND l.status=$${vals.length}`;
   }
-  if (user.tenantId) {
-    vals.push(user.tenantId);
+  if (tenantId) {
+    vals.push(tenantId);
     sql += ` AND l.tenant_id=$${vals.length}`;
   }
   sql += ' ORDER BY l.created_at DESC';
 
-  const rows = await query(sql, vals);
+  const rows = await queryRead(sql, vals);
   return Response.json(rows);
 });
 
-export const POST = withRoute({ permission: 'lab-orders:manage', tenant: 'optional' }, async ({ request, user }) => {
-  if (!user.tenantId) return forbidden();
-  const body = await request.json();
-  const { patientId, labName, caseType, description, instructions, dueDate, fee } = body;
+export const POST = withRoute(
+  { permission: 'lab-orders:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json();
+    const { patientId, labName, caseType, description, instructions, dueDate, fee } = body;
 
-  if (!patientId || !labName) {
-    return Response.json({ error: 'patientId and labName required' }, { status: 400 });
-  }
+    if (!patientId || !labName) {
+      return Response.json({ error: 'patientId and labName required' }, { status: 400 });
+    }
 
-  if (!(await getOwnedPatient(patientId, user))) {
-    return Response.json({ error: 'Patient not found' }, { status: 404 });
-  }
+    if (!(await getOwnedPatient(patientId, { tenantId }))) {
+      return Response.json({ error: 'Patient not found' }, { status: 404 });
+    }
 
-  const [row] = await query(
-    `INSERT INTO lab_orders
+    const [row] = await query(
+      `INSERT INTO lab_orders
        (tenant_id, patient_id, lab_name, case_type, description, instructions, due_date, fee, status, created_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'ordered',$9)
      RETURNING *`,
-    [
-      user.tenantId,
+      [
+        tenantId,
+        patientId,
+        sanitizeString(labName, 200),
+        sanitizeString(caseType, 100),
+        sanitizeString(description, 2000),
+        sanitizeString(instructions, 2000),
+        asDate(dueDate),
+        asFee(fee) ?? 0,
+        user.id,
+      ],
+    );
+
+    await appendTimeline(
       patientId,
-      sanitizeString(labName, 200),
-      sanitizeString(caseType, 100),
-      sanitizeString(description, 2000),
-      sanitizeString(instructions, 2000),
-      asDate(dueDate),
-      asFee(fee) ?? 0,
-      user.id,
-    ],
-  );
+      user,
+      'clinical',
+      `Encomenda de laboratório criada: ${caseType || labName} — ${labName}`,
+    );
+    await appendAudit(user, 'CREATE', `Lab order: ${labName} — ${caseType || 'N/A'}`, null, 'ordered', user.clinic);
 
-  await appendTimeline(
-    patientId,
-    user,
-    'clinical',
-    `Encomenda de laboratório criada: ${caseType || labName} — ${labName}`,
-  );
-  await appendAudit(user, 'CREATE', `Lab order: ${labName} — ${caseType || 'N/A'}`, null, 'ordered', user.clinic);
-
-  return Response.json(row, { status: 201 });
-});
+    return Response.json(row, { status: 201 });
+  },
+);

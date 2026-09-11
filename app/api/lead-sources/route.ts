@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { appendAudit } from '@/lib/audit';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { sanitizeString } from '@/lib/validate';
@@ -13,7 +13,7 @@ import { sanitizeString } from '@/lib/validate';
 export const GET = withRoute({ permission: 'lead-sources:manage', tenant: 'resolved' }, async ({ tenantId }) => {
   // token_hash is deliberately never selected — the plaintext token is shown exactly
   // once, at creation (see POST below), and there is no way to recover it after that.
-  const rows = await query(
+  const rows = await queryRead(
     `SELECT id, tenant_id, label, token_prefix, active, created_by, created_at, updated_at, last_used_at, lead_count
      FROM lead_capture_sources WHERE tenant_id=$1 ORDER BY created_at DESC`,
     [tenantId],

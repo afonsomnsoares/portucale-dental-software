@@ -1,8 +1,8 @@
 import { forbidden, requireRoles } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 
-export const GET = withRoute({ permission: 'audit:read', tenant: 'optional' }, async ({ request, user }) => {
+export const GET = withRoute({ permission: 'audit:read', tenant: 'optional' }, async ({ request, user, tenantId }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
@@ -10,7 +10,7 @@ export const GET = withRoute({ permission: 'audit:read', tenant: 'optional' }, a
   // must never see another clinic's log, so their own clinic is forced here
   // regardless of what ?clinic= they pass. Only a super-admin (no tenantId)
   // may filter across clinics.
-  const clinic = user.tenantId ? user.clinic : searchParams.get('clinic');
+  const clinic = tenantId ? user.clinic : searchParams.get('clinic');
   const q = searchParams.get('q');
 
   let sql = `SELECT * FROM audit_log WHERE 1=1`;
@@ -29,5 +29,5 @@ export const GET = withRoute({ permission: 'audit:read', tenant: 'optional' }, a
   }
   sql += ` ORDER BY created_at DESC LIMIT 200`;
 
-  return Response.json(await query(sql, vals));
+  return Response.json(await queryRead(sql, vals));
 });

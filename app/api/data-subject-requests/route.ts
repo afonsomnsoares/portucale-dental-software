@@ -1,6 +1,5 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
@@ -13,12 +12,10 @@ import { asEnum, sanitizeString } from '@/lib/validate';
 const REQUEST_TYPES = ['access', 'rectification', 'erasure', 'portability', 'restriction', 'objection'] as const;
 const STATUSES = ['pending', 'in_progress', 'completed', 'rejected'] as const;
 
-export const GET = withRoute({ permission: 'gdpr:read', tenant: 'optional' }, async ({ request, user }) => {
-  if (!user.tenantId) return forbidden();
-
+export const GET = withRoute({ permission: 'gdpr:read', tenant: 'required' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
-  const vals: unknown[] = [user.tenantId];
+  const vals: unknown[] = [tenantId];
   let sql = `SELECT r.*, p.name AS patient_name, u.name AS resolved_by_name
              FROM data_subject_requests r
              LEFT JOIN patients p ON p.id = r.patient_id
@@ -34,31 +31,32 @@ export const GET = withRoute({ permission: 'gdpr:read', tenant: 'optional' }, as
   // legal aperta é a ordem em que devem ser tratados.
   sql += ` ORDER BY (r.status = 'pending') DESC, r.created_at`;
 
-  const rows = await query(sql, vals);
+  const rows = await queryRead(sql, vals);
   return Response.json(rows);
 });
 
-export const POST = withRoute({ permission: 'gdpr:manage', tenant: 'optional' }, async ({ request, user }) => {
-  if (!user.tenantId) return forbidden();
+export const POST = withRoute(
+  { permission: 'gdpr:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object') return badRequest('Invalid request body');
 
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body !== 'object') return badRequest('Invalid request body');
+    const requestType = asEnum(body.requestType, REQUEST_TYPES);
+    if (!requestType) return badRequest(`requestType must be one of: ${REQUEST_TYPES.join(', ')}`);
 
-  const requestType = asEnum(body.requestType, REQUEST_TYPES);
-  if (!requestType) return badRequest(`requestType must be one of: ${REQUEST_TYPES.join(', ')}`);
+    const patient = await getOwnedPatient(body.patientId, { tenantId });
+    if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
 
-  const patient = await getOwnedPatient(body.patientId, user);
-  if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
-
-  const [row] = await query(
-    `INSERT INTO data_subject_requests (tenant_id, patient_id, request_type, status, notes)
+    const [row] = await query(
+      `INSERT INTO data_subject_requests (tenant_id, patient_id, request_type, status, notes)
      VALUES ($1,$2,$3,'pending',$4)
      RETURNING *`,
-    [user.tenantId, patient.id, requestType, sanitizeString(body.notes, 2000) || ''],
-  );
+      [tenantId, patient.id, requestType, sanitizeString(body.notes, 2000) || ''],
+    );
 
-  await appendTimeline(patient.id, user, 'admin', `Pedido RGPD registado: ${requestType}`);
-  await appendAudit(user, 'CREATE', `RGPD request: ${requestType}`, null, `patient:${patient.id}`, user.clinic);
+    await appendTimeline(patient.id, user, 'admin', `Pedido RGPD registado: ${requestType}`);
+    await appendAudit(user, 'CREATE', `RGPD request: ${requestType}`, null, `patient:${patient.id}`, user.clinic);
 
-  return created(row);
-});
+    return created(row);
+  },
+);

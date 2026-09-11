@@ -1,5 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { asFee, sanitizeString } from '@/lib/validate';
@@ -7,7 +7,7 @@ import { asFee, sanitizeString } from '@/lib/validate';
 // Config for item 13's procedure-driven demand forecast (lib/inventory.ts's
 // computeProcedureDemandForecast) — "uma consulta do tipo X consome Y unidades do item Z".
 export const GET = withRoute({ permission: 'inventory:manage', tenant: 'resolved' }, async ({ tenantId }) => {
-  const rows = await query(
+  const rows = await queryRead(
     `SELECT piu.*, i.item AS item_name, i.unit
      FROM procedure_item_usage piu JOIN inventory_items i ON i.id = piu.item_id
      WHERE piu.tenant_id=$1

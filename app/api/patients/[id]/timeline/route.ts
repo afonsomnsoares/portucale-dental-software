@@ -6,9 +6,8 @@ export const GET = withRoute<{ id: string }>(
     authOnly: 'Histórico de eventos de um doente da própria clínica, já filtrado por getOwnedPatient',
     tenant: 'optional',
   },
-  async ({ user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
-    const tenantId = user.tenantId;
     const rows = await query(
       `SELECT pt.* FROM patient_timeline pt
      JOIN patients p ON p.id = pt.patient_id

@@ -38,14 +38,14 @@ export const POST = withRoute({ permission: 'patient-tasks:create' }, async ({ r
   // garante que existe, não que é desta clínica (ver getOwnedUser).
   let assignedTo: string | null = null;
   if (body.assignedTo) {
-    const assignee = await getOwnedUser(body.assignedTo, user);
+    const assignee = await getOwnedUser(body.assignedTo, { tenantId });
     if (!assignee) return badRequest('assignedTo is not a user in this clinic');
     assignedTo = assignee.id;
   }
 
   let patientId: string | null = null;
   if (body.patientId) {
-    const patient = await getOwnedPatient(body.patientId, user);
+    const patient = await getOwnedPatient(body.patientId, { tenantId });
     if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
     patientId = patient.id;
   }

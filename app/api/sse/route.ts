@@ -42,7 +42,7 @@ export const GET = withRoute(
           try {
             controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
           } catch {
-            // O cliente fechou entre a verificação e a escrita. Não é erro.
+            // intentional — client closed between check and write; not an error
             closed = true;
           }
         };
@@ -58,7 +58,7 @@ export const GET = withRoute(
           );
           send('snapshot', { appointments: rows });
         } catch {
-          // Não fatal — o cliente continua a receber os eventos seguintes.
+          // intentional — non-fatal; client still receives subsequent events
         }
 
         const unsubscribe = await subscribeRealtime(tenantId, (event) => {
@@ -76,7 +76,9 @@ export const GET = withRoute(
           unsubscribe();
           try {
             controller.close();
-          } catch {}
+          } catch {
+            // intentional — controller may already be closed on abort
+          }
         };
 
         request.signal.addEventListener('abort', cleanup);

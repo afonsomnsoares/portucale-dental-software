@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -8,16 +7,15 @@ import { asEnum, sanitizeString } from '@/lib/validate';
 const STATUSES = ['pending', 'in_progress', 'completed', 'rejected'] as const;
 
 export const GET = withRoute<{ id: string }>(
-  { permission: 'gdpr:read', tenant: 'optional' },
-  async ({ user, params }) => {
-    if (!user.tenantId) return forbidden();
+  { permission: 'gdpr:read', tenant: 'required' },
+  async ({ params, tenantId }) => {
     const { id } = params;
 
     const row = await queryOne(
       `SELECT r.*, p.name AS patient_name FROM data_subject_requests r
      LEFT JOIN patients p ON p.id = r.patient_id
      WHERE r.id=$1 AND r.tenant_id=$2`,
-      [id, user.tenantId],
+      [id, tenantId],
     );
     if (!row) return notFound('Request not found');
     return Response.json(row);
@@ -25,18 +23,14 @@ export const GET = withRoute<{ id: string }>(
 );
 
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'gdpr:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
-    if (!user.tenantId) return forbidden();
+  { permission: 'gdpr:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') return badRequest('Invalid request body');
 
-    const prev = await queryOne(`SELECT * FROM data_subject_requests WHERE id=$1 AND tenant_id=$2`, [
-      id,
-      user.tenantId,
-    ]);
+    const prev = await queryOne(`SELECT * FROM data_subject_requests WHERE id=$1 AND tenant_id=$2`, [id, tenantId]);
     if (!prev) return notFound('Request not found');
 
     let status = prev.status;
@@ -61,7 +55,7 @@ export const PUT = withRoute<{ id: string }>(
          resolved_by = CASE WHEN $1 = 'rejected' THEN $3::uuid ELSE resolved_by END
      WHERE id=$4 AND tenant_id=$5
      RETURNING *`,
-      [status, body.notes !== undefined ? sanitizeString(body.notes, 2000) : prev.notes, user.id, id, user.tenantId],
+      [status, body.notes !== undefined ? sanitizeString(body.notes, 2000) : prev.notes, user.id, id, tenantId],
     );
 
     await appendAudit(user, 'UPDATE', `RGPD request ${prev.request_type}`, prev.status, status, user.clinic);

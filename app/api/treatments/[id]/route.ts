@@ -1,14 +1,12 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 
 // GET /api/treatments/[id]
 export const GET = withRoute<{ id: string }>(
-  { permission: 'treatments:read', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'treatments:read', tenant: 'required' },
+  async ({ params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
     const t = await queryOne(
       `SELECT t.*, p.name as patient_name FROM treatments t
      JOIN patients p ON p.id=t.patient_id
@@ -22,11 +20,10 @@ export const GET = withRoute<{ id: string }>(
 
 // PUT /api/treatments/[id]  — full update (receptionist or dentist)
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'treatments:update', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'treatments:update', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
-    const tenantId = scopeTenant(user, request);
     const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
       id,
       tenantId,
@@ -77,10 +74,9 @@ export const PUT = withRoute<{ id: string }>(
 
 // DELETE /api/treatments/[id]
 export const DELETE = withRoute<{ id: string }>(
-  { permission: 'treatments:delete', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'treatments:delete', tenant: 'required' },
+  async ({ user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
     const prev = await queryOne(`SELECT * FROM treatments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
       id,
       tenantId,

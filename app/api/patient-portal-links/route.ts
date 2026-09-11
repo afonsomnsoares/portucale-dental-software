@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import { appendAudit } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { getTask } from '@/lib/patientTasks';
@@ -19,12 +18,10 @@ const PURPOSES = ['missing_data', 'document_upload', 'consent_form'] as const;
 const DEFAULT_EXPIRY_HOURS = 72;
 
 export const POST = withRoute(
-  { permission: 'patient-portal:manage', tenant: 'optional' },
-  async ({ request, user }) => {
-    if (!user.tenantId) return forbidden();
-
+  { permission: 'patient-portal:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
     const body = await request.json();
-    const patient = await getOwnedPatient(body.patientId, user);
+    const patient = await getOwnedPatient(body.patientId, { tenantId });
     if (!patient) return badRequest('patientId is required and must belong to your clinic');
 
     const purpose = asEnum(body.purpose, PURPOSES);
@@ -34,7 +31,7 @@ export const POST = withRoute(
     let consentFormId: string | null = null;
 
     if (purpose === 'document_upload') {
-      const task = body.taskId ? await getTask(user.tenantId, String(body.taskId)) : null;
+      const task = body.taskId ? await getTask(tenantId, String(body.taskId)) : null;
       if (task?.type !== 'document_request' || task.patient_id !== patient.id || task.status !== 'pending') {
         return badRequest('taskId must be a pending document_request task for this patient');
       }
@@ -45,7 +42,7 @@ export const POST = withRoute(
       const form = body.consentFormId
         ? await queryOne(`SELECT id, signed_by FROM consent_forms WHERE id=$1 AND tenant_id=$2 AND patient_id=$3`, [
             body.consentFormId,
-            user.tenantId,
+            tenantId,
             patient.id,
           ])
         : null;
@@ -63,7 +60,7 @@ export const POST = withRoute(
        (tenant_id, patient_id, task_id, consent_form_id, purpose, token_hash, expires_at, created_by)
      VALUES ($1,$2,$3,$4,$5,$6, NOW() + ($7::int * INTERVAL '1 hour'), $8)
      RETURNING id, purpose, expires_at`,
-      [user.tenantId, patient.id, taskId, consentFormId, purpose, tokenHash, expiresInHours, user.id],
+      [tenantId, patient.id, taskId, consentFormId, purpose, tokenHash, expiresInHours, user.id],
     );
 
     await appendAudit(user, 'CREATE', `Patient portal link: ${purpose}`, null, `patient:${patient.id}`, user.clinic);

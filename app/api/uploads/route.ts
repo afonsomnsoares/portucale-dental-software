@@ -1,5 +1,4 @@
-import { forbidden } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { queryRead } from '@/lib/db';
 import { badRequest } from '@/lib/http';
 import { getTask } from '@/lib/patientTasks';
 import { withRoute } from '@/lib/route';
@@ -8,24 +7,22 @@ import { saveUploadFile } from '@/lib/uploads';
 
 // GET /api/uploads?patientId= — documents panel (Fase C): lists what's already on
 // file for a patient, grouped by category in the UI.
-export const GET = withRoute({ permission: 'uploads:read', tenant: 'optional' }, async ({ request, user }) => {
-  if (!user.tenantId) return forbidden();
-
+export const GET = withRoute({ permission: 'uploads:read', tenant: 'required' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   if (!patientId) return badRequest('patientId is required');
-  if (!(await getOwnedPatient(patientId, user))) {
+  if (!(await getOwnedPatient(patientId, { tenantId }))) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
 
-  const rows = await query(`SELECT * FROM uploads WHERE tenant_id=$1 AND patient_id=$2 ORDER BY created_at DESC`, [
-    user.tenantId,
+  const rows = await queryRead(`SELECT * FROM uploads WHERE tenant_id=$1 AND patient_id=$2 ORDER BY created_at DESC`, [
+    tenantId,
     patientId,
   ]);
   return Response.json(rows);
 });
 
-export const POST = withRoute({ permission: 'uploads:create' }, async ({ request, user, tenantId }) => {
+export const POST = withRoute({ permission: 'uploads:create' }, async ({ request, tenantId }) => {
   const form = await request.formData();
   const file = form.get('file') as File;
   const patientId = form.get('patientId') ? String(form.get('patientId')) : null;
@@ -34,7 +31,7 @@ export const POST = withRoute({ permission: 'uploads:create' }, async ({ request
   if (!file || typeof file.arrayBuffer !== 'function') {
     return Response.json({ error: 'Missing file' }, { status: 400 });
   }
-  if (patientId && !(await getOwnedPatient(patientId, user))) {
+  if (patientId && !(await getOwnedPatient(patientId, { tenantId }))) {
     return Response.json({ error: 'Patient not found' }, { status: 404 });
   }
   // A taskId must be a pending document_request task on the SAME patient this upload is

@@ -1,5 +1,4 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { erasePatient, exportPatientData } from '@/lib/dataSubject';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, notFound } from '@/lib/http';
@@ -11,12 +10,11 @@ import { deleteStoredFiles } from '@/lib/uploads';
 // irreversível sobre dados clínicos, e as duas coisas não devem partilhar
 // caminho nem ser possíveis por engano.
 export const POST = withRoute<{ id: string }>(
-  { permission: 'gdpr:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
-    if (!user.tenantId) return forbidden();
+  { permission: 'gdpr:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
 
-    const req = await queryOne(`SELECT * FROM data_subject_requests WHERE id=$1 AND tenant_id=$2`, [id, user.tenantId]);
+    const req = await queryOne(`SELECT * FROM data_subject_requests WHERE id=$1 AND tenant_id=$2`, [id, tenantId]);
     if (!req) return notFound('Request not found');
     if (req.status === 'completed') return badRequest('Request already completed');
     if (!req.patient_id) return badRequest('Request has no patient attached');
@@ -26,7 +24,7 @@ export const POST = withRoute<{ id: string }>(
         `UPDATE data_subject_requests
        SET status='completed', resolved_at=NOW(), resolved_by=$1, updated_at=NOW()
        WHERE id=$2 AND tenant_id=$3`,
-        [user.id, id, user.tenantId],
+        [user.id, id, tenantId],
       );
       await appendAudit(user, 'UPDATE', `RGPD ${req.request_type} cumprido`, req.status, detail, user.clinic);
     };
@@ -35,7 +33,7 @@ export const POST = withRoute<{ id: string }>(
     // O mesmo conteúdo serve os dois: o art. 20.º acrescenta a exigência de
     // formato estruturado e legível por máquina, que o JSON cumpre.
     if (req.request_type === 'access' || req.request_type === 'portability') {
-      const data = await exportPatientData(user.tenantId, req.patient_id);
+      const data = await exportPatientData(tenantId, req.patient_id);
       if (!data) return notFound('Patient not found');
 
       await appendTimeline(req.patient_id, user, 'admin', `Dados exportados a pedido do titular (${req.request_type})`);
@@ -61,7 +59,7 @@ export const POST = withRoute<{ id: string }>(
         return badRequest('Erasure is irreversible — send { "confirm": true } to proceed');
       }
 
-      const result = await erasePatient(user.tenantId, req.patient_id);
+      const result = await erasePatient(tenantId, req.patient_id);
       if (!result) return notFound('Patient not found');
 
       // As linhas de `uploads` já desapareceram; os ficheiros ainda não. Sem este

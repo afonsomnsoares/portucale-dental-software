@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { appendAudit } from '@/lib/audit';
 import { forbidden, requireRoles } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { sanitizeString } from '@/lib/validate';
@@ -15,20 +15,20 @@ export const GET = withRoute(
       'merece um notes:read/notes:write ao lado de medical-history:*',
     tenant: 'optional',
   },
-  async ({ request, user }) => {
+  async ({ request, tenantId }) => {
     const { searchParams } = new URL(request.url);
     const patientId = searchParams.get('patientId');
 
     // Query clinical notes from patient_timeline (event_type = 'note'), scoped
     // through patients.tenant_id — patient_timeline itself has no tenant_id column.
     const rows = patientId
-      ? await query(
+      ? await queryRead(
           `SELECT pt.* FROM patient_timeline pt
          JOIN patients p ON p.id = pt.patient_id
          WHERE pt.patient_id=$1 AND pt.event_type='note'
            AND ($2::uuid IS NULL OR p.tenant_id=$2::uuid)
          ORDER BY pt.created_at DESC`,
-          [patientId, user.tenantId || null],
+          [patientId, tenantId || null],
         )
       : [];
 
@@ -45,7 +45,7 @@ export const POST = withRoute(
       'merece um notes:read/notes:write ao lado de medical-history:*',
     tenant: 'optional',
   },
-  async ({ request, user }) => {
+  async ({ request, user, tenantId }) => {
     if (!requireRoles(user, 'dentist', 'admin', 'super_admin')) return forbidden();
 
     const { patientId, noteText } = await request.json();
@@ -55,7 +55,7 @@ export const POST = withRoute(
     const text = sanitizeString(noteText, 5000);
     if (!text) return Response.json({ error: 'noteText required' }, { status: 400 });
 
-    const patient = await getOwnedPatient(patientId, user);
+    const patient = await getOwnedPatient(patientId, { tenantId });
     if (!patient) return Response.json({ error: 'Patient not found' }, { status: 404 });
 
     const hash = crypto

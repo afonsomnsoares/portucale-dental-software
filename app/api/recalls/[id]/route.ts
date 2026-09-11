@@ -4,13 +4,13 @@ import { withRoute } from '@/lib/route';
 
 export const PUT = withRoute<{ id: string }>(
   { permission: 'recalls:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
 
     const prev = await queryOne(`SELECT * FROM recalls WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
       id,
-      user.tenantId || null,
+      tenantId || null,
     ]);
     if (!prev) return Response.json({ error: 'Not found' }, { status: 404 });
 

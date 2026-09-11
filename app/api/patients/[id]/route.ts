@@ -39,8 +39,8 @@ export const GET = withRoute<{ id: string }>(
 
 // PUT /api/patients/[id]
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'patients:update', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'patients:update', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
     const patientErrors = validatePatientBody(body);
@@ -84,7 +84,6 @@ export const PUT = withRoute<{ id: string }>(
     }
     const commPrefsJson = body.commPrefs && typeof body.commPrefs === 'object' ? JSON.stringify(body.commPrefs) : null;
 
-    const tenantId = scopeTenant(user, request);
     const [updated] = await query(
       `UPDATE patients SET name=$1, dob=$2, phone=$3, email=$4, insurance=$5, status=COALESCE($6,status),
         custom_fields = COALESCE($8::jsonb, custom_fields),

@@ -3,7 +3,7 @@ import { withRoute } from '@/lib/route';
 
 export const GET = withRoute<{ id: string }>(
   { permission: 'consent-forms:read', tenant: 'optional' },
-  async ({ user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
 
     const row = await queryOne(
@@ -11,7 +11,7 @@ export const GET = withRoute<{ id: string }>(
      FROM consent_forms cf
      JOIN patients p ON p.id = cf.patient_id
      WHERE cf.id=$1 AND ($2::uuid IS NULL OR cf.tenant_id=$2::uuid)`,
-      [id, user.tenantId || null],
+      [id, tenantId || null],
     );
 
     if (!row) return Response.json({ error: 'Not found' }, { status: 404 });

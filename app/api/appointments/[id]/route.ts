@@ -1,16 +1,13 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedUser } from '@/lib/tenantGuard';
 import { notifyWaitlistOfFreedSlot } from '@/lib/waitlist';
 
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'appointments:update', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'appointments:update', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
-    if (!tenantId) return forbidden();
 
     const body = await request.json();
     const prev = await queryOne(`SELECT * FROM appointments WHERE id=$1 AND tenant_id=$2`, [id, tenantId]);
@@ -70,10 +67,9 @@ export const PUT = withRoute<{ id: string }>(
 );
 
 export const DELETE = withRoute<{ id: string }>(
-  { permission: 'appointments:cancel', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'appointments:cancel', tenant: 'required' },
+  async ({ user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
     const prev = await queryOne(`SELECT * FROM appointments WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
       id,
       tenantId,

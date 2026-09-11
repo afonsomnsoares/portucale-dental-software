@@ -1,60 +1,63 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asDate, asTime, requireFields } from '@/lib/validate';
 import { addToWaitlist, listPendingOffers, listWaitlist } from '@/lib/waitlist';
 
-export const GET = withRoute({ permission: 'waitlist:manage', tenant: 'optional' }, async ({ request, user }) => {
-  const tenantId = scopeTenant(user, request);
-  if (!tenantId) return forbidden();
-
+export const GET = withRoute({ permission: 'waitlist:manage', tenant: 'required' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
   const [entries, offers] = await Promise.all([listWaitlist(tenantId, status), listPendingOffers(tenantId)]);
   return Response.json({ entries, pendingOffers: offers });
 });
 
-export const POST = withRoute({ permission: 'waitlist:manage', tenant: 'optional' }, async ({ request, user }) => {
-  const tenantId = scopeTenant(user, request);
-  if (!tenantId) return forbidden();
+export const POST = withRoute(
+  { permission: 'waitlist:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json();
+    const missing = requireFields(body, ['patientId', 'treatmentType']);
+    if (missing.length)
+      return Response.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
 
-  const body = await request.json();
-  const missing = requireFields(body, ['patientId', 'treatmentType']);
-  if (missing.length)
-    return Response.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
+    if (body.preferredTimeStart && !asTime(body.preferredTimeStart)) {
+      return Response.json({ error: 'Invalid preferredTimeStart (use HH:MM)' }, { status: 400 });
+    }
+    if (body.preferredTimeEnd && !asTime(body.preferredTimeEnd)) {
+      return Response.json({ error: 'Invalid preferredTimeEnd (use HH:MM)' }, { status: 400 });
+    }
+    if (body.maxWaitUntil && !asDate(body.maxWaitUntil)) {
+      return Response.json({ error: 'Invalid maxWaitUntil (use YYYY-MM-DD)' }, { status: 400 });
+    }
+    const preferredDays = Array.isArray(body.preferredDays)
+      ? body.preferredDays.map(Number).filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6)
+      : null;
 
-  if (body.preferredTimeStart && !asTime(body.preferredTimeStart)) {
-    return Response.json({ error: 'Invalid preferredTimeStart (use HH:MM)' }, { status: 400 });
-  }
-  if (body.preferredTimeEnd && !asTime(body.preferredTimeEnd)) {
-    return Response.json({ error: 'Invalid preferredTimeEnd (use HH:MM)' }, { status: 400 });
-  }
-  if (body.maxWaitUntil && !asDate(body.maxWaitUntil)) {
-    return Response.json({ error: 'Invalid maxWaitUntil (use YYYY-MM-DD)' }, { status: 400 });
-  }
-  const preferredDays = Array.isArray(body.preferredDays)
-    ? body.preferredDays.map(Number).filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6)
-    : null;
+    if (!(await getOwnedPatient(body.patientId, { tenantId }))) {
+      return Response.json({ error: 'Patient not found' }, { status: 404 });
+    }
 
-  if (!(await getOwnedPatient(body.patientId, user))) {
-    return Response.json({ error: 'Patient not found' }, { status: 404 });
-  }
+    const row = await addToWaitlist(tenantId, user.id, {
+      patientId: body.patientId,
+      treatmentType: String(body.treatmentType).slice(0, 200),
+      preferredDentistId: body.preferredDentistId || null,
+      preferredDays,
+      preferredTimeStart: body.preferredTimeStart || null,
+      preferredTimeEnd: body.preferredTimeEnd || null,
+      minDuration: body.minDuration,
+      maxWaitUntil: body.maxWaitUntil || null,
+      notes: String(body.notes || '').slice(0, 1000),
+    });
 
-  const row = await addToWaitlist(tenantId, user.id, {
-    patientId: body.patientId,
-    treatmentType: String(body.treatmentType).slice(0, 200),
-    preferredDentistId: body.preferredDentistId || null,
-    preferredDays,
-    preferredTimeStart: body.preferredTimeStart || null,
-    preferredTimeEnd: body.preferredTimeEnd || null,
-    minDuration: body.minDuration,
-    maxWaitUntil: body.maxWaitUntil || null,
-    notes: String(body.notes || '').slice(0, 1000),
-  });
+    await appendTimeline(body.patientId, user, 'admin', `Adicionado à lista de espera: ${body.treatmentType}`);
+    await appendAudit(
+      user,
+      'CREATE',
+      `Waitlist: ${body.treatmentType}`,
+      null,
+      `patient:${body.patientId}`,
+      user.clinic,
+    );
 
-  await appendTimeline(body.patientId, user, 'admin', `Adicionado à lista de espera: ${body.treatmentType}`);
-  await appendAudit(user, 'CREATE', `Waitlist: ${body.treatmentType}`, null, `patient:${body.patientId}`, user.clinic);
-
-  return Response.json(row, { status: 201 });
-});
+    return Response.json(row, { status: 201 });
+  },
+);

@@ -29,7 +29,7 @@ export const POST = withRoute(
 
     // Cross-tenant guard before anything else touches the patient — same call every other
     // route that accepts a client-supplied patientId makes (see lib/tenantGuard.ts).
-    const patient = await getOwnedPatient(body.patientId, user);
+    const patient = await getOwnedPatient(body.patientId, { tenantId });
     if (!patient) return apiError({ status: 404, code: 'NOT_FOUND', message: 'Patient not found' });
 
     // Only catalogue keys survive: an override for an unknown key would silently do

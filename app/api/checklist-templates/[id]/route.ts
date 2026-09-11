@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -13,12 +12,11 @@ const TYPES = ['opening', 'closing', 'other'] as const;
 // survive a template being retired. Retiring a template is `active: false` instead, same
 // idiom as lead_capture_sources.
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'checklists:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'checklists:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
     // idiom as app/api/lead-sources/[id]/route.ts.
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT * FROM checklist_templates WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,

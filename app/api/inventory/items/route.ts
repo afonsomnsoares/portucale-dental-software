@@ -1,5 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { asInt, sanitizeString } from '@/lib/validate';
@@ -11,7 +11,7 @@ import { asInt, sanitizeString } from '@/lib/validate';
 // already exist) — this is what makes the rest of item 13 (forecast/batches/purchase
 // orders) actually reachable without going straight to psql.
 export const GET = withRoute({ permission: 'inventory:manage', tenant: 'optional' }, async () => {
-  const rows = await query(`SELECT * FROM inventory_items ORDER BY item`);
+  const rows = await queryRead(`SELECT * FROM inventory_items ORDER BY item`);
   return Response.json(rows);
 });
 

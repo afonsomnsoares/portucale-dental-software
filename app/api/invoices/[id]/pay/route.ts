@@ -6,7 +6,7 @@ import { asFee } from '@/lib/validate';
 
 export const PUT = withRoute<{ id: string }>(
   { permission: 'invoices:pay', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
     const payAmount = asFee(body.amount);
@@ -21,11 +21,11 @@ export const PUT = withRoute<{ id: string }>(
     const result = await withTransaction(async (client) => {
       const { rows } = await client.query(
         `SELECT * FROM invoices WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid) FOR UPDATE`,
-        [id, user.tenantId],
+        [id, tenantId],
       );
       const inv = rows[0];
       if (!inv) return { error: 'Not found', status: 404 };
-      if (user.tenantId && inv.tenant_id !== user.tenantId) return { error: 'Forbidden', status: 403 };
+      if (tenantId && inv.tenant_id !== tenantId) return { error: 'Forbidden', status: 403 };
       if (inv.status === 'paid') return { error: 'Invoice already paid', status: 400 };
 
       const newPaid = Number(inv.paid) + payAmount;

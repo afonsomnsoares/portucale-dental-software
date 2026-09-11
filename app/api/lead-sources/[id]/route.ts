@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -9,12 +8,11 @@ import { withRoute } from '@/lib/route';
 // new token, which is just "create a new source" with extra steps, so callers who want a
 // new token create a new source and deactivate the old one instead).
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'lead-sources:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'lead-sources:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
     // idiom as app/api/patients/[id]/route.ts's PUT.
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT * FROM lead_capture_sources WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,

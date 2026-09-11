@@ -4,9 +4,8 @@ import { withRoute } from '@/lib/route';
 
 export const GET = withRoute<{ id: string }>(
   { permission: 'treatment-plans:read', tenant: 'optional' },
-  async ({ user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
-    const tenantId = user.tenantId;
 
     const row = await queryOne(
       `SELECT tp.*, p.name AS patient_name
@@ -23,11 +22,10 @@ export const GET = withRoute<{ id: string }>(
 
 export const PUT = withRoute<{ id: string }>(
   { permission: 'treatment-plans:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
 
-    const tenantId = user.tenantId;
     const prev = await queryOne(
       `SELECT * FROM treatment_plans WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,
       [id, tenantId],

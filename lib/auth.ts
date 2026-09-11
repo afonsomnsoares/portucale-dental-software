@@ -105,6 +105,7 @@ export function verifyToken(token: string): SessionUser | null {
     if (payload?.exp && now >= Number(payload.exp)) return null;
     return payload;
   } catch {
+    // intentional — returns null on invalid token
     return null;
   }
 }
@@ -214,6 +215,7 @@ export function isSameOrigin(request: AuthRequest) {
   try {
     return new URL(origin).host === host;
   } catch {
+    // intentional — returns false on malformed origin
     return false;
   }
 }

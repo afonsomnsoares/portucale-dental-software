@@ -1,4 +1,3 @@
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { computeForecasts, DEFAULT_HORIZON_DAYS } from '@/lib/forecast';
 import { withRoute } from '@/lib/route';
 
@@ -7,10 +6,8 @@ import { withRoute } from '@/lib/route';
 // Exige 'reports:read' e não uma ação nova: prever é ler o negócio, e quem pode ver os
 // relatórios da clínica pode ver para onde eles apontam. Uma permissão a mais que
 // ninguém sabe atribuir é uma funcionalidade que ninguém usa.
-export const GET = withRoute({ permission: 'reports:read', tenant: 'optional' }, async ({ request, user }) => {
+export const GET = withRoute({ permission: 'reports:read', tenant: 'required' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
-  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
-  if (!tenantId) return forbidden();
 
   // Teto de 90 dias: acima disso a previsão sazonal está a extrapolar 13 semanas a
   // partir de 12 de histórico, e o número deixa de significar o que aparenta.

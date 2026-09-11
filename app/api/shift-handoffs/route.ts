@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { createHandoff, listHandoffs } from '@/lib/shiftHandoff';
@@ -9,29 +8,33 @@ import { asDate, asEnum, sanitizeString } from '@/lib/validate';
 
 const STATUSES = ['open', 'acknowledged'] as const;
 
-export const GET = withRoute({ permission: 'shift-handoffs:manage', tenant: 'optional' }, async ({ request, user }) => {
-  const { searchParams } = new URL(request.url);
-  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
-  if (!tenantId) return forbidden();
-
-  const status = searchParams.get('status');
-  const rows = await listHandoffs(tenantId, {
-    date: asDate(searchParams.get('date')),
-    status: status && STATUSES.includes(status as (typeof STATUSES)[number]) ? status : null,
-    // ?scope=forMe — o que o turno que entra precisa de ver. Um super_admin não
-    // faz turnos, por isso o filtro só faz sentido para quem tem tenant próprio.
-    forUserId: searchParams.get('scope') === 'forMe' && user.tenantId ? user.id : null,
-  });
-  return Response.json(rows);
-});
+// 'resolved' faz o que o scopeTenant à mão aqui dentro fazia — incluindo ler o
+// ?tenantId= do super-admin — mas com o cookie acting_tenant a ganhar-lhe, e com o 403
+// de «sem clínica não há passagem de turno» a vir do wrapper.
+export const GET = withRoute(
+  { permission: 'shift-handoffs:manage', tenant: 'resolved' },
+  async ({ request, user, tenantId }) => {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const rows = await listHandoffs(tenantId, {
+      date: asDate(searchParams.get('date')),
+      status: status && STATUSES.includes(status as (typeof STATUSES)[number]) ? status : null,
+      // ?scope=forMe — o que o turno que entra precisa de ver. Um super_admin não faz
+      // turnos, por isso o filtro só faz sentido para quem tem clínica própria — e é
+      // por isso que esta linha lê `user.tenantId` e não o `tenantId` acima: a pergunta
+      // aqui não é «de que clínica falamos», é «esta pessoa faz turnos nela».
+      forUserId: searchParams.get('scope') === 'forMe' && user.tenantId ? user.id : null,
+    });
+    return Response.json(rows);
+  },
+);
 
 export const POST = withRoute(
-  { permission: 'shift-handoffs:manage', tenant: 'optional' },
-  async ({ request, user }) => {
+  { permission: 'shift-handoffs:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
     // Uma passagem de turno é sempre escrita por quem fez o turno — from_user_id é
     // o próprio, nunca um id vindo do cliente. Um super_admin não tem turno numa
     // clínica, por isso não pode escrever passagens.
-    if (!user.tenantId) return forbidden();
 
     const body = await request.json();
     const handoffDate = asDate(body.handoffDate) || new Date().toLocaleDateString('en-CA');
@@ -52,12 +55,12 @@ export const POST = withRoute(
     // desse utilizador ficava exposto a esta clínica em listHandoffs (fuga entre tenants).
     let toUserId: string | null = null;
     if (body.toUserId) {
-      const target = await getOwnedUser(body.toUserId, user);
+      const target = await getOwnedUser(body.toUserId, { tenantId });
       if (!target) return badRequest('toUserId is not a user in this clinic');
       toUserId = target.id;
     }
 
-    const row = await createHandoff(user.tenantId, user.id, {
+    const row = await createHandoff(tenantId, user.id, {
       handoffDate,
       shiftLabel: (shiftLabel || 'other') as (typeof SHIFT_LABELS)[number],
       toUserId,

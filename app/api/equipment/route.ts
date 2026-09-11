@@ -1,6 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { asInt, sanitizeString } from '@/lib/validate';
@@ -17,34 +16,31 @@ function normalizeTags(v: unknown): string[] {
     .slice(0, 20);
 }
 
-export const GET = withRoute({ permission: 'equipment:manage', tenant: 'optional' }, async ({ request, user }) => {
-  const tenantId = scopeTenant(user, request);
-  if (!tenantId) return forbidden();
-
-  const rows = await query(`SELECT * FROM clinic_equipment WHERE tenant_id=$1 ORDER BY chair NULLS LAST, name`, [
+export const GET = withRoute({ permission: 'equipment:manage', tenant: 'required' }, async ({ tenantId }) => {
+  const rows = await queryRead(`SELECT * FROM clinic_equipment WHERE tenant_id=$1 ORDER BY chair NULLS LAST, name`, [
     tenantId,
   ]);
   return Response.json(rows);
 });
 
-export const POST = withRoute({ permission: 'equipment:manage', tenant: 'optional' }, async ({ request, user }) => {
-  const tenantId = scopeTenant(user, request);
-  if (!tenantId) return forbidden();
+export const POST = withRoute(
+  { permission: 'equipment:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json();
+    const name = sanitizeString(body.name, 200);
+    if (!name) return badRequest('name is required');
+    const chair = body.chair !== undefined && body.chair !== null ? asInt(body.chair, { min: 1, max: 99 }) : null;
+    if (body.chair !== undefined && body.chair !== null && chair === null) return badRequest('chair must be 1-99');
+    const tags = normalizeTags(body.tags);
 
-  const body = await request.json();
-  const name = sanitizeString(body.name, 200);
-  if (!name) return badRequest('name is required');
-  const chair = body.chair !== undefined && body.chair !== null ? asInt(body.chair, { min: 1, max: 99 }) : null;
-  if (body.chair !== undefined && body.chair !== null && chair === null) return badRequest('chair must be 1-99');
-  const tags = normalizeTags(body.tags);
-
-  const [row] = await query(
-    `INSERT INTO clinic_equipment (tenant_id, name, chair, tags, created_by)
+    const [row] = await query(
+      `INSERT INTO clinic_equipment (tenant_id, name, chair, tags, created_by)
      VALUES ($1,$2,$3,$4,$5)
      RETURNING *`,
-    [tenantId, name, chair, tags, user.id],
-  );
+      [tenantId, name, chair, tags, user.id],
+    );
 
-  await appendAudit(user, 'CREATE', `Equipamento: ${name}`, null, 'active', user.clinic);
-  return created(row);
-});
+    await appendAudit(user, 'CREATE', `Equipamento: ${name}`, null, 'active', user.clinic);
+    return created(row);
+  },
+);

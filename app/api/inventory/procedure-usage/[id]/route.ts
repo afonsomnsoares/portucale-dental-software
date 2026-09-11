@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -9,10 +8,9 @@ import { withRoute } from '@/lib/route';
 // fine; there's no PUT because the natural "edit the quantity" path is re-POSTing (see
 // the ON CONFLICT upsert in ../route.ts).
 export const DELETE = withRoute<{ id: string }>(
-  { permission: 'inventory:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'inventory:manage', tenant: 'required' },
+  async ({ user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT * FROM procedure_item_usage WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,

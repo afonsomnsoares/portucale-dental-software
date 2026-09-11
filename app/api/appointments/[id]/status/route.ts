@@ -1,5 +1,5 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { formatEUR } from '@/lib/constants';
 import { queryOne, withTransaction } from '@/lib/db';
 import { badRequest } from '@/lib/http';
@@ -14,12 +14,11 @@ import { notifyWaitlistOfFreedSlot } from '@/lib/waitlist';
 const CLOSING_STATUS = 'departed';
 
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'appointments:status', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'appointments:status', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
     const status = String(body?.status || '');
-    const tenantId = scopeTenant(user, request);
 
     // Valor da consulta, opcional: nem toda a consulta cobra (seguimento incluído,
     // comparticipação, cortesia). Quando vem, tem de ser um número válido — um valor
@@ -33,7 +32,6 @@ export const PUT = withRoute<{ id: string }>(
       // Lançar um valor é criar um registo de conta corrente — quem fecha a consulta não
       // tem necessariamente essa permissão, e não é a de mudar estado que a concede.
       if (!(await hasPermission(user, 'invoices:create'))) return forbidden();
-      if (!user.tenantId) return forbidden();
     }
 
     const result = await withTransaction(async (client) => {

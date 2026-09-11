@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { apiError, notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { acknowledgeHandoff, getHandoff } from '@/lib/shiftHandoff';
@@ -8,15 +7,14 @@ import { acknowledgeHandoff, getHandoff } from '@/lib/shiftHandoff';
 // passagem de turno é o que ficou dito na altura, e reescrevê-la depois de o
 // turno seguinte a ter lido tornaria a confirmação inútil.
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'shift-handoffs:manage', tenant: 'optional' },
-  async ({ user, params }) => {
-    if (!user.tenantId) return forbidden();
+  { permission: 'shift-handoffs:manage', tenant: 'required' },
+  async ({ user, params, tenantId }) => {
     const { id } = params;
 
-    const prev = await getHandoff(user.tenantId, id);
+    const prev = await getHandoff(tenantId, id);
     if (!prev) return notFound('Handoff not found');
 
-    const row = await acknowledgeHandoff(user.tenantId, id, user.id);
+    const row = await acknowledgeHandoff(tenantId, id, user.id);
     if (!row) {
       // Distingue os dois casos que acknowledgeHandoff colapsa em null, para a UI
       // poder dizer porquê em vez de mostrar um erro genérico.

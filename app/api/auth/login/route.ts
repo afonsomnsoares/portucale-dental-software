@@ -2,11 +2,13 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { appendAudit } from '@/lib/audit';
 import { getDummyPasswordHash, signToken } from '@/lib/auth';
+import { SESSION_MAX_AGE } from '@/lib/constants';
 import { queryOne, withSystemContext } from '@/lib/db';
 import { effectiveActions } from '@/lib/permissions';
 import { getClientIp } from '@/lib/rateLimit';
 import { rateLimitShared } from '@/lib/rateLimitShared';
 import { withRoute } from '@/lib/route';
+import { asEmail } from '@/lib/validate';
 
 // Compared against when no user matches the submitted email, so the unknown-email and
 // wrong-password paths both pay one full bcrypt verification. The response bodies were
@@ -33,7 +35,18 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
   if (!body || typeof body !== 'object') {
     return Response.json({ error: 'Invalid request body' }, { status: 400 });
   }
-  const email = String(body.email || '');
+  // ─── Normalizado ANTES de tudo, e com a MESMA função que usa quem grava ────
+  // `asEmail` faz trim + lowercase, e é exatamente o que app/api/users/route.ts e
+  // scripts/create-admin.ts aplicam ao INSERIR. Enquanto isto não estava aqui, a
+  // consulta abaixo era `WHERE u.email=$1` com o que a pessoa escreveu — e como as
+  // duas pontas discordavam, qualquer maiúscula devolvia 401 com a password certa.
+  // Não é um caso de laboratório: os teclados de telemóvel capitalizam a primeira
+  // letra por omissão, e um espaço colado num copy-paste faz o mesmo.
+  //
+  // Um email malformado dá '' em vez de rebentar: nenhuma linha corresponde, o
+  // caminho do bcrypt de mitigação de timing abaixo corre na mesma, e a resposta é o
+  // 401 indistinguível de sempre — em vez de um 500 que revelaria a diferença.
+  const email = asEmail(body.email) || '';
   // Normalizada aqui, uma vez, para os DOIS caminhos de bcrypt.compare abaixo.
   // Enquanto só o caminho do email desconhecido a normalizava, um pedido sem
   // password devolvia 500 numa conta existente e 401 numa inexistente — um
@@ -46,7 +59,7 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
   // balde, e com duas instâncias o travão do login deixa de travar. Ver
   // lib/rateLimitShared.ts.
   const [perAccount, perIp] = await Promise.all([
-    rateLimitShared(`login:acct:${ip}:${email.toLowerCase()}`, PER_ACCOUNT_LIMIT),
+    rateLimitShared(`login:acct:${ip}:${email}`, PER_ACCOUNT_LIMIT),
     rateLimitShared(`login:ip:${ip}`, PER_IP_LIMIT),
   ]);
   const rl = !perAccount.ok ? perAccount : perIp;
@@ -128,7 +141,7 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
     secure: true,
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: SESSION_MAX_AGE,
   });
 
   await appendAudit(

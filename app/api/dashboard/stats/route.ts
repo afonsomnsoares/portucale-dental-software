@@ -19,8 +19,7 @@ export const GET = withRoute(
       'os números de plataforma são calculados só para o super-admin, abaixo',
     tenant: 'optional',
   },
-  async ({ user }) => {
-    const tenantId = user.tenantId || null;
+  async ({ user, tenantId }) => {
     const filter = tenantId ? 'WHERE tenant_id=$1' : '';
     const params = tenantId ? [tenantId] : [];
 

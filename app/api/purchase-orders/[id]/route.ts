@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, notFound } from '@/lib/http';
 import { receivePurchaseOrder } from '@/lib/inventory';
@@ -14,12 +13,11 @@ const TRANSITIONABLE_STATUSES = ['ordered', 'cancelled', 'received'] as const;
 //  - body.items: replaces the order's line items — only while still 'draft' (an order
 //    that's been sent or received is a historical record from here on).
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'inventory:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'inventory:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
     // idiom as app/api/lead-sources/[id]/route.ts.
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT * FROM purchase_orders WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`,

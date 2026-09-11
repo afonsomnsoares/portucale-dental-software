@@ -1,16 +1,14 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 
 export const DELETE = withRoute<{ id: string }>(
-  { permission: 'staff-schedules:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'staff-schedules:manage', tenant: 'required' },
+  async ({ user, params, tenantId }) => {
     const { id } = params;
     // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
     // idiom as app/api/lead-sources/[id]/route.ts.
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(
       `SELECT s.*, u.name AS user_name FROM staff_schedules s JOIN users u ON u.id = s.user_id

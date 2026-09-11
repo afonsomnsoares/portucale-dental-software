@@ -1,5 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
@@ -15,14 +15,13 @@ const STATUSES = ['pending', 'approved', 'rejected', 'cancelled'] as const;
 export const PUT = withRoute<{ id: string }>(
   {
     authOnly: 'Mesma regra do POST em ../route.ts: o corpo confina a alteração à clínica de quem chama',
-    tenant: 'optional',
+    tenant: 'required',
   },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     // super_admin (no tenantId of their own) isn't restricted to one tenant here — same
     // idiom as app/api/lead-sources/[id]/route.ts. A tenant-scoped user (including one
     // cancelling their own request) is still confined to their own tenant as before.
-    const tenantId = scopeTenant(user, request);
     if (!tenantId && user.role !== 'super_admin') return forbidden();
 
     const prev = await queryOne(

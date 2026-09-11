@@ -7,13 +7,12 @@ export const GET = withRoute(
       'Catálogos da própria clínica (códigos de tratamento e estados). São a tabela de referência que a interface precisa para desenhar seja o que for',
     tenant: 'optional',
   },
-  async ({ user }) => {
+  async ({ tenantId }) => {
     // Catálogos por clínica (migração 035): cada tabela tem a linha global
     // (tenant_id NULL) e, opcionalmente, o override desta clínica. O DISTINCT ON
     // com `(tenant_id IS NOT NULL) DESC` no ORDER BY escolhe o override quando
     // existe e cai no global quando não existe — uma clínica só precisa de
     // inserir os códigos que quer repricar, não o catálogo inteiro.
-    const tenantId = user.tenantId || null;
     const [treatmentCodes, statuses] = await Promise.all([
       query(
         `SELECT DISTINCT ON (code) code, description AS desc, category, fee

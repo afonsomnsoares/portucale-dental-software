@@ -1,5 +1,5 @@
 import { AGENTS } from '@/lib/agents/registry';
-import { query } from '@/lib/db';
+import { queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import type { AgentJobRun, AgentStatus } from '@/lib/types/agent';
 
@@ -13,7 +13,7 @@ export const GET = withRoute({ permission: 'agents:read' }, async ({ tenantId })
   // Uma linha por job_name: a mais recente desta clínica. O DISTINCT ON é o
   // idioma do Postgres para "o último de cada grupo" e assenta no índice que a
   // migração 038 cria — (tenant_id, job_name, started_at DESC).
-  const rows = await query(
+  const rows = await queryRead(
     `SELECT DISTINCT ON (job_name) job_name, status, started_at, finished_at, details
        FROM job_runs
       WHERE tenant_id = $1

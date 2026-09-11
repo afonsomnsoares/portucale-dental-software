@@ -1,5 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { query, queryOne } from '@/lib/db';
+import { queryOne, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { applyMovement, type InventoryMovementReason } from '@/lib/inventory';
 import { withRoute } from '@/lib/route';
@@ -27,7 +27,7 @@ export const GET = withRoute({ permission: 'inventory:manage', tenant: 'resolved
   vals.push(limit);
   sql += ` ORDER BY m.created_at DESC LIMIT $${vals.length}`;
 
-  const rows = await query(sql, vals);
+  const rows = await queryRead(sql, vals);
   return Response.json(rows);
 });
 

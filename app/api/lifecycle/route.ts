@@ -1,14 +1,9 @@
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { queryOne } from '@/lib/db';
 import { computeLifecycleTransitions, listOpenLeads } from '@/lib/lifecycle';
 import { computeJourneyPipeline } from '@/lib/patientJourney';
 import { withRoute } from '@/lib/route';
 
-export const GET = withRoute({ permission: 'lifecycle:read', tenant: 'optional' }, async ({ request, user }) => {
-  const requestedTenantId = new URL(request.url).searchParams.get('tenantId');
-  const tenantId = scopeTenant(user, request, requestedTenantId);
-  if (!tenantId) return forbidden();
-
+export const GET = withRoute({ permission: 'lifecycle:read', tenant: 'required' }, async ({ tenantId }) => {
   const tenant = await queryOne(`SELECT id FROM tenants WHERE id=$1`, [tenantId]);
   if (!tenant) return Response.json({ error: 'Not found' }, { status: 404 });
 

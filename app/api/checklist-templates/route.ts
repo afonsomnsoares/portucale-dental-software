@@ -1,5 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { asEnum, sanitizeString } from '@/lib/validate';
@@ -20,7 +20,7 @@ export const GET = withRoute(
     if (activeOnly) sql += ` AND active=TRUE`;
     sql += ' ORDER BY type, name';
 
-    const rows = await query(sql, vals);
+    const rows = await queryRead(sql, vals);
     return Response.json(rows);
   },
 );

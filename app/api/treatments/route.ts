@@ -1,12 +1,11 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asFee, requireFields, validateTreatmentBody } from '@/lib/validate';
 
 // GET /api/treatments?patientId=&status=
-export const GET = withRoute({ permission: 'treatments:read', tenant: 'optional' }, async ({ request, user }) => {
+export const GET = withRoute({ permission: 'treatments:read', tenant: 'optional' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   const patientId = searchParams.get('patientId');
   const status = searchParams.get('status');
@@ -24,50 +23,52 @@ export const GET = withRoute({ permission: 'treatments:read', tenant: 'optional'
     sql += ` AND t.status=$${vals.length}`;
   }
   // Tenant scope for non-admins
-  if (user.tenantId) {
-    vals.push(user.tenantId);
+  if (tenantId) {
+    vals.push(tenantId);
     sql += ` AND t.tenant_id=$${vals.length}`;
   }
   sql += ' ORDER BY t.phase, t.created_at';
 
-  const rows = await query(sql, vals);
+  const rows = await queryRead(sql, vals);
   return Response.json(rows);
 });
 
 // POST /api/treatments
-export const POST = withRoute({ permission: 'treatments:create', tenant: 'optional' }, async ({ request, user }) => {
-  if (!user.tenantId) return forbidden();
-  const body = await request.json();
-  const missing = requireFields(body, ['patientId', 'description']);
-  if (missing.length)
-    return Response.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
-  const treatmentErrors = validateTreatmentBody(body);
-  if (treatmentErrors) return Response.json({ error: treatmentErrors.join('; ') }, { status: 400 });
+export const POST = withRoute(
+  { permission: 'treatments:create', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json();
+    const missing = requireFields(body, ['patientId', 'description']);
+    if (missing.length)
+      return Response.json({ error: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
+    const treatmentErrors = validateTreatmentBody(body);
+    if (treatmentErrors) return Response.json({ error: treatmentErrors.join('; ') }, { status: 400 });
 
-  const { patientId, treatmentCode, description, phase, fee, notes } = body;
+    const { patientId, treatmentCode, description, phase, fee, notes } = body;
 
-  if (!(await getOwnedPatient(patientId, user))) {
-    return Response.json({ error: 'Patient not found' }, { status: 404 });
-  }
+    if (!(await getOwnedPatient(patientId, { tenantId }))) {
+      return Response.json({ error: 'Patient not found' }, { status: 404 });
+    }
 
-  const [t] = await query(
-    `INSERT INTO treatments (tenant_id, patient_id, treatment_code, description, phase, status, fee, notes, created_by)
+    const [t] = await query(
+      `INSERT INTO treatments (tenant_id, patient_id, treatment_code, description, phase, status, fee, notes, created_by)
      VALUES ($1,$2,$3,$4,$5,'proposed',$6,$7,$8)
      RETURNING *`,
-    [
-      user.tenantId,
-      patientId,
-      String(treatmentCode || '').slice(0, 30),
-      String(description).slice(0, 500),
-      phase || 1,
-      asFee(fee) ?? 0,
-      String(notes || '').slice(0, 2000) || null,
-      user.id,
-    ],
-  );
+      [
+        tenantId,
+        patientId,
+        String(treatmentCode || '').slice(0, 30),
+        String(description).slice(0, 500),
+        phase || 1,
+        asFee(fee) ?? 0,
+        String(notes || '').slice(0, 2000) || null,
+        user.id,
+      ],
+    );
 
-  await appendTimeline(patientId, user, 'clinical', `Tratamento proposto: ${description} — €${fee}`);
-  await appendAudit(user, 'CREATE', `Tratamento: ${description}`, null, 'proposto', user.clinic);
+    await appendTimeline(patientId, user, 'clinical', `Tratamento proposto: ${description} — €${fee}`);
+    await appendAudit(user, 'CREATE', `Tratamento: ${description}`, null, 'proposto', user.clinic);
 
-  return Response.json(t, { status: 201 });
-});
+    return Response.json(t, { status: 201 });
+  },
+);

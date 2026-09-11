@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { hasPermission } from '@/lib/permissions';
@@ -20,13 +19,11 @@ export const GET = withRoute(
     authOnly:
       'A permissão staff-time-off:manage é lida abaixo mas não barra: quem não a tem vê ' +
       'as ausências da sua própria clínica, quem a tem pode escolher outra por ?tenantId=',
-    tenant: 'optional',
+    tenant: 'resolved',
   },
-  async ({ request, user }) => {
+  async ({ request, user, tenantId }) => {
     const canManage = await hasPermission(user, 'staff-time-off:manage');
     const { searchParams } = new URL(request.url);
-    const tenantId = user.tenantId || (canManage ? searchParams.get('tenantId') : null);
-    if (!tenantId) return forbidden();
 
     const status = searchParams.get('status');
 
@@ -53,11 +50,9 @@ export const GET = withRoute(
 export const POST = withRoute(
   {
     authOnly: 'Registar a própria ausência é trabalho de equipa, e o corpo confina-a à clínica de quem chama',
-    tenant: 'optional',
+    tenant: 'required',
   },
-  async ({ request, user }) => {
-    if (!user.tenantId) return forbidden();
-
+  async ({ request, user, tenantId }) => {
     const body = await request.json();
     const type = body.type ? asEnum(body.type, TYPES) : 'vacation';
     if (body.type && !type) return badRequest(`type must be one of: ${TYPES.join(', ')}`);
@@ -72,7 +67,7 @@ export const POST = withRoute(
       `INSERT INTO staff_time_off (tenant_id, user_id, type, start_date, end_date, notes, requested_by)
      VALUES ($1,$2,$3,$4,$5,$6,$7)
      RETURNING *`,
-      [user.tenantId, user.id, type || 'vacation', startDate, endDate, sanitizeString(body.notes, 1000), user.id],
+      [tenantId, user.id, type || 'vacation', startDate, endDate, sanitizeString(body.notes, 1000), user.id],
     );
 
     await appendAudit(user, 'CREATE', `Time off request: ${user.name}`, null, `${startDate} → ${endDate}`, user.clinic);

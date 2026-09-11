@@ -1,15 +1,12 @@
-import { forbidden, requireRoles, scopeTenant } from '@/lib/auth';
+import { forbidden, requireRoles } from '@/lib/auth';
 import { type JobName, runJob } from '@/lib/jobsRunner';
 import { withRoute } from '@/lib/route';
 
-export const POST = withRoute({ permission: 'jobs:run', tenant: 'optional' }, async ({ request, user }) => {
+export const POST = withRoute({ permission: 'jobs:run', tenant: 'required' }, async ({ request, user, tenantId }) => {
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
 
   const { searchParams } = new URL(request.url);
   const job = (searchParams.get('job') || 'all') as JobName;
-  const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = scopeTenant(user, request, requestedTenantId);
-  if (!tenantId) return forbidden();
 
   const result = await runJob(tenantId, job, { id: user.id, name: user.name, role: user.role, clinic: user.clinic });
   if (!result.ok) {

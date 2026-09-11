@@ -1,4 +1,4 @@
-import { query, queryOne } from '@/lib/db';
+import { query, queryOne, queryRead } from '@/lib/db';
 import { badRequest, notFound, ok } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 
@@ -30,7 +30,7 @@ export const GET = withRoute({ permission: 'agents:read', tenant: 'optional' }, 
   }
   if (!includeResolved) conds.push(`resolved_at IS NULL`);
 
-  const rows = await query(
+  const rows = await queryRead(
     `SELECT id, tenant_id, agent_id, kind, severity, title, body, impact_eur, resolved_at, created_at
      FROM agent_insights
      WHERE ${conds.join(' AND ')}

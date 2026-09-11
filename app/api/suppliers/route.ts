@@ -1,5 +1,5 @@
 import { appendAudit } from '@/lib/audit';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { badRequest, created, ok } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { sanitizeString } from '@/lib/validate';
@@ -9,7 +9,7 @@ import { sanitizeString } from '@/lib/validate';
 // política de RLS própria.
 export const GET = withRoute({ permission: 'inventory:manage' }, async ({ request, tenantId }) => {
   const includeInactive = new URL(request.url).searchParams.get('includeInactive') === '1';
-  const rows = await query(
+  const rows = await queryRead(
     `SELECT * FROM suppliers WHERE tenant_id=$1 ${includeInactive ? '' : 'AND active = TRUE'} ORDER BY name`,
     [tenantId],
   );

@@ -1,7 +1,6 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { normalizeCustomFields } from '@/lib/customFields';
-import { query, warnSchemaGap } from '@/lib/db';
+import { query, queryRead, warnSchemaGap } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
 import { validatePatientBody } from '@/lib/validate';
@@ -25,11 +24,10 @@ export const GET = withRoute(
       'Lista de doentes da própria clínica: não há trabalho de clínica nenhum que não comece aqui. Escrever exige patients:create, que o POST verifica',
     tenant: 'optional',
   },
-  async ({ request, user }) => {
+  async ({ request, tenantId }) => {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('q') || '';
-    const tenantId = scopeTenant(user, request);
-    const rows = await query(
+    const rows = await queryRead(
       `SELECT p.*,
             ROUND((p.no_show_count::numeric / NULLIF(p.visit_count,0)) * 100)::int AS no_show_score,
             COALESCE(json_agg(pa.alert) FILTER (WHERE pa.alert IS NOT NULL), '[]') AS alerts
@@ -50,54 +48,48 @@ export const GET = withRoute(
   },
 );
 
-export const POST = withRoute({ permission: 'patients:create', tenant: 'optional' }, async ({ request, user }) => {
-  if (!user.tenantId) return forbidden();
-  const body = await request.json();
-  const patientErrors = validatePatientBody(body);
-  if (patientErrors) return badRequest(patientErrors.join('; '));
+export const POST = withRoute(
+  { permission: 'patients:create', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json();
+    const patientErrors = validatePatientBody(body);
+    if (patientErrors) return badRequest(patientErrors.join('; '));
 
-  let schema = await safeSchemaQuery(
-    `SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields WHERE tenant_id=$1`,
-    [user.tenantId],
-  );
-  if (schema === null) {
-    schema = await query(`SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields`);
-  } else if (!schema.length) {
-    const global = await safeSchemaQuery(
-      `SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields WHERE tenant_id IS NULL`,
+    let schema = await safeSchemaQuery(
+      `SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields WHERE tenant_id=$1`,
+      [tenantId],
     );
-    schema =
-      global === null
-        ? await query(`SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields`)
-        : global;
-  }
-  const normalized = normalizeCustomFields(schema, body.customFields);
-  if (normalized.error) return badRequest(normalized.error);
-
-  const [patient] = await query(
-    `INSERT INTO patients (tenant_id, name, dob, phone, email, insurance, balance, status, custom_fields)
-     VALUES ($1,$2,$3,$4,$5,$6,0,'registered',$7::jsonb) RETURNING *`,
-    [
-      user.tenantId,
-      body.name,
-      body.dob,
-      body.phone,
-      body.email,
-      body.insurance,
-      JSON.stringify(normalized.value || {}),
-    ],
-  );
-  if (body.alerts?.length) {
-    for (const alert of body.alerts) {
-      await query(`INSERT INTO patient_alerts (patient_id, alert) VALUES ($1,$2)`, [patient.id, alert]);
+    if (schema === null) {
+      schema = await query(`SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields`);
+    } else if (!schema.length) {
+      const global = await safeSchemaQuery(
+        `SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields WHERE tenant_id IS NULL`,
+      );
+      schema =
+        global === null
+          ? await query(`SELECT field_name, field_type, required, rollout, enum_values FROM schema_fields`)
+          : global;
     }
-  }
-  await appendTimeline(
-    patient.id,
-    user,
-    'admin',
-    `Perfil de paciente criado — ID Global #${patient.global_seq} atribuído`,
-  );
-  await appendAudit(user, 'CREATE', `Patient — ${patient.name}`, null, 'registered', user.clinic);
-  return created(patient);
-});
+    const normalized = normalizeCustomFields(schema, body.customFields);
+    if (normalized.error) return badRequest(normalized.error);
+
+    const [patient] = await query(
+      `INSERT INTO patients (tenant_id, name, dob, phone, email, insurance, balance, status, custom_fields)
+     VALUES ($1,$2,$3,$4,$5,$6,0,'registered',$7::jsonb) RETURNING *`,
+      [tenantId, body.name, body.dob, body.phone, body.email, body.insurance, JSON.stringify(normalized.value || {})],
+    );
+    if (body.alerts?.length) {
+      for (const alert of body.alerts) {
+        await query(`INSERT INTO patient_alerts (patient_id, alert) VALUES ($1,$2)`, [patient.id, alert]);
+      }
+    }
+    await appendTimeline(
+      patient.id,
+      user,
+      'admin',
+      `Perfil de paciente criado — ID Global #${patient.global_seq} atribuído`,
+    );
+    await appendAudit(user, 'CREATE', `Patient — ${patient.name}`, null, 'registered', user.clinic);
+    return created(patient);
+  },
+);

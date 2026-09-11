@@ -1,13 +1,8 @@
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { computeRecovery } from '@/lib/recovery';
 import { withRoute } from '@/lib/route';
 
-export const GET = withRoute({ permission: 'recovery:read', tenant: 'optional' }, async ({ request, user }) => {
-  const requestedTenantId = new URL(request.url).searchParams.get('tenantId');
-  const tenantId = scopeTenant(user, request, requestedTenantId);
-  if (!tenantId) return forbidden();
-
+export const GET = withRoute({ permission: 'recovery:read', tenant: 'required' }, async ({ tenantId }) => {
   const tenant = await queryOne(`SELECT id, name, operatories FROM tenants WHERE id=$1`, [tenantId]);
   if (!tenant) return Response.json({ error: 'Not found' }, { status: 404 });
 

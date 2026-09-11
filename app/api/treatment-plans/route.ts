@@ -1,37 +1,38 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
 import { asFee, sanitizeString } from '@/lib/validate';
 
-export const GET = withRoute({ permission: 'treatment-plans:read', tenant: 'optional' }, async ({ request, user }) => {
-  const { searchParams } = new URL(request.url);
-  const patientId = searchParams.get('patientId');
+export const GET = withRoute(
+  { permission: 'treatment-plans:read', tenant: 'optional' },
+  async ({ request, tenantId }) => {
+    const { searchParams } = new URL(request.url);
+    const patientId = searchParams.get('patientId');
 
-  let sql = `SELECT tp.*, p.name AS patient_name
+    let sql = `SELECT tp.*, p.name AS patient_name
              FROM treatment_plans tp
              JOIN patients p ON p.id = tp.patient_id
              WHERE 1=1`;
-  const vals = [];
-  if (patientId) {
-    vals.push(patientId);
-    sql += ` AND tp.patient_id=$${vals.length}`;
-  }
-  if (user.tenantId) {
-    vals.push(user.tenantId);
-    sql += ` AND tp.tenant_id=$${vals.length}`;
-  }
-  sql += ' ORDER BY tp.created_at DESC';
+    const vals = [];
+    if (patientId) {
+      vals.push(patientId);
+      sql += ` AND tp.patient_id=$${vals.length}`;
+    }
+    if (tenantId) {
+      vals.push(tenantId);
+      sql += ` AND tp.tenant_id=$${vals.length}`;
+    }
+    sql += ' ORDER BY tp.created_at DESC';
 
-  const rows = await query(sql, vals);
-  return Response.json(rows);
-});
+    const rows = await queryRead(sql, vals);
+    return Response.json(rows);
+  },
+);
 
 export const POST = withRoute(
-  { permission: 'treatment-plans:manage', tenant: 'optional' },
-  async ({ request, user }) => {
-    if (!user.tenantId) return forbidden();
+  { permission: 'treatment-plans:manage', tenant: 'required' },
+  async ({ request, user, tenantId }) => {
     const body = await request.json();
     const { patientId, title, description, phases, totalFee } = body;
 
@@ -39,7 +40,7 @@ export const POST = withRoute(
       return Response.json({ error: 'patientId and title required' }, { status: 400 });
     }
 
-    if (!(await getOwnedPatient(patientId, user))) {
+    if (!(await getOwnedPatient(patientId, { tenantId }))) {
       return Response.json({ error: 'Patient not found' }, { status: 404 });
     }
 
@@ -49,7 +50,7 @@ export const POST = withRoute(
      VALUES ($1,$2,$3,$4,$5,$6,$7)
      RETURNING *`,
       [
-        user.tenantId,
+        tenantId,
         patientId,
         sanitizeString(title, 200),
         sanitizeString(description, 2000),

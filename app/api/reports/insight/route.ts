@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { forbidden, scopeTenant } from '@/lib/auth';
+import { forbidden } from '@/lib/auth';
 import { computeClinicComparison, computeClinicSummary } from '@/lib/reports';
 import { withRoute } from '@/lib/route';
 
@@ -12,72 +12,73 @@ const SYSTEM_SINGLE = `És um analista de negócio para clínicas dentárias. Re
 
 const SYSTEM_COMPARE = `És um analista de negócio para grupos de clínicas dentárias. Recebes métricas já calculadas (em JSON) comparando várias clínicas do mesmo grupo — nunca as inventes nem recalcules. Escreve um diagnóstico curto em português europeu (máximo 3 frases, sem markdown) que identifique a clínica com pior desempenho e a causa provável (conversão, aquisição, agenda ou cobrança), citando os números e o valor em euros da diferença ("gap") fornecido.`;
 
-export const POST = withRoute({ permission: 'reports:read', tenant: 'optional' }, async ({ request, user }) => {
-  const body = await request.json().catch(() => ({}));
-  const from = clampDate(body.from) || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
-  const to = clampDate(body.to) || new Date().toISOString().slice(0, 10);
-  const requestedTenantId = body.tenantId ? String(body.tenantId) : null;
-  const tenantId = scopeTenant(user, request, requestedTenantId);
+export const POST = withRoute(
+  { permission: 'reports:read', tenant: 'resolved' },
+  async ({ request, user, tenantId }) => {
+    const body = await request.json().catch(() => ({}));
+    const from = clampDate(body.from) || new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10);
+    const to = clampDate(body.to) || new Date().toISOString().slice(0, 10);
 
-  // No key configured: degrade gracefully (same pattern as the SMS integration in
-  // app/api/jobs/run/route.ts) instead of erroring the whole reports page.
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return Response.json({ insight: null, configured: false });
-  }
-
-  let system: string;
-  let payload: unknown;
-  if (tenantId) {
-    const summary = await computeClinicSummary(tenantId, from, to);
-    if (!summary) return Response.json({ error: 'Not found' }, { status: 404 });
-    system = SYSTEM_SINGLE;
-    payload = {
-      clinica: summary.tenant.name,
-      periodo: summary.range,
-      receita: summary.metrics.completedValue,
-      tendenciaReceita: summary.previous.revenueTrend,
-      ocupacao: summary.metrics.chairUtilization,
-      taxaNoShow: summary.metrics.noShowRate,
-      tendenciaNoShow: summary.previous.noShowTrend,
-      novosPacientes: summary.metrics.newPatients,
-      planosApresentados: summary.metrics.presentedValue,
-      planosAceites: summary.metrics.acceptedValue,
-      taxaConversaoPlanos: summary.metrics.planConversionRate,
-      tendenciaConversao: summary.previous.conversionTrend,
-      receitaPotencialPerdida: summary.metrics.recoveryPotential,
-      saldoEmDivida: summary.metrics.outstandingBalance,
-    };
-  } else {
-    // Comparing across clinics only makes sense for the super_admin — same gate as
-    // GET /api/reports/compare.
-    if (user.role !== 'super_admin') return forbidden();
-    system = SYSTEM_COMPARE;
-    payload = await computeClinicComparison(from, to);
-  }
-
-  const client = new Anthropic({ apiKey });
-  try {
-    const response = await client.messages.create({
-      model: 'claude-opus-5',
-      max_tokens: 500,
-      thinking: { type: 'adaptive' },
-      system,
-      messages: [{ role: 'user', content: JSON.stringify(payload) }],
-    });
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
-    return Response.json({ insight: textBlock?.text || null, configured: true });
-  } catch (e) {
-    let message = 'Falha ao gerar análise';
-    if (e instanceof Anthropic.RateLimitError)
-      message = 'Limite de pedidos à IA atingido — tenta novamente dentro de momentos.';
-    else if (e instanceof Anthropic.AuthenticationError) message = 'Chave da API da Claude inválida.';
-    else {
-      // Don't forward the raw SDK/error message to the client — it can carry
-      // internal detail (request ids, upstream error bodies). Log it
-      // server-side and return the generic fallback instead.
-      console.error('reports/insight: Anthropic call failed:', e instanceof Error ? e.message : e);
+    // No key configured: degrade gracefully (same pattern as the SMS integration in
+    // app/api/jobs/run/route.ts) instead of erroring the whole reports page.
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return Response.json({ insight: null, configured: false });
     }
-    return Response.json({ insight: null, configured: true, error: message }, { status: 502 });
-  }
-});
+
+    let system: string;
+    let payload: unknown;
+    if (tenantId) {
+      const summary = await computeClinicSummary(tenantId, from, to);
+      if (!summary) return Response.json({ error: 'Not found' }, { status: 404 });
+      system = SYSTEM_SINGLE;
+      payload = {
+        clinica: summary.tenant.name,
+        periodo: summary.range,
+        receita: summary.metrics.completedValue,
+        tendenciaReceita: summary.previous.revenueTrend,
+        ocupacao: summary.metrics.chairUtilization,
+        taxaNoShow: summary.metrics.noShowRate,
+        tendenciaNoShow: summary.previous.noShowTrend,
+        novosPacientes: summary.metrics.newPatients,
+        planosApresentados: summary.metrics.presentedValue,
+        planosAceites: summary.metrics.acceptedValue,
+        taxaConversaoPlanos: summary.metrics.planConversionRate,
+        tendenciaConversao: summary.previous.conversionTrend,
+        receitaPotencialPerdida: summary.metrics.recoveryPotential,
+        saldoEmDivida: summary.metrics.outstandingBalance,
+      };
+    } else {
+      // Comparing across clinics only makes sense for the super_admin — same gate as
+      // GET /api/reports/compare.
+      if (user.role !== 'super_admin') return forbidden();
+      system = SYSTEM_COMPARE;
+      payload = await computeClinicComparison(from, to);
+    }
+
+    const client = new Anthropic({ apiKey });
+    try {
+      const response = await client.messages.create({
+        model: 'claude-opus-5',
+        max_tokens: 500,
+        thinking: { type: 'adaptive' },
+        system,
+        messages: [{ role: 'user', content: JSON.stringify(payload) }],
+      });
+      const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
+      return Response.json({ insight: textBlock?.text || null, configured: true });
+    } catch (e) {
+      let message = 'Falha ao gerar análise';
+      if (e instanceof Anthropic.RateLimitError)
+        message = 'Limite de pedidos à IA atingido — tenta novamente dentro de momentos.';
+      else if (e instanceof Anthropic.AuthenticationError) message = 'Chave da API da Claude inválida.';
+      else {
+        // Don't forward the raw SDK/error message to the client — it can carry
+        // internal detail (request ids, upstream error bodies). Log it
+        // server-side and return the generic fallback instead.
+        console.error('reports/insight: Anthropic call failed:', e instanceof Error ? e.message : e);
+      }
+      return Response.json({ insight: null, configured: true, error: message }, { status: 502 });
+    }
+  },
+);

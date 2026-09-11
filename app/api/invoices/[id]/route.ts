@@ -6,7 +6,7 @@ import { asFee, asString } from '@/lib/validate';
 
 export const GET = withRoute<{ id: string }>(
   { permission: 'invoices:read', tenant: 'optional' },
-  async ({ user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
     const inv = await queryOne(
       `SELECT i.*, d.name as dentist_name
@@ -16,7 +16,7 @@ export const GET = withRoute<{ id: string }>(
       [id],
     );
     if (!inv) return Response.json({ error: 'Not found' }, { status: 404 });
-    if (user.tenantId && inv.tenant_id !== user.tenantId) return forbidden();
+    if (tenantId && inv.tenant_id !== tenantId) return forbidden();
 
     return Response.json(inv);
   },
@@ -24,11 +24,11 @@ export const GET = withRoute<{ id: string }>(
 
 export const PUT = withRoute<{ id: string }>(
   { permission: 'invoices:update', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const inv = await queryOne(`SELECT * FROM invoices WHERE id=$1`, [id]);
     if (!inv) return Response.json({ error: 'Not found' }, { status: 404 });
-    if (user.tenantId && inv.tenant_id !== user.tenantId) return forbidden();
+    if (tenantId && inv.tenant_id !== tenantId) return forbidden();
 
     const body = await request.json();
     const updates: string[] = [];

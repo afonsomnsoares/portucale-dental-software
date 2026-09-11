@@ -18,6 +18,9 @@ import { withRoute } from '@/lib/route';
 // Entrar e sair ficam no audit_log: é o operador da plataforma a ir ver dados clínicos de
 // um cliente, e isso tem de deixar rasto.
 
+// 'optional' e não 'resolved': esta é a rota que ESCREVE o cookie acting_tenant, por
+// isso a clínica de destino vem do corpo e é a única fonte possível — resolvê-la pelo
+// wrapper seria pedir-lhe a resposta a uma pergunta que só este pedido vai criar.
 export const POST = withRoute({ platform: true, tenant: 'optional' }, async ({ request, user }) => {
   if (!requireRoles(user, 'super_admin')) {
     await logBlockedAccess(user, 'Clinic impersonation blocked: caller is not a super-admin');

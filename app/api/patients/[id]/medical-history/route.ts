@@ -4,9 +4,8 @@ import { withRoute } from '@/lib/route';
 
 export const GET = withRoute<{ id: string }>(
   { permission: 'medical-history:read', tenant: 'optional' },
-  async ({ user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
-    const tenantId = user.tenantId;
 
     const row = await queryOne(
       `SELECT mh.allergies, mh.medications, mh.conditions, mh.family_history, mh.smoking, mh.pregnancy, mh.notes

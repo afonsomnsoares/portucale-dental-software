@@ -1,15 +1,12 @@
-import { forbidden, scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { asDate } from '@/lib/validate';
 
-export const GET = withRoute({ permission: 'finance:read', tenant: 'optional' }, async ({ request, user }) => {
+export const GET = withRoute({ permission: 'finance:read', tenant: 'required' }, async ({ request, tenantId }) => {
   const { searchParams } = new URL(request.url);
   // Only a super-admin (role=admin with no tenantId of their own) may pick a
   // tenant via the query string; everyone else is confined to their own,
   // matching the pattern used everywhere else (e.g. app/api/patients/route.ts).
-  const tenantId = scopeTenant(user, request, searchParams.get('tenantId'));
-  if (!tenantId) return forbidden();
 
   const from = asDate(searchParams.get('from'));
   const to = asDate(searchParams.get('to'));

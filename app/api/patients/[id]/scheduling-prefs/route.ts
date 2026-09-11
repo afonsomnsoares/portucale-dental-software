@@ -23,10 +23,10 @@ function parseDays(v: unknown): number[] | null {
 
 export const GET = withRoute<{ id: string }>(
   { permission: 'schedule:read', tenant: 'optional' },
-  async ({ user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
 
-    const patient = await getOwnedPatient(id, user);
+    const patient = await getOwnedPatient(id, { tenantId });
     if (!patient) return notFound('Patient not found');
 
     const row = await getPreferences(String(patient.tenant_id), String(patient.id));
@@ -38,10 +38,10 @@ export const GET = withRoute<{ id: string }>(
 
 export const PUT = withRoute<{ id: string }>(
   { permission: 'patients:update', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
 
-    const patient = await getOwnedPatient(id, user);
+    const patient = await getOwnedPatient(id, { tenantId });
     if (!patient) return notFound('Patient not found');
 
     const body = await request.json();

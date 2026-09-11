@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { appendAudit, logBlockedAccess } from '@/lib/audit';
 import { forbidden } from '@/lib/auth';
-import { MIN_PASSWORD_LENGTH } from '@/lib/constants';
+import { BCRYPT_COST, MIN_PASSWORD_LENGTH } from '@/lib/constants';
 import { query, queryOne } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { asEmail } from '@/lib/validate';
@@ -78,7 +78,7 @@ export const PUT = withRoute<{ id: string }>(
         : undefined;
 
       if (password) {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, BCRYPT_COST);
         rows = await query(
           `UPDATE users SET email=$1, name=$2, role=$3, clinic=$4, tenant_id=$5, active=$6, password=$7,
                 specialties=COALESCE($9::text[], specialties)

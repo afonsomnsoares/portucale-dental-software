@@ -1,4 +1,3 @@
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { computeLifecycleStage } from '@/lib/lifecycleCalc';
 import { findMissingFields, type RequiredSchemaField } from '@/lib/missingData';
@@ -12,11 +11,10 @@ export const GET = withRoute<{ id: string }>(
   {
     authOnly:
       'A próxima ação sugerida para um doente da própria clínica — é o produto a fazer o que existe para fazer, e não revela nada que a ficha já não mostre',
-    tenant: 'optional',
+    tenant: 'required',
   },
-  async ({ request, user, params }) => {
+  async ({ params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
 
     const patient = await queryOne(
       `SELECT id, tenant_id, phone, email, dob, custom_fields, visit_count, last_visit, created_at

@@ -1,5 +1,4 @@
-import { forbidden, scopeTenant } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 
 // Read-only view over the queue lib/jobsRunner.ts writes to and drains —
@@ -17,40 +16,40 @@ const KINDS = new Set([
   'plan_followup',
 ]);
 
-export const GET = withRoute({ permission: 'notifications:read', tenant: 'optional' }, async ({ request, user }) => {
-  const { searchParams } = new URL(request.url);
-  const requestedTenantId = searchParams.get('tenantId');
-  const tenantId = scopeTenant(user, request, requestedTenantId);
-  if (!tenantId) return forbidden();
+export const GET = withRoute(
+  { permission: 'notifications:read', tenant: 'resolved' },
+  async ({ request, tenantId }) => {
+    const { searchParams } = new URL(request.url);
 
-  const status = searchParams.get('status');
-  const kind = searchParams.get('kind');
-  const patientId = searchParams.get('patientId');
-  const limitRaw = Number(searchParams.get('limit') || 100);
-  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, Math.floor(limitRaw))) : 100;
+    const status = searchParams.get('status');
+    const kind = searchParams.get('kind');
+    const patientId = searchParams.get('patientId');
+    const limitRaw = Number(searchParams.get('limit') || 100);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, Math.floor(limitRaw))) : 100;
 
-  let sql = `SELECT n.*, p.name AS patient_name
+    let sql = `SELECT n.*, p.name AS patient_name
              FROM notifications n
              LEFT JOIN patients p ON p.id = n.patient_id
              WHERE n.tenant_id = $1`;
-  const vals: unknown[] = [tenantId];
+    const vals: unknown[] = [tenantId];
 
-  if (status && STATUSES.has(status)) {
-    vals.push(status);
-    sql += ` AND n.status = $${vals.length}`;
-  }
-  if (kind && KINDS.has(kind)) {
-    vals.push(kind);
-    sql += ` AND n.payload->>'kind' = $${vals.length}`;
-  }
-  if (patientId) {
-    vals.push(patientId);
-    sql += ` AND n.patient_id = $${vals.length}`;
-  }
+    if (status && STATUSES.has(status)) {
+      vals.push(status);
+      sql += ` AND n.status = $${vals.length}`;
+    }
+    if (kind && KINDS.has(kind)) {
+      vals.push(kind);
+      sql += ` AND n.payload->>'kind' = $${vals.length}`;
+    }
+    if (patientId) {
+      vals.push(patientId);
+      sql += ` AND n.patient_id = $${vals.length}`;
+    }
 
-  vals.push(limit);
-  sql += ` ORDER BY n.created_at DESC LIMIT $${vals.length}`;
+    vals.push(limit);
+    sql += ` ORDER BY n.created_at DESC LIMIT $${vals.length}`;
 
-  const rows = await query(sql, vals);
-  return Response.json(rows);
-});
+    const rows = await queryRead(sql, vals);
+    return Response.json(rows);
+  },
+);

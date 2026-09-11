@@ -1,14 +1,11 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { forbidden } from '@/lib/auth';
 import { withRoute } from '@/lib/route';
 import { asDate, asTime } from '@/lib/validate';
 import { updateWaitlistEntry } from '@/lib/waitlist';
 
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'waitlist:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
-    if (!user.tenantId) return forbidden();
-
+  { permission: 'waitlist:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
     const body = await request.json();
 
@@ -30,7 +27,7 @@ export const PUT = withRoute<{ id: string }>(
       ? body.preferredDays.map(Number).filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6)
       : undefined;
 
-    const updated = await updateWaitlistEntry(user.tenantId, id, {
+    const updated = await updateWaitlistEntry(tenantId, id, {
       treatmentType: body.treatmentType,
       preferredDentistId: body.preferredDentistId,
       preferredDays,

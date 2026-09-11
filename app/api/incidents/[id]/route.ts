@@ -1,5 +1,4 @@
 import { appendAudit } from '@/lib/audit';
-import { scopeTenant } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
 import { notFound } from '@/lib/http';
 import { withRoute } from '@/lib/route';
@@ -14,10 +13,9 @@ const STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
 // 'incidents:manage' — unlike checklist runs, this isn't undoing your own action, it's
 // managing someone else's report, so there's no self-service carve-out here.
 export const PUT = withRoute<{ id: string }>(
-  { permission: 'incidents:manage', tenant: 'optional' },
-  async ({ request, user, params }) => {
+  { permission: 'incidents:manage', tenant: 'required' },
+  async ({ request, user, params, tenantId }) => {
     const { id } = params;
-    const tenantId = scopeTenant(user, request);
 
     const prev = await queryOne(`SELECT * FROM incidents WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2::uuid)`, [
       id,
@@ -44,7 +42,7 @@ export const PUT = withRoute<{ id: string }>(
       if (!body.assignedTo) {
         assignedTo = null;
       } else {
-        const assignee = await getOwnedUser(body.assignedTo, user);
+        const assignee = await getOwnedUser(body.assignedTo, { tenantId });
         if (!assignee) return Response.json({ error: 'assignedTo is not a user in this clinic' }, { status: 400 });
         assignedTo = assignee.id;
       }
