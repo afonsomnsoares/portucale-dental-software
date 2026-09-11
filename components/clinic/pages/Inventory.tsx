@@ -6,6 +6,8 @@ import EquipmentTab from '@/components/inventory/EquipmentTab';
 import ForecastTab from '@/components/inventory/ForecastTab';
 import ItemsTab from '@/components/inventory/ItemsTab';
 import PurchaseOrdersTab from '@/components/inventory/PurchaseOrdersTab';
+import StagnantTab from '@/components/inventory/StagnantTab';
+import SuppliersTab from '@/components/inventory/SuppliersTab';
 import { AlertBanner, MetricCard, PageHeader, Spinner, Tabs } from '@/components/ui';
 import type { InventoryItem, InventoryStock } from '@/lib/types';
 
@@ -81,6 +83,8 @@ export default function ClinicInventoryPage() {
           { key: 'items', label: 'Itens' },
           { key: 'forecast', label: 'Previsão & Validade' },
           { key: 'orders', label: 'Encomendas' },
+          { key: 'stagnant', label: 'Parados' },
+          { key: 'suppliers', label: 'Fornecedores' },
           { key: 'equipment', label: 'Equipamento' },
         ]}
       />
@@ -166,6 +170,10 @@ export default function ClinicInventoryPage() {
         <ForecastTab api={api} tenantId={tenantId} />
       ) : tab === 'orders' ? (
         <PurchaseOrdersTab api={api} tenantId={tenantId} items={items} onReceived={loadInventory} />
+      ) : tab === 'stagnant' ? (
+        <StagnantTab api={api} />
+      ) : tab === 'suppliers' ? (
+        <SuppliersTab api={api} />
       ) : (
         <EquipmentTab api={api} />
       )}

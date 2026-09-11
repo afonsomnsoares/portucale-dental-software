@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import { Badge, Empty, FormField, GhostBtn, Modal, PrimaryBtn, Sel, Spinner, TD } from '@/components/ui';
+import { formatEUR } from '@/lib/constants';
 import type { InventoryItem, PurchaseOrder } from '@/lib/types';
 
 interface PurchaseOrdersTabProps {
@@ -60,6 +61,37 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
     await api(`/jobs/run?job=reorderSuggestions&tenantId=${tenantId}`, { method: 'POST' }).catch(() => null);
     setGenerating(false);
     load();
+  }
+
+  // ─── Reconciliação ────────────────────────────────────────────────────────
+  // As três versões de uma encomenda — o que se pediu, o que chegou, o que se pagou.
+  // `computeOrderReconciliation` e `freezeOrderReconciliation` existiam com rota e sem
+  // consumidor nenhum: a clínica recebia a encomenda e não tinha como saber se o que
+  // veio era o que tinha pedido.
+  //
+  // Só aparece em encomendas recebidas, e carrega a pedido: comparar três fontes por
+  // cada encomenda da lista seria pagar o custo para a esmagadora maioria que ninguém
+  // vai abrir.
+  // biome-ignore lint/suspicious/noExplicitAny: forma do relatório varia com o estado (congelado ou calculado)
+  const [recon, setRecon] = useState<Record<string, any>>({});
+  const [reconBusy, setReconBusy] = useState<string | null>(null);
+
+  async function verReconciliacao(id: string) {
+    if (recon[id]) {
+      setRecon((r) => ({ ...r, [id]: undefined }));
+      return;
+    }
+    setReconBusy(id);
+    const r = await api(`/purchase-orders/${id}/reconcile`).catch(() => null);
+    setRecon((prev) => ({ ...prev, [id]: r }));
+    setReconBusy(null);
+  }
+
+  async function congelar(id: string) {
+    setReconBusy(id);
+    const r = await api(`/purchase-orders/${id}/reconcile`, { method: 'POST' }).catch(() => null);
+    setRecon((prev) => ({ ...prev, [id]: r }));
+    setReconBusy(null);
   }
 
   async function setStatus(order: PurchaseOrder, status: 'ordered' | 'cancelled' | 'received') {
@@ -155,6 +187,15 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         </PrimaryBtn>
                       </>
                     )}
+                    {o.status === 'received' && (
+                      <GhostBtn
+                        disabled={reconBusy === o.id}
+                        onClick={() => verReconciliacao(o.id)}
+                        style={{ padding: '5px 10px', fontSize: 12 }}
+                      >
+                        {recon[o.id] ? 'Fechar reconciliação' : 'Reconciliar'}
+                      </GhostBtn>
+                    )}
                     {o.status === 'ordered' && (
                       <>
                         <GhostBtn
@@ -187,6 +228,49 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                     ))}
                   </tbody>
                 </table>
+
+                {recon[o.id] && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: '11px 13px',
+                      borderRadius: 'var(--radius-control)',
+                      background: recon[o.id].clean ? 'var(--urgency-ok-bg)' : 'var(--urgency-soon-bg)',
+                      fontSize: 12.5,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                      <b style={{ color: recon[o.id].clean ? 'var(--urgency-ok)' : 'var(--urgency-soon)' }}>
+                        {recon[o.id].clean ? 'Bate certo' : `${recon[o.id].discrepancies?.length || 0} discrepância(s)`}
+                        {recon[o.id].frozen ? ' · congelada' : ''}
+                      </b>
+                      <span style={{ color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                        pedido {formatEUR(recon[o.id].orderedValue || 0)} · recebido{' '}
+                        {formatEUR(recon[o.id].receivedValue || 0)}
+                      </span>
+                    </div>
+                    {(recon[o.id].discrepancies || []).map(
+                      // biome-ignore lint/suspicious/noExplicitAny: linha do relatório, tipada em lib/inventoryCalc.ts
+                      (d: any) => (
+                        <div key={`${d.itemId}-${d.kind}`} style={{ marginTop: 5, color: 'var(--text-secondary)' }}>
+                          <b>{d.item}</b> — {d.detail}
+                          {d.valueDelta !== null ? ` (${formatEUR(d.valueDelta)})` : ''}
+                        </div>
+                      ),
+                    )}
+                    {!recon[o.id].frozen && (
+                      <div style={{ marginTop: 9 }}>
+                        <GhostBtn
+                          disabled={reconBusy === o.id}
+                          onClick={() => congelar(o.id)}
+                          style={{ padding: '4px 10px', fontSize: 12 }}
+                        >
+                          Congelar reconciliação
+                        </GhostBtn>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import EfficiencyTab from '@/components/receptionist/EfficiencyTab';
 import OptimizerTab from '@/components/receptionist/OptimizerTab';
+import SlotRiskTab, { type SlotRiskReport } from '@/components/receptionist/SlotRiskTab';
 import { Badge, Empty, GhostBtn, PageHeader, RiskBadge, Spinner, Tabs } from '@/components/ui';
 import { formatPhonePT } from '@/lib/constants';
 import type { AgendaEfficiency, RiskData, RiskHeatmapData, ScheduleOptimization, WaitlistData } from '@/lib/types';
@@ -50,13 +51,14 @@ export default function ClinicScheduleIntelPage() {
   const [waitlist, setWaitlist] = useState<WaitlistData | null>(null);
   const [optimization, setOptimization] = useState<ScheduleOptimization | null>(null);
 
+  const [slotRisk, setSlotRisk] = useState<SlotRiskReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
   const load = useCallback(async () => {
     setErr('');
     setLoading(true);
-    const [r, h, e, w, o] = await Promise.all([
+    const [r, h, e, w, o, sr] = await Promise.all([
       api('/schedule-intel/risk?days=14').catch((err) => {
         setErr(err instanceof Error ? err.message : 'Falha ao carregar');
         return null;
@@ -65,7 +67,11 @@ export default function ClinicScheduleIntelPage() {
       api('/schedule-intel/efficiency?days=14').catch(() => null),
       api('/waitlist').catch(() => null),
       api('/schedule-intel/optimizer?days=14').catch(() => null),
+      // Projeção ao nível do LUGAR — diferente do 'risk' acima, que pontua consultas.
+      // Ver o cabeçalho de SlotRiskTab.
+      api('/schedule-intel/slot-risk?days=21').catch(() => null),
     ]);
+    setSlotRisk(sr);
     setRisk(r);
     setHeatmap(h);
     setEfficiency(e);
@@ -122,9 +128,12 @@ export default function ClinicScheduleIntelPage() {
               { key: 'heatmap', label: 'Heatmap' },
               { key: 'efficiency', label: 'Eficiência' },
               { key: 'optimizer', label: 'Otimizador', count: optimization?.totals.moves || undefined },
+              { key: 'slot-risk', label: 'Vagas em Risco', count: slotRisk?.totals.atRisk || undefined },
               { key: 'waitlist', label: 'Lista de Espera', count: waitlist?.pendingOffers?.length || undefined },
             ]}
           />
+
+          {tab === 'slot-risk' && <SlotRiskTab data={slotRisk} loading={loading} />}
 
           {tab === 'risk' &&
             (!risk?.appointments?.length ? (

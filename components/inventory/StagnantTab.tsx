@@ -1,0 +1,186 @@
+'use client';
+// ─── Produtos parados ───────────────────────────────────────────────────────
+// O contrário da rutura, e o mais fácil de ignorar: dinheiro imobilizado em coisas que
+// não saem. `computeStagnantInventory` existia com rota e nenhum consumidor.
+//
+// Os quatro estados aparecem separados e não somados num só «parado», porque decidem
+// coisas diferentes: «nunca consumido» é uma compra errada, «parado e a expirar» é uma
+// perda com data marcada, e «rotação lenta» pode ser perfeitamente normal num material
+// de especialidade. A ordenação vem do servidor (`rankStagnant`): primeiro o que expira,
+// depois o que tem mais capital preso.
+import { useCallback, useEffect, useState } from 'react';
+import type { ApiOptions } from '@/app/providers';
+import { Empty, Spinner } from '@/components/ui';
+import { formatEUR } from '@/lib/constants';
+
+interface Props {
+  // biome-ignore lint/suspicious/noExplicitAny: generic fetch wrapper — response shape varies per endpoint
+  api: (path: string, opts?: ApiOptions) => Promise<any>;
+}
+
+interface Item {
+  itemId: number;
+  item: string;
+  status: string;
+  currentQty: number;
+  tiedUpValue: number | null;
+  daysSinceConsumed: number | null;
+  nearestExpiry: string | null;
+}
+
+const LABELS: Record<string, string> = {
+  never_moved: 'Nunca consumido',
+  stagnant: 'Parado',
+  slow: 'Rotação lenta',
+  expiring_dead: 'Parado e a expirar',
+  active: 'Em uso',
+};
+
+const TOM: Record<string, string> = {
+  expiring_dead: 'var(--urgency-critical)',
+  never_moved: 'var(--urgency-soon)',
+  stagnant: 'var(--urgency-soon)',
+  slow: 'var(--text-muted)',
+  active: 'var(--urgency-ok)',
+};
+
+export default function StagnantTab({ api }: Props) {
+  const [items, setItems] = useState<Item[]>([]);
+  const [totais, setTotais] = useState<{ count: number; tiedUpValue: number; itemsWithoutCost: number } | null>(null);
+  const [aCarregar, setACarregar] = useState(true);
+
+  const carregar = useCallback(async () => {
+    setACarregar(true);
+    const r = await api('/inventory/stagnant').catch(() => null);
+    setItems(r?.items || []);
+    setTotais(r?.totals || null);
+    setACarregar(false);
+  }, [api]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  if (aCarregar) return <Spinner />;
+  if (!items.length) return <Empty message="Nada parado. Todo o stock com movimento registado está a sair." />;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 21, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{totais?.count ?? 0}</div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>itens sem rotação</div>
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 21,
+              fontWeight: 700,
+              color: 'var(--urgency-soon)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {formatEUR(totais?.tiedUpValue ?? 0)}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+            de capital imobilizado
+            {totais?.itemsWithoutCost
+              ? ` · ${totais.itemsWithoutCost} ${totais.itemsWithoutCost === 1 ? 'item sem preço' : 'itens sem preço'}, fora da conta`
+              : ''}
+          </div>
+        </div>
+      </div>
+
+      <div
+        style={{
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-card)',
+          background: 'var(--bg-surface)',
+          overflowX: 'auto',
+        }}
+      >
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 580 }}>
+          <thead>
+            <tr>
+              {['Item', 'Estado', 'Em stock', 'Sem sair há', 'Validade', 'Capital preso'].map((h, i) => (
+                <th
+                  key={h}
+                  style={{
+                    textAlign: i >= 2 ? 'right' : 'left',
+                    padding: '9px 14px',
+                    fontSize: 10.5,
+                    letterSpacing: '.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                    fontWeight: 500,
+                    borderBottom: '1px solid var(--border-strong)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((i) => (
+              <tr key={i.itemId} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                <td style={{ padding: '10px 14px', fontSize: 13, fontWeight: 600 }}>{i.item}</td>
+                <td style={{ padding: '10px 14px', fontSize: 12, color: TOM[i.status], fontWeight: 600 }}>
+                  {LABELS[i.status] || i.status}
+                </td>
+                <td
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: 12.5,
+                    textAlign: 'right',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {i.currentQty}
+                </td>
+                <td
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: 12.5,
+                    textAlign: 'right',
+                    color: 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {i.daysSinceConsumed === null ? 'nunca saiu' : `${i.daysSinceConsumed} dias`}
+                </td>
+                <td
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: 12.5,
+                    textAlign: 'right',
+                    color: i.status === 'expiring_dead' ? 'var(--urgency-critical)' : 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {i.nearestExpiry ? String(i.nearestExpiry).slice(0, 10) : '—'}
+                </td>
+                <td
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: 12.5,
+                    textAlign: 'right',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {/* Null e não 0 €: um item sem preço registado não vale zero — não se sabe. */}
+                  {i.tiedUpValue === null ? (
+                    <span style={{ color: 'var(--text-muted)' }}>sem preço</span>
+                  ) : (
+                    formatEUR(i.tiedUpValue)
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
