@@ -1,9 +1,11 @@
 'use client';
-import { type ChangeEvent, useEffect, useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   Badge,
   DataTable,
+  ErrorState,
+  ErrorText,
   FormField,
   GhostBtn,
   Inp,
@@ -13,45 +15,65 @@ import {
   Sel,
   Spinner,
 } from '@/components/ui';
+import { useInvalidate, useQuery } from '@/hooks/useQuery';
 import type { Tenant } from '@/lib/types';
 
 export default function TenantsPage() {
   const { api } = useAuth();
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const tenantsQuery = useQuery<Tenant[]>('/tenants');
+  const tenants = tenantsQuery.data ?? [];
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ name: '', city: '', operatories: 3 });
   const [saving, setSaving] = useState(false);
   const [entering, setEntering] = useState<string | null>(null);
-
-  useEffect(() => {
-    api('/tenants')
-      .then(setTenants)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api]);
+  // As duas escritas desta página falhavam em silêncio: o `catch(() => null)`
+  // devolvia null, o botão desprendia-se e não acontecia nada visível. Provisionar
+  // uma clínica é a operação mais consequente do painel de plataforma — não pode
+  // ser a que menos diz.
+  const [erro, setErro] = useState('');
+  const invalidate = useInvalidate();
 
   // Entrar na clínica: grava a clínica ativa (POST /api/tenants/enter) e leva às páginas
   // do admin. Recarrega a página em vez de navegar, para que /api/auth/me seja lido de novo
   // e o âmbito da sessão (faixa, sidebar, permissões) venha já com a clínica.
   async function enterClinic(id: string) {
     setEntering(id);
-    const ok = await api('/tenants/enter', { method: 'POST', body: { tenantId: id } }).catch(() => null);
-    if (ok) window.location.href = '/dashboard/admin';
-    else setEntering(null);
+    setErro('');
+    try {
+      await api('/tenants/enter', { method: 'POST', body: { tenantId: id } });
+      window.location.href = '/dashboard/admin';
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível entrar nesta clínica.');
+      setEntering(null);
+    }
   }
 
   async function provision() {
     setSaving(true);
-    const t = await api('/tenants', { method: 'POST', body: form }).catch(() => null);
-    if (t) {
-      setTenants((p) => [...p, t]);
+    setErro('');
+    try {
+      await api('/tenants', { method: 'POST', body: form });
+      // Invalidar em vez de acrescentar à lista à mão: a linha que o servidor
+      // gravou tem campos que o formulário não conhece (id, estado, datas), e
+      // remendar o array local fazia a tabela mostrar uma versão pela metade.
+      invalidate('/tenants');
       setModal(false);
       setForm({ name: '', city: '', operatories: 3 });
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível criar a clínica.');
     }
     setSaving(false);
   }
+
+  if (tenantsQuery.error)
+    return (
+      <ErrorState
+        error={tenantsQuery.error}
+        onRetry={tenantsQuery.refetch}
+        message="Não foi possível ler a lista de clínicas."
+      />
+    );
 
   const filtered = tenants.filter(
     (t) => t.name.toLowerCase().includes(search.toLowerCase()) || t.city.toLowerCase().includes(search.toLowerCase()),
@@ -75,7 +97,7 @@ export default function TenantsPage() {
         />
       </div>
       <div className="card" style={{ padding: 0 }}>
-        {loading ? (
+        {tenantsQuery.loading ? (
           <Spinner />
         ) : (
           <DataTable
@@ -141,6 +163,7 @@ export default function TenantsPage() {
               ))}
             </Sel>
           </FormField>
+          {erro ? <ErrorText>{erro}</ErrorText> : null}
           <div className="flex gap-3 mt-2">
             <PrimaryBtn onClick={provision} disabled={saving || !form.name}>
               {saving ? 'A criar…' : 'Criar clínica'}

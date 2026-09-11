@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Run {
   id: string;
@@ -27,20 +26,19 @@ interface AgentUsage {
 //   CONTINUOU com a regra fixa (ver callAgentTool). A clínica não notou nada. É
 //   silencioso por desenho, e por isso é aqui que tem de aparecer.
 export default function AiFailures() {
-  const { api } = useAuth();
-  const [runs, setRuns] = useState<Run[] | null>(null);
-  const [agents, setAgents] = useState<AgentUsage[]>([]);
+  const runsQuery = useQuery<{ runs: Run[] }>('/platform/agent-runs?status=failed&limit=200');
+  const agentsQuery = useQuery<{ byAgent: AgentUsage[] }>('/platform/ai-usage');
+  const runs = runsQuery.data ? runsQuery.data.runs || [] : null;
+  const agents = agentsQuery.data?.byAgent || [];
 
-  useEffect(() => {
-    Promise.all([
-      api('/platform/agent-runs?status=failed&limit=200').catch(() => ({ runs: [] })),
-      api('/platform/ai-usage').catch(() => ({ byAgent: [] })),
-    ]).then(([r, u]) => {
-      setRuns(r.runs || []);
-      setAgents(u.byAgent || []);
-    });
-  }, [api]);
-
+  if (runsQuery.error)
+    return (
+      <ErrorState
+        error={runsQuery.error}
+        onRetry={runsQuery.refetch}
+        message="Não foi possível ler as falhas dos agentes."
+      />
+    );
   if (!runs) return <Spinner />;
 
   const modelFailures = agents.filter((a) => a.failed > 0);

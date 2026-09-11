@@ -1,27 +1,19 @@
 'use client';
 import { AlertTriangle, Building2, CreditCard, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 import type { AuditLogEntry, DashboardStats, Tenant } from '@/lib/types';
 
 export default function AdminOverview() {
-  const { api } = useAuth();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [audit, setAudit] = useState<AuditLogEntry[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-
-  useEffect(() => {
-    Promise.all([
-      api('/dashboard/stats').catch(() => null),
-      api('/audit').catch(() => []),
-      api('/tenants').catch(() => []),
-    ]).then(([s, a, t]) => {
-      if (s) setStats(s);
-      setAudit(a || []);
-      setTenants(t || []);
-    });
-  }, [api]);
+  // Três painéis independentes. Em Promise.all, qualquer um deles a falhar
+  // apagava os outros dois — e o painel da rede é precisamente o ecrã onde
+  // interessa ver o que ainda responde.
+  const statsQuery = useQuery<DashboardStats>('/dashboard/stats');
+  const auditQuery = useQuery<AuditLogEntry[]>('/audit');
+  const tenantsQuery = useQuery<Tenant[]>('/tenants');
+  const stats = statsQuery.data ?? null;
+  const audit = auditQuery.data ?? [];
+  const tenants = tenantsQuery.data ?? [];
 
   const AM: Record<string, { bg: string; color: string }> = {
     UPDATE: { bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
@@ -32,6 +24,11 @@ export default function AdminOverview() {
 
   return (
     <div>
+      {statsQuery.error || tenantsQuery.error ? (
+        <AlertBanner type="danger">
+          Parte dos números da rede não carregou. {(statsQuery.error || tenantsQuery.error)?.message}
+        </AlertBanner>
+      ) : null}
       <PageHeader
         title="Visão Geral da Rede"
         sub={new Date().toLocaleDateString('pt-PT', {
@@ -76,7 +73,13 @@ export default function AdminOverview() {
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
         <div className="card p-5">
           <div className="section-label mb-4">AUDITORIA RECENTE</div>
-          {!audit.length ? (
+          {auditQuery.error ? (
+            <ErrorState
+              error={auditQuery.error}
+              onRetry={auditQuery.refetch}
+              message="Não foi possível ler a atividade."
+            />
+          ) : !audit.length ? (
             <Spinner />
           ) : (
             audit.slice(0, 6).map((l) => {

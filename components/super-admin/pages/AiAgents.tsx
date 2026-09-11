@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/app/providers';
-import { Badge, Empty, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { useQuery } from '@/hooks/useQuery';
 
 interface Summary {
   id: string;
@@ -31,20 +30,21 @@ const AI_META: Record<string, { label: string; bg: string; color: string }> = {
 // O catálogo de agentes ao nível da rede: o que cada um é, se usa mesmo um modelo, e
 // o que fez em todas as clínicas. A versão por clínica é /dashboard/admin/agents.
 export default function AiAgents() {
-  const { api } = useAuth();
-  const [runs, setRuns] = useState<Summary[] | null>(null);
-  const [usage, setUsage] = useState<AgentUsage[]>([]);
+  // Dois pedidos independentes, e não um Promise.all: o consumo falhar não pode
+  // apagar a lista de agentes, que é o assunto da página.
+  const runsQuery = useQuery<{ summary: Summary[] }>('/platform/agent-runs?limit=500');
+  const usageQuery = useQuery<{ byAgent: AgentUsage[] }>('/platform/ai-usage');
+  const runs = runsQuery.data ? runsQuery.data.summary || [] : null;
+  const usage = usageQuery.data?.byAgent || [];
 
-  useEffect(() => {
-    Promise.all([
-      api('/platform/agent-runs?limit=500').catch(() => ({ summary: [] })),
-      api('/platform/ai-usage').catch(() => ({ byAgent: [] })),
-    ]).then(([r, u]) => {
-      setRuns(r.summary || []);
-      setUsage(u.byAgent || []);
-    });
-  }, [api]);
-
+  if (runsQuery.error)
+    return (
+      <ErrorState
+        error={runsQuery.error}
+        onRetry={runsQuery.refetch}
+        message="Não foi possível ler as execuções dos agentes."
+      />
+    );
   if (!runs) return <Spinner />;
 
   const wired = runs.filter((r) => r.ai === 'wired').length;
