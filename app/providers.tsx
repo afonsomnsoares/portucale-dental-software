@@ -1,5 +1,6 @@
 'use client';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { queryCache } from '@/lib/queryCache';
 
 export interface AuthUser {
   id: string;
@@ -190,6 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (res.status === 401 && !AUTH_PATHS.some((p) => path === p || path.startsWith(`${p}?`))) {
           setUser(null);
           setSettings(null);
+          // A cache de leituras é da sessão que acabou de morrer. Deixá-la de pé
+          // faria o ecrã seguinte — outra conta, ou a mesma noutra clínica —
+          // abrir com os dados da anterior antes de a revalidação os corrigir.
+          queryCache.clear();
         }
 
         // O detalhe técnico deixa de ir na mensagem que o utilizador lê, mas não se
@@ -230,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     setSettings(null);
+    queryCache.clear();
   }, [api]);
 
   return <AuthCtx.Provider value={{ user, loading, login, logout, api, settings }}>{children}</AuthCtx.Provider>;

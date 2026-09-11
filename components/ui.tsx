@@ -504,6 +504,44 @@ export function Empty({ message = 'Sem dados', icon }: { message?: string; icon?
   );
 }
 
+// ─── O terceiro estado de um ecrã ───────────────────────────────────────────
+// Havia `Spinner` para «a carregar» e `Empty` para «não há nada». Não havia
+// nada para «não consegui saber» — e era essa a ausência que fazia setenta e
+// seis ficheiros escreverem `.catch(() => [])`: sem sítio onde pôr o erro,
+// devolver a lista vazia era o caminho mais curto. A pessoa ficava a ver «Sem
+// dados» sobre uma base de dados em baixo.
+//
+// Ocupa o mesmo espaço que o Empty de propósito: substitui-o, não se acumula
+// por cima. E traz sempre o botão de repetir — um erro de rede resolve-se
+// quase sempre à segunda, e sem botão a alternativa é recarregar a página e
+// perder o resto do ecrã.
+export function ErrorState({
+  error,
+  onRetry,
+  message = 'Não foi possível carregar esta informação.',
+}: {
+  error?: Error | null;
+  onRetry?: () => void;
+  message?: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-3" role="alert">
+      <AlertTriangle size={32} style={{ color: 'var(--urgency-critical)', opacity: 0.7 }} />
+      <p className="text-sm" style={{ color: 'var(--text-primary)', fontWeight: 650 }}>
+        {message}
+      </p>
+      {/* A frase do servidor, quando existe. O ApiError já a limpa do prefixo
+          técnico (ver app/providers.tsx), por isso é legível. */}
+      {error?.message ? (
+        <p className="text-sm" style={{ color: 'var(--text-muted)', maxWidth: 420, textAlign: 'center' }}>
+          {error.message}
+        </p>
+      ) : null}
+      {onRetry ? <SecondaryBtn onClick={onRetry}>Tentar novamente</SecondaryBtn> : null}
+    </div>
+  );
+}
+
 const BANNER_ICONS = {
   info: Info,
   success: Check,
