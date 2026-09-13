@@ -126,8 +126,21 @@ BEGIN
   END IF;
 END $$;
 
--- Not covered (documented, not an oversight): patient_timeline, audit_log and
--- teeth have no tenant_id column to key a policy on (timeline/teeth key off
--- patient_id only, audit_log off a legacy `clinic` text field predating the
--- UUID-tenant model). Retrofitting that is a separate, bigger migration —
--- these three stay at app-level-only trust, same as today.
+-- Not covered (documented, not an oversight) — five tables, none of which has a
+-- tenant_id column to key a policy on:
+--   patient_timeline    keys off patient_id only; append-only audit trail.
+--   audit_log           keys off a legacy `clinic` text field predating the UUID
+--                       tenant model; append-only.
+--   patient_alerts      keys off patient_id only, and is only ever reached by
+--                       joining through `patients`, which IS under a policy — so
+--                       the join scopes it even though the table itself doesn't.
+--   rate_limit_counters holds no tenant data at all: keys and counters.
+--   inventory_items     deliberately global — the shared catalogue every clinic
+--                       draws from. Per-clinic overrides live in
+--                       inventory_item_settings, which IS under a policy
+--                       (migration 044).
+-- Retrofitting tenant_id onto the first two is a separate, bigger migration; the
+-- last three don't want one. These stay at app-level trust, same as today.
+--
+-- `teeth` used to be named here too. It was dropped by migration 034 along with
+-- the odontogram, so it is no longer a table this file has anything to say about.

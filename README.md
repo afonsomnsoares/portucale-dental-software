@@ -603,7 +603,7 @@ estado local.
 - **Sessão**: JWT próprio (HMAC-SHA256) em cookie `httpOnly`, com rotação de chaves —
   `JWT_SECRET` assina, `JWT_SECRETS` lista segredos antigos que ainda validam, para que uma
   rotação não expulse quem tem sessão aberta.
-- **Uma rota não pode esquecer-se de autorizar.** Os 191 handlers de `app/api/` passam por
+- **Uma rota não pode esquecer-se de autorizar.** Os 190 handlers de `app/api/` passam por
   `withRoute` (`lib/route.ts`), que faz o preâmbulo inteiro — origem/CSRF, autenticação,
   revalidação de sessão, autorização, teto de escrita e resolução de clínica. As opções são
   uma união discriminada de quatro regimes (`permission`, `platform`, `authOnly`, `public`),
@@ -618,13 +618,26 @@ estado local.
   no corpo nem no tempo de resposta (coberto por `test/integration/login-oracle.test.ts`).
 - **CSRF**: double-submit cookie com comparação em tempo constante + verificação de origem
   em todas as mutações.
-- **Rate limiting em duas camadas**: o teto genérico sobre `/api/*` vive no proxy Edge (240
+- **Rate limiting em três camadas**: o teto genérico sobre `/api/*` vive no proxy Edge (240
   pedidos/min por utilizador autenticado, 60/min por IP anónimo) e conta em memória, por
   instância — é a primeira linha, não o teto. Por cima dele, **todas as mutações** passam por
   um contador partilhado em Postgres (120/min por utilizador, `lib/rateLimitGlobal.ts`), que
   vale entre réplicas. O limite do **login** é diferente ainda: vive em `rate_limit_counters`
   (`lib/rateLimitShared.ts`), porque é um controlo de segurança e não pode depender de qual
   réplica atendeu o pedido.
+- **O travão do login não depende do IP.** Um limite com o IP na chave não é um travão: o
+  endereço vem de um cabeçalho que quem chama escreve, e mudá-lo a cada pedido dá um balde
+  novo de cada vez. Por isso há um limite por **conta** (25 falhas / 15 min, só falhas — quem
+  sabe a password nunca o vê) que vale independentemente de quantos endereços alguém finja
+  ter, a somar aos limites por IP e por par (IP, conta). E `TRUSTED_PROXY_HOPS` diz quantos
+  proxies estão à frente da app, para que o IP saia da entrada do `X-Forwarded-For` que a
+  nossa própria infraestrutura escreveu, e não da que o cliente inventou.
+- **Uma recusa que ninguém regista não aconteceu.** Os 401/403 dos 327 handlers passam todos
+  por `withRoute`, que os regista: um 403 — sessão válida a pedir o que não lhe compete — vai
+  para o `audit_log`; um 401 fica só no log do processo, porque é quase sempre um cookie
+  expirado e encheria de ruído o sítio onde o sinal devia estar. O registo é coalescido (5/min
+  por identidade e caminho) para que um cliente em ciclo não transforme a auditoria no alvo
+  mais barato da aplicação.
 - **Isolamento multi-clínica em duas camadas independentes**: filtros `tenant_id` na
   aplicação **e** políticas de Row-Level Security no próprio PostgreSQL (migração 011). Isto
   só funciona se a app ligar com `APP_DATABASE_URL` (papel `portucale_app`, não-superuser):
@@ -644,16 +657,20 @@ estado local.
 - **Cabeçalhos**: CSP com `default-src 'self'`, `object-src 'none'`, `base-uri 'self'`,
   `form-action 'self'`, `frame-ancestors 'none'`; HSTS com `preload`; `nosniff`;
   `X-Frame-Options: DENY`; Referrer-Policy; Permissions-Policy.
-- **Rotas públicas**: existem exatamente duas rotas sem sessão, ambas autenticadas por
-  bearer token em vez de cookie — captação externa de leads (`/api/public/leads`, a única
-  com CORS aberto, sem credenciais) e o portal do doente
-  (`/api/public/patient-portal/[token]`).
+- **Rotas públicas**: existem exatamente três rotas que servem tráfego sem sessão, todas
+  autenticadas por algo que não é o cookie — captação externa de leads
+  (`/api/public/leads`, bearer token por fonte, a única com CORS aberto e sem
+  credenciais), o portal do doente (`/api/public/patient-portal/[token]`, o token do URL
+  é a credencial) e os webhooks de canal (`/api/webhooks/[channel]`, assinatura do
+  fornecedor verificada em tempo constante). É isso — e não a origem do pedido — que
+  torna o par same-origin/CSRF inaplicável às três: não há credencial ambiente para um
+  site terceiro aproveitar.
 
 ---
 
 ## Modelo de dados
 
-68 tabelas, definidas em `scripts/schema.sql` e evoluídas por 51 migrações aplicadas por
+69 tabelas, definidas em `scripts/schema.sql` e evoluídas por 54 migrações aplicadas por
 ordem de nome e registadas em `schema_migrations`.
 
 | Domínio | Tabelas |
@@ -845,7 +862,7 @@ portucale_dental/
 ├── PRODUCT.md                 ← Âmbito: o que pertence aqui e o que não
 ├── scripts/
 │   ├── schema.sql             ← Schema base PostgreSQL
-│   ├── migrations/            ← 51 migrações incrementais
+│   ├── migrations/            ← 54 migrações incrementais
 │   ├── seed.ts                ← Dados demo (clínica, utilizadores, doentes, catálogos)
 │   ├── migrate.ts             ← Runner de migrações (tabela schema_migrations)
 │   ├── run-jobs.ts            ← Pipeline de jobs, para todas as clínicas ativas

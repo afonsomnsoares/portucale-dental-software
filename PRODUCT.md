@@ -158,7 +158,7 @@ página, testes e migração — não protótipo.
 | Relatórios e comparação de grupo | Construído | `lib/reportsCalc.ts` |
 | Diagnóstico por IA sobre métricas já calculadas | Construído, degrada sem `ANTHROPIC_API_KEY` | `lib/agents/` |
 | RGPD: consentimentos, direitos do titular, retenção | Mecânica construída; prazos são decisão da clínica | `lib/dataSubject.ts`, `lib/retention.ts` |
-| Tempo real na UI | Canal SSE escrito, sem consumidores ligados | `app/api/sse/`, `hooks/useSSE.ts` |
+| Tempo real na UI | Construído; ligado no mapa de sala | `app/api/sse/`, `hooks/useSSE.ts`, `dashboard/receptionist/floor` |
 | Cifra ao nível da coluna nas notas clínicas | Por fazer | — |
 | Integração com software de faturação certificado | Por fazer — é o caminho, não a substituição | — |
 
