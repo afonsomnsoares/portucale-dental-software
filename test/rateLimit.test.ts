@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { __rateLimitStoreSize, __resetRateLimitStore, getClientIp, rateLimit } from '../lib/rateLimit.ts';
+import {
+  __rateLimitStoreSize,
+  __resetRateLimitStore,
+  clientIpIsTrustworthy,
+  getClientIp,
+  rateLimit,
+} from '../lib/rateLimit.ts';
 
 // Date.now is stubbed rather than sleeping: the sweep is time-driven (a 60s interval)
 // and windows are minutes long, so real waiting would make these tests either slow or
@@ -162,5 +168,42 @@ test('um TRUSTED_PROXY_HOPS inválido é tratado como ausente, não como 1', () 
       const headers = new Headers({ 'x-forwarded-for': '1.2.3.4, 203.0.113.5' });
       assert.equal(getClientIp({ headers }), '1.2.3.4', `valor "${bogus}" não devia ativar a leitura pela direita`);
     });
+  }
+});
+
+// ─── O buraco ao lado da porta que se fechou ────────────────────────────────
+// Endurecer o X-Forwarded-For e continuar a aceitar os três cabeçalhos de valor
+// único deixava a bypass intacta: bastava omitir o XFF e mandar X-Real-IP.
+test('com proxy declarado, um X-Real-IP sozinho não escolhe o balde', () => {
+  withProxyHops('1', () => {
+    const headers = new Headers({ 'x-real-ip': '1.2.3.4' });
+    assert.equal(getClientIp({ headers }), 'unknown');
+  });
+});
+
+test('com proxy declarado, os outros cabeçalhos de endereço valem o mesmo — nada', () => {
+  for (const header of ['cf-connecting-ip', 'x-client-ip']) {
+    withProxyHops('2', () => {
+      const headers = new Headers({ [header]: '1.2.3.4' });
+      assert.equal(getClientIp({ headers }), 'unknown', `${header} não devia ser aceite com proxy declarado`);
+    });
+  }
+});
+
+test('sem proxy declarado, os cabeçalhos de reserva continuam a valer', () => {
+  // O melhor esforço mantém-se onde sempre foi melhor esforço: sem proxy nenhum, pôr
+  // todo o tráfego anónimo num balde só seria negação de serviço auto-infligida.
+  withProxyHops(undefined, () => {
+    assert.equal(getClientIp({ headers: new Headers({ 'x-real-ip': '1.2.3.4' }) }), '1.2.3.4');
+  });
+});
+
+test('clientIpIsTrustworthy responde à mesma variável que getClientIp lê', () => {
+  withProxyHops('1', () => assert.equal(clientIpIsTrustworthy(), true));
+  withProxyHops('3', () => assert.equal(clientIpIsTrustworthy(), true));
+  for (const semProxy of [undefined, '', '0', '-1', 'dois']) {
+    withProxyHops(semProxy, () =>
+      assert.equal(clientIpIsTrustworthy(), false, `"${semProxy}" não devia contar como proxy de confiança`),
+    );
   }
 });

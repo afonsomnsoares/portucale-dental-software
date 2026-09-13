@@ -5,7 +5,7 @@ import { getDummyPasswordHash, signToken } from '@/lib/auth';
 import { SESSION_MAX_AGE } from '@/lib/constants';
 import { queryOne, withSystemContext } from '@/lib/db';
 import { effectiveActions } from '@/lib/permissions';
-import { getClientIp } from '@/lib/rateLimit';
+import { clientIpIsTrustworthy, getClientIp } from '@/lib/rateLimit';
 import { peekRateLimitShared, rateLimitShared } from '@/lib/rateLimitShared';
 import { withRoute } from '@/lib/route';
 import { asEmail } from '@/lib/validate';
@@ -43,14 +43,34 @@ const PER_IP_LIMIT = { limit: 50, windowMs: 60 * 60 * 1000 };
 // perto do limite do que quem anda a adivinhar. Contando só falhas, quem sabe a
 // password nunca o vê.
 //
-// ─── O que se perde, dito por extenso ───────────────────────────────────────
+// ─── O que se perde, e porque é que não se perde sempre ─────────────────────
 // Quem atacar pode gastar de propósito o orçamento de falhas de uma conta alheia e
-// deixá-la sem login até a janela fechar. É o preço conhecido de qualquer travão por
-// conta, e escolhe-se a bloquear 15 minutos em vez de adivinhação sem teto. Por isso
-// o limite é folgado (25 falhas / 15 min): ninguém que saiba a password lá chega, e
-// quem não sabe fica com 100 tentativas por hora contra um bcrypt de custo 10.
+// deixá-la sem login até a janela fechar. Num sistema com travão por IP a funcionar
+// isso é caro — é preciso um endereço atribuível por rajada — e o preço aceita-se.
+//
+// Só que os dois limites acima têm o IP na chave, e esse IP só é atribuível quando
+// existe um proxy declarado (`TRUSTED_PROXY_HOPS`). Na configuração por omissão —
+// que é a que o docker-compose.yml deste repositório monta, a app publicada
+// diretamente na 3000 — não existe: quem rode o X-Forwarded-For tem um balde novo a
+// cada pedido. Recusar por conta nessas condições trocava adivinhação de passwords
+// por uma coisa pior e mais barata: a ~2 pedidos por minuto por conta, todas as
+// contas da clínica ficavam trancadas para sempre, e o audit registava só o endereço
+// forjado.
+//
+// Por isso a recusa por conta está condicionada a haver um IP de confiança. Sem ele,
+// o orçamento continua a ser contado e gasto — o sinal fica gravado na mesma — mas o
+// que acontece ao exceder é um ATRASO e não uma porta fechada. Atrasar degrada quem
+// adivinha sem nunca impedir quem sabe a password de entrar, que é exatamente a
+// assimetria que falta quando não se consegue distinguir os dois pelo endereço.
 const PER_EMAIL_LIMIT = { limit: 25, windowMs: 15 * 60 * 1000 };
 const perEmailKey = (email: string) => (email ? `login:email:${email}` : null);
+
+// Um segundo. Chega para levar a cadência de adivinhação de ~10/s para ~1/s por
+// conta, e é imperceptível para quem se enganou a escrever e vai tentar outra vez.
+// Deliberadamente fixo e não exponencial: um atraso que cresce sem teto é uma ligação
+// presa a mais por cada tentativa, e transforma o travão no alvo.
+const OVER_BUDGET_DELAY_MS = 1000;
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Gasta uma unidade do orçamento por conta. Chamada nos DOIS caminhos de falha —
 // conta inexistente e password errada — para que continuem indistinguíveis um do
@@ -99,10 +119,21 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
     rateLimitShared(`login:ip:${ip}`, PER_IP_LIMIT),
     emailKey ? peekRateLimitShared(emailKey, PER_EMAIL_LIMIT) : Promise.resolve(null),
   ]);
+  // ─── Recusar por conta só com um IP atribuível ────────────────────────────
+  // Ver o comentário do PER_EMAIL_LIMIT acima. Sem proxy declarado, exceder o
+  // orçamento por conta atrasa em vez de barrar: quem sabe a password entra na mesma,
+  // só que um segundo mais tarde, e quem adivinha perde uma ordem de grandeza de
+  // cadência. O atraso fica AQUI, antes de olhar para a base de dados, para se
+  // aplicar por igual a contas existentes e inexistentes — pô-lo só nos caminhos de
+  // falha tornava-o um oráculo de enumeração, que é o que o bcrypt de mitigação mais
+  // abaixo existe para não haver.
+  const perEmailBlocks = perEmail && !perEmail.ok;
+  if (perEmailBlocks && !clientIpIsTrustworthy()) await delay(OVER_BUDGET_DELAY_MS);
+
   // O primeiro que barrar decide a resposta. A ordem entre eles não é observável de
   // fora — o corpo e o estado são os mesmos — e serve só para o retryAfterMs devolvido
   // ser o do limite que realmente barrou.
-  const rl = [perEmail, perAccount, perIp].find((r) => r && !r.ok);
+  const rl = [clientIpIsTrustworthy() ? perEmail : null, perAccount, perIp].find((r) => r && !r.ok);
   if (rl) {
     await appendAudit(
       { name: String(email || 'Unknown'), role: 'anonymous', clinic: 'System' },

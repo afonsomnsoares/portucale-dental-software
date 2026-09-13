@@ -109,6 +109,20 @@ function trustedProxyHops(): number {
   return Number.isFinite(n) && n > 0 ? n : TRUSTED_HOPS_UNSET;
 }
 
+/**
+ * O endereço devolvido por `getClientIp` é atribuível a alguém, ou é só melhor
+ * esforço?
+ *
+ * Existe porque um controlo de segurança precisa de saber a diferença, e o tipo de
+ * retorno de `getClientIp` — uma string sempre — não a consegue exprimir. Quem
+ * decide RECUSAR alguma coisa com base no endereço tem de perguntar isto primeiro;
+ * ver o travão por conta em app/api/auth/login/route.ts, onde a resposta decide
+ * entre bloquear e atrasar.
+ */
+export function clientIpIsTrustworthy(): boolean {
+  return trustedProxyHops() > TRUSTED_HOPS_UNSET;
+}
+
 // ─── O caso sem proxy, e porque é que continua a usar o cabeçalho ───────────
 // Com TRUSTED_PROXY_HOPS=0 (a omissão, e o que o docker-compose.yml deste projeto
 // monta — a app publica a 3000 sem nada à frente) NENHUM destes cabeçalhos é de
@@ -118,11 +132,14 @@ function trustedProxyHops(): number {
 // na captação de leads.
 //
 // O que muda é aquilo em que se confia: nenhum controlo de SEGURANÇA pode depender
-// só disto. É por isso que o travão contra adivinhação de passwords passou a ter uma
-// perna que não olha ao IP nenhum — ver PER_EMAIL_LIMIT em
-// app/api/auth/login/route.ts. Este continua a ser o que sempre foi bom a ser: um
-// teto anti-abuso barato, que trava quem não está a tentar contorná-lo.
+// só disto. É por isso que o travão contra adivinhação de passwords tem uma perna que
+// não olha ao IP nenhum — ver PER_EMAIL_LIMIT em app/api/auth/login/route.ts — e é
+// também por isso que essa perna só RECUSA quando `clientIpIsTrustworthy()` diz que
+// sim: sem travão por IP, um bloqueio por conta é uma porta que quem ataca fecha à
+// vítima. Este continua a ser o que sempre foi bom a ser: um teto anti-abuso barato,
+// que trava quem não está a tentar contorná-lo.
 export function getClientIp(request: { headers?: Headers }) {
+  const hops = trustedProxyHops();
   const xf = request?.headers?.get?.('x-forwarded-for') || '';
   if (xf) {
     const chain = xf
@@ -130,13 +147,26 @@ export function getClientIp(request: { headers?: Headers }) {
       .map((s) => s.trim())
       .filter(Boolean);
     if (chain.length) {
-      const hops = trustedProxyHops();
       // Cadeia mais curta do que os hops configurados: foi escrita inteira por nós,
       // portanto a da esquerda já é o cliente. Math.max fecha esse caso sem um if.
       if (hops > TRUSTED_HOPS_UNSET) return chain[Math.max(0, chain.length - hops)];
       return chain[0];
     }
   }
+
+  // ─── Com proxy declarado, só o X-Forwarded-For conta ──────────────────────
+  // Os três cabeçalhos abaixo trazem um único valor e não têm cadeia nenhuma, logo
+  // não há entrada da direita para preferir: ou se acredita no que lá está, ou não.
+  // Endurecer só o XFF e continuar a aceitá-los deixava a porta aberta ao lado da
+  // que se acabou de fechar — bastava mandar `X-Real-IP` e omitir o XFF para voltar
+  // a escolher o próprio balde.
+  //
+  // Com hops ≥ 1, um pedido SEM X-Forwarded-For não passou pelo nosso proxy, e o
+  // endereço que ele declara de si próprio não vale nada. Vão todos para o mesmo
+  // balde, que é o tratamento correto para tráfego não atribuível: partilham o teto
+  // em vez de cada um ter o seu.
+  if (hops > TRUSTED_HOPS_UNSET) return 'unknown';
+
   return (
     request?.headers?.get?.('x-real-ip') ||
     request?.headers?.get?.('cf-connecting-ip') ||
