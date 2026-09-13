@@ -131,9 +131,16 @@ END $$;
 --   patient_timeline    keys off patient_id only; append-only audit trail.
 --   audit_log           keys off a legacy `clinic` text field predating the UUID
 --                       tenant model; append-only.
---   patient_alerts      keys off patient_id only, and is only ever reached by
---                       joining through `patients`, which IS under a policy — so
---                       the join scopes it even though the table itself doesn't.
+--   patient_alerts      keys off patient_id only. Reads reach it by joining through
+--                       `patients` (which IS under a policy), but writes do NOT:
+--                       app/api/patients/route.ts and .../import/route.ts INSERT
+--                       into it directly, and lib/dataSubject.ts deletes from it
+--                       with `tenantScoped: false`. What actually scopes those is
+--                       the patient id having been tenant-checked in app code
+--                       first — app-level trust, not a policy. Said plainly here
+--                       because this is the file people read to decide what RLS
+--                       covers, and "the join scopes it" would be read as more
+--                       than it is.
 --   rate_limit_counters holds no tenant data at all: keys and counters.
 --   inventory_items     deliberately global — the shared catalogue every clinic
 --                       draws from. Per-clinic overrides live in

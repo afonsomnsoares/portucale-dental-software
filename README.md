@@ -632,11 +632,13 @@ estado local.
   ter, a somar aos limites por IP e por par (IP, conta). E `TRUSTED_PROXY_HOPS` diz quantos
   proxies estão à frente da app, para que o IP saia da entrada do `X-Forwarded-For` que a
   nossa própria infraestrutura escreveu, e não da que o cliente inventou.
-- **Uma recusa que ninguém regista não aconteceu.** Os 401/403 dos 327 handlers passam todos
-  por `withRoute`, que os regista: um 403 — sessão válida a pedir o que não lhe compete — vai
-  para o `audit_log`; um 401 fica só no log do processo, porque é quase sempre um cookie
-  expirado e encheria de ruído o sítio onde o sinal devia estar. O registo é coalescido (5/min
-  por identidade e caminho) para que um cliente em ciclo não transforme a auditoria no alvo
+- **Uma recusa que ninguém regista não aconteceu.** Os 401/403 dos 190 handlers passam todos
+  por `withRoute`, que os regista. O que decide é haver **alguém identificado**, e não o
+  estado: um 403, e um 401 de sessão revogada — conta desativada, movida de clínica, password
+  mudada — vão para o `audit_log`; só o 401 sem utilizador nenhum, que é quase sempre um
+  cookie expirado, fica no log do processo. O registo é coalescido (5/min
+  por identidade e **padrão de rota**, não caminho — senão varrer ids numa rota dinâmica dava
+  um balde novo a cada pedido) para que um cliente em ciclo não transforme a auditoria no alvo
   mais barato da aplicação.
 - **Isolamento multi-clínica em duas camadas independentes**: filtros `tenant_id` na
   aplicação **e** políticas de Row-Level Security no próprio PostgreSQL (migração 011). Isto

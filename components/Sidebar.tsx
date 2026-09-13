@@ -359,7 +359,7 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
                 fontSize: 'var(--text-base)',
                 fontWeight: 'var(--weight-bold)',
                 color: 'var(--accent)',
-                letterSpacing: 'var(--text-xl-tracking)',
+                letterSpacing: 'var(--text-base-tracking)',
                 fontFamily: '"Plus Jakarta Sans",sans-serif',
               }}
             >

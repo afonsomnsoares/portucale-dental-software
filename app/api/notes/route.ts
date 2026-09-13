@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import { appendAudit } from '@/lib/audit';
-import { forbidden, requireRoles } from '@/lib/auth';
 import { query, queryRead } from '@/lib/db';
 import { withRoute } from '@/lib/route';
 import { getOwnedPatient } from '@/lib/tenantGuard';
@@ -46,9 +45,17 @@ export const POST = withRoute(
     permission: 'notes:write',
     tenant: 'optional',
   },
+  // Sem `requireRoles` por baixo, de propósito. Enquanto lá esteve, `notes:write`
+  // aparecia na matriz de permissões como interruptor para a receção — é uma ação
+  // normal, não de plataforma, logo `getPermissionMatrix` mostra-a — e ligá-lo não
+  // ligava nada: o GET passava a responder e o POST continuava a devolver 403 na
+  // linha de baixo. Um interruptor que não liga nada é pior do que não existir.
+  //
+  // Nada se abre com isto: o conjunto por omissão de `notes:write` é exatamente
+  // {dentist, admin, super_admin} (lib/permissions.ts), os mesmos três papéis que a
+  // linha verificava. O que muda é que agora a clínica pode decidir de outra forma e
+  // a decisão tem efeito.
   async ({ request, user, tenantId }) => {
-    if (!requireRoles(user, 'dentist', 'admin', 'super_admin')) return forbidden();
-
     const { patientId, noteText } = await request.json();
     if (!patientId || !noteText) {
       return Response.json({ error: 'patientId and noteText required' }, { status: 400 });
