@@ -126,3 +126,34 @@ test('a matriz mostra exatamente o que pode ser gravado', () => {
     assert.equal(canOverride('admin', action), true, `a matriz oferece '${action}' mas o guardião recusa-o`);
   }
 });
+
+// ─── Notas clínicas ──────────────────────────────────────────────────────────
+// Estiveram atrás de `authOnly`, com a lacuna declarada por escrito no próprio
+// app/api/notes/route.ts: qualquer sessão válida lia e escrevia notas clínicas, a
+// receção incluída. Estes testes fixam a regra nova — a mesma de medical-history:*,
+// porque é a mesma matéria — para que uma edição distraída à lista de defaults não
+// volte a abrir a porta sem ninguém dar por isso.
+test('notas clínicas seguem a regra de medical-history, não a de "qualquer sessão"', () => {
+  for (const action of ['notes:read', 'notes:write']) {
+    assert.ok(PERMISSION_ACTIONS.includes(action), `${action} tem de existir na lista de ações`);
+    assert.equal(defaultAllows('dentist', action), true, `o clínico precisa de ${action}`);
+    assert.equal(defaultAllows('receptionist', action), false, `a receção não tem razão para ${action}`);
+    assert.equal(defaultAllows('admin', action), true, `o admin herda ${action}`);
+  }
+});
+
+test('notas e histórico clínico têm exatamente os mesmos donos por omissão', () => {
+  // Se um dia divergirem, é uma decisão — e tem de se ver num diff, não por acidente.
+  for (const role of ['receptionist', 'dentist', 'admin', 'super_admin']) {
+    assert.equal(
+      defaultAllows(role, 'notes:read'),
+      defaultAllows(role, 'medical-history:read'),
+      `${role}: leitura de notas e de histórico devia coincidir`,
+    );
+    assert.equal(
+      defaultAllows(role, 'notes:write'),
+      defaultAllows(role, 'medical-history:manage'),
+      `${role}: escrita de notas e de histórico devia coincidir`,
+    );
+  }
+});

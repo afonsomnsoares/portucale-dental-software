@@ -73,6 +73,14 @@ export const PERMISSION_ACTIONS = [
   'consent-forms:manage',
   'medical-history:read',
   'medical-history:manage',
+  // ─── Notas clínicas ────────────────────────────────────────────────────────
+  // Estiveram até aqui atrás de `authOnly`, com a lacuna declarada por escrito no
+  // próprio app/api/notes/route.ts: são notas clínicas e não havia ação nenhuma a
+  // cobri-las, pelo que qualquer sessão válida — receção incluída — as lia e escrevia.
+  // Ficam ao lado de medical-history:* porque são a mesma matéria e seguem a mesma
+  // regra: quem trata do processo clínico, e mais ninguém.
+  'notes:read',
+  'notes:write',
   // Recalls são trabalho administrativo tanto quanto clínico — a receção
   // agenda-os e fecha-os, e já tinha páginas a fazê-lo.
   'recalls:read',
@@ -209,6 +217,8 @@ const DEFAULT: Record<string, Set<string>> = {
     'consent-forms:manage',
     'medical-history:read',
     'medical-history:manage',
+    'notes:read',
+    'notes:write',
     'recalls:read',
     'recalls:manage',
     'incidents:read',
@@ -250,7 +260,7 @@ async function safeQuery(sql: string, params: unknown[] = []) {
   }
 }
 
-export async function permissionOverride(
+async function permissionOverride(
   tenantId: string | null | undefined,
   role: string,
   action: string,

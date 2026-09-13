@@ -7,12 +7,16 @@ import { getOwnedPatient } from '@/lib/tenantGuard';
 import { sanitizeString } from '@/lib/validate';
 
 // GET /api/notes?patientId=
+//
+// A lacuna que estava aqui escrita — «são notas clínicas e não há ação declarada que
+// as cubra» — deixou de existir: `notes:read` e `notes:write` vivem agora em
+// lib/permissions.ts, ao lado de medical-history:*, e com o mesmo dono (o clínico;
+// admin e super-admin herdam tudo). Quem consome isto é só a página de doentes do
+// dentista, por isso fechar a porta não fecha nenhum ecrã — só deixa de a deixar
+// aberta à receção, que nunca teve razão para escrever numa nota clínica.
 export const GET = withRoute(
   {
-    authOnly:
-      'LACUNA CONHECIDA: são notas clínicas e não há ação declarada que as cubra. ' +
-      'Ficou como estava para a migração para withRoute não mudar quem entra; ' +
-      'merece um notes:read/notes:write ao lado de medical-history:*',
+    permission: 'notes:read',
     tenant: 'optional',
   },
   async ({ request, tenantId }) => {
@@ -39,10 +43,7 @@ export const GET = withRoute(
 // POST /api/notes — save a signed progress note
 export const POST = withRoute(
   {
-    authOnly:
-      'LACUNA CONHECIDA: são notas clínicas e não há ação declarada que as cubra. ' +
-      'Ficou como estava para a migração para withRoute não mudar quem entra; ' +
-      'merece um notes:read/notes:write ao lado de medical-history:*',
+    permission: 'notes:write',
     tenant: 'optional',
   },
   async ({ request, user, tenantId }) => {
