@@ -8,6 +8,17 @@ import { asFee } from '@/lib/validate';
 // O catálogo de itens é global de propósito — ninguém quer manter a mesma lista de
 // luvas em vinte clínicas — mas o ponto de reposição não pode ser: uma clínica com
 // três cadeiras e outra com doze não repõem no mesmo nível.
+// ─── Sem ecrã, de propósito registado aqui ──────────────────────────────────
+// Nenhuma página consome esta rota hoje: os limiares por artigo definem-se pela
+// página de inventário, que escreve em /api/inventory/items. Esta existe porque
+// inventory_item_settings é por clínica (migração 044) e o custo unitário entrou cá
+// depois (migração 047), e está coberta por test/integration/equipment-inventory.test.ts
+// — incluindo o isolamento entre clínicas.
+//
+// Fica, em vez de ser apagada, porque o que lhe falta é o ecrã e não a lógica. Se
+// daqui a uns meses continuar sem consumidor, apagar é a decisão certa: uma rota que
+// ninguém chama é superfície de ataque sem contrapartida.
+
 export const GET = withRoute({ permission: 'inventory:manage' }, async ({ tenantId }) => {
   const rows = await query(
     `SELECT i.id AS item_id, i.item, i.unit,

@@ -7,20 +7,23 @@ import type { AgentDefinition, AgentId } from '@/lib/types/agent';
 // Cada agente declara as tarefas de lib/jobsRunner.ts que já governa hoje. Isso é o
 // ponto importante: nenhum destes agentes é novo trabalho a inventar — são jobs
 // determinísticos que já correm, agrupados por quem decide o quê. O campo `ai`
-// diz onde é que um modelo entra: 'operations' já decide sozinha a tarefa
-// 'reorderSuggestions' (lib/agents/reorderAgent.ts) e 'lead' já qualifica e escreve
-// o rascunho de resposta (lib/agents/leadAgent.ts, nunca envia sozinho — ver
-// boundary abaixo). Os restantes continuam 'none' até serem construídos com o
-// mesmo cuidado de fronteiras.
+// diz onde é que um modelo entra: 'operations' decide a tarefa 'reorderSuggestions'
+// (lib/agents/reorderAgent.ts) e 'lead' qualifica e escreve o rascunho de resposta
+// (lib/agents/leadAgent.ts, nunca envia sozinho — ver boundary abaixo).
+//
+// Os sete agentes do roadmap estão hoje todos em 'wired', cada um com o seu
+// lib/agents/*Agent.ts. O oitavo, 'compliance', continua em 'none' e vai continuar:
+// apagar dados por decisão de um modelo é exatamente o que a fronteira dele proíbe.
+// Não é trabalho por fazer — é a decisão.
 //
 // Taxonomia alinhada ao roadmap de fases do produto (Fase 1: Agenda/Doente/Lead,
 // Fase 2: Finanças/Operações/Gestão, Fase 3: Grupo). Existia antes um agente
 // 'revenue' à parte ("Receita") que hoje está absorvido aqui: as tarefas de
 // pré-fatura (planFollowup, recallOutreach, lifecycleOutreach) são claramente
 // jornada do doente, por isso ficam em 'patient'; 'recovery' (saldo em dívida) é
-// dinheiro, por isso fica em 'finance'. 'Gestão' e 'Grupo' ainda não têm nenhuma
-// tarefa real e por isso não aparecem aqui — a mesma regra que manteve 'lead' de
-// fora até ter a primeira tarefa de verdade (ver git log deste ficheiro).
+// dinheiro, por isso fica em 'finance'. 'Gestão' e 'Grupo' entraram quando passaram
+// a ter tarefas reais — managementReview/anomalyReview e groupReview — pela mesma
+// regra que manteve 'lead' de fora até ter a primeira (ver git log deste ficheiro).
 export const AGENTS: readonly AgentDefinition[] = [
   {
     id: 'lead',
@@ -154,10 +157,6 @@ export const COMMS_JOB = 'send' as const;
 // escrita em agent_contact_ledger — um árbitro em que ninguém vê quem cedeu a quem é um
 // árbitro em que ninguém confia.
 export const COORDINATION_MODULE = 'lib/agents/coordinationCalc.ts' as const;
-
-export function agentById(id: string): AgentDefinition | undefined {
-  return AGENTS.find((a) => a.id === id);
-}
 
 /** Todas as tarefas governadas por agentes, sem o canal de saída partilhado. */
 export function agentJobNames(): string[] {

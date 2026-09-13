@@ -97,7 +97,7 @@ function fmt(n: number, unit: string): string {
  * por minuto que a clínica não declarou, e um número suposto ao lado de números reais
  * contamina os dois.
  */
-export async function computeAnomalies(tenantId: string): Promise<ClampedInsight[]> {
+async function computeAnomalies(tenantId: string): Promise<ClampedInsight[]> {
   const since = `${WEEKS} weeks`;
   const tenant = await queryOne(`SELECT operatories FROM tenants WHERE id=$1`, [tenantId]);
   const operatories = Math.max(1, Number(tenant?.operatories || 1));

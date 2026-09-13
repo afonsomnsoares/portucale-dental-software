@@ -80,7 +80,7 @@ function parseDate(iso: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export function toIso(d: Date): string {
+function toIso(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 

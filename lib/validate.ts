@@ -10,11 +10,6 @@ export function asString(v: unknown, { trim = true, max = 2000 }: { trim?: boole
   return s;
 }
 
-export function asNumber(v: unknown) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
 export function asInt(v: unknown, { min, max }: { min?: number; max?: number } = {}) {
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
@@ -41,12 +36,6 @@ export function asEmail(v: unknown) {
   if (!v) return null;
   const s = String(v).trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) ? s : null;
-}
-
-export function asPhone(v: unknown) {
-  if (!v) return null;
-  const s = String(v).trim();
-  return s.length <= 30 ? s : null;
 }
 
 // Twilio (SMS) requires E.164 (leading '+' and country code). Patient phones are stored

@@ -221,7 +221,7 @@ export interface SharedPatientContext {
   canContact: boolean;
 }
 
-export function toContactState(ctx: SharedPatientContext): PatientContactState {
+function toContactState(ctx: SharedPatientContext): PatientContactState {
   return {
     patientId: ctx.patientId,
     contactsToday: ctx.contactsToday,

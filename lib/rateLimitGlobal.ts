@@ -60,18 +60,3 @@ export async function rateLimitGlobal(
     return FAIL_OPEN;
   }
 }
-
-export async function sweepRateLimitCountersGlobal(olderThanMs = 24 * 60 * 60 * 1000) {
-  const row = await withSystemContext(() =>
-    queryOne(
-      `WITH deleted AS (
-         DELETE FROM rate_limit_counters
-         WHERE window_start < NOW() - ($1::bigint * INTERVAL '1 millisecond')
-         RETURNING 1
-       )
-       SELECT COUNT(*)::int AS removed FROM deleted`,
-      [Math.trunc(olderThanMs)],
-    ),
-  );
-  return { removed: Number(row?.removed || 0) };
-}

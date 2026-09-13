@@ -207,7 +207,7 @@ export function requireRoles(user: SessionUser | null | undefined, ...roles: str
   return !!user && roles.includes(user.role);
 }
 
-export function isSameOrigin(request: AuthRequest) {
+function isSameOrigin(request: AuthRequest) {
   const origin = request.headers.get('origin');
   if (!origin) return true;
   const host = request.headers.get('host');

@@ -183,19 +183,4 @@ export async function requestContacts(
   return { ...summarizeCoordination(decisions), grantedContacts };
 }
 
-// O que a página de Agentes mostra: quem cedeu a quem, nos últimos dias. Sem isto o
-// árbitro é uma caixa preta, e a primeira pergunta de uma clínica quando um SMS não sai
-// é exatamente esta.
-export async function recentYields(tenantId: string, days = 7) {
-  return queryRead(
-    `SELECT agent_id, kind, decision, reason, COUNT(*)::int AS count, MAX(created_at) AS last_at
-     FROM agent_contact_ledger
-     WHERE tenant_id=$1 AND created_at >= NOW() - ($2::int * INTERVAL '1 day') AND decision <> 'granted'
-     GROUP BY agent_id, kind, decision, reason
-     ORDER BY count DESC
-     LIMIT 50`,
-    [tenantId, days],
-  );
-}
-
 export type { ContactDecision, ContactRequest, SharedPatientContext };

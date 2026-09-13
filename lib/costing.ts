@@ -77,7 +77,7 @@ export async function saveCostSettings(
 // Custo unitário efetivo por item: média ponderada dos lotes com custo registado, e o
 // preço de catálogo/clínica como referência quando não há lotes custeados (stock
 // anterior à migração 047, ou lançado à mão).
-export async function unitCostsByItem(tenantId: string): Promise<Map<number, number | null>> {
+async function unitCostsByItem(tenantId: string): Promise<Map<number, number | null>> {
   const rows = await queryRead(
     `SELECT i.id,
             COALESCE(s.unit_cost, i.unit_cost) AS reference_cost,
@@ -111,7 +111,7 @@ export async function unitCostsByItem(tenantId: string): Promise<Map<number, num
 }
 
 // Custo de material por tipo de consulta, a partir de procedure_item_usage.
-export async function materialCostByAppointmentType(tenantId: string) {
+async function materialCostByAppointmentType(tenantId: string) {
   const [usage, costs] = await Promise.all([
     queryRead(`SELECT appointment_type, item_id, qty_per_procedure FROM procedure_item_usage WHERE tenant_id=$1`, [
       tenantId,

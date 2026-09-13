@@ -115,10 +115,7 @@ export interface DocumentContext {
 // sem as variáveis de consulta) em vez de erro: é uma referência opcional, e
 // preencher uma declaração com a consulta de outra pessoa seria muito pior do
 // que a deixar em branco.
-export async function buildDocumentContext(
-  tenantId: string,
-  input: BuildVariablesInput,
-): Promise<DocumentContext | null> {
+async function buildDocumentContext(tenantId: string, input: BuildVariablesInput): Promise<DocumentContext | null> {
   const patient = await queryOne(
     `SELECT id, name, dob::text AS dob, phone, email, insurance
      FROM patients WHERE id=$1 AND tenant_id=$2`,

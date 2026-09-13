@@ -188,7 +188,7 @@ export async function notifyWaitlistOfFreedSlot(
   return { offered };
 }
 
-export async function getOffer(tenantId: string, offerId: string) {
+async function getOffer(tenantId: string, offerId: string) {
   return queryOne(
     `SELECT o.*, w.treatment_type
      FROM slot_offers o JOIN waitlist_entries w ON w.id = o.waitlist_entry_id

@@ -130,10 +130,3 @@ export async function subscribeRealtime(tenantId: string, fn: Subscriber): Promi
     if (!current.size) map.delete(tenantId);
   };
 }
-
-/** Quantos separadores estão ligados. Só para diagnóstico. */
-export function realtimeSubscriberCount() {
-  let total = 0;
-  for (const set of subscribers().values()) total += set.size;
-  return total;
-}

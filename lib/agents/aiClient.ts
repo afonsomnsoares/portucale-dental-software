@@ -46,7 +46,7 @@ export interface AgentToolSpec {
 // foi privado, essa rota não registava nada: o painel de plataforma que existe para
 // responder a «que clínica está a consumir» omitia por completo o modelo mais caro em
 // uso, e apresentava a diferença como se fosse consumo a menos.
-export async function recordAiCall(row: {
+async function recordAiCall(row: {
   tenantId: string | null;
   agent: string;
   model: string;

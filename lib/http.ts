@@ -37,7 +37,3 @@ export function badRequest(message = 'Bad request', details?: unknown) {
 export function conflict(message = 'Conflict', details?: unknown) {
   return apiError({ status: 409, code: 'CONFLICT', message, details });
 }
-
-export function serverError(message = 'Internal server error', details?: unknown) {
-  return apiError({ status: 500, code: 'INTERNAL', message, details });
-}

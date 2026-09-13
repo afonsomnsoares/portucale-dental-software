@@ -19,7 +19,7 @@ export interface ResolveAssigneeOptions {
 // resolveAssignee porque a varredura periódica (job assignOrphanTasks) atribui
 // muitas tarefas de uma vez e não faz sentido repetir estas três queries por
 // tarefa — carrega uma vez, decide N vezes.
-export async function loadAssigneeCandidates(tenantId: string, at: Date = new Date()): Promise<AssigneeCandidate[]> {
+async function loadAssigneeCandidates(tenantId: string, at: Date = new Date()): Promise<AssigneeCandidate[]> {
   const weekday = at.getDay();
   const dateStr = at.toLocaleDateString('en-CA'); // local YYYY-MM-DD, mesma razão de lib/staffSchedule.ts
 
