@@ -6,7 +6,7 @@ import { SESSION_MAX_AGE } from '@/lib/constants';
 import { queryOne, withSystemContext } from '@/lib/db';
 import { effectiveActions } from '@/lib/permissions';
 import { getClientIp } from '@/lib/rateLimit';
-import { rateLimitShared } from '@/lib/rateLimitShared';
+import { peekRateLimitShared, rateLimitShared } from '@/lib/rateLimitShared';
 import { withRoute } from '@/lib/route';
 import { asEmail } from '@/lib/validate';
 
@@ -24,6 +24,40 @@ import { asEmail } from '@/lib/validate';
 // O hash é gerado em runtime por getDummyPasswordHash() (lib/auth.ts).
 const PER_ACCOUNT_LIMIT = { limit: 10, windowMs: 10 * 60 * 1000 };
 const PER_IP_LIMIT = { limit: 50, windowMs: 60 * 60 * 1000 };
+
+// ─── O travão que não depende do IP ─────────────────────────────────────────
+// Os dois limites acima têm o IP na chave, e o IP vem de um cabeçalho que quem
+// chama escreve (ver getClientIp em lib/rateLimit.ts). Enquanto este limite não
+// existiu, isso queria dizer que o travão do login não travava nada: bastava mudar
+// o X-Forwarded-For a cada pedido para ter um balde novo de cada vez — incluindo no
+// `login:acct:${ip}:${email}`, que apesar do nome nunca foi por conta, era por par
+// (endereço, conta). Adivinhar passwords contra uma conta conhecida ficava limitado
+// só pelo custo do bcrypt.
+//
+// Este é por CONTA e mais nada, por isso vale independentemente de quantos endereços
+// alguém finja ter.
+//
+// ─── Conta só as FALHAS, e porquê ───────────────────────────────────────────
+// Um contador que incrementasse em todas as tentativas gastaria orçamento a quem
+// escreve a password certa — quem entra dez vezes num dia de trabalho ficaria mais
+// perto do limite do que quem anda a adivinhar. Contando só falhas, quem sabe a
+// password nunca o vê.
+//
+// ─── O que se perde, dito por extenso ───────────────────────────────────────
+// Quem atacar pode gastar de propósito o orçamento de falhas de uma conta alheia e
+// deixá-la sem login até a janela fechar. É o preço conhecido de qualquer travão por
+// conta, e escolhe-se a bloquear 15 minutos em vez de adivinhação sem teto. Por isso
+// o limite é folgado (25 falhas / 15 min): ninguém que saiba a password lá chega, e
+// quem não sabe fica com 100 tentativas por hora contra um bcrypt de custo 10.
+const PER_EMAIL_LIMIT = { limit: 25, windowMs: 15 * 60 * 1000 };
+const perEmailKey = (email: string) => (email ? `login:email:${email}` : null);
+
+// Gasta uma unidade do orçamento por conta. Chamada nos DOIS caminhos de falha —
+// conta inexistente e password errada — para que continuem indistinguíveis um do
+// outro, que é o que test/integration/login-oracle.test.ts fixa.
+async function registerFailedAttempt(emailKey: string | null) {
+  if (emailKey) await rateLimitShared(emailKey, PER_EMAIL_LIMIT);
+}
 
 // Público por definição: é a rota que cria a sessão, logo não pode exigir uma.
 // O same-origin/CSRF continua a valer (withRoute aplica-o a tudo o que não declare
@@ -58,12 +92,18 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
   // Contadores no Postgres, não em memória: em memória cada instância tem o seu
   // balde, e com duas instâncias o travão do login deixa de travar. Ver
   // lib/rateLimitShared.ts.
-  const [perAccount, perIp] = await Promise.all([
+  // O de email é lido sem incrementar — só as falhas lá abaixo é que o gastam.
+  const emailKey = perEmailKey(email);
+  const [perAccount, perIp, perEmail] = await Promise.all([
     rateLimitShared(`login:acct:${ip}:${email}`, PER_ACCOUNT_LIMIT),
     rateLimitShared(`login:ip:${ip}`, PER_IP_LIMIT),
+    emailKey ? peekRateLimitShared(emailKey, PER_EMAIL_LIMIT) : Promise.resolve(null),
   ]);
-  const rl = !perAccount.ok ? perAccount : perIp;
-  if (!rl.ok) {
+  // O primeiro que barrar decide a resposta. A ordem entre eles não é observável de
+  // fora — o corpo e o estado são os mesmos — e serve só para o retryAfterMs devolvido
+  // ser o do limite que realmente barrou.
+  const rl = [perEmail, perAccount, perIp].find((r) => r && !r.ok);
+  if (rl) {
     await appendAudit(
       { name: String(email || 'Unknown'), role: 'anonymous', clinic: 'System' },
       'RATE_LIMIT',
@@ -103,6 +143,7 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
     // getDummyPasswordHash() above. The result is discarded (it is always false); it is
     // awaited purely so the two failure paths take comparable time.
     await bcrypt.compare(password, getDummyPasswordHash());
+    await registerFailedAttempt(emailKey);
     await appendAudit(
       { name: String(email || 'Unknown'), role: 'anonymous', clinic: 'System' },
       'AUTH_FAIL',
@@ -116,6 +157,7 @@ export const POST = withRoute({ public: true }, async ({ request }) => {
 
   const isValid = await bcrypt.compare(password, user.hashed_password);
   if (!isValid) {
+    await registerFailedAttempt(emailKey);
     await appendAudit(
       { name: user.name, role: user.role, clinic: user.clinic },
       'AUTH_FAIL',

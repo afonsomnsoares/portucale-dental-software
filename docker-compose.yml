@@ -5,7 +5,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # Sem omissão, ao contrário do resto deste ficheiro: esta é a credencial do
+      # SUPERUSER, e é a ligação que aplica DDL e corre os jobs. Um valor por defeito
+      # ('postgres') é o que ninguém repara que ficou em produção.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       POSTGRES_DB: portucale_dental
       # Read by scripts/docker-init-app-role-password.sh below — only used on
       # first container start (empty data volume), same as every other
@@ -46,7 +49,7 @@ services:
     # depois de terminar com sucesso.
     restart: 'no'
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/portucale_dental
     command: ['node', '--import', 'tsx', 'scripts/migrate.ts']
     depends_on:
       postgres:
@@ -55,6 +58,10 @@ services:
   pgadmin:
     image: dpage/pgadmin4:9
     container_name: portucale-pgadmin
+    # Uma consola de administração da base de dados não arranca sozinha em todos os
+    # ambientes. Com o perfil, só sobe a pedido — `docker compose --profile tools up`.
+    # Continua ligada a 127.0.0.1 e com password obrigatória; isto tira-lhe o resto.
+    profiles: ['tools']
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@portucale.dental
@@ -83,7 +90,7 @@ services:
       # Admin connection — unused by the app itself once APP_DATABASE_URL
       # below is set (lib/db.ts prefers it), kept here only so this service
       # still works unmodified if that var is ever removed.
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/portucale_dental
       # Restricted, RLS-bound connection — see scripts/migrations/011_row_level_security.sql
       # and .env's APP_DATABASE_URL comment for why this is what actually makes
       # RLS enforce anything. Deliberately not set on the `jobs` service below,
@@ -91,6 +98,12 @@ services:
       APP_DATABASE_URL: postgresql://portucale_app:${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD}@postgres:5432/portucale_dental
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       NODE_ENV: production
+      # De que entrada do X-Forwarded-For sai o IP do cliente (lib/rateLimit.ts).
+      # Fica a 0 por omissão porque este ficheiro publica a app diretamente em
+      # 3000:3000, sem nada à frente — e nesse caso o cabeçalho é escrito por quem
+      # chama. Pôr um proxy à frente sem acertar isto aqui deixa os limites por IP
+      # a contar um valor forjado; ver .env.example.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
       # Optional — leaving these unset just makes the SMS send step and the AI
       # report insight degrade gracefully (see lib/jobsRunner.ts and
       # app/api/reports/insight/route.ts), not error.
@@ -131,7 +144,7 @@ services:
       # process reads across every tenant with no per-request session to
       # scope it, so it's exempt from Row-Level Security the same way
       # scripts/migrate.ts is (see that migration's header comment).
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/portucale_dental
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/portucale_dental
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}

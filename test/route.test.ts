@@ -14,6 +14,7 @@ import test from 'node:test';
 import type { NextRequest } from 'next/server';
 import type { SessionUser } from '../lib/auth.ts';
 import { scopeTenant } from '../lib/auth.ts';
+import { __resetRateLimitStore } from '../lib/rateLimit.ts';
 import { resolveTenantId, withRoute } from '../lib/route.ts';
 
 process.env.JWT_SECRET ||= 'test-secret-para-route-aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -227,4 +228,65 @@ test('resolveTenantId concorda com scopeTenant em todos os casos acima', () => {
     const resolvido = out instanceof Response ? null : out;
     assert.equal(resolvido, scopeTenant(user, request, pedido), `caso ${user.role} / pedido=${pedido}`);
   }
+});
+
+// ─── 4. Registo das recusas ─────────────────────────────────────────────────
+// withRoute devolvia 401/403 sem escrever uma linha em lado nenhum, e é por aqui
+// que passam as recusas de todos os handlers. Estes testes correm sem base de
+// dados, por isso cobrem o caminho do 401 — o único que, por decisão, não escreve
+// no audit_log (ver o comentário de recordDenial). O 403 com sessão viva revalida
+// contra a base e vive em test/integration/.
+
+function capturingWarn(fn: (lines: string[]) => Promise<void>) {
+  const real = console.warn;
+  const lines: string[] = [];
+  console.warn = (...args: unknown[]) => {
+    lines.push(args.map(String).join(' '));
+  };
+  return fn(lines).finally(() => {
+    console.warn = real;
+  });
+}
+
+test('um 401 deixa rasto no log do processo sem tocar na base de dados', async () => {
+  __resetRateLimitStore();
+  await capturingWarn(async (lines) => {
+    const route = withRoute({ permission: 'patients:create' }, handlerThatMustNotRun());
+    const res = await route(req({ method: 'GET', url: '/api/patients' }), noParams);
+
+    assert.equal(res.status, 401);
+    const denied = lines.filter((l) => l.startsWith('[denied]'));
+    assert.equal(denied.length, 1, 'a recusa devia ter sido registada exatamente uma vez');
+    assert.match(denied[0], /GET \/api\/patients/, 'o método e o caminho identificam o que foi tentado');
+    assert.match(denied[0], /\[401\]/);
+  });
+});
+
+test('um cliente em ciclo não consegue encher o registo — as recusas são coalescidas', async () => {
+  // Sem isto, cada pedido recusado escreve uma linha e o registo de segurança passa
+  // a ser o alvo mais barato da aplicação.
+  __resetRateLimitStore();
+  await capturingWarn(async (lines) => {
+    const route = withRoute({ permission: 'patients:create' }, handlerThatMustNotRun());
+    for (let i = 0; i < 50; i += 1) {
+      const res = await route(req({ method: 'GET', url: '/api/patients' }), noParams);
+      assert.equal(res.status, 401, 'coalescer o registo não pode mudar a resposta');
+    }
+
+    const denied = lines.filter((l) => l.startsWith('[denied]'));
+    assert.equal(denied.length, 5, '5 por minuto por identidade e caminho — as outras 45 são silenciadas');
+  });
+});
+
+test('caminhos diferentes contam em separado — varrer endpoints continua visível', async () => {
+  __resetRateLimitStore();
+  await capturingWarn(async (lines) => {
+    const route = withRoute({ permission: 'patients:create' }, handlerThatMustNotRun());
+    for (const url of ['/api/patients', '/api/invoices', '/api/users']) {
+      await route(req({ method: 'GET', url }), noParams);
+    }
+
+    const denied = lines.filter((l) => l.startsWith('[denied]'));
+    assert.equal(denied.length, 3, 'o coalescer é por caminho, senão uma varredura ficava invisível');
+  });
 });

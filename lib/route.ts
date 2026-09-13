@@ -1,7 +1,9 @@
 import type { NextRequest } from 'next/server';
+import { logBlockedAccess } from './audit';
 import { forbidden, getAuth, requireSameOrigin, type SessionUser, scopeTenant, unauthorized } from './auth';
 import { hasPermission, revalidateSession } from './permissions';
 import { requirePlatform } from './platform';
+import { getClientIp, rateLimit } from './rateLimit';
 import { rateLimitGlobal } from './rateLimitGlobal';
 
 // Política de tenant da rota. Os três casos que existem em app/api/*:
@@ -111,6 +113,51 @@ type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
 const WRITE_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+// ─── Uma recusa que ninguém regista não aconteceu ───────────────────────────
+// Este ficheiro é por onde passam as recusas dos 190 handlers, e até aqui devolvia
+// 401/403 sem escrever uma linha em lado nenhum. Havia 14 chamadas a
+// logBlockedAccess espalhadas por 7 rotas — as que alguém se lembrou de acrescentar
+// — e mais nada. Quem andasse a espreitar endpoints com uma sessão válida de
+// rececionista não deixava rasto nenhum, que é exatamente o caso que se quer ver.
+//
+// ─── Porque é que o 401 não vai para o audit_log e o 403 vai ────────────────
+// Não valem o mesmo. Um 401 é quase sempre um cookie expirado — um separador aberto
+// desde ontem a pedir /api/auth/me — e enviá-lo para a tabela encheria de ruído
+// precisamente o sítio onde o sinal devia estar. Um 403 é outra coisa: há sessão
+// válida, a pessoa foi identificada, e mesmo assim pediu algo a que não tem direito.
+// Isso é o sinal, e é esse que fica gravado. O 401 fica no log do processo, que
+// chega para correlacionar picos sem poluir a auditoria.
+const DENIAL_LOG_LIMIT = { limit: 5, windowMs: 60 * 1000 };
+
+function denialReason(options: RouteOptions): string {
+  if (options.platform !== undefined) {
+    return typeof options.platform === 'string' ? `plataforma: sem a ação "${options.platform}"` : 'só super-admin';
+  }
+  if (options.permission !== undefined) return `sem a ação "${options.permission}"`;
+  return 'sessão já não é válida (conta desativada, movida de clínica ou password alterada)';
+}
+
+// Nunca lança e nunca atrasa a resposta por mais do que um INSERT. Um problema a
+// escrever a auditoria não pode transformar um 403 correto num 500.
+async function recordDenial(request: NextRequest, user: SessionUser | null, reason: string, status: number) {
+  try {
+    const identity = user ? `user:${user.id}` : `ip:${getClientIp(request)}`;
+    const path = new URL(request.url).pathname;
+    // Coalescido de propósito. Sem isto, um cliente em ciclo escreve uma linha por
+    // pedido e o registo de segurança passa a ser o alvo mais barato da aplicação —
+    // uma amplificação de escrita servida por quem ataca. Cinco por minuto por
+    // identidade e caminho chegam para ver o padrão; o que interessa é que houve
+    // tentativas, não a contagem exata.
+    if (!rateLimit(`denial:${identity}:${path}`, DENIAL_LOG_LIMIT).ok) return;
+
+    const line = `${request.method} ${path} — ${reason} [${status}]`;
+    console.warn(`[denied] ${line} ${identity}`);
+    if (user) await logBlockedAccess(user, line);
+  } catch (e) {
+    console.error('[denied] falhou a registar a recusa:', e instanceof Error ? e.message : e);
+  }
+}
+
 // ─── Resolução de clínica ───────────────────────────────────────────────────
 // Delega em scopeTenant (lib/auth.ts) em vez de reimplementar a regra. É ele que
 // honra o cookie `acting_tenant` — o "entrar na clínica" do super-admin, POST
@@ -123,7 +170,7 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 //
 // Exportada — como o `canOverride` de lib/permissions.ts, e pela mesma razão. O resto
 // de withRoute precisa de uma sessão viva e de uma base de dados para correr; esta
-// função é pura, e é ela que decide de que clínica fala cada um dos 191 handlers. Uma
+// função é pura, e é ela que decide de que clínica fala cada um dos 190 handlers. Uma
 // regra dessas testa-se, e testa-se sem infraestrutura nenhuma.
 export function resolveTenantId(
   request: NextRequest,
@@ -204,10 +251,16 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
     }
 
     const user = getAuth(request);
-    if (!user) return unauthorized();
+    if (!user) {
+      await recordDenial(request, null, 'sem sessão válida', 401);
+      return unauthorized();
+    }
 
     const blocked = await authorize(options, user);
-    if (blocked) return blocked;
+    if (blocked) {
+      await recordDenial(request, user, denialReason(options), blocked.status);
+      return blocked;
+    }
 
     // Depois da autorização, de propósito: a chave é o utilizador autenticado, e gastar
     // orçamento de escrita de alguém antes de saber se ele sequer podia fazer aquilo
@@ -229,7 +282,10 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
     if (needsBody) body = await request.json().catch(() => null);
 
     const tenantId = resolveTenantId(request, user, options.tenant ?? 'required', body);
-    if (tenantId instanceof Response) return tenantId;
+    if (tenantId instanceof Response) {
+      await recordDenial(request, user, 'sem clínica resolvível para um pedido que exige uma', tenantId.status);
+      return tenantId;
+    }
 
     return handler({
       request: needsBody ? withParsedBody(request, body) : request,

@@ -82,6 +82,53 @@ export async function rateLimitShared(
 }
 
 /**
+ * Lê um contador SEM o incrementar.
+ *
+ * Existe para o travão por conta do login (PER_EMAIL_LIMIT em
+ * app/api/auth/login/route.ts), que só conta tentativas FALHADAS. Um contador que
+ * incrementa na verificação obrigaria a contar também os logins com a password
+ * certa — e aí bastava alguém entrar muitas vezes num dia para ficar sem orçamento,
+ * que é precisamente o contrário do que se quer.
+ *
+ * Separar em ler-agora/incrementar-depois abre uma corrida: duas tentativas em
+ * simultâneo leem o mesmo valor e passam as duas. É deliberado e inofensivo — o erro
+ * é de uma tentativa por pedido concorrente, num limite de dezenas, e não muda a
+ * ordem de grandeza do que a adivinhação de passwords consegue.
+ *
+ * `ok` compara com `<` e não `<=` (ao contrário de rateLimitShared): quem chama está
+ * a perguntar "posso fazer mais uma?", e com count === limit o orçamento acabou.
+ */
+export async function peekRateLimitShared(
+  key: string,
+  { limit, windowMs }: { limit: number; windowMs: number },
+): Promise<SharedRateLimitResult> {
+  try {
+    const row = await withSystemContext(() =>
+      queryOne(
+        `SELECT count,
+                EXTRACT(EPOCH FROM (window_start + ($2::bigint * INTERVAL '1 millisecond') - NOW())) * 1000 AS retry_after_ms
+           FROM rate_limit_counters
+          WHERE key=$1
+            AND window_start >= NOW() - ($2::bigint * INTERVAL '1 millisecond')`,
+        [key, Math.trunc(windowMs)],
+      ),
+    );
+    // Sem linha, ou com a janela já expirada (o WHERE acima trata os dois da mesma
+    // forma): o orçamento está inteiro.
+    if (!row) return { ok: true, remaining: limit, retryAfterMs: 0 };
+    const count = Number(row.count || 0);
+    return {
+      ok: count < limit,
+      remaining: Math.max(0, limit - count),
+      retryAfterMs: Math.max(0, Math.ceil(Number(row.retry_after_ms || 0))),
+    };
+  } catch (e) {
+    console.error('[rate-limit] leitura do contador partilhado indisponível:', e instanceof Error ? e.message : e);
+    return FAIL_OPEN;
+  }
+}
+
+/**
  * Apaga janelas já expiradas. Chamado pelo pipeline de jobs — sem isto a tabela
  * cresce com uma linha por cada par IP/email que alguma vez tentou entrar, que é
  * espaço de chaves escolhido por quem ataca (o mesmo raciocínio que levou à

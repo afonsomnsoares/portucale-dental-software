@@ -85,9 +85,58 @@ function maybeSweep(store: Map<string, RateRecord>, now: number) {
   sweep(store, now);
 }
 
+// ─── De onde vem o IP, e porque é que isso é configuração e não código ──────
+// `X-Forwarded-For` é um cabeçalho como qualquer outro: quem faz o pedido escreve
+// nele o que lhe apetecer. Só valem as entradas que a NOSSA infraestrutura
+// acrescentou, e essas são as da DIREITA — cada proxy acrescenta ao fim o endereço
+// de quem lhe falou a ele.
+//
+//   cliente honesto, 1 proxy à frente:  XFF = "203.0.113.5"
+//   cliente a forjar, 1 proxy à frente: XFF = "1.2.3.4, 203.0.113.5"
+//                                              ↑ inventado  ↑ escrito pelo proxy
+//
+// Ler a PRIMEIRA entrada — o que este ficheiro fazia — devolve o valor inventado.
+// Com ele, qualquer limite por IP deixa de existir: muda-se o cabeçalho e há um
+// balde novo a cada pedido, incluindo no login.
+//
+// TRUSTED_PROXY_HOPS diz quantos proxies estão à nossa frente. Com n ≥ 1 lê-se a
+// n-ésima entrada A CONTAR DA DIREITA, que é a última que o nosso próprio proxy
+// escreveu e que quem chama não consegue influenciar.
+const TRUSTED_HOPS_UNSET = 0;
+
+function trustedProxyHops(): number {
+  const n = Number.parseInt(String(process.env.TRUSTED_PROXY_HOPS ?? ''), 10);
+  return Number.isFinite(n) && n > 0 ? n : TRUSTED_HOPS_UNSET;
+}
+
+// ─── O caso sem proxy, e porque é que continua a usar o cabeçalho ───────────
+// Com TRUSTED_PROXY_HOPS=0 (a omissão, e o que o docker-compose.yml deste projeto
+// monta — a app publica a 3000 sem nada à frente) NENHUM destes cabeçalhos é de
+// confiar. Mesmo assim continuam a ser usados, porque a alternativa — devolver o
+// mesmo valor a toda a gente — poria todo o tráfego anónimo num único balde de
+// 60/min e seria negação de serviço auto-infligida no login, no portal do doente e
+// na captação de leads.
+//
+// O que muda é aquilo em que se confia: nenhum controlo de SEGURANÇA pode depender
+// só disto. É por isso que o travão contra adivinhação de passwords passou a ter uma
+// perna que não olha ao IP nenhum — ver PER_EMAIL_LIMIT em
+// app/api/auth/login/route.ts. Este continua a ser o que sempre foi bom a ser: um
+// teto anti-abuso barato, que trava quem não está a tentar contorná-lo.
 export function getClientIp(request: { headers?: Headers }) {
   const xf = request?.headers?.get?.('x-forwarded-for') || '';
-  if (xf) return xf.split(',')[0].trim();
+  if (xf) {
+    const chain = xf
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (chain.length) {
+      const hops = trustedProxyHops();
+      // Cadeia mais curta do que os hops configurados: foi escrita inteira por nós,
+      // portanto a da esquerda já é o cliente. Math.max fecha esse caso sem um if.
+      if (hops > TRUSTED_HOPS_UNSET) return chain[Math.max(0, chain.length - hops)];
+      return chain[0];
+    }
+  }
   return (
     request?.headers?.get?.('x-real-ip') ||
     request?.headers?.get?.('cf-connecting-ip') ||
