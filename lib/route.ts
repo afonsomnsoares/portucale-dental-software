@@ -120,21 +120,53 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // — e mais nada. Quem andasse a espreitar endpoints com uma sessão válida de
 // rececionista não deixava rasto nenhum, que é exatamente o caso que se quer ver.
 //
-// ─── Porque é que o 401 não vai para o audit_log e o 403 vai ────────────────
-// Não valem o mesmo. Um 401 é quase sempre um cookie expirado — um separador aberto
-// desde ontem a pedir /api/auth/me — e enviá-lo para a tabela encheria de ruído
-// precisamente o sítio onde o sinal devia estar. Um 403 é outra coisa: há sessão
-// válida, a pessoa foi identificada, e mesmo assim pediu algo a que não tem direito.
-// Isso é o sinal, e é esse que fica gravado. O 401 fica no log do processo, que
-// chega para correlacionar picos sem poluir a auditoria.
+// ─── O que decide não é o estado, é haver alguém identificado ───────────────
+// A regra é `if (user)` no recordDenial abaixo, e não o 401/403. É deliberado, e não
+// coincide com a divisão por estado que parece óbvia:
+//
+//   401 sem utilizador   cookie ausente, expirado ou com assinatura má. É quase
+//                        sempre um separador aberto desde ontem a pedir
+//                        /api/auth/me. Fica só no log do processo — chega para
+//                        correlacionar picos, e mandá-lo para a tabela encheria de
+//                        ruído o sítio onde o sinal devia estar.
+//   401 COM utilizador   o token é válido e a sessão é que já não: conta desativada,
+//                        movida de clínica, password mudada. Isto não é ruído — é
+//                        alguém a apresentar credenciais que lhe foram retiradas, e
+//                        é dos sinais mais interessantes que há. Fica gravado.
+//   403                  há sessão viva, a pessoa está identificada, e pediu o que
+//                        não lhe pertence. Fica gravado.
 const DENIAL_LOG_LIMIT = { limit: 5, windowMs: 60 * 1000 };
 
-function denialReason(options: RouteOptions): string {
-  if (options.platform !== undefined) {
-    return typeof options.platform === 'string' ? `plataforma: sem a ação "${options.platform}"` : 'só super-admin';
-  }
-  if (options.permission !== undefined) return `sem a ação "${options.permission}"`;
-  return 'sessão já não é válida (conta desativada, movida de clínica ou password alterada)';
+// A frase que descreve uma sessão revogada, num sítio só: o `authorize` abaixo chega
+// a ela por dois caminhos diferentes (o 401 do authOnly e o 403 de uma rota com
+// `permission`) e a auditoria deve chamar-lhe o mesmo nas duas.
+const SESSION_REVOKED = 'sessão já não é válida (conta desativada, movida de clínica ou password alterada)';
+
+// ─── A chave tem de ser o PADRÃO da rota, não o caminho ─────────────────────
+// Há cerca de 40 rotas com segmento dinâmico em app/api/**/[id]/. Com o caminho cru
+// na chave, cada id diferente é um balde diferente — e a coalescência abaixo, que
+// existe precisamente para o registo não ser amplificável, deixa de se aplicar a
+// exatamente o caso que interessa: alguém a varrer ids numa rota a que não tem
+// acesso. Uma rececionista em ciclo contra /api/patients/<uuid>/medical-history
+// escreveria uma linha de audit_log por pedido.
+//
+// Normalizar é reduzir cada segmento identificador ao seu lugar. UUID, inteiro e
+// token opaco cobrem tudo o que esta aplicação põe num segmento — ver os `[id]`,
+// `[token]`, `[channel]` e `[offerId]` de app/api/.
+const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const NUMERIC_SEGMENT = /^\d+$/;
+// Um segmento longo sem separadores é um token (o do portal do doente tem 43
+// caracteres em base64url). Não se testa o conteúdo, testa-se a forma.
+const OPAQUE_SEGMENT = /^[A-Za-z0-9_-]{24,}$/;
+
+function routePattern(pathname: string): string {
+  return pathname
+    .split('/')
+    .map((seg) => {
+      if (UUID_SEGMENT.test(seg) || NUMERIC_SEGMENT.test(seg) || OPAQUE_SEGMENT.test(seg)) return ':id';
+      return seg;
+    })
+    .join('/');
 }
 
 // Nunca lança e nunca atrasa a resposta por mais do que um INSERT. Um problema a
@@ -146,9 +178,9 @@ async function recordDenial(request: NextRequest, user: SessionUser | null, reas
     // Coalescido de propósito. Sem isto, um cliente em ciclo escreve uma linha por
     // pedido e o registo de segurança passa a ser o alvo mais barato da aplicação —
     // uma amplificação de escrita servida por quem ataca. Cinco por minuto por
-    // identidade e caminho chegam para ver o padrão; o que interessa é que houve
-    // tentativas, não a contagem exata.
-    if (!rateLimit(`denial:${identity}:${path}`, DENIAL_LOG_LIMIT).ok) return;
+    // identidade e PADRÃO de rota chegam para ver o padrão; o que interessa é que
+    // houve tentativas, não a contagem exata.
+    if (!rateLimit(`denial:${identity}:${routePattern(path)}`, DENIAL_LOG_LIMIT).ok) return;
 
     const line = `${request.method} ${path} — ${reason} [${status}]`;
     console.warn(`[denied] ${line} ${identity}`);
@@ -200,14 +232,32 @@ export function resolveTenantId(
 // clínica ainda passaria. É também o que realinha `user.role`/`user.tenantId`
 // (escreve no próprio objeto, ver lib/permissions.ts) antes de resolvermos a
 // clínica logo a seguir — por isso corre sempre primeiro.
-async function authorize(options: RouteOptions, user: SessionUser): Promise<Response | null> {
+//
+// Devolve o motivo com a resposta, em vez de o deixar para quem regista deduzir a
+// partir das opções da rota: `hasPermission` devolve `false` por DOIS motivos muito
+// diferentes — a ação falta, ou a sessão foi revogada — e deduzir de fora escolhia
+// sempre o primeiro. O mais interessante dos dois ficava registado como uma falta de
+// permissão vulgar, no único sítio onde é registado.
+type Denial = { response: Response; reason: string };
+
+async function authorize(options: RouteOptions, user: SessionUser): Promise<Denial | null> {
   if (options.platform !== undefined) {
-    return requirePlatform(user, options.platform === true ? undefined : options.platform);
+    const response = await requirePlatform(user, options.platform === true ? undefined : options.platform);
+    if (!response) return null;
+    const reason =
+      typeof options.platform === 'string' ? `plataforma: sem a ação "${options.platform}"` : 'só super-admin';
+    return { response, reason };
   }
   if (options.permission !== undefined) {
-    return (await hasPermission(user, options.permission)) ? null : forbidden();
+    if (await hasPermission(user, options.permission)) return null;
+    // Separar os dois motivos custa zero: `liveUser` é memoizado por pedido
+    // (WeakMap em lib/permissions.ts), por isso isto não é uma segunda ida à base
+    // de dados — é a mesma promessa outra vez.
+    const live = await revalidateSession(user);
+    return { response: forbidden(), reason: live ? `sem a ação "${options.permission}"` : SESSION_REVOKED };
   }
-  return (await revalidateSession(user)) ? null : unauthorized();
+  if (await revalidateSession(user)) return null;
+  return { response: unauthorized(), reason: SESSION_REVOKED };
 }
 
 /**
@@ -258,8 +308,8 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
 
     const blocked = await authorize(options, user);
     if (blocked) {
-      await recordDenial(request, user, denialReason(options), blocked.status);
-      return blocked;
+      await recordDenial(request, user, blocked.reason, blocked.response.status);
+      return blocked.response;
     }
 
     // Depois da autorização, de propósito: a chave é o utilizador autenticado, e gastar

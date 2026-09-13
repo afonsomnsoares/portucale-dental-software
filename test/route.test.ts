@@ -232,10 +232,14 @@ test('resolveTenantId concorda com scopeTenant em todos os casos acima', () => {
 
 // ─── 4. Registo das recusas ─────────────────────────────────────────────────
 // withRoute devolvia 401/403 sem escrever uma linha em lado nenhum, e é por aqui
-// que passam as recusas de todos os handlers. Estes testes correm sem base de
-// dados, por isso cobrem o caminho do 401 — o único que, por decisão, não escreve
-// no audit_log (ver o comentário de recordDenial). O 403 com sessão viva revalida
-// contra a base e vive em test/integration/.
+// que passam as recusas de todos os handlers.
+//
+// Estes testes correm sem base de dados, por isso cobrem o caso do 401 SEM
+// utilizador — pedido sem cookie nenhum. É esse, e não o 401 em geral, que por
+// decisão fica só no log do processo: o que manda é haver alguém identificado, e um
+// 401 de sessão revogada tem-no e vai para o audit_log (ver o comentário do
+// DENIAL_LOG_LIMIT). Os dois casos que escrevem precisam de base de dados para
+// revalidar, e vivem em test/integration/.
 
 function capturingWarn(fn: (lines: string[]) => Promise<void>) {
   const real = console.warn;
@@ -288,5 +292,55 @@ test('caminhos diferentes contam em separado — varrer endpoints continua visí
 
     const denied = lines.filter((l) => l.startsWith('[denied]'));
     assert.equal(denied.length, 3, 'o coalescer é por caminho, senão uma varredura ficava invisível');
+  });
+});
+
+// ─── O bug que estes três testes não apanhavam ──────────────────────────────
+// Os de cima usam caminhos estáticos, e o coalescer funcionava para esses. A chave
+// era o caminho CRU, e há ~40 rotas com segmento dinâmico: varrer ids numa delas
+// dava um balde novo por pedido, que é precisamente o caso que a coalescência
+// existe para cobrir.
+test('varrer ids numa rota dinâmica não multiplica o registo', async () => {
+  __resetRateLimitStore();
+  await capturingWarn(async (lines) => {
+    const route = withRoute({ permission: 'medical-history:read' }, handlerThatMustNotRun());
+    for (let i = 0; i < 50; i += 1) {
+      const uuid = `0000000${i.toString(16).padStart(1, '0')}-1111-4222-8333-444444444444`;
+      await route(req({ method: 'GET', url: `/api/patients/${uuid}/medical-history` }), noParams);
+    }
+
+    const denied = lines.filter((l) => l.startsWith('[denied]'));
+    assert.equal(denied.length, 5, 'o balde é por PADRÃO de rota, não por caminho — 50 ids são um só padrão');
+  });
+});
+
+test('o que fica gravado é o caminho real, não o padrão', async () => {
+  // O padrão serve para agrupar; quem lê a auditoria precisa de saber que id foi
+  // pedido. Agrupar e registar são coisas diferentes e não podem partilhar o valor.
+  __resetRateLimitStore();
+  await capturingWarn(async (lines) => {
+    const route = withRoute({ permission: 'medical-history:read' }, handlerThatMustNotRun());
+    const uuid = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    await route(req({ method: 'GET', url: `/api/patients/${uuid}/medical-history` }), noParams);
+
+    const denied = lines.filter((l) => l.startsWith('[denied]'));
+    assert.equal(denied.length, 1);
+    assert.match(denied[0], new RegExp(uuid), 'sem o id concreto, a linha não serve para investigar nada');
+  });
+});
+
+test('rotas dinâmicas distintas continuam a contar em separado', async () => {
+  // O reverso do teste anterior: normalizar de mais colapsaria rotas diferentes num
+  // balde só, e uma varredura por vários endpoints voltaria a ficar invisível.
+  __resetRateLimitStore();
+  await capturingWarn(async (lines) => {
+    const route = withRoute({ permission: 'invoices:read' }, handlerThatMustNotRun());
+    const id = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+    for (const url of [`/api/invoices/${id}`, `/api/invoices/${id}/pay`, `/api/patients/${id}/timeline`]) {
+      await route(req({ method: 'GET', url }), noParams);
+    }
+
+    const denied = lines.filter((l) => l.startsWith('[denied]'));
+    assert.equal(denied.length, 3, 'três padrões diferentes são três baldes');
   });
 });
