@@ -204,7 +204,7 @@ export default function DentistTreatmentsPage() {
                           fontSize: 'var(--text-2xs)',
                           fontWeight: 'var(--weight-bold)',
                           color: ph.color,
-                          letterSpacing: '.08em',
+                          letterSpacing: 'var(--text-2xs-tracking)',
                           marginBottom: 2,
                         }}
                       >

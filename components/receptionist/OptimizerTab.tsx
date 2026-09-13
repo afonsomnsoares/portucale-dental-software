@@ -104,7 +104,7 @@ export default function OptimizerTab({
                     <Badge label={meta.label} bg={meta.bg} color={meta.color} />
                   </div>
                 </div>
-                <div className="text-xs" style={{ color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   {m.detail}
                 </div>
               </div>

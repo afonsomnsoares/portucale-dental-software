@@ -122,7 +122,14 @@ export default function Health({ initialData }: { initialData?: PlatformHealth }
 
       <div className="card p-5" style={{ marginTop: 16 }}>
         <div className="section-label mb-2">O QUE ESTA PÁGINA AINDA NÃO MEDE</div>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0 }}>
+        <p
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-secondary)',
+            lineHeight: 'var(--leading-prose)',
+            margin: 0,
+          }}
+        >
           {h.notInstrumented.join(' · ')} — precisam de monitorização fora da aplicação (a app não se consegue medir a
           si própria quando está em baixo). O que está acima é tudo medido, nada é estimado.
         </p>

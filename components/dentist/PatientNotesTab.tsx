@@ -220,7 +220,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                       color: 'var(--text-muted)',
                       cursor: 'pointer',
                       fontSize: 'var(--text-lg)',
-                      lineHeight: 1,
+                      lineHeight: 'var(--leading-none)',
                       padding: '0 6px',
                     }}
                     aria-label="Remover anexo"
@@ -327,7 +327,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
             minHeight: 220,
             fontFamily: '"JetBrains Mono",monospace',
             fontSize: 'var(--text-xs)',
-            lineHeight: 1.7,
+            lineHeight: 'var(--leading-prose)',
           }}
         />
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 12 }}>
@@ -399,7 +399,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                   whiteSpace: 'pre-wrap',
                   maxHeight: 260,
                   overflowY: 'auto',
-                  lineHeight: 1.7,
+                  lineHeight: 'var(--leading-prose)',
                 }}
               >
                 {n.event}

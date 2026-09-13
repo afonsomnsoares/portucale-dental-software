@@ -69,7 +69,14 @@ function Medidor({ s, invertido = false }: { s: Score; invertido?: boolean }) {
       <div style={{ height: 3, background: 'var(--bg-sunken)', borderRadius: 2, marginTop: 3, overflow: 'hidden' }}>
         <div style={{ width: `${s.score}%`, height: '100%', background: cor }} />
       </div>
-      <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.4 }}>
+      <div
+        style={{
+          fontSize: 'var(--text-2xs)',
+          color: 'var(--text-muted)',
+          marginTop: 4,
+          lineHeight: 'var(--text-2xs-leading)',
+        }}
+      >
         {s.suppressed ? s.suppressed : s.drivers.length ? s.drivers.map((d) => d.label).join(' · ') : 'Sem sinal forte'}
       </div>
     </div>
@@ -150,7 +157,7 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
                         textAlign: 'left',
                         padding: '9px 14px',
                         fontSize: 'var(--text-2xs)',
-                        letterSpacing: '.08em',
+                        letterSpacing: 'var(--text-2xs-tracking)',
                         textTransform: 'uppercase',
                         color: 'var(--text-muted)',
                         fontWeight: 'var(--weight-medium)',

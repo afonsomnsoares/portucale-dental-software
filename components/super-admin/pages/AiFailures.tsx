@@ -149,7 +149,14 @@ export default function AiFailures() {
             </div>
           ))
         )}
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '14px 0 0' }}>
+        <p
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-secondary)',
+            lineHeight: 'var(--leading-prose)',
+            margin: '14px 0 0',
+          }}
+        >
           Estas falhas não aparecem em lado nenhum para a clínica: quando o modelo não responde, o agente cai para a
           regra fixa e o trabalho é feito à mesma. É por isso que uma taxa a subir aqui é o aviso antecipado — a
           qualidade das decisões degrada-se sem nada avariar.

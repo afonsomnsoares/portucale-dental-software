@@ -106,7 +106,7 @@ export default function ClinicAgentsPage() {
 
           <div className="card p-5 mt-4" style={{ borderLeft: '4px solid var(--cat-purple)' }}>
             <div className="section-label mb-2">💬 COMUNICAÇÃO — CAMADA DE POLÍTICA</div>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: 0 }}>
               Comunicar não é um agente, é o canal por onde todos passam. O consentimento do doente, o canal preferido,
               o limite de mensagens por semana, as horas de silêncio e a deduplicação entre agentes vivem num sítio só —
               senão os seis escrevem à mesma pessoa na mesma manhã.
@@ -134,7 +134,7 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-        <span style={{ fontSize: 'var(--text-lg)', lineHeight: 1 }}>{agent.icon}</span>
+        <span style={{ fontSize: 'var(--text-lg)', lineHeight: 'var(--leading-none)' }}>{agent.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
             {agent.name}
@@ -150,14 +150,11 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
         />
       </div>
 
-      <p className="text-sm" style={{ color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 10px' }}>
+      <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: '0 0 10px' }}>
         {agent.summary}
       </p>
 
-      <p
-        className="text-xs"
-        style={{ color: 'var(--text-muted)', lineHeight: 1.5, margin: '0 0 12px', fontStyle: 'italic' }}
-      >
+      <p className="text-xs" style={{ color: 'var(--text-muted)', margin: '0 0 12px', fontStyle: 'italic' }}>
         Fronteira: {agent.boundary}
       </p>
 
@@ -242,7 +239,7 @@ function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: 
             {insight.title}
           </div>
           {insight.body && (
-            <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: '4px 0 0', lineHeight: 1.5 }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)', margin: '4px 0 0' }}>
               {insight.body}
             </p>
           )}

@@ -173,7 +173,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                             fontSize: 'var(--text-2xs)',
                             fontWeight: 'var(--weight-bold)',
                             color: col,
-                            letterSpacing: '.1em',
+                            letterSpacing: 'var(--text-2xs-tracking)',
                             marginBottom: 8,
                           }}
                         >

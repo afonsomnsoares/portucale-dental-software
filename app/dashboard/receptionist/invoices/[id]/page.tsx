@@ -149,7 +149,13 @@ export default function InvoiceDetailPage() {
           {inv.notes && (
             <>
               <div className="section-label mt-4 mb-2">Notas</div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 'var(--text-sm-leading)',
+                }}
+              >
                 {inv.notes}
               </div>
             </>

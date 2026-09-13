@@ -148,7 +148,14 @@ export default function PlatformIncidents() {
                 </span>
               </div>
               {c.body && (
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>
+                <p
+                  style={{
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--text-secondary)',
+                    margin: 0,
+                    lineHeight: 'var(--text-xs-leading)',
+                  }}
+                >
                   {c.body}
                 </p>
               )}
@@ -161,7 +168,7 @@ export default function PlatformIncidents() {
         style={{
           fontSize: 'var(--text-xs)',
           color: 'var(--text-secondary)',
-          lineHeight: 1.7,
+          lineHeight: 'var(--leading-prose)',
           marginTop: 16,
           maxWidth: 720,
         }}

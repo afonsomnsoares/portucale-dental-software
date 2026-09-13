@@ -35,7 +35,14 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
       >
         Não foi possível carregar esta página
       </h2>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.55, margin: '0 0 18px' }}>
+      <p
+        style={{
+          color: 'var(--text-secondary)',
+          fontSize: 'var(--text-base)',
+          lineHeight: 'var(--text-base-leading)',
+          margin: '0 0 18px',
+        }}
+      >
         Ocorreu um erro ao mostrar esta secção. As outras secções continuam acessíveis pelo menu lateral.
       </p>
       {error.digest && (

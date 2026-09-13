@@ -342,7 +342,7 @@ export default function Reports() {
                 {insight.error}
               </p>
             ) : (
-              <p className="text-sm" style={{ color: 'var(--text-primary)', lineHeight: 1.55 }}>
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>
                 {insight.insight}
               </p>
             )}

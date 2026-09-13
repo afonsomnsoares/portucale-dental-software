@@ -104,7 +104,14 @@ export default function AuditFeed({
       )}
 
       {footnote && (
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.55, marginTop: 16 }}>
+        <p
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-secondary)',
+            lineHeight: 'var(--text-xs-leading)',
+            marginTop: 16,
+          }}
+        >
           {footnote}
         </p>
       )}

@@ -92,7 +92,7 @@ export default function CommsSettings() {
           padding: '12px 16px',
           marginBottom: 20,
           fontSize: 'var(--text-xs)',
-          lineHeight: 1.55,
+          lineHeight: 'var(--text-xs-leading)',
         }}
       >
         <div style={{ fontWeight: 'var(--weight-bold)', marginBottom: 4 }}>Duas coisas não dependem desta página</div>

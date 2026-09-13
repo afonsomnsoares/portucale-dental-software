@@ -99,7 +99,7 @@ export default function StagnantTab() {
                     textAlign: i >= 2 ? 'right' : 'left',
                     padding: '9px 14px',
                     fontSize: 'var(--text-2xs)',
-                    letterSpacing: '.08em',
+                    letterSpacing: 'var(--text-2xs-tracking)',
                     textTransform: 'uppercase',
                     color: 'var(--text-muted)',
                     fontWeight: 'var(--weight-medium)',

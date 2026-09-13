@@ -70,7 +70,7 @@ export default function PatientOverviewTab({
                       fontSize: 'var(--text-2xs)',
                       color: 'var(--text-muted)',
                       fontWeight: 'var(--weight-bold)',
-                      letterSpacing: '.06em',
+                      letterSpacing: 'var(--text-2xs-tracking)',
                       textTransform: 'uppercase',
                       marginBottom: 4,
                     }}

@@ -131,7 +131,7 @@ export default function Roles() {
         style={{
           fontSize: 'var(--text-xs)',
           color: 'var(--text-secondary)',
-          lineHeight: 1.7,
+          lineHeight: 'var(--leading-prose)',
           marginTop: 16,
           maxWidth: 720,
         }}

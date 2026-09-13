@@ -390,7 +390,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
               whiteSpace: 'pre-wrap',
               fontFamily: 'Georgia, serif',
               fontSize: 'var(--text-sm)',
-              lineHeight: 1.7,
+              lineHeight: 'var(--leading-prose)',
               maxHeight: '55vh',
               overflowY: 'auto',
             }}

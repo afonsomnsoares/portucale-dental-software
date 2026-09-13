@@ -96,7 +96,7 @@ export default function Alerts() {
                   style={{
                     fontSize: 'var(--text-sm)',
                     color: 'var(--text-secondary)',
-                    lineHeight: 1.55,
+                    lineHeight: 'var(--text-sm-leading)',
                     margin: '0 0 8px',
                   }}
                 >

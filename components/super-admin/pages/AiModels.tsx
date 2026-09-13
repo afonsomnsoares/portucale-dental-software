@@ -42,7 +42,14 @@ export default function AiModels({ initialData }: { initialData?: AiUsage } = {}
             {d.pricePerMTok[d.configuredModel].output} € por milhão de saída
           </div>
         )}
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '12px 0 0' }}>
+        <p
+          style={{
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-secondary)',
+            lineHeight: 'var(--leading-prose)',
+            margin: '12px 0 0',
+          }}
+        >
           Definido em <code>AGENT_MODEL</code> (lib/agents/aiClient.ts), igual para toda a rede. As chamadas dos agentes
           correm em segundo plano, uma por clínica por passagem do cron, e são decisões estruturadas e limitadas — o
           custo por corrida pesa mais aqui do que a capacidade bruta.

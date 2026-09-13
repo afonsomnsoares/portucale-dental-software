@@ -198,7 +198,7 @@ export function PageHeader({
             fontSize: 'var(--text-xl)',
             fontWeight: 'var(--weight-bold)',
             color: 'var(--text-primary)',
-            lineHeight: 1.15,
+            lineHeight: 'var(--text-xl-leading)',
             fontFamily: '"Plus Jakarta Sans",sans-serif',
           }}
         >
@@ -457,7 +457,7 @@ export function Modal({
               fontSize: 'var(--text-lg)',
               color: 'var(--text-muted)',
               cursor: 'pointer',
-              lineHeight: 1,
+              lineHeight: 'var(--leading-none)',
               padding: '2px 6px',
             }}
           >
@@ -618,7 +618,7 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
                 boxShadow: `0 0 0 2px ${tint(col, 19)}`,
               }}
             />
-            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)', lineHeight: 1.4 }}>
+            <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
               {e.event}
             </div>
             <div className="flex items-center gap-2 flex-wrap">

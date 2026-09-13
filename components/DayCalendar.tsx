@@ -580,7 +580,6 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                 background: 'var(--urgency-critical-bg)',
                 color: 'var(--urgency-critical)',
                 border: '1px solid var(--urgency-critical-border)',
-                lineHeight: 1.5,
               }}
             >
               <strong>Ação necessária:</strong> risco elevado de falta. Ligar ao doente para confirmar.

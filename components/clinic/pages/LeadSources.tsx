@@ -207,7 +207,7 @@ export default function ClinicLeadSourcesPage() {
               borderRadius: 'var(--radius-control)',
               overflowX: 'auto',
               whiteSpace: 'pre',
-              lineHeight: 1.55,
+              lineHeight: 'var(--text-2xs-leading)',
             }}
           >
             {`fetch("${endpoint}", {

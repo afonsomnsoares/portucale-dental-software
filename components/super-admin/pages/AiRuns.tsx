@@ -267,7 +267,7 @@ export default function AiRuns() {
                   style={{
                     fontSize: 'var(--text-xs)',
                     color: 'var(--text-secondary)',
-                    lineHeight: 1.55,
+                    lineHeight: 'var(--text-xs-leading)',
                     margin: 0,
                     paddingTop: 12,
                     borderTop: '1px solid var(--bg-sunken)',

@@ -21,7 +21,7 @@ export default function NotFound() {
             fontSize: 'var(--text-3xl)',
             fontWeight: 'var(--weight-bold)',
             color: 'var(--accent)',
-            lineHeight: 1,
+            lineHeight: 'var(--text-3xl-leading)',
           }}
         >
           404
@@ -37,7 +37,12 @@ export default function NotFound() {
           Página não encontrada
         </h1>
         <p
-          style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.55, margin: '0 0 20px' }}
+          style={{
+            color: 'var(--text-secondary)',
+            fontSize: 'var(--text-base)',
+            lineHeight: 'var(--text-base-leading)',
+            margin: '0 0 20px',
+          }}
         >
           O endereço que abriu não existe ou deixou de estar disponível.
         </p>

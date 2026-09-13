@@ -82,7 +82,7 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
                   fontSize: 'var(--text-3xl)',
                   fontWeight: 'var(--weight-bold)',
                   color: 'var(--urgency-ok)',
-                  lineHeight: 1,
+                  lineHeight: 'var(--text-3xl-leading)',
                 }}
               >
                 {formatEUR(data.total)}

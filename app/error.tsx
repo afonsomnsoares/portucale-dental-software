@@ -49,7 +49,12 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
           Algo correu mal
         </h1>
         <p
-          style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', lineHeight: 1.55, margin: '0 0 20px' }}
+          style={{
+            color: 'var(--text-secondary)',
+            fontSize: 'var(--text-base)',
+            lineHeight: 'var(--text-base-leading)',
+            margin: '0 0 20px',
+          }}
         >
           Ocorreu um erro inesperado. Os dados não foram perdidos — pode tentar novamente.
         </p>

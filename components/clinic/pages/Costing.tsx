@@ -81,7 +81,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
           padding: '11px 14px',
           fontSize: 'var(--text-2xs)',
           fontWeight: 'var(--weight-bold)',
-          letterSpacing: '.06em',
+          letterSpacing: 'var(--text-2xs-tracking)',
           textTransform: 'uppercase',
           color: 'var(--text-muted)',
         }}
@@ -98,7 +98,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
                   textAlign: h ? 'right' : 'left',
                   padding: '7px 14px',
                   fontSize: 'var(--text-2xs)',
-                  letterSpacing: '.07em',
+                  letterSpacing: 'var(--text-2xs-tracking)',
                   textTransform: 'uppercase',
                   color: 'var(--text-muted)',
                   fontWeight: 'var(--weight-medium)',
@@ -259,7 +259,7 @@ export default function Costing({
                 borderRadius: 'var(--radius-card)',
                 marginBottom: 16,
                 fontSize: 'var(--text-xs)',
-                lineHeight: 1.55,
+                lineHeight: 'var(--text-xs-leading)',
               }}
             >
               {!rel.coverage.reliable && (

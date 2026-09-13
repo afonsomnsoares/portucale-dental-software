@@ -160,6 +160,20 @@
   --text-3xl-leading:  1;
   --text-3xl-tracking: -0.025em;
 
+  /* ─── Duas entrelinhas que o degrau não dá ────────────────────────────────
+     A entrelinha do degrau serve texto de interface: uma linha, duas, uma
+     célula. Há dois sítios onde não serve, e ambos apareciam no código como
+     um número solto repetido dezenas de vezes.
+
+     Texto que se LÊ — a nota clínica, o corpo do documento, o rodapé que
+     explica um ecrã — quer mais ar entre linhas do que um rótulo quer. E um
+     glifo sozinho (o ✕ de fechar, o ícone de um agente) não quer entrelinha
+     nenhuma: qualquer valor acima de 1 descentra-o dentro do botão.
+
+     São papéis, não tamanhos, e por isso não pertencem a nenhum degrau. */
+  --leading-prose: 1.7;   /* texto corrido: notas, documentos, rodapés    */
+  --leading-none:  1;     /* um glifo sozinho, centrado no seu botão      */
+
   /* ─── Peso ───────────────────────────────────────────────────────────────
      Quatro, e todos existem na fonte carregada em app/layout.tsx. Os `550`,
      `650`, `750` e `900` que andavam pelo código não estão lá: o browser

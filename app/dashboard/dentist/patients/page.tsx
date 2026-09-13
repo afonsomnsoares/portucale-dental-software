@@ -91,7 +91,7 @@ function Sintese({
             style={{
               fontSize: 'var(--text-lg)',
               fontWeight: 'var(--weight-bold)',
-              lineHeight: 1.1,
+              lineHeight: 'var(--text-lg-leading)',
               color: c.cor || 'var(--text-primary)',
               fontVariantNumeric: 'tabular-nums',
             }}
