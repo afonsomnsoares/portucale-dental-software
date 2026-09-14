@@ -23,3 +23,9 @@ dist/
 # o R2 não está configurado). É onde aterram documentos de doentes nesse modo — não
 # é conteúdo do repositório, e versioná-lo poria dados clínicos no histórico do git.
 public/uploads/
+
+# Destino por omissão do serviço `backup` do docker-compose.yml (BACKUP_DIR). Um
+# dump é a base de dados INTEIRA — processos clínicos, contactos, hashes de password.
+# É o ficheiro que nunca pode entrar num repositório, e o git não esquece o que já
+# seguiu uma vez.
+/backups/

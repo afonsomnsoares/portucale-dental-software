@@ -39,6 +39,19 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/next.config.mjs ./
 
+# ─── O diretório dos uploads existe na IMAGEM, de propósito ─────────────────
+# lib/uploads.ts grava em `process.cwd()/public/uploads` quando o R2 não está
+# configurado, criando o diretório com mkdir à primeira gravação. Isso bastava
+# enquanto ninguém montava nada lá — mas o docker-compose.yml passou a montar um
+# volume nomeado neste caminho (sem ele, cada redeploy levava consigo os anexos
+# das notas clínicas e os ficheiros que os doentes submetem pelo portal).
+#
+# E um volume nomeado sobre um caminho que NÃO existe na imagem nasce root:root,
+# o que deixaria o utilizador `nextjs` sem escrita — uploads a falhar com EACCES
+# em produção e em lado nenhum mais. Criado aqui, o Docker copia dono e permissões
+# deste diretório para o volume na primeira montagem, e o chown abaixo cobre-o.
+RUN mkdir -p ./public/uploads
+
 RUN chown -R nextjs:nodejs /app
 
 USER nextjs

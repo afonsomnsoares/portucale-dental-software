@@ -90,8 +90,26 @@ services:
         BUILD_COMMIT: ${BUILD_COMMIT:-}
     container_name: portucale-app
     restart: unless-stopped
+    # ─── Já não se publica na rede ──────────────────────────────────────────
+    # Era '3000:3000', ou seja, a app exposta em claro em todas as interfaces. O
+    # código põe HSTS e cookies `secure` (next.config.mjs e app/api/auth/login),
+    # e um cookie `secure` nem chega a ser guardado pelo browser sobre HTTP — em
+    # HTTP a app não ficava insegura, ficava impossível de usar, e o login falhava
+    # sem dizer porquê.
+    #
+    # Quem termina TLS agora é o serviço `caddy` abaixo, que alcança este pela rede
+    # interna do Compose (http://app:3000). O 127.0.0.1 fica só para depuração na
+    # própria máquina.
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
+    volumes:
+      # Os uploads sobrevivem ao redeploy. Sem R2 configurado, lib/uploads.ts grava
+      # em public/uploads DENTRO do contentor — e a imagem traz o public/ assado, por
+      # isso cada `docker compose up --build` apagava os anexos das notas clínicas e
+      # os ficheiros do portal do doente, deixando para trás as linhas de `uploads`
+      # a apontar para ficheiros que já não existiam. Ver o mkdir no Dockerfile, que
+      # é o que garante que este volume nasce com dono `nextjs` e não root.
+      - uploads:/app/public/uploads
     environment:
       # Admin connection — unused by the app itself once APP_DATABASE_URL
       # below is set (lib/db.ts prefers it), kept here only so this service
@@ -109,7 +127,12 @@ services:
       # 3000:3000, sem nada à frente — e nesse caso o cabeçalho é escrito por quem
       # chama. Pôr um proxy à frente sem acertar isto aqui deixa os limites por IP
       # a contar um valor forjado; ver .env.example.
-      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-0}
+      # Passou de 0 a 1: há agora exatamente um proxy de confiança à frente (o
+      # `caddy` abaixo), e é a entrada que ele escreve no X-Forwarded-For que vale.
+      # Com 0, a app confiaria no cabeçalho como o cliente o mandasse e os limites
+      # por IP contavam um valor forjado. Atrás de Cloudflare + caddy seriam 2 —
+      # contar a mais é pior do que contar a menos (ver .env.example).
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
       # Optional — leaving these unset just makes the SMS send step and the AI
       # report insight degrade gracefully (see lib/jobsRunner.ts and
       # app/api/reports/insight/route.ts), not error.
@@ -145,6 +168,13 @@ services:
       target: builder
     container_name: portucale-jobs
     restart: unless-stopped
+    volumes:
+      # O MESMO volume do serviço `app`, e não por simetria: o cleanupUploads de
+      # lib/jobsRunner.ts (linha ~675) apaga ficheiros expirados de public/uploads
+      # pelo disco. Sem esta montagem, este contentor varria um diretório vazio que
+      # é só dele — a retenção de uploads reportava sucesso todos os dias sem nunca
+      # apagar nada, e os ficheiros de verdade ficavam no volume do `app` para sempre.
+      - uploads:/app/public/uploads
     environment:
       # Intentionally the admin connection, not APP_DATABASE_URL — this
       # process reads across every tenant with no per-request session to
@@ -180,5 +210,126 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # ─── Terminação TLS ─────────────────────────────────────────────────────────
+  # O README dizia, e dizia bem, que TLS "não é responsabilidade do código". Só que
+  # também não estava a ser responsabilidade de ninguém: o compose publicava a app em
+  # claro e o produto guarda dados de saúde. Fica aqui, ao lado do resto, para que
+  # subir o produto e subir o TLS sejam o mesmo comando.
+  #
+  # Caddy e não nginx por uma razão só: os certificados. Renova sozinho via ACME sem
+  # cron, sem certbot e sem um ficheiro de configuração de cinquenta linhas — e um
+  # certificado que expira num domingo é o modo de falha real deste tipo de serviço.
+  #
+  # APP_DOMAIN por omissão é `localhost`, e aí o Caddy emite um certificado local
+  # assinado por ele próprio: a stack sobe em HTTPS numa máquina de desenvolvimento
+  # sem pedir um domínio a ninguém. Com um domínio a sério, o mesmo ficheiro passa a
+  # ir buscar um certificado Let's Encrypt sem mais nenhuma alteração.
+  caddy:
+    image: caddy:2-alpine
+    container_name: portucale-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-localhost}
+      # Só usado quando APP_DOMAIN é um domínio real. A Let's Encrypt manda avisos de
+      # expiração para aqui, que é o único canal que resta quando a renovação falha.
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Os certificados TÊM de sobreviver ao restart. Sem isto, cada reinício pedia
+      # certificados novos e a Let's Encrypt aplica limites por semana e por domínio —
+      # algumas reinicializações num dia mau e o domínio fica sem poder emitir.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  # ─── Cópias de segurança ────────────────────────────────────────────────────
+  # Não existia nada. Nenhum pg_dump, nenhum procedimento, nada fora do volume
+  # `pgdata` — que vive no mesmo disco que tudo o resto. Para um produto que guarda
+  # processos de doentes isso é a falha mais grave possível: irreversível, e a
+  # disponibilidade dos dados é obrigação do RGPD (art. 32.º), não uma cortesia.
+  #
+  # Imagem `postgres:17-alpine` e não a do projeto: é aqui que vive o pg_dump, e na
+  # MESMA versão maior do servidor acima — um pg_dump mais antigo do que o servidor
+  # recusa-se a correr, e é o género de coisa que só se descobre quando se precisa.
+  #
+  # Escreve para ${BACKUP_DIR:-./backups}, um bind mount e não um volume nomeado, de
+  # propósito: uma cópia de segurança tem de poder sair desta máquina, e para isso o
+  # rsync/rclone de quem administra precisa de a ver no sistema de ficheiros. Aponta
+  # isto a um disco montado ou a uma pasta sincronizada para fora.
+  #
+  # ISTO NÃO É AINDA OFFSITE. Cópias no mesmo servidor protegem de "apaguei a tabela
+  # errada", não de o servidor se perder. Ver o cabeçalho de scripts/backup.sh.
+  backup:
+    image: postgres:17-alpine
+    container_name: portucale-backup
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGDATABASE: portucale_dental
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    entrypoint: ['sh', '-c', 'while true; do sh /usr/local/bin/backup.sh || true; sleep "$$BACKUP_INTERVAL_SECONDS"; done']
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Vigia do pipeline de jobs ──────────────────────────────────────────────
+  # lib/platformStats.ts já calcula `staleJobs` e mostra-o em Saúde do Sistema. O
+  # problema é que é por CONSULTA: alguém tem de abrir a página. O serviço `jobs`
+  # acima é um `while true; sleep`, e se morrer morre calado — os lembretes de
+  # consulta e a fila de SMS param, e a clínica descobre-o pelos doentes que não
+  # apareceram.
+  #
+  # Processo à parte do `jobs` de propósito, e esse é o ponto todo: um vigia que
+  # corresse dentro do ciclo que vigia morria com ele.
+  watchdog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: portucale-watchdog
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/portucale_dental
+      # Quanto tempo sem uma passagem completa conta como avaria. Por omissão 4x o
+      # JOB_INTERVAL_SECONDS do serviço `jobs` (900s), para uma passagem lenta ou um
+      # restart não dispararem nada.
+      JOBS_STALE_AFTER_SECONDS: ${JOBS_STALE_AFTER_SECONDS:-3600}
+      WATCHDOG_INTERVAL_SECONDS: ${WATCHDOG_INTERVAL_SECONDS:-900}
+      # Opcional. Sem isto o vigia só grita no log do contentor (que é melhor do que
+      # o silêncio de hoje, mas continua a precisar de alguém a olhar). Com um número
+      # de operações aqui, manda SMS por Twilio — é o número de QUEM ADMINISTRA, não
+      # de um doente, e por isso não cai na regra do PRODUCT.md sobre o que sai da
+      # clínica para fora.
+      OPS_ALERT_PHONE: ${OPS_ALERT_PHONE:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          node --import tsx scripts/check-jobs-fresh.ts || true
+          sleep "$$WATCHDOG_INTERVAL_SECONDS"
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

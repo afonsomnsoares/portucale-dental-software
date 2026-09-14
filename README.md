@@ -805,13 +805,49 @@ docker compose up -d
 | Serviço | Imagem | Porta | Função |
 |---------|--------|-------|--------|
 | `postgres` | postgres:17-alpine | 127.0.0.1:5432 | Base de dados. Aplica `schema.sql` e cria o papel `portucale_app` no primeiro arranque |
-| `migrate` | Build (stage `builder`) | — | Corre `scripts/migrate.ts` uma vez e sai. `app` e `jobs` esperam pela conclusão (`service_completed_successfully`) |
-| `pgadmin` | dpage/pgadmin4:9 | 127.0.0.1:5050 | Interface de gestão da BD |
-| `app` | Build multi-stage | 3000 | Aplicação Next.js, ligada por `APP_DATABASE_URL` (com RLS) |
+| `migrate` | Build (stage `builder`) | — | Corre `scripts/migrate.ts` uma vez e sai. `app`, `jobs` e `watchdog` esperam pela conclusão (`service_completed_successfully`) |
+| `pgadmin` | dpage/pgadmin4:9 | 127.0.0.1:5050 | Interface de gestão da BD (perfil `tools`) |
+| `app` | Build multi-stage | **127.0.0.1:3000** | Aplicação Next.js, ligada por `APP_DATABASE_URL` (com RLS). Já não se publica na rede — quem a serve é o `caddy` |
+| `caddy` | caddy:2-alpine | 80, 443 | **Terminação TLS.** Certificado local com `APP_DOMAIN=localhost`; Let's Encrypt automático com um domínio a sério |
 | `jobs` | Build (stage `builder`) | — | Corre `scripts/run-jobs.ts` em ciclo. Usa deliberadamente a ligação admin: lê através de todas as clínicas, sem sessão que o delimite |
+| `watchdog` | Build (stage `builder`) | — | Corre `scripts/check-jobs-fresh.ts` em ciclo. Processo **separado** do `jobs`: um vigia dentro do ciclo que vigia morreria com ele |
+| `backup` | postgres:17-alpine | — | `pg_dump` periódico para `BACKUP_DIR`, com verificação de integridade e retenção. Ver `scripts/backup.sh` |
 
 `POSTGRES_APP_PASSWORD`, `PGADMIN_PASSWORD` e `JWT_SECRET` são obrigatórias — o Compose
 recusa arrancar sem elas.
+
+> **TLS não é opcional aqui.** O código põe HSTS e cookies `secure`, e um cookie `secure`
+> não é guardado pelo browser sobre HTTP — servida em claro, a app não ficava insegura,
+> ficava impossível de usar, com o login a falhar sem dizer porquê. Com `APP_DOMAIN`
+> em `localhost` (omissão) o Caddy assina um certificado local e a stack sobe em
+> `https://localhost`; com um domínio real, vai buscar um Let's Encrypt e renova-o
+> sozinho. Para o caso real faltam duas coisas que não são deste repositório: o domínio
+> a apontar para a máquina e as portas 80 e 443 abertas de fora — a **80 não é opcional**,
+> é por onde a renovação se faz.
+>
+> Com um proxy à frente, `TRUSTED_PROXY_HOPS` passou a `1` por omissão. Atrás de
+> Cloudflare + Caddy seriam `2`; contar a mais é pior do que contar a menos.
+
+> **Os uploads têm agora um volume.** Sem R2 configurado, `lib/uploads.ts` grava em
+> `public/uploads` dentro do contentor — e a imagem traz o `public/` assado, por isso
+> cada `docker compose up --build` levava consigo os anexos das notas clínicas e os
+> ficheiros do portal do doente, deixando atrás as linhas de `uploads` a apontar para
+> ficheiros que já não existiam. O volume `uploads` é montado no `app` **e** no `jobs`:
+> o `cleanupUploads` de `lib/jobsRunner.ts` apaga ficheiros pelo disco, e sem a segunda
+> montagem varria um diretório vazio e reportava sucesso todos os dias.
+
+> **Cópias de segurança: o que o serviço faz e o que ainda falta.** O `backup` corre
+> `pg_dump -Fc`, verifica cada ficheiro com `pg_restore --list` antes de o contar como
+> bom (um dump truncado tem tamanho, data e um nome tranquilizador), marca `.CORRUPTO`
+> o que não passa, e aplica retenção só ao que verificou. `scripts/restore.sh` faz o
+> caminho inverso e exige `PORTUCALE_RESTORE_CONFIRMO=1`, porque apaga o schema de
+> destino.
+>
+> **Isto não é offsite.** Cópias no mesmo disco protegem de «apaguei a tabela errada»,
+> não de perder o servidor. Aponta `BACKUP_DIR` a um disco montado ou sincroniza-o para
+> fora (`rclone sync`, `rsync`). E faz o ensaio de restauro descrito no cabeçalho de
+> `scripts/restore.sh` — obrigatoriamente depois de mudar a versão do Postgres, que é
+> a mudança que quebra restauros, e quebra-os em silêncio.
 
 > **Porque existe um serviço só para migrar.** O `initdb` do Postgres aplica apenas
 > `scripts/schema.sql`, que define cerca de metade das tabelas: `patients`, `patient_tasks`,
@@ -961,7 +997,11 @@ decisão, calibração e contas de terceiros.
 | `seed.ts --reset` | **Corrigido.** Apaga o schema inteiro em vez de uma lista de tabelas escrita à mão | A lista tinha voltado a ficar desatualizada, e falhava mal: `DROP TABLE tenants CASCADE` levava as chaves estrangeiras das tabelas fora da lista, e os `CREATE TABLE IF NOT EXISTS` das migrações não as repunham. **Instalações novas ficavam sem `REFERENCES tenants(id)`** em `purchase_orders`, `inventory_batches`, `inventory_movements` e companhia — silenciosamente, e só em bases criadas de raiz |
 | Notas clínicas | Texto simples na BD | Cifra ao nível da coluna com KMS por clínica |
 | Auth | JWT próprio | Suficiente hoje; NextAuth/Clerk se houver necessidade de SSO |
-| TLS | Não é responsabilidade do código — HSTS e cookies `secure` estão postos | Terminação é do deploy |
+| TLS | **Terminado.** Serviço `caddy` no Compose, certificado automático | Era verdade que a terminação é do deploy — mas não estava a ser de ninguém, e o compose publicava a app em claro. `TRUSTED_PROXY_HOPS` passou a `1` |
+| Cópias de segurança | **Existem.** `scripts/backup.sh` (verificado com `pg_restore --list`) e `scripts/restore.sh` | Não havia nada: nem `pg_dump`, nem procedimento, nada fora do volume `pgdata`. O passo que falta é **offsite** e é de quem administra |
+| Persistência de uploads | **Corrigida.** Volume `uploads` no `app` e no `jobs` | Sem R2, os anexos clínicos e os ficheiros do portal viviam dentro do contentor e desapareciam a cada redeploy, em silêncio |
+| Vigilância do pipeline | **Ativa.** `scripts/check-jobs-fresh.ts` no serviço `watchdog` | O `staleJobs` de `lib/platformStats.ts` já existia mas era por consulta; o ciclo do `jobs` morria calado. Alerta por log, e por SMS com `OPS_ALERT_PHONE` |
+| Testes de interface | **Continuam a não existir.** Nenhum Playwright/Cypress, nenhum teste de componente | Os 771 testes cobrem lógica e rotas; nenhum renderiza uma página. O dashboard é uma SPA cliente, por isso um `curl` vê sempre a casca `Loading…` — um componente que rebente com dados válidos não é apanhado por nada hoje |
 
 > **Nota sobre `.env.test`:** as credenciais da base de dados de testes não correspondem às
 > do `.env`, e por isso a suite de integração não conseguia sequer ligar-se — 128 testes

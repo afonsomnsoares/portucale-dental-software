@@ -1,0 +1,54 @@
+#  Terminação TLS à frente da app — ver o serviço `caddy` em docker-compose.yml.
+#
+#  ─── Porque é que isto existe ───────────────────────────────────────────────
+#  O código já fazia a sua parte: next.config.mjs manda Strict-Transport-Security,
+#  CSP e X-Frame-Options, e o cookie de sessão é `secure` (app/api/auth/login).
+#  Faltava o outro lado do contrato. Um cookie `secure` sobre HTTP não é guardado
+#  pelo browser, por isso a app publicada em claro não ficava insegura — ficava
+#  inutilizável, com o login a falhar sem explicação visível.
+#
+#  ─── Um ficheiro, dois ambientes ────────────────────────────────────────────
+#  APP_DOMAIN=localhost (omissão): o Caddy assina um certificado local e a stack
+#  sobe em https://localhost sem domínio nem ACME. O browser avisa que não conhece
+#  a autoridade — é esperado, e é a única diferença.
+#
+#  APP_DOMAIN=clinica.exemplo.pt: o mesmo ficheiro passa a ir buscar um certificado
+#  Let's Encrypt e a renová-lo sozinho. Nada mais muda aqui.
+#
+#  Pré-requisitos para o caso real, e são de rede, não deste ficheiro: o domínio a
+#  apontar para esta máquina, e as portas 80 e 443 abertas de fora. A 80 não é
+#  opcional — é por lá que o desafio ACME se resolve e, portanto, por onde a
+#  renovação acontece; fechá-la funciona até ao dia em que o certificado expira.
+
+{
+	# Vazio quando APP_DOMAIN é localhost, e nesse caso o Caddy ignora-o.
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	# A app não está publicada na rede (o compose prende-a a 127.0.0.1); este proxy
+	# alcança-a pelo nome do serviço na rede interna do Compose.
+	reverse_proxy app:3000
+
+	# ─── O cabeçalho que os limites por IP leem ───────────────────────────────
+	# O getClientIp de lib/rateLimit.ts conta as entradas do X-Forwarded-For de
+	# trás para a frente, tantas quantas TRUSTED_PROXY_HOPS (agora 1). O Caddy
+	# ACRESCENTA a entrada dele ao que o cliente mandou, por isso a última é sempre
+	# a que ele escreveu e é essa que vale — um X-Forwarded-For forjado pelo cliente
+	# fica para trás na lista e deixa de contar.
+	#
+	# Não se limpa o cabeçalho de entrada de propósito: com hops=1 já não é lido, e
+	# apagá-lo escondia o rasto de quem o tentou forjar.
+	header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+
+	# O log de acesso vai para stdout, que é onde o `docker compose logs caddy` o
+	# encontra. Sem isto, um 502 entre o proxy e a app não deixa rasto em lado nenhum.
+	log {
+		output stdout
+		format console
+	}
+
+	# Compressão: as páginas deste produto são HTML e JSON de dashboards, e a rede
+	# de uma clínica raramente é boa.
+	encode zstd gzip
+}
