@@ -5,6 +5,13 @@ node_modules
 # Qualquer variante (.env.local, .env.test.bak-review, ...). O sufixo é o que
 # fez escapar um backup com DATABASE_URL e JWT_SECRET lá dentro.
 .env*
+# Menos o exemplo, que é justamente o ficheiro que documenta a configuração e que,
+# por desenho, não traz valor nenhum lá dentro. Sem esta linha é apanhado pelo
+# `.env*` acima: continuava versionado por já o estar — o .gitignore não desiste de
+# um ficheiro que o git já segue — mas bastava removê-lo e repô-lo para desaparecer
+# sem aviso. A exceção é nominal e não um padrão: um `.env.sample` continua ignorado,
+# que é o que se quer. O exemplo é este, e é só um.
+!.env.example
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

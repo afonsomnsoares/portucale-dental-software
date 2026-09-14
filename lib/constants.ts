@@ -260,12 +260,21 @@ const DENTIST_NAV: NavItem[] = [
 // elas entrando na clínica (POST /api/tenants/enter), que leva às páginas do próprio
 // admin. Uma árvore em vez de duas a divergir.
 //
-// ─── Porque é que INTEGRAÇÕES e FATURAÇÃO saíram ────────────────────────────
-// Saíram do menu as duas, em momentos e por razões diferentes.
+// ─── A regra: o menu só liga o que está instrumentado ───────────────────────
+// Uma entrada de menu é uma promessa. Uma página NotInstrumented é honesta com quem lá
+// chega — diz o que faria e o que falta por baixo — mas só depois de a pessoa ter ido lá
+// ver. O link é que promete, e um menu que promete e não entrega é pior do que um menu
+// curto.
 //
-// INTEGRAÇÕES: quatro entradas, quatro páginas NotInstrumented, zero tabelas por baixo.
-// As páginas ficam no repositório — dizem o que fariam e o que falta instrumentar — e o
-// que sai é o link, porque um menu que promete e não entrega é pior do que um menu curto.
+// Foi por isso que saíram as quatro entradas de INTEGRAÇÕES, e é por isso que saem agora
+// as sete que sobravam do mesmo tipo: Avaliações, Tarefas da Plataforma, Suporte,
+// Sessões, Plataforma, Políticas de IA e Feature Flags. Todas eram placeholders de ~20
+// linhas atrás de um link no menu. As páginas ficam no repositório, como as das
+// Integrações: o que sai é o link.
+//
+// A saída é reversível e o caminho de volta é conhecido — 'Configuração' esteve nesta
+// lista e saiu dela ao ganhar `systemConfig()` por baixo. Instrumentar é o que repõe a
+// entrada; até lá, o menu diz a verdade sobre o que a plataforma faz hoje.
 //
 // FATURAÇÃO: saiu inteira, páginas incluídas. Não é a mesma decisão — é o âmbito a
 // encolher. Não há modelo de subscrições nem vai haver, por isso as quatro páginas de
@@ -302,11 +311,8 @@ const SUPER_ADMIN_NAV: NavItem[] = [
   { label: 'Execuções', href: '/dashboard/super-admin/ai/runs', group: 'AGENTES', requires: 'agents:read' },
   { label: 'Custos de IA', href: '/dashboard/super-admin/ai/costs', group: 'AGENTES', requires: 'agents:read' },
   { label: 'Falhas', href: '/dashboard/super-admin/ai/failures', group: 'AGENTES', requires: 'agents:read' },
-  { label: 'Avaliações', href: '/dashboard/super-admin/ai/evaluations', group: 'AGENTES', requires: 'agents:read' },
 
-  { label: 'Tarefas da Plataforma', href: '/dashboard/super-admin/ops/tasks', group: 'OPERAÇÕES' },
   { label: 'Incidentes', href: '/dashboard/super-admin/ops/incidents', group: 'OPERAÇÕES' },
-  { label: 'Suporte', href: '/dashboard/super-admin/ops/support', group: 'OPERAÇÕES' },
   {
     label: 'Eventos de Sistema',
     href: '/dashboard/super-admin/ops/events',
@@ -332,11 +338,7 @@ const SUPER_ADMIN_NAV: NavItem[] = [
     group: 'SEGURANÇA',
     requires: 'audit:read',
   },
-  { label: 'Sessões', href: '/dashboard/super-admin/security/sessions', group: 'SEGURANÇA', requires: 'users:manage' },
 
-  { label: 'Plataforma', href: '/dashboard/super-admin/settings', group: 'DEFINIÇÕES' },
-  { label: 'Políticas de IA', href: '/dashboard/super-admin/settings/ai-policies', group: 'DEFINIÇÕES' },
-  { label: 'Feature Flags', href: '/dashboard/super-admin/settings/feature-flags', group: 'DEFINIÇÕES' },
   { label: 'Configuração', href: '/dashboard/super-admin/settings/system', group: 'DEFINIÇÕES' },
   { label: 'Campos Schema', href: '/dashboard/super-admin/schema', group: 'DEFINIÇÕES', requires: 'schema:manage' },
 ];

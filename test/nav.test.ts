@@ -44,22 +44,28 @@ const SEM_LINK = new Map<string, string>([
   // ─── Estacionadas: descrevem o que fariam, sem dados por baixo ─────────────
   // Ficam no repositório porque o texto de cada uma (components/super-admin/NotInstrumented)
   // nomeia as tabelas que faltariam — é a especificação, e apagá-la perderia o raciocínio.
-  // O que saiu foi o LINK: um menu que promete nove secções e entrega uma é pior do que um
-  // menu honesto de seis.
+  // O que saiu foi o LINK, e a regra está escrita em lib/constants.ts: a página é honesta
+  // com quem lá chega, mas só depois de a pessoa ter ido lá ver. O link é que promete.
+  //
+  // Esta lista é o inverso do menu, e é de propósito que custa a escrever: cada linha
+  // obriga a dizer o que falta por baixo. Uma página que ganhe dados sai daqui e volta ao
+  // NAV — foi o que aconteceu a settings/system, que tinha ~20 linhas de placeholder e
+  // hoje lê `systemConfig()`.
   ...(
     [
-      ['integrations', 'Integrações'],
-      ['integrations/connections', 'Integrações'],
-      ['integrations/sync', 'Integrações'],
-      ['integrations/api', 'Integrações'],
+      ['integrations', 'precisa de um modelo de dados que não existe, e que não deve ser inventado antes do primeiro cliente'],
+      ['integrations/connections', 'idem — não há tabela de ligações a terceiros'],
+      ['integrations/sync', 'idem — não há registo de sincronizações'],
+      ['integrations/api', 'idem — não há chaves de API emitidas a guardar'],
+      ['ai/evaluations', 'não há tabela de avaliações de agentes; o que existe é `ai_runs`, que é execução e não avaliação'],
+      ['ops/tasks', 'as tarefas que existem são da clínica (`tasks.tenant_id`); tarefa ao nível da plataforma não tem tabela'],
+      ['ops/support', 'não há tabela de tickets, e um canal de suporte é produto antes de ser ecrã'],
+      ['security/sessions', 'a autenticação é por JWT assinado e sem estado: listar sessões exige um registo do lado do servidor que não existe. Metade da revogação já existe e é a metade difícil — `users.password_changed_at` (migração 046) invalida os tokens anteriores, e lib/permissions.ts revalida a cada pedido. O que falta é a LISTA'],
+      ['settings', 'não há tabela de configuração da plataforma; o que é configurável hoje são variáveis de ambiente, e essas veem-se em settings/system'],
+      ['settings/ai-policies', 'as fronteiras dos agentes estão no código (lib/agents/registry.ts) e não em dados — editá-las num ecrã é uma decisão de produto, não um CRUD'],
+      ['settings/feature-flags', 'não há tabela de flags nem sítio onde o código as leia'],
     ] as const
-  ).map(
-    ([p, grupo]) =>
-      [
-        `/dashboard/super-admin/${p}`,
-        `${grupo}: precisa de um modelo de dados que não existe, e que não deve ser inventado antes do primeiro cliente.`,
-      ] as [string, string],
-  ),
+  ).map(([p, razao]) => [`/dashboard/super-admin/${p}`, razao] as [string, string]),
   [
     '/dashboard/super-admin/locations',
     'Não há nada acima de `tenants`: a tabela é plana. Um dono com várias clínicas é uma migração, não um menu.',

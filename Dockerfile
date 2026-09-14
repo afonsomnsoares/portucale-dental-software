@@ -43,5 +43,23 @@ RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
+# ─── Que commit é este ──────────────────────────────────────────────────────
+# lib/platformStats.ts lê BUILD_COMMIT e mostra-o em Definições › Configuração.
+# Sem nada a injetá-lo, o campo respondia sempre null e a página dizia «não
+# definido» — verdade, mas inútil: a pergunta a que aquele ecrã existe para
+# responder é «o que é que está em produção AGORA», e sem o commit ela não tem
+# resposta.
+#
+# Runtime e não build: é lido a cada pedido, por isso tem de estar no ENV desta
+# imagem, e não na que a construiu. Fica aqui no fim de propósito — um commit
+# novo a cada build invalidaria tudo o que viesse a seguir, e a seguir não vem
+# nada. As camadas de npm ci e de build não dão por isto.
+#
+# Vazio por omissão para que um `docker build` sem argumento nenhum continue a
+# funcionar. Passa-se assim:
+#   docker build --build-arg BUILD_COMMIT=$(git rev-parse --short HEAD) .
+ARG BUILD_COMMIT=""
+ENV BUILD_COMMIT=$BUILD_COMMIT
+
 EXPOSE 3000
 CMD ["npm", "start"]

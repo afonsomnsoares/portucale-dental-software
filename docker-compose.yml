@@ -82,6 +82,12 @@ services:
       args:
         R2_ENDPOINT: ${R2_ENDPOINT:-}
         R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL:-}
+        # Aparece em Definições › Configuração, e é o que responde a «o que está
+        # em produção agora». O Compose não corre `git`, por isso quem constrói é
+        # que o traz:
+        #   BUILD_COMMIT=$(git rev-parse --short HEAD) docker compose build app
+        # Sem ele fica vazio e a página di-lo, em vez de inventar um valor.
+        BUILD_COMMIT: ${BUILD_COMMIT:-}
     container_name: portucale-app
     restart: unless-stopped
     ports:
