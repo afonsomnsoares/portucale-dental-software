@@ -1,5 +1,5 @@
 import { computeClinicComparison } from '../reports';
-import { callAgentTool } from './aiClient';
+import { aiIsConfigured, callAgentTool } from './aiClient';
 import { type AiInsight, clampInsights } from './insightCalc';
 import { aiActor, replaceOpenInsights } from './insights';
 
@@ -36,7 +36,7 @@ export async function reviewGroup() {
   const to = new Date().toISOString().slice(0, 10);
   const from = new Date(Date.now() - (WINDOW_DAYS - 1) * 86400000).toISOString().slice(0, 10);
   const comparison = await computeClinicComparison(from, to);
-  if (comparison.clinics.length < MIN_CLINICS) return { insights: 0, configured: true as const };
+  if (comparison.clinics.length < MIN_CLINICS) return { insights: 0, configured: aiIsConfigured() };
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'groupAgent',
@@ -80,8 +80,8 @@ export async function reviewGroup() {
     },
   });
 
-  if (result.status === 'unconfigured') return { insights: 0, configured: false as const };
-  if (result.status === 'failed') return { insights: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { insights: 0, configured: false };
+  if (result.status === 'failed') return { insights: 0, configured: aiIsConfigured() };
 
   // Teto: a receita somada de todo o grupo no período. Uma diferença entre clínicas não
   // pode valer mais do que tudo o que o grupo faturou.
@@ -91,8 +91,8 @@ export async function reviewGroup() {
     maxImpactEur: maxImpact,
     maxItems: 4,
   });
-  if (!insights.length) return { insights: 0, configured: true as const };
+  if (!insights.length) return { insights: 0, configured: aiIsConfigured() };
 
   // tenant_id NULL: insight de plataforma, não de nenhuma clínica.
-  return { ...(await replaceOpenInsights(null, AGENT_ID, insights, ACTOR)), configured: true as const };
+  return { ...(await replaceOpenInsights(null, AGENT_ID, insights, ACTOR)), configured: aiIsConfigured() };
 }

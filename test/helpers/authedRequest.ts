@@ -23,7 +23,25 @@ type RouteRequest = NextRequest;
 
 export function authedRequest(
   user: TestUser,
-  opts: { method?: string; url: string; body?: unknown; headers?: Record<string, string> },
+  opts: {
+    method?: string;
+    url: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+    /**
+     * A clínica em que o super-admin "entrou" — o cookie `acting_tenant` que
+     * POST /api/tenants/enter grava (ver lib/auth.ts:actingTenantId).
+     *
+     * Existe porque o super-admin não tem clínica própria: `user.tenantId` é null
+     * por construção, e as rotas com `tenant: 'required'` (lib/route.ts) recusam-lhe
+     * o pedido com 403 enquanto ele não disser de que clínica está a falar. Sem
+     * forma de pôr este cookie, um teste só conseguia exercitar o super-admin FORA
+     * de qualquer clínica — metade do comportamento real.
+     *
+     * Ignorado para todos os outros papéis, exatamente como em produção.
+     */
+    actingTenant?: string | null;
+  },
 ): RouteRequest {
   const token = signToken({
     id: user.id,
@@ -34,7 +52,9 @@ export function authedRequest(
   });
   const csrf = crypto.randomUUID();
   const headers = new Headers(opts.headers);
-  headers.set('cookie', `dent_token=${token}; dent_csrf=${csrf}`);
+  const cookies = [`dent_token=${token}`, `dent_csrf=${csrf}`];
+  if (opts.actingTenant) cookies.push(`acting_tenant=${opts.actingTenant}`);
+  headers.set('cookie', cookies.join('; '));
   headers.set('x-csrf-token', csrf);
 
   const init: RequestInit = { method: opts.method || 'GET', headers };

@@ -88,11 +88,37 @@ async function doEnsureSeeded() {
         });
       }
       await ensureTenantB(client);
+      await clearRuntimeCounters(client);
     } finally {
       await client.query('SELECT pg_advisory_unlock($1)', [SEED_LOCK_KEY]);
     }
   } finally {
     client.release();
+  }
+}
+
+// ─── O que é fixture e o que é estado de execução ───────────────────────────
+// `rate_limit_counters` (migração 036) é o contador partilhado que lib/rateLimitGlobal.ts
+// usa para o teto de escritas de lib/route.ts — 120 mutações por minuto e por
+// utilizador — e o travão do login em lib/rateLimitShared.ts. Vive na base de dados
+// de propósito, para valer entre instâncias.
+//
+// Numa base de testes isso torna-o estado que sobrevive a corridas. A suite faz mais
+// de 120 escritas com o mesmo super-admin, por isso a segunda corrida dentro do mesmo
+// minuto começava a receber 429 em testes que nada têm a ver com rate limiting — e a
+// mensagem («429 !== 200») não diz em lado nenhum que o problema é a corrida anterior.
+// Uma suite que só passa à primeira e falha à segunda não é uma suite em que se confie.
+//
+// Os testes que exercitam mesmo os travões (rate-limit-shared, login-oracle) não são
+// afetados: montam as suas próprias chaves e contam a partir do zero, que é o que isto
+// lhes garante.
+async function clearRuntimeCounters(client: import('pg').PoolClient) {
+  try {
+    await client.query('TRUNCATE rate_limit_counters');
+  } catch (e) {
+    // 42P01 = a tabela ainda não existe (base sem a migração 036). Não é motivo para
+    // impedir a suite de arrancar.
+    if ((e as { code?: string })?.code !== '42P01') throw e;
   }
 }
 

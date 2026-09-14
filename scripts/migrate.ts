@@ -57,11 +57,35 @@ async function columnExists(client: PgClient, table: string, column: string) {
   return r.rowCount > 0;
 }
 
+// ─── Numa base vazia, o schema base vem primeiro ────────────────────────────
+// As migrações são incrementos sobre scripts/schema.sql — a 001 já faz ALTER a tabelas
+// que espera encontrar. Contra uma base vazia, a primeira rebentava com
+//
+//   Migration failed: relation "patients" does not exist
+//
+// e o README mandava (linhas 108-109) correr `db:migrate` ANTES de `db:seed`, que era
+// justamente a ordem que não funcionava: só o seed.ts aplicava o schema.sql, por isso a
+// sequência documentada só passava em bases que já tinham sido semeadas alguma vez.
+//
+// Aplicar aqui é melhor do que trocar as duas linhas do README, por duas razões: o
+// schema.sql é idempotente (é tudo CREATE TABLE IF NOT EXISTS), e a ordem
+// «migrar, depois semear» é a que toda a gente espera — semear antes de migrar é que é
+// a surpresa. Quem já tem a base montada não nota diferença: a condição é falsa e isto
+// não corre.
+async function ensureBaseSchema(client: PgClient) {
+  if (await tableExists(client, 'patients')) return;
+  console.log('ℹ Base vazia — a aplicar scripts/schema.sql antes das migrações');
+  const schema = await readFile(join(__dirname, 'schema.sql'), 'utf8');
+  await client.query(schema);
+  console.log('✅ Schema base aplicado');
+}
+
 async function migrate() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
+    await ensureBaseSchema(client);
     await ensureMigrationsTable(client);
     const files = await listMigrationFiles();
     for (const f of files) {

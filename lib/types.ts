@@ -8,7 +8,6 @@
 
 export * from './types/appointment';
 export * from './types/audit';
-export * from './types/billing';
 export * from './types/clinic-ops';
 export * from './types/consent';
 export * from './types/daily-briefing';
@@ -16,6 +15,7 @@ export * from './types/dashboard';
 export * from './types/document';
 export * from './types/finance-reports';
 export * from './types/inventory';
+export * from './types/invoice';
 export * from './types/lab-order';
 export * from './types/lead-capture';
 export * from './types/lifecycle';

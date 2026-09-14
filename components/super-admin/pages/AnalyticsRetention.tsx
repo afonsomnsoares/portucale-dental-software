@@ -12,7 +12,9 @@ const BANDS = [
 
 // Retenção sem contrato: mede-se pelo uso, não pela subscrição.
 //
-// Não há tabela de subscrições, por isso não há churn no sentido comercial. O que há —
+// Não há tabela de subscrições — é decisão de âmbito, não lacuna (ver lib/constants.ts, onde
+// as quatro páginas de Faturação foram apagadas em vez de estacionadas: «estacionar uma página
+// diz "ainda não"; apagá-la diz "não"»). Por isso não há churn no sentido comercial. O que há —
 // e que na prática antecede o churn — é a clínica deixar de marcar. Uma clínica
 // dentária que não marca consultas há um mês já saiu, só ainda não avisou.
 export default function AnalyticsRetention({ initialData }: { initialData?: UsageRow[] } = {}) {
@@ -83,8 +85,9 @@ export default function AnalyticsRetention({ initialData }: { initialData?: Usag
           maxWidth: 720,
         }}
       >
-        Para haver churn e coortes no sentido comercial faltaria a tabela de subscrições (ver Faturação → Subscrições):
-        quando cada clínica assinou, por quanto, e quando cancelou. Isto mede o sinal que aparece primeiro.
+        Não há churn nem coortes no sentido comercial porque não há modelo de subscrições — nem vai haver, e as páginas
+        de faturação da plataforma foram apagadas por isso. Sem contrato não há data de adesão nem de cancelamento; o
+        que se mede aqui é o sinal que, de qualquer forma, aparece primeiro: deixar de marcar.
       </p>
     </div>
   );

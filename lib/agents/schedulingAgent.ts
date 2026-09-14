@@ -1,5 +1,5 @@
 import { computeScheduleOptimization } from '../scheduleOptimizer';
-import { callAgentTool } from './aiClient';
+import { aiIsConfigured, callAgentTool } from './aiClient';
 import { type AiInsight, clampInsights } from './insightCalc';
 import { aiActor, replaceOpenInsights } from './insights';
 
@@ -33,7 +33,7 @@ Usa severity "critical" só para o que rebenta se ninguém agir nas próximas 48
 
 export async function reviewSchedule(tenantId: string) {
   const optimization = await computeScheduleOptimization(tenantId, WINDOW_DAYS);
-  if (!optimization.moves.length) return { insights: 0, configured: true as const };
+  if (!optimization.moves.length) return { insights: 0, configured: aiIsConfigured() };
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'schedulingAgent',
@@ -76,13 +76,13 @@ export async function reviewSchedule(tenantId: string) {
     },
   });
 
-  if (result.status === 'unconfigured') return { insights: 0, configured: false as const };
-  if (result.status === 'failed') return { insights: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { insights: 0, configured: false };
+  if (result.status === 'failed') return { insights: 0, configured: aiIsConfigured() };
 
   // Sem valor monetário nesta análise (a agenda mede-se em minutos), por isso o teto de
   // impactEur é 0 — qualquer euro que a IA escrevesse aqui seria inventado.
   const insights = clampInsights(result.input.insights, { allowedKinds: KINDS, maxImpactEur: 0, maxItems: 5 });
-  if (!insights.length) return { insights: 0, configured: true as const };
+  if (!insights.length) return { insights: 0, configured: aiIsConfigured() };
 
-  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: true as const };
+  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: aiIsConfigured() };
 }

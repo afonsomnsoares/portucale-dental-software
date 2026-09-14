@@ -1,5 +1,7 @@
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { queryRead, warnSchemaGap } from './db';
-import type { PlatformHealth, UsageRow } from './types/platform';
+import type { PlatformHealth, SystemConfigInfo, UsageRow } from './types/platform';
 
 // ─── As leituras de plataforma, fora das rotas ──────────────────────────────
 // Estas consultas viviam dentro de app/api/platform/*. Saíram de lá quando as
@@ -111,5 +113,95 @@ export async function platformHealth(): Promise<PlatformHealth> {
     // Nomeado à parte para a UI não ter de adivinhar o que falta: são estes os
     // sinais que um "System Health" a sério teria e que este sistema não produz.
     notInstrumented: ['uptime HTTP', 'latência por endpoint', 'saúde de integrações', 'profundidade de filas'],
+  };
+}
+
+// ─── Configuração técnica em vigor ──────────────────────────────────────────
+// O que esta leitura NÃO faz, e é o ponto inteiro dela: não devolve o valor de
+// nenhum segredo. Devolve se está definido. A página que a desenha é lida por
+// quem opera a plataforma, com sessão iniciada — e um ecrã que mostre
+// ANTHROPIC_API_KEY é uma fuga de credenciais tão real como um log com a chave
+// lá dentro, com a diferença de ser mais fácil de fotografar.
+//
+// A lista é explícita e não derivada de process.env: enumerar o ambiente
+// exporia tudo o que a máquina tiver posto lá, incluindo o que não é nosso.
+// Cada linha nova aqui é uma decisão, que é exatamente o que se quer.
+const SECRET_KEYS: Array<{ key: string; group: string; note: string }> = [
+  { key: 'DATABASE_URL', group: 'Base de dados', note: 'Ligação de administração — corre migrações e ignora RLS' },
+  { key: 'APP_DATABASE_URL', group: 'Base de dados', note: 'Ligação restrita, sujeita às políticas de RLS' },
+  { key: 'JWT_SECRET', group: 'Autenticação', note: 'Assina as sessões' },
+  { key: 'JWT_SECRETS', group: 'Autenticação', note: 'Segredos antigos aceites durante uma rotação' },
+  { key: 'ANTHROPIC_API_KEY', group: 'Agentes', note: 'Sem esta, os agentes caem para regra fixa ou desligam-se' },
+  { key: 'TWILIO_ACCOUNT_SID', group: 'Comunicação', note: 'Conta Twilio' },
+  { key: 'TWILIO_AUTH_TOKEN', group: 'Comunicação', note: 'Valida a assinatura dos webhooks de entrada' },
+  { key: 'TWILIO_FROM_NUMBER', group: 'Comunicação', note: 'Número de origem das SMS' },
+  { key: 'R2_ENDPOINT', group: 'Ficheiros', note: 'Sem R2, os uploads caem para disco local' },
+  { key: 'R2_BUCKET', group: 'Ficheiros', note: 'Bucket dos documentos' },
+  { key: 'R2_ACCESS_KEY_ID', group: 'Ficheiros', note: 'Credencial de escrita' },
+  { key: 'R2_SECRET_ACCESS_KEY', group: 'Ficheiros', note: 'Credencial de escrita' },
+];
+
+/**
+ * A configuração técnica que o processo tem à frente agora.
+ *
+ * As três leituras degradam separadamente, de propósito: uma base de dados em
+ * baixo não pode esconder a versão em execução, e um diretório de migrações
+ * ilegível não pode fazer parecer que não há nada por aplicar.
+ */
+export async function systemConfig(): Promise<SystemConfigInfo> {
+  // ─── Versão e commit ──────────────────────────────────────────────────────
+  // O package.json é copiado para a imagem de produção (ver Dockerfile), por isso
+  // esta leitura vale nos dois ambientes. O commit não: não há nada a injetá-lo
+  // hoje, e por isso devolve-se null e a página diz que não está definido, em vez
+  // de inventar um «desconhecido» que se leia como valor.
+  let appVersion: string | null = null;
+  try {
+    const pkg = JSON.parse(await readFile(path.join(process.cwd(), 'package.json'), 'utf8'));
+    appVersion = typeof pkg?.version === 'string' ? pkg.version : null;
+  } catch {
+    appVersion = null;
+  }
+
+  // ─── Migrações: base contra repositório ───────────────────────────────────
+  const applied: string[] = await (async () => {
+    try {
+      const rows = await queryRead(`SELECT id FROM schema_migrations ORDER BY id`);
+      return rows.map((r) => String(r.id));
+    } catch (e) {
+      warnSchemaGap('systemConfig.schema_migrations', e);
+      return [];
+    }
+  })();
+
+  // null quando o diretório não existe: a imagem de produção não copia scripts/.
+  // Ver o comentário de SystemConfigInfo — «não sei» não pode virar «não há».
+  const onDisk: string[] | null = await (async () => {
+    try {
+      const files = await readdir(path.join(process.cwd(), 'scripts', 'migrations'));
+      return files.filter((f) => f.endsWith('.sql')).sort((a, b) => a.localeCompare(b));
+    } catch {
+      return null;
+    }
+  })();
+
+  const appliedSet = new Set(applied);
+  const diskSet = new Set(onDisk ?? []);
+
+  return {
+    runtime: {
+      appVersion,
+      commit: process.env.BUILD_COMMIT || process.env.GIT_COMMIT || null,
+      node: process.version,
+      env: process.env.NODE_ENV || 'development',
+    },
+    migrations: {
+      applied,
+      onDisk,
+      pending: onDisk ? onDisk.filter((f) => !appliedSet.has(f)) : [],
+      // A base à frente do código: aconteceu um rollback do repositório sem
+      // rollback da base, ou alguém aplicou uma migração que não foi commitada.
+      drift: onDisk ? applied.filter((id) => !diskSet.has(id)) : [],
+    },
+    secrets: SECRET_KEYS.map((s) => ({ ...s, set: !!process.env[s.key] })),
   };
 }

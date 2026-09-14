@@ -19,6 +19,44 @@ let tenantAId: string;
 let tenantBId: string;
 const CLINIC_NUMBER = '+351900111222';
 
+// ─── Um MessageSid tem de ser novo em cada corrida ──────────────────────────
+// O webhook deduplica por `provider_id` antes de fazer o que quer que seja (ver
+// handleInbound em lib/inbound.ts) — que é o comportamento certo, porque os
+// fornecedores reenviam o que não recebe 200 a tempo. A consequência para os testes é
+// que um sid escrito à mão só é processado UMA vez na vida da base de dados: a
+// primeira corrida passa, e todas as seguintes recebem `duplicate: true` e verificam
+// um efeito que nunca chegou a acontecer.
+//
+// Foi exatamente isso que aconteceu com 'sid-optout': o teste do opt-out passou na
+// primeira corrida e falhou em todas as outras, a apontar para um bug de produto que
+// não era o que estava a acontecer.
+const RUN = crypto.randomUUID();
+const sid = (name: string) => `sid-${name}-${RUN}`;
+
+// ─── Os testes de coordenação trazem o seu próprio doente ───────────────────
+// Pescar um doente da semente com `LIMIT 1` e um filtro é frágil por dois motivos que
+// já morderam os dois: sem ORDER BY a linha devolvida muda com a ordem física da heap
+// (que qualquer UPDATE altera), e o conjunto que sobra depende do que os testes
+// anteriores fizeram — o do opt-out silencia TODOS os que partilham o número, e a
+// semente dá o mesmo telefone a dezenas de fichas.
+//
+// Um doente criado aqui, com telefone único, não tem nenhum desses problemas: não é
+// apanhado pelo opt-out de outro teste, não colide no agent_contact_ledger, e a
+// pré-condição que o teste precisa — contactável, com telefone — passa a estar escrita
+// em vez de ser esperada da semente.
+let patientSeq = 0;
+async function freshContactablePatient(tenantId: string) {
+  patientSeq += 1;
+  // 9 dígitos, prefixo 96 (móvel PT), únicos por corrida e por teste.
+  const phone = `96${String(patientSeq).padStart(3, '0')}${RUN.replace(/\D/g, '').slice(0, 4).padEnd(4, '0')}`;
+  const [row] = await query(
+    `INSERT INTO patients (tenant_id, name, phone, comm_prefs)
+     VALUES ($1, $2, $3, '{}'::jsonb) RETURNING id, phone`,
+    [tenantId, `Coordenação ${patientSeq} (${RUN.slice(0, 8)})`, phone.slice(0, 9)],
+  );
+  return row;
+}
+
 before(async () => {
   await ensureSeeded();
   tenantAId = await getTenantAId();
@@ -96,7 +134,7 @@ test('webhook: sem destinatário é 400, não uma conversa órfã', async () => 
 test('webhook: um tenantId no corpo é ignorado', async () => {
   const res = await webhookPost(
     webhookRequest(
-      { To: CLINIC_NUMBER, From: '+351911222333', Body: 'bom dia', MessageSid: 'sid-tenant-injection', tenantId: tenantBId },
+      { To: CLINIC_NUMBER, From: '+351911222333', Body: 'bom dia', MessageSid: sid('tenant-injection'), tenantId: tenantBId },
       'segredo-correto',
     ),
     ctx,
@@ -109,13 +147,13 @@ test('webhook: um tenantId no corpo é ignorado', async () => {
 
 // Os fornecedores reenviam o que não recebe 200 a tempo.
 test('webhook: uma reentrega não cria uma segunda mensagem', async () => {
-  const body = { To: CLINIC_NUMBER, From: '+351911333444', Body: 'quero remarcar', MessageSid: 'sid-repetido-1' };
+  const body = { To: CLINIC_NUMBER, From: '+351911333444', Body: 'quero remarcar', MessageSid: sid('repetido') };
   const first = await webhookPost(webhookRequest(body, 'segredo-correto'), ctx);
   const second = await webhookPost(webhookRequest(body, 'segredo-correto'), ctx);
   assert.equal(first.status, 200);
   assert.equal(second.status, 200);
   assert.equal((await second.json()).duplicate, true);
-  const rows = await query(`SELECT id FROM conversation_messages WHERE provider_id='sid-repetido-1'`);
+  const rows = await query(`SELECT id FROM conversation_messages WHERE provider_id=$1`, [body.MessageSid]);
   assert.equal(rows.length, 1);
 });
 
@@ -123,7 +161,7 @@ test('webhook: uma reentrega não cria uma segunda mensagem', async () => {
 test('webhook: uma mensagem clínica escala e não recebe resposta automática', async () => {
   const res = await webhookPost(
     webhookRequest(
-      { To: CLINIC_NUMBER, From: '+351911444555', Body: 'tenho muitas dores e o dente partiu', MessageSid: 'sid-clinico' },
+      { To: CLINIC_NUMBER, From: '+351911444555', Body: 'tenho muitas dores e o dente partiu', MessageSid: sid('clinico') },
       'segredo-correto',
     ),
     ctx,
@@ -141,10 +179,16 @@ test('webhook: uma mensagem clínica escala e não recebe resposta automática',
 
 // Obrigação legal: processado sempre, independentemente do nível de autonomia.
 test('webhook: um opt-out é gravado no perfil do doente', async () => {
-  const [p] = await query(`SELECT id, phone FROM patients WHERE tenant_id=$1 AND phone IS NOT NULL LIMIT 1`, [tenantAId]);
+  // ORDER BY, e não LIMIT 1 solto: sem ordem declarada o Postgres devolve o que a
+  // heap lhe der, e a heap muda a cada UPDATE. Era isso que punha este teste e o da
+  // coordenação a escolher a mesma linha umas corridas e linhas diferentes noutras.
+  const [p] = await query(
+    `SELECT id, phone FROM patients WHERE tenant_id=$1 AND phone IS NOT NULL ORDER BY id LIMIT 1`,
+    [tenantAId],
+  );
   await query(`UPDATE patients SET comm_prefs='{}'::jsonb WHERE id=$1`, [p.id]);
   const res = await webhookPost(
-    webhookRequest({ To: CLINIC_NUMBER, From: String(p.phone), Body: 'STOP', MessageSid: 'sid-optout' }, 'segredo-correto'),
+    webhookRequest({ To: CLINIC_NUMBER, From: String(p.phone), Body: 'STOP', MessageSid: sid('optout') }, 'segredo-correto'),
     ctx,
   );
   assert.equal(res.status, 200);
@@ -156,10 +200,11 @@ test('webhook: um opt-out é gravado no perfil do doente', async () => {
 // ─── Coordenação entre agentes ──────────────────────────────────────────────
 
 test('coordenação: cinco pedidos para o mesmo doente no mesmo dia dão um contacto', async () => {
-  const [p] = await query(
-    `SELECT id FROM patients WHERE tenant_id=$1 AND comm_prefs->'doNotContact' IS NULL LIMIT 1`,
-    [tenantAId],
-  );
+  // Ordem declarada, e de propósito a começar pelo FIM: o teste do opt-out acima cala
+  // todos os doentes que partilham o número dele, e os dados de semente dão o mesmo
+  // telefone a dezenas de fichas. Sem isto, este teste procura um doente contactável
+  // exatamente no conjunto que o outro acabou de silenciar.
+  const p = await freshContactablePatient(tenantAId);
   await query(`DELETE FROM agent_contact_ledger WHERE patient_id=$1`, [p.id]);
 
   const pedido = (agentId: string, kind: string) => ({
@@ -192,10 +237,7 @@ test('coordenação: cinco pedidos para o mesmo doente no mesmo dia dão um cont
 });
 
 test('coordenação: só a mensagem autorizada é escrita em notifications', async () => {
-  const [p] = await query(
-    `SELECT id FROM patients WHERE tenant_id=$1 AND comm_prefs->'doNotContact' IS NULL OFFSET 1 LIMIT 1`,
-    [tenantAId],
-  );
+  const p = await freshContactablePatient(tenantAId);
   await query(`DELETE FROM agent_contact_ledger WHERE patient_id=$1`, [p.id]);
   await query(`DELETE FROM notifications WHERE patient_id=$1`, [p.id]);
 
@@ -215,7 +257,7 @@ test('coordenação: só a mensagem autorizada é escrita em notifications', asy
 });
 
 test('coordenação: um doente sem consentimento não recebe nada e a recusa fica escrita', async () => {
-  const [p] = await query(`SELECT id FROM patients WHERE tenant_id=$1 LIMIT 1`, [tenantAId]);
+  const p = await freshContactablePatient(tenantAId);
   await query(`UPDATE patients SET comm_prefs='{"doNotContact":["sms"]}'::jsonb WHERE id=$1`, [p.id]);
   await query(`DELETE FROM agent_contact_ledger WHERE patient_id=$1`, [p.id]);
 

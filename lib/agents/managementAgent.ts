@@ -1,5 +1,5 @@
 import { computeClinicSummary } from '../reports';
-import { callAgentTool } from './aiClient';
+import { aiIsConfigured, callAgentTool } from './aiClient';
 import { type AiInsight, clampInsights } from './insightCalc';
 import { aiActor, replaceOpenInsights } from './insights';
 
@@ -36,7 +36,7 @@ export async function reviewManagement(tenantId: string) {
   const to = new Date().toISOString().slice(0, 10);
   const from = new Date(Date.now() - (WINDOW_DAYS - 1) * 86400000).toISOString().slice(0, 10);
   const summary = await computeClinicSummary(tenantId, from, to);
-  if (!summary) return { insights: 0, configured: true as const };
+  if (!summary) return { insights: 0, configured: aiIsConfigured() };
 
   const m = summary.metrics;
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
@@ -84,8 +84,8 @@ export async function reviewManagement(tenantId: string) {
     },
   });
 
-  if (result.status === 'unconfigured') return { insights: 0, configured: false as const };
-  if (result.status === 'failed') return { insights: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { insights: 0, configured: false };
+  if (result.status === 'failed') return { insights: 0, configured: aiIsConfigured() };
 
   // Teto da perda: nada pode "custar" mais do que a receita do período mais o que já
   // estava identificado como potencial perdido e em dívida. Sem este limite, "a quebra
@@ -97,12 +97,12 @@ export async function reviewManagement(tenantId: string) {
     maxImpactEur: maxImpact,
     maxItems: 4,
   });
-  if (!insights.length) return { insights: 0, configured: true as const };
+  if (!insights.length) return { insights: 0, configured: aiIsConfigured() };
 
   // Só substitui os tipos que este agente escreve: as anomalias de lib/anomaly.ts vivem
   // sob o mesmo agente e não podem ser apagadas por esta corrida.
   return {
     ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR, { kinds: KINDS })),
-    configured: true as const,
+    configured: aiIsConfigured(),
   };
 }

@@ -260,11 +260,33 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
 // A retirada de consentimento escreve mesmo no perfil — não basta registá-la na
 // conversa. `comm_prefs.doNotContact` é o que lib/commPrefs.ts consulta antes de
 // qualquer envio automático, e é por isso o único sítio onde um opt-out tem efeito.
+// ─── O opt-out NÃO usa a resolução para um doente só ────────────────────────
+// `findPatientByAddress` devolve o primeiro de quantos partilhem o número, e assume-o
+// por escrito. Para atribuir uma CONVERSA isso é aceitável — o nome de quem escreveu
+// fica guardado à parte, e uma pessoa lê a conversa e percebe com quem fala.
+//
+// Para um opt-out não é, e a diferença é de natureza, não de grau. Num consultório os
+// números partilhados são a norma, não a exceção: um casal, um pai e os filhos, o fixo
+// de casa. Com a resolução para um só, quem escreve STOP vê o pedido gravado na ficha
+// de outra pessoa — continua a receber mensagens, e alguém que nunca pediu nada deixa
+// de as receber. As duas metades estão erradas, e a primeira é uma queixa à CNPD.
+//
+// Por isso aqui a pergunta é outra: QUEM PODE estar por trás deste número. Todos os que
+// o partilham são calados, e fica uma tarefa para uma pessoa confirmar quando há mais
+// do que um. A assimetria decide o desenho — um opt-out a mais desfaz-se com um clique;
+// um a menos é uma mensagem que não devia ter saído, e essa não se desfaz.
 async function processOptOut(tenantId: string, conversation: Record<string, unknown>, msg: InboundMessage) {
-  const patientId = conversation.patient_id as string | null;
-  if (patientId) {
-    await query(
-      `UPDATE patients
+  const e164 = toE164(msg.fromAddress);
+  const tail = e164 ? e164.replace(/\D/g, '').slice(-9) : '';
+
+  // A conversa pode estar ligada a um doente cujo telefone já não bate certo com o
+  // número de onde a mensagem veio (número mudado na ficha, por exemplo). Esse conta
+  // na mesma: foi a ele que atribuímos a conversa onde o pedido foi feito.
+  const conversationPatientId = (conversation.patient_id as string | null) || null;
+
+  const silenced = tail
+    ? await query(
+        `UPDATE patients
        SET comm_prefs = jsonb_set(
              COALESCE(comm_prefs, '{}'::jsonb),
              '{doNotContact}',
@@ -276,19 +298,59 @@ async function processOptOut(tenantId: string, conversation: Record<string, unkn
              ),
              TRUE
            )
-       WHERE id=$1 AND tenant_id=$2`,
-      [patientId, tenantId],
-    );
-  }
-  // Mesmo sem doente identificado o pedido tem de valer: cria-se a tarefa para uma
-  // pessoa ligar o número à ficha certa. Um opt-out que se perde por não sabermos quem
-  // é o remetente continua a ser um opt-out ignorado.
-  if (!patientId) {
+       WHERE tenant_id=$1
+         AND (
+           right(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9) = $2
+           OR id = $3::uuid
+         )
+       RETURNING id, name`,
+        [tenantId, tail, conversationPatientId],
+      )
+    : await query(
+        `UPDATE patients
+       SET comm_prefs = jsonb_set(
+             COALESCE(comm_prefs, '{}'::jsonb),
+             '{doNotContact}',
+             (
+               SELECT to_jsonb(ARRAY(SELECT DISTINCT unnest(
+                 COALESCE(ARRAY(SELECT jsonb_array_elements_text(comm_prefs->'doNotContact')), ARRAY[]::text[])
+                 || ARRAY['sms','phone']
+               )))
+             ),
+             TRUE
+           )
+       WHERE tenant_id=$1 AND id = $2::uuid
+       RETURNING id, name`,
+        [tenantId, conversationPatientId],
+      );
+
+  // Nenhum doente reconhecido: o pedido vale na mesma e alguém tem de o ligar à ficha
+  // certa. Um opt-out que se perde por não sabermos quem é o remetente continua a ser
+  // um opt-out ignorado.
+  if (!silenced.length) {
     await createTask(tenantId, null, {
       patientId: null,
       type: 'generic',
       title: `Pedido de não contacto de ${msg.fromAddress} — associar à ficha`,
       notes: `Recebido por ${msg.channel}: "${msg.body.slice(0, 200)}". Não foi possível identificar o doente pelo contacto.`,
+      autoAssign: true,
+    });
+    return;
+  }
+
+  // Mais do que um: calados todos (ver o cabeçalho), e uma pessoa confirma quem pediu
+  // mesmo. A tarefa nasce ligada ao doente da conversa quando há um, porque é o palpite
+  // mais informado que temos sobre quem escreveu.
+  if (silenced.length > 1) {
+    const nomes = silenced.map((p) => String(p.name)).join(', ');
+    await createTask(tenantId, null, {
+      patientId: conversationPatientId,
+      type: 'generic',
+      title: `Não contactar pedido de ${msg.fromAddress} — ${silenced.length} doentes partilham o número`,
+      notes:
+        `Recebido por ${msg.channel}: "${msg.body.slice(0, 200)}". ` +
+        `O pedido foi aplicado a todos por segurança: ${nomes}. ` +
+        `Confirmar quem o fez e reativar o contacto dos restantes, se for o caso.`,
       autoAssign: true,
     });
   }

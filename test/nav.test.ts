@@ -48,10 +48,6 @@ const SEM_LINK = new Map<string, string>([
   // menu honesto de seis.
   ...(
     [
-      ['billing/subscriptions', 'Faturação'],
-      ['billing/payments', 'Faturação'],
-      ['billing/usage', 'Faturação'],
-      ['billing/invoices', 'Faturação'],
       ['integrations', 'Integrações'],
       ['integrations/connections', 'Integrações'],
       ['integrations/sync', 'Integrações'],

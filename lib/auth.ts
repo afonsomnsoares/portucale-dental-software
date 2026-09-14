@@ -130,8 +130,6 @@ function parseCookieHeader(cookieHeader: string | null | undefined) {
 // que se perdia a cada navegação.
 export const ACTING_TENANT_COOKIE = 'acting_tenant';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function rawCookie(request: AuthRequest, name: string): string | null {
   return (
     request?.cookies?.get?.(name)?.value || parseCookieHeader(request?.headers?.get?.('cookie') || '')?.[name] || null
@@ -142,9 +140,23 @@ function rawCookie(request: AuthRequest, name: string): string | null {
 // é super_admin (ver scopeTenant), e um super_admin pode entrar em qualquer clínica de
 // qualquer forma — não há privilégio a ganhar por o forjar. Para todos os outros papéis é
 // pura e simplesmente ignorado.
+//
+// ─── Porque é que NÃO usa o `isUuid` de lib/validate.ts ─────────────────────
+// Parecem a mesma verificação e não são. O `isUuid` exige a versão em [1-5] e a variante
+// em [89ab], o que descreve o que `gen_random_uuid()` produz HOJE (v4). Esta pergunta é
+// outra: «isto tem a forma de um id?», e a resposta não deve depender da versão de UUID
+// que a base de dados por acaso gera. Um UUIDv7 — a mudança mais provável que esta tabela
+// pode sofrer, porque ordena por tempo e é melhor para os índices — tem '7' na posição da
+// versão e seria recusado aqui, deixando o super-admin sem conseguir entrar em clínica
+// nenhuma, sem erro visível e com o cookie gravado na mesma.
+//
+// O que protege isto não é a forma do valor: é o `user.role !== 'super_admin'` do
+// scopeTenant logo acima. Aqui basta recusar lixo com a forma errada.
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function actingTenantId(request: AuthRequest): string | null {
   const raw = rawCookie(request, ACTING_TENANT_COOKIE);
-  return raw && UUID_RE.test(raw) ? raw : null;
+  return raw && UUID_SHAPE.test(raw) ? raw : null;
 }
 
 // A clínica a que este pedido diz respeito. Substitui as ~31 repetições de

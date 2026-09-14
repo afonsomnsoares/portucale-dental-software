@@ -18,6 +18,28 @@ import { query, warnSchemaGap } from '../db';
 //                    app/api/reports/insight/route.ts).
 export type AgentToolResult<T> = { status: 'unconfigured' } | { status: 'failed' } | { status: 'ok'; input: T };
 
+// ─── «Há chave?» é uma pergunta diferente de «correu alguma coisa?» ─────────
+// O `configured` que os agentes devolvem era calculado de uma maneira que parecia certa
+// e não era: cada agente tem um atalho no início — sem leads, sem movimentos de agenda,
+// sem resumo — e esse atalho devolvia `configured: true` SEM nunca ter chamado a IA.
+//
+// Numa instalação sem ANTHROPIC_API_KEY e sem trabalho para fazer, o resultado era este:
+//
+//   leadTriage        configured: true    ← e não há chave nenhuma
+//   patientReview     configured: false   ← este tinha trabalho, chamou, e soube
+//
+// Ou seja: o campo que existe para dizer se a camada de IA está de pé respondia «sim»
+// consoante a clínica tivesse ou não trabalho nesse dia. Quem olha para job_runs ou para
+// o painel (components/shared/Reports.tsx lê `configured === false`) conclui que está
+// tudo bem precisamente quando está tudo desligado.
+//
+// Isto responde à pergunta de forma independente de ter havido chamada ou não, que é a
+// distinção que o comentário do callAgentTool abaixo já dizia ser de plataforma: «a
+// diferença entre "o agente não encontrou nada" e "o agente nunca foi chamado"».
+export function aiIsConfigured(): boolean {
+  return Boolean(process.env.ANTHROPIC_API_KEY);
+}
+
 // Sonnet e não Opus: estas chamadas correm em background, uma por clínica por passagem
 // do cron (ver scripts/run-jobs.ts), e são decisões estruturadas e limitadas — não
 // análise aberta. O custo por corrida importa mais aqui do que na análise a pedido de

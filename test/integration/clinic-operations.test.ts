@@ -196,11 +196,16 @@ test('incidentes: qualquer membro reporta (auto-serviço); só quem tem incident
   );
   assert.equal(blockedResolve.status, 403, 'quem reportou não pode resolver sem incidents:manage');
 
+  // `actingTenant`: resolver um incidente é trabalho DENTRO de uma clínica, e o
+  // super-admin não tem clínica própria. É o cookie que POST /api/tenants/enter grava
+  // que lhe diz de qual se trata — sem ele, lib/route.ts recusa com 403 antes de o
+  // handler correr, que é o comportamento correto e não o que este teste quer exercitar.
   const resolveRes = await putIncident(
     authedRequest(superAdmin, {
       method: 'PUT',
       url: `/api/incidents/${incident.id}`,
       body: { status: 'resolved', resolutionNotes: 'Peça substituída (teste)' },
+      actingTenant: tenantAId,
     }),
     { params: Promise.resolve({ id: incident.id }) },
   );
@@ -241,6 +246,7 @@ test('checklist templates: desativar (active:false) impede novas runs mas não a
       method: 'PUT',
       url: `/api/checklist-templates/${template.id}`,
       body: { active: false },
+      actingTenant: tenantAId,
     }),
     { params: Promise.resolve({ id: template.id }) },
   );

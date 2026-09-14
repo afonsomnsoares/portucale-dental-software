@@ -1,7 +1,7 @@
 import { appendAudit } from '../audit';
 import type { SessionUser } from '../auth';
 import { query } from '../db';
-import { callAgentTool } from './aiClient';
+import { aiIsConfigured, callAgentTool } from './aiClient';
 import { type AiInsight, clampInsights } from './insightCalc';
 import { replaceOpenInsights } from './insights';
 import { clampLeadTriage, type LeadContact } from './leadAgentCalc';
@@ -51,7 +51,7 @@ export async function triageOpenLeads(tenantId: string) {
      LIMIT $2`,
     [tenantId, MAX_CANDIDATES],
   );
-  if (!leads.length) return { triaged: 0, configured: true as const };
+  if (!leads.length) return { triaged: 0, configured: aiIsConfigured() };
 
   const candidates = new Map<string, LeadContact>(
     leads.map((l) => [String(l.id), { hasPhone: !!l.phone, hasEmail: !!l.email }]),
@@ -93,8 +93,8 @@ export async function triageOpenLeads(tenantId: string) {
     },
   });
 
-  if (result.status === 'unconfigured') return { triaged: 0, configured: false as const };
-  if (result.status === 'failed') return { triaged: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { triaged: 0, configured: false };
+  if (result.status === 'failed') return { triaged: 0, configured: aiIsConfigured() };
 
   const items = clampLeadTriage(candidates, (result.input.leads || []) as never);
 
@@ -116,7 +116,7 @@ export async function triageOpenLeads(tenantId: string) {
       AI_ACTOR.clinic,
     );
   }
-  return { triaged: items.length, configured: true as const };
+  return { triaged: items.length, configured: aiIsConfigured() };
 }
 
 // ─── Follow-up de leads frios ───────────────────────────────────────────────────
@@ -139,7 +139,7 @@ Mantém a qualification que o lead já tinha, a não ser que o tempo decorrido a
 
 export async function followUpColdLeads(tenantId: string) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return { drafted: 0, configured: false as const };
+  if (!apiKey) return { drafted: 0, configured: false };
 
   const leads = await query(
     `SELECT id, name, phone, email, source, notes, ai_qualification, ai_intent,
@@ -152,7 +152,7 @@ export async function followUpColdLeads(tenantId: string) {
      LIMIT $3`,
     [tenantId, COLD_AFTER_DAYS, MAX_CANDIDATES],
   );
-  if (!leads.length) return { drafted: 0, configured: true as const };
+  if (!leads.length) return { drafted: 0, configured: aiIsConfigured() };
 
   const candidates = new Map<string, LeadContact>(
     leads.map((l) => [String(l.id), { hasPhone: !!l.phone, hasEmail: !!l.email }]),
@@ -221,7 +221,7 @@ export async function followUpColdLeads(tenantId: string) {
       AI_ACTOR.clinic,
     );
   }
-  return { drafted: items.length, configured: true as const };
+  return { drafted: items.length, configured: aiIsConfigured() };
 }
 
 // ─── Conversão por origem ───────────────────────────────────────────────────────
@@ -249,7 +249,7 @@ export async function reviewLeadSources(tenantId: string) {
      ORDER BY total DESC`,
     [tenantId],
   );
-  if (!rows.length) return { insights: 0, configured: true as const };
+  if (!rows.length) return { insights: 0, configured: aiIsConfigured() };
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'leadAgent.sources',
@@ -286,8 +286,8 @@ export async function reviewLeadSources(tenantId: string) {
     },
   });
 
-  if (result.status === 'unconfigured') return { insights: 0, configured: false as const };
-  if (result.status === 'failed') return { insights: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { insights: 0, configured: false };
+  if (result.status === 'failed') return { insights: 0, configured: aiIsConfigured() };
 
   // Sem euros nesta análise: contam-se contactos e taxas, não receita.
   const insights = clampInsights(result.input.insights, {
@@ -295,7 +295,7 @@ export async function reviewLeadSources(tenantId: string) {
     maxImpactEur: 0,
     maxItems: 3,
   });
-  if (!insights.length) return { insights: 0, configured: true as const };
+  if (!insights.length) return { insights: 0, configured: aiIsConfigured() };
 
-  return { ...(await replaceOpenInsights(tenantId, 'lead', insights, AI_ACTOR)), configured: true as const };
+  return { ...(await replaceOpenInsights(tenantId, 'lead', insights, AI_ACTOR)), configured: aiIsConfigured() };
 }

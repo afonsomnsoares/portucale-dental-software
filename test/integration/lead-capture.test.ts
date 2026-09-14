@@ -95,10 +95,23 @@ test('sem header Authorization é rejeitado com 401', async () => {
 
 test('fonte desativada deixa de aceitar leads', async () => {
   const source = await createSource('Fonte a desativar');
-  await putLeadSource(
-    authedRequest(superAdmin, { method: 'PUT', url: `/api/lead-sources/${source.id}`, body: { active: false } }),
+  // O `actingTenant` é o cookie de "entrar na clínica" (POST /api/tenants/enter): sem
+  // ele o super-admin não tem clínica e lib/route.ts recusa o PUT com 403.
+  //
+  // E o resultado é verificado, que antes não era. Sem esta asserção, um PUT que
+  // falhasse deixava a fonte ativa e o teste ia falhar cinco linhas mais abaixo, num
+  // 201 onde se esperava um 401 — uma mensagem que aponta para a rota pública quando o
+  // problema estava aqui. Um teste deve falhar no sítio onde a coisa correu mal.
+  const deactivate = await putLeadSource(
+    authedRequest(superAdmin, {
+      method: 'PUT',
+      url: `/api/lead-sources/${source.id}`,
+      body: { active: false },
+      actingTenant: tenantAId,
+    }),
     { params: Promise.resolve({ id: source.id }) },
   );
+  assert.equal(deactivate.status, 200, 'a fonte tem mesmo de ficar desativada antes do que se testa a seguir');
 
   const res = await postPublicLead(
     anonRequest({

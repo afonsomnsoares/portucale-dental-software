@@ -45,6 +45,34 @@ async function resolveToken(token: string) {
 
 const SYSTEM_ACTOR = (tenantName: string) => ({ name: 'Portal do Paciente', role: 'system', clinic: tenantName });
 
+// ─── O uso único era verificado, mas não era reclamado ──────────────────────
+// `resolveToken` lê `used_at` e o handler só o escrevia no fim, depois de já ter
+// gravado tudo. Entre as duas coisas há uma janela: dois pedidos com o mesmo token
+// leem ambos `used_at` a null, passam ambos, e gravam ambos. Não é preciso ninguém
+// de má-fé — um duplo-clique no botão de submeter chega, e é o que acontece numa
+// ligação lenta, que é precisamente onde a pessoa carrega outra vez.
+//
+// O que se perdia com isso não era o ficheiro nem os dados: era a promessa de uso
+// único. Ficavam duas tarefas de revisão para a equipa confirmar a mesma submissão,
+// duas linhas na cronologia do doente e duas no registo de auditoria — e o registo
+// que devia dizer «isto aconteceu uma vez» passava a dizer outra coisa.
+//
+// A correção é fazer da marca de usado a própria reclamação: o `used_at IS NULL`
+// dentro do UPDATE torna-o atómico, e quem perder a corrida não recebe linha
+// nenhuma de volta. Duas escritas em paralelo, uma só a passar — decidido pela base
+// de dados, que é o único sítio onde isso se pode decidir.
+async function claimToken(tokenId: string): Promise<boolean> {
+  const [claimed] = await query(
+    `UPDATE patient_portal_tokens SET used_at=NOW() WHERE id=$1 AND used_at IS NULL RETURNING id`,
+    [tokenId],
+  );
+  return !!claimed;
+}
+
+// Mesma resposta que `resolveToken` dá a um token já gasto — de fora, perder a corrida
+// e chegar tarde são a mesma coisa, e devem ler-se como a mesma coisa.
+const alreadyUsed = () => Response.json({ error: 'This link was already used' }, { status: 410 });
+
 // Closes the loop on "validar informação": a patient submitting through the portal
 // creates a review task for the team instead of silently updating clinical/contact
 // records unsupervised. Reuses the existing 'follow_up' task type (no schema change) —
@@ -166,6 +194,11 @@ export const POST = withRoute<{ token: string }>({ public: true, crossOrigin: tr
       customJson = JSON.stringify(normalized.value || {});
     }
 
+    // Reclamado depois de validar o corpo e antes de gravar: um email malformado
+    // devolve 400 sem gastar o link (a pessoa corrige e volta a submeter), mas a
+    // partir daqui nenhuma segunda submissão chega às escritas abaixo.
+    if (!(await claimToken(row.id))) return alreadyUsed();
+
     await query(
       `UPDATE patients
        SET phone=COALESCE($1,phone), email=COALESCE($2,email), dob=COALESCE($3,dob),
@@ -173,7 +206,6 @@ export const POST = withRoute<{ token: string }>({ public: true, crossOrigin: tr
        WHERE id=$5`,
       [phone || null, email, dob, customJson, row.patient_id],
     );
-    await query(`UPDATE patient_portal_tokens SET used_at=NOW() WHERE id=$1`, [row.id]);
     await appendTimeline(row.patient_id, actor, 'admin', 'Paciente atualizou os seus dados através do portal');
     await createReviewTask(row.tenant_id, row.patient_id, 'Rever dados submetidos pelo paciente via portal');
     await appendAudit(
@@ -200,7 +232,10 @@ export const POST = withRoute<{ token: string }>({ public: true, crossOrigin: tr
     });
     if (!saved.ok) return Response.json({ error: saved.error }, { status: saved.status });
 
-    await query(`UPDATE patient_portal_tokens SET used_at=NOW() WHERE id=$1`, [row.id]);
+    // Depois de `saveUploadFile`, que valida o tamanho e os magic bytes ANTES de
+    // escrever seja o que for: um .docx recusado não gasta o link. A partir daqui só
+    // um dos pedidos em corrida cria a tarefa de revisão e a linha de auditoria.
+    if (!(await claimToken(row.id))) return alreadyUsed();
     await appendTimeline(row.patient_id, actor, 'admin', 'Paciente enviou um documento através do portal');
     await createReviewTask(row.tenant_id, row.patient_id, 'Rever documento submetido pelo paciente via portal');
     await appendAudit(
@@ -219,13 +254,18 @@ export const POST = withRoute<{ token: string }>({ public: true, crossOrigin: tr
   const signedBy = sanitizeString(body.signedBy, 200);
   if (!signedBy) return Response.json({ error: 'signedBy is required' }, { status: 400 });
 
+  // Este ramo já estava protegido contra a dupla escrita pelo `signed_by IS NULL` do
+  // UPDATE abaixo — era o único dos três que estava. A reclamação fica na mesma, e
+  // antes: é o que faz os três ramos responderem da mesma maneira à mesma corrida,
+  // em vez de um deles acertar por ter uma guarda própria que os outros não têm.
+  if (!(await claimToken(row.id))) return alreadyUsed();
+
   const [updated] = await query(
     `UPDATE consent_forms SET signed_by=$1 WHERE id=$2 AND tenant_id=$3 AND (signed_by IS NULL OR signed_by='') RETURNING id`,
     [signedBy, row.consent_form_id, row.tenant_id],
   );
   if (!updated) return Response.json({ error: 'This consent form was already signed' }, { status: 409 });
 
-  await query(`UPDATE patient_portal_tokens SET used_at=NOW() WHERE id=$1`, [row.id]);
   await appendTimeline(row.patient_id, actor, 'admin', `Consentimento assinado através do portal por ${signedBy}`);
   await createReviewTask(row.tenant_id, row.patient_id, 'Confirmar consentimento assinado via portal');
   await appendAudit(

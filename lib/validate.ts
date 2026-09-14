@@ -42,8 +42,17 @@ export function asEmail(v: unknown) {
 // as plain PT digits (9-digit mobile, no country code) — assume '351' when it's missing
 // so numbers don't silently fail to send. Numbers already carrying a country code pass
 // through untouched. Returns '' when there's nothing usable.
+//
+// ─── O prefixo de marcação internacional não é parte do número ──────────────
+// '00' é como se marca para fora a partir de Portugal, e é como muita gente escreve
+// um número internacional num formulário. Não pertence ao E.164 — o '+' ocupa
+// exatamente esse lugar — mas como só se olhava para o comprimento, '00351912345678'
+// saía daqui como '+00351912345678': um número que a Twilio recusa, numa mensagem que
+// alguém contava que fosse enviada. Descartar o '00' antes de decidir é o que põe as
+// duas escritas do mesmo número a dar no mesmo sítio.
 export function toE164(v: unknown) {
-  const digits = String(v || '').replace(/[^\d]/g, '');
+  let digits = String(v || '').replace(/[^\d]/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
   if (!digits) return '';
   if (digits.length === 9) return `+351${digits}`;
   return `+${digits}`;

@@ -39,6 +39,22 @@ let tenantBId: string;
 let guardedTables: Array<{ table: string; column: string }> = [];
 
 // Constrói o DSN do papel restrito a partir do admin, trocando só as credenciais.
+//
+// ─── Porque é que o DSN admin não serve de molde ao outro ───────────────────
+// A ligação admin pode ser por socket unix — `postgresql://afonso@/bd?host=/var/run/postgresql`,
+// que é como .env.test se liga numa máquina onde o `local` do pg_hba é `peer`. Duas
+// coisas se seguem, e nenhuma delas se resolvia com o `new URL(admin)` que aqui estava
+// (que rebentava com ERR_INVALID_URL nessa forma, e com ele toda a suite de RLS):
+//
+//   • peer autentica pelo utilizador do SISTEMA, e não existe um chamado
+//     portucale_app — logo o papel restrito NUNCA se pode ligar por socket, por
+//     muita password que se lhe ponha;
+//   • a password que acabámos de definir só vale onde há autenticação por password,
+//     ou seja, na porta TCP.
+//
+// Por isso o papel restrito liga-se sempre por TCP a localhost, mesmo quando o admin
+// veio por socket — é a mesma base de dados, pela porta que o próprio servidor diz
+// estar a servir.
 async function appConnectionString(): Promise<string> {
   const fromEnv = process.env.APP_DATABASE_URL;
   if (fromEnv) return fromEnv;
@@ -51,10 +67,30 @@ async function appConnectionString(): Promise<string> {
   const password = crypto.randomBytes(24).toString('hex');
   await adminPool.query(`ALTER ROLE portucale_app PASSWORD '${password}'`);
 
-  const url = new URL(admin);
-  url.username = 'portucale_app';
-  url.password = password;
-  return url.toString();
+  // O que decide é haver um host na URL. Um DSN por socket ou não é parsável de todo
+  // (`postgresql://utilizador@/bd?host=/var/run/postgresql`) ou traz o caminho em
+  // `host=` e hostname vazio; nos dois casos não há TCP a herdar, e pergunta-se ao
+  // servidor onde ele está a atender.
+  const tcp = (() => {
+    try {
+      const u = new URL(admin);
+      return u.hostname ? u : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  if (!tcp) {
+    const { rows } = await adminPool.query('SELECT current_setting($1) AS port, current_database() AS database', [
+      'port',
+    ]);
+    const { port, database } = rows[0];
+    return `postgresql://portucale_app:${encodeURIComponent(password)}@localhost:${port}/${database}`;
+  }
+
+  tcp.username = 'portucale_app';
+  tcp.password = password;
+  return tcp.toString();
 }
 
 /**

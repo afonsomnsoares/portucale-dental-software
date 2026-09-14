@@ -5,6 +5,7 @@ import { hasPermission, revalidateSession } from './permissions';
 import { requirePlatform } from './platform';
 import { getClientIp, rateLimit } from './rateLimit';
 import { rateLimitGlobal } from './rateLimitGlobal';
+import { isUuid } from './validate';
 
 // Política de tenant da rota. Os três casos que existem em app/api/*:
 //   'required' — a rota precisa de uma clínica concreta (o caso por omissão).
@@ -96,6 +97,63 @@ type RouteOptions =
 // Handler já autenticado, autorizado e com o tenant resolvido.
 type Handler<P> = (ctx: RouteContext<P>) => Promise<Response> | Response;
 
+// ─── Um id malformado é erro de quem chama, não do servidor ─────────────────
+// Há 45 rotas com um segmento que acaba numa coluna `uuid` do Postgres, e nenhuma
+// delas validava a forma antes de o entregar à consulta. O que acontecia era isto:
+//
+//   GET /api/patients/nao-e-uuid  →  500, corpo vazio
+//
+// O Postgres lança 22P02 («invalid input syntax for type uuid»), ninguém o apanha, e
+// o que devia ser um 400 sai como avaria do servidor. Não vaza nada — o corpo vem
+// vazio — mas é um 500 que qualquer sessão válida provoca à vontade, enche o log de
+// erros e afoga lá dentro as falhas a sério.
+//
+// Validar aqui e não nas 45 rotas é o mesmo argumento do resto deste ficheiro: uma
+// rota nova nasce protegida sem ninguém se lembrar de nada.
+//
+// ─── Porque é que a regra é o NOME do parâmetro ─────────────────────────────
+// Os segmentos dinâmicos desta aplicação são quatro: `id` (44 rotas), `offerId`,
+// `token` e `channel`. Os dois primeiros são UUID; os outros dois não são e nunca
+// serão — o token do portal do doente tem 43 caracteres base64url e o canal é um
+// nome ('sms', 'voice'). Validar por nome deixa-os passar por construção, em vez de
+// depender de uma lista de exceções que alguém tem de manter.
+//
+// ─── Nem todas as chaves desta base são UUID ────────────────────────────────
+// Onze tabelas usam inteiros: `inventory_items` e `schema_fields` são `integer`,
+// `audit_log`, `job_runs`, `statuses`, `treatment_codes` e companhia são `bigint`. Duas
+// delas estão atrás de rotas com `[id]` — /api/inventory/items/[id] e /api/schema/[id].
+//
+// A pergunta aqui não é «isto é um UUID?», é «isto é um identificador que a base
+// consegue sequer receber?». Recusar só o que não é nem uma coisa nem outra é o que
+// evita o 22P02 sem inventar uma regra que o schema não tem. Se amanhã uma tabela passar
+// a ter chave de outro formato, isto recusa-a — e é por isso que a mensagem de erro diz
+// o que diz, em vez de mentir sobre a causa.
+//
+// `isUuid` e não o UUID_SEGMENT mais solto que está mais abaixo neste ficheiro: as
+// duas perguntas são diferentes. Aquele agrupa chaves de registo e tem de errar para
+// o lado de casar demais; este recusa entrada e deve casar exatamente com o que o
+// `gen_random_uuid()` produz.
+//
+// O teto de 19 dígitos é o do bigint: acima disso o Postgres devolve «value out of
+// range», que é o mesmo 500 por outro nome.
+const NUMERIC_ID = /^\d{1,19}$/;
+
+function idParamsAreWellFormed(params: unknown): boolean {
+  if (!params || typeof params !== 'object') return true;
+  for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
+    if (key !== 'id' && !key.endsWith('Id')) continue;
+    // Ausente não é o mesmo que malformado: quem não recebeu o segmento trata disso
+    // à sua maneira, e não é aqui que se decide se ele era obrigatório.
+    if (value === undefined || value === null) continue;
+    if (!isUuid(value) && !NUMERIC_ID.test(String(value))) return false;
+  }
+  return true;
+}
+
+function malformedId() {
+  return Response.json({ code: 'BAD_REQUEST', message: 'Identificador inválido' }, { status: 400 });
+}
+
 // ─── Teto de escrita partilhado entre instâncias ────────────────────────────
 // O travão genérico de /api/* vive no proxy, que corre no runtime Edge e por isso
 // conta em memória, por instância (ver a nota em lib/rateLimit.ts). Com duas instâncias
@@ -153,6 +211,11 @@ const SESSION_REVOKED = 'sessão já não é válida (conta desativada, movida d
 // Normalizar é reduzir cada segmento identificador ao seu lugar. UUID, inteiro e
 // token opaco cobrem tudo o que esta aplicação põe num segmento — ver os `[id]`,
 // `[token]`, `[channel]` e `[offerId]` de app/api/.
+// Propositadamente mais solta do que o `isUuid` de lib/validate.ts, que valida se um
+// valor é aceitável. A pergunta aqui é outra — «este segmento é um identificador ou um
+// nome de rota?» — e é para agrupar chaves de registo, não para deixar passar nada. Uma
+// forma estrita falharia no sentido perigoso: um id que não casasse voltaria a ser um
+// balde só dele, que é exatamente a amplificação que a coalescência evita.
 const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NUMERIC_SEGMENT = /^\d+$/;
 // Um segmento longo sem separadores é um token (o do portal do doente tem 43
@@ -296,8 +359,13 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
       if (originCheck) return originCheck;
     }
 
+    // Resolvido uma vez: a validação abaixo e o handler falam do mesmo objeto, e
+    // `ctx.params` é uma promessa que não se deve consumir duas vezes.
+    const params = (await ctx?.params) as P;
+    if (!idParamsAreWellFormed(params)) return malformedId();
+
     if (options.public) {
-      return handler({ request, user: null as never, tenantId: '', params: (await ctx?.params) as P });
+      return handler({ request, user: null as never, tenantId: '', params });
     }
 
     const user = getAuth(request);
@@ -341,7 +409,7 @@ export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
       request: needsBody ? withParsedBody(request, body) : request,
       user,
       tenantId: tenantId as string,
-      params: (await ctx?.params) as P,
+      params,
     });
   };
 }

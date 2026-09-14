@@ -261,16 +261,20 @@ const DENTIST_NAV: NavItem[] = [
 // admin. Uma árvore em vez de duas a divergir.
 //
 // ─── Porque é que INTEGRAÇÕES e FATURAÇÃO saíram ────────────────────────────
-// Oito entradas, oito páginas NotInstrumented, zero tabelas por baixo. MRR, ARR, churn e
-// expansão precisam de um modelo de subscrições que não existe — e que não deve ser
-// inventado antes do primeiro cliente a pagar, porque a forma que ele tomar depende do
-// que se acabar por vender. 'Localizações' e 'Todas as Organizações' saíram pela mesma
-// razão de fundo: não há nada acima de `tenants`, a tabela é plana, e um dono com várias
-// clínicas é uma migração de modelo de dados e não uma entrada de menu.
+// Saíram do menu as duas, em momentos e por razões diferentes.
 //
-// As páginas ficam no repositório — dizem o que fariam e o que falta instrumentar. O que
-// sai é o link: um menu que promete nove secções e entrega uma é pior do que um menu
-// honesto de seis.
+// INTEGRAÇÕES: quatro entradas, quatro páginas NotInstrumented, zero tabelas por baixo.
+// As páginas ficam no repositório — dizem o que fariam e o que falta instrumentar — e o
+// que sai é o link, porque um menu que promete e não entrega é pior do que um menu curto.
+//
+// FATURAÇÃO: saiu inteira, páginas incluídas. Não é a mesma decisão — é o âmbito a
+// encolher. Não há modelo de subscrições nem vai haver, por isso as quatro páginas de
+// faturação e a de Receita foram apagadas em vez de estacionadas. Estacionar uma página
+// diz «ainda não»; apagá-la diz «não».
+//
+// 'Localizações' e 'Todas as Organizações' saíram por uma terceira razão: não há nada
+// acima de `tenants`, a tabela é plana, e um dono com várias clínicas é uma migração de
+// modelo de dados e não uma entrada de menu.
 const SUPER_ADMIN_NAV: NavItem[] = [
   { label: 'Painel da Plataforma', href: '/dashboard/super-admin', group: 'VISÃO GERAL' },
   { label: 'Estado do Sistema', href: '/dashboard/super-admin/health', group: 'VISÃO GERAL' },
@@ -320,7 +324,6 @@ const SUPER_ADMIN_NAV: NavItem[] = [
   },
   { label: 'Utilização', href: '/dashboard/super-admin/analytics/usage', group: 'ANÁLISE', requires: 'reports:read' },
   { label: 'Retenção', href: '/dashboard/super-admin/analytics/retention', group: 'ANÁLISE', requires: 'reports:read' },
-  { label: 'Receita', href: '/dashboard/super-admin/analytics/revenue', group: 'ANÁLISE', requires: 'reports:read' },
 
   { label: 'Registo de Auditoria', href: '/dashboard/super-admin/audit', group: 'SEGURANÇA', requires: 'audit:read' },
   {

@@ -1,5 +1,5 @@
 import { query } from '../db';
-import { callAgentTool } from './aiClient';
+import { aiIsConfigured, callAgentTool } from './aiClient';
 import { type AiInsight, clampInsights } from './insightCalc';
 import { aiActor, replaceOpenInsights } from './insights';
 
@@ -53,7 +53,7 @@ export async function reviewFinance(tenantId: string) {
 
   const outstanding = Number(balances?.em_divida || 0);
   const unbilledValue = Number(unbilled?.valor || 0);
-  if (outstanding <= 0 && unbilledValue <= 0) return { insights: 0, configured: true as const };
+  if (outstanding <= 0 && unbilledValue <= 0) return { insights: 0, configured: aiIsConfigured() };
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'financeAgent',
@@ -95,8 +95,8 @@ export async function reviewFinance(tenantId: string) {
     },
   });
 
-  if (result.status === 'unconfigured') return { insights: 0, configured: false as const };
-  if (result.status === 'failed') return { insights: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { insights: 0, configured: false };
+  if (result.status === 'failed') return { insights: 0, configured: aiIsConfigured() };
 
   // Teto: nenhuma conclusão pode valer mais do que todo o dinheiro que este agente viu.
   const insights = clampInsights(result.input.insights, {
@@ -104,7 +104,7 @@ export async function reviewFinance(tenantId: string) {
     maxImpactEur: outstanding + unbilledValue,
     maxItems: 4,
   });
-  if (!insights.length) return { insights: 0, configured: true as const };
+  if (!insights.length) return { insights: 0, configured: aiIsConfigured() };
 
-  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: true as const };
+  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: aiIsConfigured() };
 }

@@ -167,6 +167,7 @@ test('purchase orders: criação manual, edição de itens em draft, e transiç�
       method: 'PUT',
       url: `/api/purchase-orders/${order.id}`,
       body: { items: [{ itemId: item.id, quantity: 9 }] },
+      actingTenant: tenantAId,
     }),
     { params: Promise.resolve({ id: order.id }) },
   );
@@ -178,7 +179,7 @@ test('purchase orders: criação manual, edição de itens em draft, e transiç�
   // o que testamos aqui é que draft -> ordered -> ... -> ordered outra vez não avança por
   // engano quando já não é 'draft' nem 'ordered'->'cancelled'.
   const toOrdered = await putPurchaseOrder(
-    authedRequest(superAdmin, { method: 'PUT', url: `/api/purchase-orders/${order.id}`, body: { status: 'ordered' } }),
+    authedRequest(superAdmin, { method: 'PUT', url: `/api/purchase-orders/${order.id}`, actingTenant: tenantAId, body: { status: 'ordered' } }),
     { params: Promise.resolve({ id: order.id }) },
   );
   assert.equal(toOrdered.status, 200);
@@ -188,6 +189,7 @@ test('purchase orders: criação manual, edição de itens em draft, e transiç�
       method: 'PUT',
       url: `/api/purchase-orders/${order.id}`,
       body: { items: [{ itemId: item.id, quantity: 1 }] },
+      actingTenant: tenantAId,
     }),
     { params: Promise.resolve({ id: order.id }) },
   );
@@ -212,7 +214,7 @@ test('purchase orders: marcar como recebido cria lotes + movimentos e incrementa
   const qtyBefore = before?.currentQty || 0;
 
   const receiveRes = await putPurchaseOrder(
-    authedRequest(superAdmin, { method: 'PUT', url: `/api/purchase-orders/${order.id}`, body: { status: 'received' } }),
+    authedRequest(superAdmin, { method: 'PUT', url: `/api/purchase-orders/${order.id}`, actingTenant: tenantAId, body: { status: 'received' } }),
     { params: Promise.resolve({ id: order.id }) },
   );
   assert.equal(receiveRes.status, 200);
@@ -229,7 +231,7 @@ test('purchase orders: marcar como recebido cria lotes + movimentos e incrementa
 
   // não se pode receber duas vezes a mesma encomenda
   const receiveAgain = await putPurchaseOrder(
-    authedRequest(superAdmin, { method: 'PUT', url: `/api/purchase-orders/${order.id}`, body: { status: 'received' } }),
+    authedRequest(superAdmin, { method: 'PUT', url: `/api/purchase-orders/${order.id}`, actingTenant: tenantAId, body: { status: 'received' } }),
     { params: Promise.resolve({ id: order.id }) },
   );
   assert.equal(receiveAgain.status, 400);

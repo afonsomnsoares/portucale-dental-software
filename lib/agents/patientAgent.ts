@@ -1,5 +1,5 @@
 import { query } from '../db';
-import { callAgentTool } from './aiClient';
+import { aiIsConfigured, callAgentTool } from './aiClient';
 import { type AiInsight, clampInsights } from './insightCalc';
 import { aiActor, replaceOpenInsights } from './insights';
 
@@ -87,7 +87,7 @@ export async function reviewPatients(tenantId: string) {
     Number(facts.planos_por_decidir) +
     Number(facts.recalls_vencidos) +
     Number(facts.dormentes);
-  if (!signals) return { insights: 0, configured: true as const };
+  if (!signals) return { insights: 0, configured: aiIsConfigured() };
 
   const result = await callAgentTool<{ insights?: AiInsight[] }>({
     agent: 'patientAgent',
@@ -129,8 +129,8 @@ export async function reviewPatients(tenantId: string) {
     },
   });
 
-  if (result.status === 'unconfigured') return { insights: 0, configured: false as const };
-  if (result.status === 'failed') return { insights: 0, configured: true as const };
+  if (result.status === 'unconfigured') return { insights: 0, configured: false };
+  if (result.status === 'failed') return { insights: 0, configured: aiIsConfigured() };
 
   // O único euro que este agente viu foi o valor dos planos por decidir — é esse o teto.
   const insights = clampInsights(result.input.insights, {
@@ -138,7 +138,7 @@ export async function reviewPatients(tenantId: string) {
     maxImpactEur: openPlanValue,
     maxItems: 4,
   });
-  if (!insights.length) return { insights: 0, configured: true as const };
+  if (!insights.length) return { insights: 0, configured: aiIsConfigured() };
 
-  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: true as const };
+  return { ...(await replaceOpenInsights(tenantId, AGENT_ID, insights, ACTOR)), configured: aiIsConfigured() };
 }
