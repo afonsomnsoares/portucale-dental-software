@@ -13,7 +13,7 @@
 //    'erasure' é irreversível e não há como o desfazer — um clique não chega.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, PageHeader, Sel, Spinner } from '@/components/ui';
+import { ConfirmModal, Empty, PageHeader, Sel, Spinner } from '@/components/ui';
 
 const TIPO_LABEL: Record<string, string> = {
   access: 'Acesso aos dados',
@@ -65,6 +65,7 @@ export default function DataSubjectRequests() {
   const [aCarregar, setACarregar] = useState(true);
   const [erro, setErro] = useState('');
   const [aExecutar, setAExecutar] = useState<string | null>(null);
+  const [aConfirmar, setAConfirmar] = useState<Pedido | null>(null);
 
   const carregar = useCallback(async () => {
     setACarregar(true);
@@ -81,17 +82,17 @@ export default function DataSubjectRequests() {
     void carregar();
   }, [carregar]);
 
+  // Era o window.confirm() nativo. Para um apagamento definitivo ao abrigo do RGPD,
+  // uma caixa do sistema com os botões em inglês é o pior sítio possível para essa
+  // pergunta: não tem o nome do doente em destaque, não distingue o apagamento da
+  // exportação a não ser pelo texto corrido, e não trava um segundo clique.
   const executar = useCallback(
     async (p: Pedido) => {
-      const irreversivel = p.request_type === 'erasure';
-      const aviso = irreversivel
-        ? `Apagar definitivamente os dados de ${p.patient_name || 'este doente'}?\n\nIsto é irreversível e não há como o desfazer. Os registos clínicos que a lei obriga a conservar são mantidos anonimizados.`
-        : `Preparar a exportação dos dados de ${p.patient_name || 'este doente'}?`;
-      if (!window.confirm(aviso)) return;
       setAExecutar(p.id);
       setErro('');
       try {
         await api(`/data-subject-requests/${p.id}/fulfil`, { method: 'POST' });
+        setAConfirmar(null);
         await carregar();
       } catch (e) {
         setErro(e instanceof Error ? e.message : 'Não foi possível executar o pedido.');
@@ -101,6 +102,8 @@ export default function DataSubjectRequests() {
     },
     [api, carregar],
   );
+
+  const pedidoIrreversivel = aConfirmar?.request_type === 'erasure';
 
   return (
     <div>
@@ -224,7 +227,7 @@ export default function DataSubjectRequests() {
                       {p.status !== 'completed' && p.status !== 'rejected' && EXECUTAVEIS.has(p.request_type) && (
                         <button
                           type="button"
-                          onClick={() => executar(p)}
+                          onClick={() => setAConfirmar(p)}
                           disabled={aExecutar === p.id}
                           style={{
                             fontSize: 'var(--text-xs)',
@@ -250,6 +253,29 @@ export default function DataSubjectRequests() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {aConfirmar && (
+        <ConfirmModal
+          title={pedidoIrreversivel ? 'Apagar dados do doente' : 'Preparar exportação'}
+          confirmLabel={pedidoIrreversivel ? 'Apagar definitivamente' : 'Preparar exportação'}
+          busyLabel={pedidoIrreversivel ? 'A apagar…' : 'A preparar…'}
+          danger={pedidoIrreversivel}
+          emCurso={aExecutar === aConfirmar.id}
+          onConfirm={() => executar(aConfirmar)}
+          onCancel={() => setAConfirmar(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aConfirmar.patient_name || 'Este doente'}</strong>
+          <br />
+          {pedidoIrreversivel ? (
+            <>
+              Isto é irreversível e não há como o desfazer. Os registos clínicos que a lei obriga a conservar são
+              mantidos <strong>anonimizados</strong>.
+            </>
+          ) : (
+            <>Os dados do doente são reunidos num ficheiro para lhe serem entregues.</>
+          )}
+        </ConfirmModal>
       )}
     </div>
   );

@@ -89,8 +89,22 @@ export async function computeUpcomingRisk(tenantId: string, days = UPCOMING_RISK
     };
   });
 
-  for (const s of scored) {
-    await query(`UPDATE appointments SET risk_score=$1, risk_score_computed_at=NOW() WHERE id=$2`, [s.score, s.id]);
+  // Uma escrita só, e não uma por consulta. Cada `query()` abre a sua própria
+  // transação (lib/db.ts, por causa do SET LOCAL do contexto RLS), por isso isto eram
+  // centenas de idas e voltas ao Postgres por passagem numa clínica com agenda cheia —
+  // e a passagem corre para todas as clínicas, uma atrás da outra.
+  //
+  // O tenant_id vai na cláusula por cima do RLS de propósito: a política já barraria
+  // uma consulta de outra clínica, mas escrever a condição torna a intenção legível
+  // sem ter de ir ler as políticas.
+  if (scored.length) {
+    await query(
+      `UPDATE appointments a
+          SET risk_score = v.score, risk_score_computed_at = NOW()
+         FROM (SELECT unnest($1::uuid[]) AS id, unnest($2::int[]) AS score) AS v
+        WHERE a.id = v.id AND a.tenant_id = $3`,
+      [scored.map((s) => s.id), scored.map((s) => Math.round(s.score)), tenantId],
+    );
   }
 
   scored.sort((a, b) => b.score - a.score);

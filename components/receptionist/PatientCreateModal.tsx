@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react';
 import SchemaFieldInput, { fieldLabel, type SchemaField } from '@/components/shared/SchemaFieldInput';
 import { FormField, GhostBtn, Inp, Modal, PrimaryBtn } from '@/components/ui';
+import { LIMITES } from '@/lib/validate';
 
 export interface NewPatientForm {
   name: string;
@@ -54,6 +55,7 @@ export default function PatientCreateModal({
         <FormField label="Nome completo *">
           <Inp
             value={form.name}
+            maxLength={LIMITES.nome}
             placeholder="Maria Silva"
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, name: e.target.value })}
           />
@@ -69,6 +71,7 @@ export default function PatientCreateModal({
         <FormField label="Telefone">
           <Inp
             value={form.phone}
+            maxLength={LIMITES.telefone}
             placeholder="912 345 678"
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, phone: e.target.value })}
           />
@@ -85,6 +88,7 @@ export default function PatientCreateModal({
       <FormField label="Seguro">
         <Inp
           value={form.insurance}
+          maxLength={LIMITES.seguro}
           placeholder="Multicare"
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...form, insurance: e.target.value })}
         />

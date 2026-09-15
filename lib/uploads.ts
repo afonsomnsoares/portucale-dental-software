@@ -17,6 +17,29 @@ import { asEnum } from './validate';
 // quem já os importava daqui.
 export { EXTENSION_FOR_TYPE, UPLOAD_ALLOWED_TYPES, UPLOAD_CATEGORIES, UPLOAD_MAX_BYTES } from './uploadsCalc';
 
+// ─── Onde ficam os ficheiros quando o R2 não está configurado ────────────────
+// FORA de `public/`. O Next serve `public/` estaticamente e sem passar por nenhuma
+// rota, por isso um ficheiro lá dentro é um ficheiro publicado: bastava ter o
+// endereço para abrir um raio-X, um documento de identificação ou um consentimento
+// assinado — sem sessão, de qualquer clínica, e mesmo depois de a retenção o ter
+// dado por expirado.
+//
+// Aqui, o único caminho até ao ficheiro é app/api/uploads/[id]/file.
+export const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
+
+// ─── E o que já estava gravado no sítio antigo ───────────────────────────────
+// As instalações que correram antes desta mudança têm os ficheiros em
+// `public/uploads`. Não se movem aqui: mover ficheiros a partir do código da
+// aplicação, com um volume do Docker montado por baixo e possivelmente dois
+// processos a correr ao mesmo tempo, é como se perdem anexos clínicos.
+//
+// Em vez disso, a leitura e o apagamento olham para os dois sítios. Os ficheiros
+// novos nascem no diretório privado; os antigos continuam a ser servidos — mas agora
+// só através da rota, que é o que interessa. Quando a operação os mover (ou quando a
+// retenção os tiver apagado a todos), esta constante e os dois sítios que a usam
+// saem daqui.
+export const LEGACY_UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
+
 export interface SaveUploadInput {
   tenantId: string;
   patientId: string | null;
@@ -80,10 +103,14 @@ export async function saveUploadFile({
     }
   }
   if (!out) {
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-    await writeFile(path.join(uploadsDir, filename), buf);
-    out = { url: `/uploads/${filename}`, storage: 'local', storageKey: filename };
+    // ─── Fora de `public/`, de propósito ──────────────────────────────────
+    // Isto gravava em `public/uploads`, que o Next serve estaticamente e sem
+    // verificação nenhuma: qualquer pessoa com o endereço abria um raio-X ou um
+    // consentimento assinado. Em UPLOADS_DIR, o único caminho até ao ficheiro é
+    // app/api/uploads/[id]/file, que confere sessão, clínica e validade.
+    await mkdir(UPLOADS_DIR, { recursive: true });
+    await writeFile(path.join(UPLOADS_DIR, filename), buf);
+    out = { url: '', storage: 'local', storageKey: filename };
   }
 
   const days = Number(process.env.UPLOAD_RETENTION_DAYS || 90);
@@ -106,6 +133,21 @@ export async function saveUploadFile({
     ],
   );
 
+  // ─── O `url` aponta para a rota, nunca para o armazenamento ────────────────
+  // Guardava-se aqui `/uploads/<uuid>.<ext>` (o diretório estático do Next) ou o URL
+  // público do bucket R2. Nos dois casos, quem tivesse o endereço via o ficheiro sem
+  // sessão, de qualquer clínica e mesmo depois de expirado — o controlo de acesso a
+  // raios-X e consentimentos era o endereço ser difícil de adivinhar.
+  //
+  // Agora é sempre app/api/uploads/[id]/file, que confere sessão, clínica e validade
+  // a cada pedido. `storage` e `storage_key` continuam a dizer onde o ficheiro está
+  // mesmo; só esta coluna é que deixou de o revelar.
+  //
+  // Em dois passos porque o id só existe depois do INSERT (DEFAULT gen_random_uuid()).
+  const publicUrl = `/api/uploads/${row.id}/file`;
+  await query(`UPDATE uploads SET url=$1 WHERE id=$2`, [publicUrl, row.id]);
+  row.url = publicUrl;
+
   if (taskId) {
     await completeTask(tenantId, taskId);
   }
@@ -118,7 +160,6 @@ export async function saveUploadFile({
 // toca em I/O), e é o mesmo caminho para R2 e para disco local — quem chama não
 // tem de saber qual está configurado.
 export async function deleteStoredFiles(storageKeys: string[]) {
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   const r2 = getR2Config();
   let removed = 0;
   const failed: string[] = [];
@@ -135,7 +176,14 @@ export async function deleteStoredFiles(storageKeys: string[]) {
     // um caminho vindo do cliente — mas o basename é barato e fecha a porta a
     // travessia de diretórios se isso alguma vez mudar.
     try {
-      await unlink(path.join(uploadsDir, path.basename(key)));
+      // Os dois sítios: o novo e o antigo (ver LEGACY_UPLOADS_DIR). Um apagamento
+      // ao abrigo do RGPD não pode deixar a cópia antiga para trás.
+      const nome = path.basename(key);
+      const resultados = await Promise.allSettled([
+        unlink(path.join(UPLOADS_DIR, nome)),
+        unlink(path.join(LEGACY_UPLOADS_DIR, nome)),
+      ]);
+      if (!resultados.some((r) => r.status === 'fulfilled')) throw new Error('nenhum dos caminhos tinha o ficheiro');
       removed += 1;
     } catch {
       // Ficheiro já ausente conta como apagado; qualquer outra falha também não

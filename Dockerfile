@@ -33,6 +33,26 @@ ENV R2_PUBLIC_BASE_URL=$R2_PUBLIC_BASE_URL
 
 RUN npm run build
 
+# ─── Stage dos processos de fundo: migrate, jobs e watchdog ─────────────────
+# Os três correm código nosso continuamente em produção e apontavam para a stage
+# `builder`, que nunca define USER — ou seja, corriam como ROOT, ao contrário da
+# imagem final, que baixa corretamente para `nextjs`. O `jobs` é o mais exposto dos
+# três: é ele que apaga ficheiros na retenção e que fala com a API do Anthropic.
+#
+# Continua a herdar do `builder` porque é dele que vêm as dependências de
+# desenvolvimento — o tsx que corre os scripts .ts está em devDependencies e não
+# existe na stage `deps`.
+#
+# O uid/gid são os MESMOS da imagem final de propósito: o volume `uploads` nasce com
+# o dono que o runner lhe deu (ver o mkdir mais abaixo), e o `jobs` monta esse mesmo
+# volume para apagar ficheiros expirados. Com um uid diferente, a limpeza passava a
+# falhar com EACCES — e a falhar em silêncio, porque o job regista sucesso à mesma.
+FROM builder AS worker
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+RUN mkdir -p ./data/uploads ./public/uploads && chown -R nextjs:nodejs /app
+USER nextjs
+
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -52,7 +72,7 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/next.config.mjs ./
 
 # ─── O diretório dos uploads existe na IMAGEM, de propósito ─────────────────
-# lib/uploads.ts grava em `process.cwd()/public/uploads` quando o R2 não está
+# lib/uploads.ts grava em `process.cwd()/data/uploads` quando o R2 não está
 # configurado, criando o diretório com mkdir à primeira gravação. Isso bastava
 # enquanto ninguém montava nada lá — mas o docker-compose.yml passou a montar um
 # volume nomeado neste caminho (sem ele, cada redeploy levava consigo os anexos
@@ -62,7 +82,12 @@ COPY --from=builder /app/next.config.mjs ./
 # o que deixaria o utilizador `nextjs` sem escrita — uploads a falhar com EACCES
 # em produção e em lado nenhum mais. Criado aqui, o Docker copia dono e permissões
 # deste diretório para o volume na primeira montagem, e o chown abaixo cobre-o.
-RUN mkdir -p ./public/uploads
+# `data/uploads` é o sítio novo: FORA de public/, porque o Next serve public/
+# estaticamente e sem passar por rota nenhuma — um ficheiro lá dentro é um ficheiro
+# publicado. `public/uploads` continua a ser criado para as instalações que já lá têm
+# ficheiros (LEGACY_UPLOADS_DIR em lib/uploads.ts) e para o volume antigo continuar a
+# montar com o dono certo.
+RUN mkdir -p ./data/uploads ./public/uploads
 
 RUN chown -R nextjs:nodejs /app
 

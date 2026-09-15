@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
   Badge,
+  ConfirmModal,
   DangerBtn,
   DataTable,
   Empty,
@@ -40,6 +41,9 @@ export default function PrescriptionsPage() {
   // Guardar falhava em silêncio: o modal fechava-se na mesma e a linha nova
   // não aparecia. Quem escreveu não sabia se tinha ficado gravado.
   const [erroEscrita, setErroEscrita] = useState('');
+  // Anular uma prescrição é mexer num registo clínico, e era um clique só.
+  const [aAnular, setAAnular] = useState<Prescription | null>(null);
+  const [anulando, setAnulando] = useState(false);
   const [form, setForm] = useState<NewPrescriptionForm>({
     medication: '',
     dosage: '',
@@ -97,12 +101,17 @@ export default function PrescriptionsPage() {
   }
 
   async function cancel(id: string) {
+    if (anulando) return;
     setErroEscrita('');
+    setAnulando(true);
     try {
       await api(`/prescriptions/${id}`, { method: 'PUT', body: { status: 'cancelled' } });
+      setAAnular(null);
       prescriptionsQuery.refetch();
     } catch (e) {
       setErroEscrita(e instanceof Error ? e.message : 'Não foi possível atualizar.');
+    } finally {
+      setAnulando(false);
     }
   }
 
@@ -201,7 +210,7 @@ export default function PrescriptionsPage() {
                         {p.status !== 'cancelled' && (
                           <DangerBtn
                             style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
-                            onClick={() => cancel(p.id)}
+                            onClick={() => setAAnular(p)}
                           >
                             Anular
                           </DangerBtn>
@@ -293,6 +302,24 @@ export default function PrescriptionsPage() {
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
+      )}
+
+      {aAnular && (
+        <ConfirmModal
+          title="Anular prescrição"
+          confirmLabel="Anular prescrição"
+          busyLabel="A anular…"
+          emCurso={anulando}
+          onConfirm={() => cancel(aAnular.id)}
+          onCancel={() => setAAnular(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>
+            {aAnular.medication} · {aAnular.dosage}
+          </strong>
+          <br />
+          Fica marcada como anulada no registo do doente. O histórico não é apagado — a prescrição continua visível, com
+          o estado «anulada».
+        </ConfirmModal>
       )}
     </div>
   );

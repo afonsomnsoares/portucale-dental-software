@@ -470,6 +470,66 @@ export function Modal({
   );
 }
 
+/**
+ * Confirmação de uma ação que não se desfaz.
+ *
+ * ─── Porque é que isto passou a existir ─────────────────────────────────────
+ * Havia cinco convenções ao mesmo tempo para a mesma pergunta: o `confirm()` nativo
+ * do browser (em inglês no cromo do sistema, e bloqueando a página), um modal feito à
+ * mão na página de consultas, só um `disabled` sem pergunta nenhuma, e — em cinco
+ * sítios — nem uma coisa nem outra. Anular uma prescrição, que é mexer num registo
+ * clínico, era um clique só. E sem trava de envio, um duplo clique em «Remover»
+ * disparava dois DELETE, com o segundo a dar 404 dentro da faixa de erro.
+ *
+ * `emCurso` desativa o botão enquanto o pedido corre, que é a metade do problema que
+ * a confirmação não resolve: confirmar duas vezes depressa continuava a enviar dois
+ * pedidos.
+ */
+export function ConfirmModal({
+  title,
+  children,
+  confirmLabel = 'Confirmar',
+  busyLabel = 'A processar…',
+  onConfirm,
+  onCancel,
+  emCurso = false,
+  danger = true,
+}: {
+  title: string;
+  children?: ReactNode;
+  confirmLabel?: string;
+  busyLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  emCurso?: boolean;
+  /** A ação destrói ou altera algo que não se desfaz. Falso para confirmações neutras. */
+  danger?: boolean;
+}) {
+  const Botao = danger ? DangerBtn : PrimaryBtn;
+  return (
+    <Modal title={title} onClose={onCancel} width={520}>
+      <div
+        style={{
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-secondary)',
+          lineHeight: 'var(--text-sm-leading)',
+          marginBottom: 18,
+        }}
+      >
+        {children}
+      </div>
+      <div className="flex gap-3">
+        <Botao onClick={onConfirm} disabled={emCurso}>
+          {emCurso ? busyLabel : confirmLabel}
+        </Botao>
+        <GhostBtn onClick={onCancel} disabled={emCurso}>
+          Voltar atrás
+        </GhostBtn>
+      </div>
+    </Modal>
+  );
+}
+
 export function Spinner() {
   return (
     <div className="flex items-center justify-center gap-3 py-12">

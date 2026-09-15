@@ -2,7 +2,7 @@
 import { type ChangeEvent, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import type { Treatment } from '@/lib/types';
-import { Badge, FormField, GhostBtn, Inp, Modal, PrimaryBtn, Sel } from './ui';
+import { Badge, ConfirmModal, FormField, GhostBtn, Inp, Modal, PrimaryBtn, Sel } from './ui';
 
 interface TreatmentEditForm {
   treatmentCode: string;
@@ -30,6 +30,8 @@ export default function TreatmentTable({
   const TANOMD_CODES = settings?.TANOMD_CODES || [];
 
   const [editing, setEditing] = useState<Treatment | null>(null);
+  const [aEliminar, setAEliminar] = useState<Treatment | null>(null);
+  const [aEliminar2, setAEliminar2] = useState(false);
   const [form, setForm] = useState<TreatmentEditForm>({
     treatmentCode: '',
     description: '',
@@ -60,9 +62,18 @@ export default function TreatmentTable({
     setEditing(null);
   }
 
+  // Era o confirm() nativo: caixa do sistema, com os botões em inglês, fora do estilo
+  // do resto da aplicação e a bloquear a página. E sem trava nenhuma depois de
+  // confirmar. Ver ConfirmModal em components/ui.tsx.
   async function handleDelete(id: string) {
-    if (!confirm('Eliminar este tratamento? Esta ação não pode ser revertida.')) return;
-    await onDelete?.(id);
+    if (aEliminar2) return;
+    setAEliminar2(true);
+    try {
+      await onDelete?.(id);
+      setAEliminar(null);
+    } finally {
+      setAEliminar2(false);
+    }
   }
 
   return (
@@ -127,7 +138,7 @@ export default function TreatmentTable({
                       Editar
                     </button>
                     {onDelete && (
-                      <button type="button" onClick={() => handleDelete(t.id)} className="btn btn-danger btn-sm">
+                      <button type="button" onClick={() => setAEliminar(t)} className="btn btn-danger btn-sm">
                         ×
                       </button>
                     )}
@@ -218,6 +229,21 @@ export default function TreatmentTable({
             <GhostBtn onClick={() => setEditing(null)}>Cancelar</GhostBtn>
           </div>
         </Modal>
+      )}
+
+      {aEliminar && (
+        <ConfirmModal
+          title="Eliminar tratamento"
+          confirmLabel="Eliminar"
+          busyLabel="A eliminar…"
+          emCurso={aEliminar2}
+          onConfirm={() => handleDelete(aEliminar.id)}
+          onCancel={() => setAEliminar(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aEliminar.description}</strong>
+          <br />
+          Esta ação não pode ser revertida.
+        </ConfirmModal>
       )}
     </>
   );

@@ -161,3 +161,69 @@ export async function deleteObjectR2({ key }: { key: string }) {
     return { ok: false as const, error: e instanceof Error ? e.message : 'Network error' };
   }
 }
+
+/**
+ * Lê um objeto do R2 com as credenciais do servidor.
+ *
+ * Existe para app/api/uploads/[id]/file, que passou a ser o único caminho por onde
+ * um ficheiro de doente é servido. Antes, o URL guardado em `uploads.url` apontava
+ * diretamente para o bucket público (R2_PUBLIC_BASE_URL) ou para /uploads/ na nossa
+ * própria origem: quem tivesse o endereço via o ficheiro, para sempre, sem sessão,
+ * de qualquer clínica e mesmo depois de a retenção o ter dado por expirado.
+ *
+ * Devolve o corpo como stream para o handler o reencaminhar sem o materializar em
+ * memória — um raio-X não tem de passar inteiro pelo heap do Node para ser servido.
+ */
+export async function getObjectR2({ key }: { key: string }) {
+  const cfg = getR2Config();
+  if (!cfg) return { ok: false as const, error: 'R2 not configured' };
+
+  const region = 'auto';
+  const service = 's3';
+  const url = new URL(cfg.endpoint);
+  const host = url.host;
+  const now = new Date();
+  const amzDate = `${now.toISOString().replace(/[:-]|\.\d{3}/g, '')}Z`;
+  const dateStamp = amzDate.slice(0, 8);
+
+  const objectPath = `/${cfg.bucket}/${key}`;
+  // GET não tem corpo: o hash é o do vazio, como no delete.
+  const payloadHash = sha256Hex(Buffer.from(''));
+
+  const headers: Record<string, string> = {
+    host,
+    'x-amz-content-sha256': payloadHash,
+    'x-amz-date': amzDate,
+  };
+  const signedHeaders = Object.keys(headers).sort().join(';');
+  const canonicalHeaders = Object.keys(headers)
+    .sort()
+    .map((k) => `${k}:${String(headers[k]).trim()}\n`)
+    .join('');
+  const canonicalRequest = ['GET', canonicalPath(objectPath), '', canonicalHeaders, signedHeaders, payloadHash].join(
+    '\n',
+  );
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, credentialScope, sha256Hex(Buffer.from(canonicalRequest))].join(
+    '\n',
+  );
+  const signingKey = getSigningKey(cfg.secretAccessKey, dateStamp, region, service);
+  const signature = crypto.createHmac('sha256', signingKey).update(stringToSign, 'utf8').digest('hex');
+  const authorization = `AWS4-HMAC-SHA256 Credential=${cfg.accessKeyId}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  try {
+    const res = await fetch(`${url.origin}${objectPath}`, {
+      method: 'GET',
+      headers: { ...headers, Authorization: authorization },
+    });
+    if (!res.ok) return { ok: false as const, status: res.status, error: `R2 get error (${res.status})` };
+    return {
+      ok: true as const,
+      body: res.body,
+      contentType: res.headers.get('content-type') || undefined,
+      contentLength: res.headers.get('content-length') || undefined,
+    };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : 'Network error' };
+  }
+}

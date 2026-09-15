@@ -1,6 +1,7 @@
 'use client';
 import type { ChangeEvent, ReactNode } from 'react';
 import { GhostBtn, Inp, Modal, PrimaryBtn, Sel, Textarea } from '@/components/ui';
+import { LIMITES } from '@/lib/validate';
 
 export interface AppointmentEditForm {
   date: string;
@@ -87,7 +88,11 @@ export default function AppointmentEditModal({
         <FormRow label="Duração (min)">
           <Inp
             type="number"
-            min={5}
+            // Os limites vêm de lib/validate.ts, que é quem os aplica do lado do
+            // servidor. Escritos à mão, o `max` faltava e o campo aceitava 600 —
+            // que a API recusava depois com uma mensagem em inglês.
+            min={LIMITES.duracaoMin}
+            max={LIMITES.duracaoMax}
             step={5}
             value={value.duration}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, duration: e.target.value })}
@@ -96,7 +101,8 @@ export default function AppointmentEditModal({
         <FormRow label="Cadeira">
           <Inp
             type="number"
-            min={1}
+            min={LIMITES.cadeiraMin}
+            max={LIMITES.cadeiraMax}
             value={value.chair}
             onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, chair: e.target.value })}
           />

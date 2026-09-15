@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
   Badge,
+  ConfirmModal,
   DataTable,
   Empty,
   FormField,
@@ -41,6 +42,9 @@ export default function TreatmentPlansPage() {
   // Guardar falhava em silêncio: o modal fechava-se na mesma e a linha nova
   // não aparecia. Quem escreveu não sabia se tinha ficado gravado.
   const [erroEscrita, setErroEscrita] = useState('');
+  // Aprovar um plano compromete o doente com um orçamento — não é um clique neutro.
+  const [aAprovar, setAAprovar] = useState<TreatmentPlan | null>(null);
+  const [aprovando, setAprovando] = useState(false);
   const [form, setForm] = useState<PlanForm>({
     title: '',
     description: '',
@@ -108,12 +112,18 @@ export default function TreatmentPlansPage() {
   }
 
   async function approve(id: string) {
+    if (aprovando) return;
     setErroEscrita('');
+    setAprovando(true);
     try {
       await api(`/treatment-plans/${id}`, { method: 'PUT', body: { approve: true } });
+      setAAprovar(null);
+      setDetailModal(null);
       plansQuery.refetch();
     } catch (e) {
       setErroEscrita(e instanceof Error ? e.message : 'Não foi possível atualizar.');
+    } finally {
+      setAprovando(false);
     }
   }
 
@@ -217,7 +227,7 @@ export default function TreatmentPlansPage() {
                         {p.status === 'draft' && (
                           <PrimaryBtn
                             style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
-                            onClick={() => approve(p.id)}
+                            onClick={() => setAAprovar(p)}
                           >
                             Aprovar
                           </PrimaryBtn>
@@ -372,17 +382,25 @@ export default function TreatmentPlansPage() {
           <div className="flex gap-3 mt-2">
             <GhostBtn onClick={() => setDetailModal(null)}>Fechar</GhostBtn>
             {detailModal.status === 'draft' && (
-              <PrimaryBtn
-                onClick={async () => {
-                  await approve(detailModal.id);
-                  setDetailModal(null);
-                }}
-              >
-                Aprovar
-              </PrimaryBtn>
+              <PrimaryBtn onClick={() => setAAprovar(detailModal)}>Aprovar</PrimaryBtn>
             )}
           </div>
         </Modal>
+      )}
+
+      {aAprovar && (
+        <ConfirmModal
+          title="Aprovar plano de tratamento"
+          confirmLabel="Aprovar plano"
+          busyLabel="A aprovar…"
+          danger={false}
+          emCurso={aprovando}
+          onConfirm={() => approve(aAprovar.id)}
+          onCancel={() => setAAprovar(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aAprovar.title}</strong>
+          <br />O plano passa a aprovado e deixa de contar como orçamento por fechar.
+        </ConfirmModal>
       )}
     </div>
   );

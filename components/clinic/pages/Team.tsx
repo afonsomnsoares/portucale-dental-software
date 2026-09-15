@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   Badge,
+  ConfirmModal,
   DangerBtn,
   DataTable,
   Empty,
@@ -53,6 +54,9 @@ export default function ClinicTeamPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  // O × que remove o turno é pequeno e fica encostado à hora: tinha trava de envio,
+  // mas nenhuma pergunta antes. Um clique ao lado apagava o turno sem aviso.
+  const [aRemoverTurno, setARemoverTurno] = useState<{ id: string; label: string } | null>(null);
 
   const usersQuery = useQuery<DbUser[]>('/users');
   const users = usersQuery.data ?? [];
@@ -107,6 +111,7 @@ export default function ClinicTeamPage() {
     setError('');
     try {
       await api(`/staff-schedules/${id}`, { method: 'DELETE' });
+      setARemoverTurno(null);
       loadShifts();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível remover o turno.');
@@ -189,7 +194,12 @@ export default function ClinicTeamPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeShift(s.id)}
+                          onClick={() =>
+                            setARemoverTurno({
+                              id: s.id,
+                              label: `${wd.label}, ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}`,
+                            })
+                          }
                           disabled={busyId === s.id}
                           aria-label="Remover turno"
                           style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}
@@ -311,6 +321,20 @@ export default function ClinicTeamPage() {
             </PrimaryBtn>
           </div>
         </Modal>
+      )}
+
+      {aRemoverTurno && (
+        <ConfirmModal
+          title="Remover turno"
+          confirmLabel="Remover turno"
+          busyLabel="A remover…"
+          emCurso={busyId === aRemoverTurno.id}
+          onConfirm={() => removeShift(aRemoverTurno.id)}
+          onCancel={() => setARemoverTurno(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aRemoverTurno.label}</strong>
+          <br />A pessoa deixa de constar na escala neste horário.
+        </ConfirmModal>
       )}
     </div>
   );

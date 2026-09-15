@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
   Badge,
+  ConfirmModal,
   DangerBtn,
   DataTable,
   Empty,
@@ -42,6 +43,8 @@ export default function RecallsPage() {
   // Guardar falhava em silêncio: o modal fechava-se na mesma e a linha nova
   // não aparecia. Quem escreveu não sabia se tinha ficado gravado.
   const [erroEscrita, setErroEscrita] = useState('');
+  const [aDesativar, setADesativar] = useState<Recall | null>(null);
+  const [desativando, setDesativando] = useState(false);
   const [form, setForm] = useState<NewRecallForm>({ recallType: 'checkup', intervalMonths: 6, nextDue: '' });
 
   const select = useCallback((p: Patient) => {
@@ -91,12 +94,17 @@ export default function RecallsPage() {
   }
 
   async function deactivate(id: string) {
+    if (desativando) return;
     setErroEscrita('');
+    setDesativando(true);
     try {
       await api(`/recalls/${id}`, { method: 'PUT', body: { active: false } });
+      setADesativar(null);
       recallsQuery.refetch();
     } catch (e) {
       setErroEscrita(e instanceof Error ? e.message : 'Não foi possível atualizar.');
+    } finally {
+      setDesativando(false);
     }
   }
 
@@ -215,7 +223,7 @@ export default function RecallsPage() {
                               </GhostBtn>
                               <DangerBtn
                                 style={{ padding: '4px 12px', fontSize: 'var(--text-2xs)' }}
-                                onClick={() => deactivate(r.id)}
+                                onClick={() => setADesativar(r)}
                               >
                                 Desativar
                               </DangerBtn>
@@ -270,6 +278,20 @@ export default function RecallsPage() {
             <GhostBtn onClick={() => setModal(false)}>Cancelar</GhostBtn>
           </div>
         </Modal>
+      )}
+
+      {aDesativar && (
+        <ConfirmModal
+          title="Desativar recall"
+          confirmLabel="Desativar"
+          busyLabel="A desativar…"
+          emCurso={desativando}
+          onConfirm={() => deactivate(aDesativar.id)}
+          onCancel={() => setADesativar(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aDesativar.patient_name || 'Este doente'}</strong>
+          <br />O doente deixa de ser convocado por este recall. O histórico fica.
+        </ConfirmModal>
       )}
     </div>
   );

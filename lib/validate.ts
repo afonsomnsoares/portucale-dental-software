@@ -80,35 +80,66 @@ export function requireFields(obj: Record<string, unknown> | null | undefined, f
 
 type BodyRecord = Record<string, unknown>;
 
+/**
+ * Os limites que o servidor aplica, num sítio só e exportados.
+ *
+ * Existem porque os formulários os tinham escritos à mão e mais frouxos do que isto:
+ * o modal de consulta punha `min={5}` sem `max` nenhum enquanto o servidor recusa
+ * acima de 480, e o de doente não tinha `<form>` à volta, por isso o `type="email"`
+ * nunca chegava a validar. O pedido ia à API, voltava recusado, e a pessoa via a
+ * mensagem do servidor — em inglês, numa interface em português.
+ *
+ * Com os limites aqui, o formulário e a rota não podem divergir: mudar um número
+ * muda os dois lados.
+ */
+export const LIMITES = {
+  duracaoMin: 5,
+  duracaoMax: 480,
+  cadeiraMin: 1,
+  cadeiraMax: 99,
+  nome: 200,
+  tipo: 100,
+  telefone: 30,
+  seguro: 100,
+} as const;
+
 export function validateAppointmentBody(body: BodyRecord) {
   const errors: string[] = [];
-  if (body.date && !asDate(body.date)) errors.push('Invalid date format (use YYYY-MM-DD)');
-  if (body.startTime && !asTime(body.startTime)) errors.push('Invalid startTime format (use HH:MM)');
-  if (body.duration !== undefined && asInt(body.duration, { min: 5, max: 480 }) === null)
-    errors.push('duration must be between 5 and 480 minutes');
-  if (body.chair !== undefined && asInt(body.chair, { min: 1, max: 99 }) === null)
-    errors.push('chair must be between 1 and 99');
-  if (body.type && String(body.type).length > 100) errors.push('type too long (max 100 chars)');
-  if (body.patientName && String(body.patientName).length > 200) errors.push('patientName too long (max 200 chars)');
+  if (body.date && !asDate(body.date)) errors.push('Data inválida (formato AAAA-MM-DD).');
+  if (body.startTime && !asTime(body.startTime)) errors.push('Hora inválida (formato HH:MM).');
+  if (
+    body.duration !== undefined &&
+    asInt(body.duration, { min: LIMITES.duracaoMin, max: LIMITES.duracaoMax }) === null
+  )
+    errors.push(`A duração tem de estar entre ${LIMITES.duracaoMin} e ${LIMITES.duracaoMax} minutos.`);
+  if (body.chair !== undefined && asInt(body.chair, { min: LIMITES.cadeiraMin, max: LIMITES.cadeiraMax }) === null)
+    errors.push(`A cadeira tem de estar entre ${LIMITES.cadeiraMin} e ${LIMITES.cadeiraMax}.`);
+  if (body.type && String(body.type).length > LIMITES.tipo)
+    errors.push(`O tipo de consulta não pode ter mais de ${LIMITES.tipo} caracteres.`);
+  if (body.patientName && String(body.patientName).length > LIMITES.nome)
+    errors.push(`O nome do doente não pode ter mais de ${LIMITES.nome} caracteres.`);
   return errors.length ? errors : null;
 }
 
 export function validatePatientBody(body: BodyRecord) {
   const errors: string[] = [];
-  if (!body.name || String(body.name).trim().length < 1) errors.push('name is required');
-  if (String(body.name || '').length > 200) errors.push('name too long (max 200 chars)');
-  if (body.dob && !asDate(body.dob)) errors.push('Invalid dob format (use YYYY-MM-DD)');
-  if (body.email && !asEmail(body.email)) errors.push('Invalid email format');
-  if (body.phone && String(body.phone).length > 30) errors.push('phone too long (max 30 chars)');
-  if (body.insurance && String(body.insurance).length > 100) errors.push('insurance too long (max 100 chars)');
+  if (!body.name || String(body.name).trim().length < 1) errors.push('O nome é obrigatório.');
+  if (String(body.name || '').length > LIMITES.nome)
+    errors.push(`O nome não pode ter mais de ${LIMITES.nome} caracteres.`);
+  if (body.dob && !asDate(body.dob)) errors.push('Data de nascimento inválida (formato AAAA-MM-DD).');
+  if (body.email && !asEmail(body.email)) errors.push('O e-mail não parece válido.');
+  if (body.phone && String(body.phone).length > LIMITES.telefone)
+    errors.push(`O telefone não pode ter mais de ${LIMITES.telefone} caracteres.`);
+  if (body.insurance && String(body.insurance).length > LIMITES.seguro)
+    errors.push(`O seguro não pode ter mais de ${LIMITES.seguro} caracteres.`);
   return errors.length ? errors : null;
 }
 
 export function validateTreatmentBody(body: BodyRecord) {
   const errors: string[] = [];
-  if (!body.patientId) errors.push('patientId is required');
-  if (!body.description || String(body.description).trim().length < 1) errors.push('description is required');
-  if (body.fee !== undefined && asFee(body.fee) === null) errors.push('Invalid fee value');
+  if (!body.patientId) errors.push('É preciso indicar o doente.');
+  if (!body.description || String(body.description).trim().length < 1) errors.push('A descrição é obrigatória.');
+  if (body.fee !== undefined && asFee(body.fee) === null) errors.push('O valor cobrado não é válido.');
   return errors.length ? errors : null;
 }
 

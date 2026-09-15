@@ -48,7 +48,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      # Ver a stage `worker` no Dockerfile: é a `builder` com um utilizador sem
+      # privilégios por cima. Apontar aqui para `builder` era correr isto como root.
+      target: worker
     container_name: portucale-migrate
     # Um passo de arranque, não um serviço: sem isto o Compose reiniciava-o em ciclo
     # depois de terminar com sucesso.
@@ -119,6 +121,10 @@ services:
       # os ficheiros do portal do doente, deixando para trás as linhas de `uploads`
       # a apontar para ficheiros que já não existiam. Ver o mkdir no Dockerfile, que
       # é o que garante que este volume nasce com dono `nextjs` e não root.
+      # O sítio novo, fora da árvore servida estaticamente.
+      - uploads_data:/app/data/uploads
+      # O antigo, para as instalações que já lá tinham ficheiros. Serve-os pela rota
+      # até a retenção os apagar; pode sair daqui quando o volume estiver vazio.
       - uploads:/app/public/uploads
     environment:
       # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
@@ -195,7 +201,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      # Ver a stage `worker` no Dockerfile: é a `builder` com um utilizador sem
+      # privilégios por cima. Apontar aqui para `builder` era correr isto como root.
+      target: worker
     container_name: portucale-jobs
     restart: unless-stopped
     volumes:
@@ -204,6 +212,10 @@ services:
       # pelo disco. Sem esta montagem, este contentor varria um diretório vazio que
       # é só dele — a retenção de uploads reportava sucesso todos os dias sem nunca
       # apagar nada, e os ficheiros de verdade ficavam no volume do `app` para sempre.
+      # O sítio novo, fora da árvore servida estaticamente.
+      - uploads_data:/app/data/uploads
+      # O antigo, para as instalações que já lá tinham ficheiros. Serve-os pela rota
+      # até a retenção os apagar; pode sair daqui quando o volume estiver vazio.
       - uploads:/app/public/uploads
     environment:
       # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
@@ -338,7 +350,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      # Ver a stage `worker` no Dockerfile: é a `builder` com um utilizador sem
+      # privilégios por cima. Apontar aqui para `builder` era correr isto como root.
+      target: worker
     container_name: portucale-watchdog
     restart: unless-stopped
     environment:
@@ -378,6 +392,7 @@ services:
 
 volumes:
   pgdata:
+  uploads_data:
   uploads:
   caddy_data:
   caddy_config:

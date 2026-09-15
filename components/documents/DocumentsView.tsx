@@ -5,6 +5,7 @@ import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import {
   AlertBanner,
   Badge,
+  ConfirmModal,
   DangerBtn,
   DataTable,
   Empty,
@@ -71,6 +72,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
   const [templateModal, setTemplateModal] = useState<DocumentTemplate | 'new' | null>(null);
   const [templateForm, setTemplateForm] = useState(EMPTY_TEMPLATE);
   const [busy, setBusy] = useState(false);
+  const [aDesativarModelo, setADesativarModelo] = useState<DocumentTemplate | null>(null);
   const [error, setError] = useState('');
 
   const loadTemplates = templatesQuery.refetch;
@@ -174,6 +176,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
     setError('');
     try {
       await api(`/document-templates/${t.id}`, { method: 'DELETE' });
+      setADesativarModelo(null);
       loadTemplates();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível desativar o modelo.');
@@ -359,7 +362,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                         Editar
                       </GhostBtn>
                       <DangerBtn
-                        onClick={() => deactivate(t)}
+                        onClick={() => setADesativarModelo(t)}
                         disabled={busy}
                         style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                       >
@@ -474,6 +477,20 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
             </PrimaryBtn>
           </div>
         </Modal>
+      )}
+
+      {aDesativarModelo && (
+        <ConfirmModal
+          title="Desativar modelo"
+          confirmLabel="Desativar"
+          busyLabel="A desativar…"
+          emCurso={busy}
+          onConfirm={() => deactivate(aDesativarModelo)}
+          onCancel={() => setADesativarModelo(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aDesativarModelo.name}</strong>
+          <br />O modelo deixa de aparecer para escolher. Os documentos já emitidos a partir dele não são afetados.
+        </ConfirmModal>
       )}
     </div>
   );

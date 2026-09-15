@@ -20,6 +20,7 @@ import { useQuery } from '@/hooks/useQuery';
 import type { MissingField } from '@/lib/missingData';
 import type { NextAction } from '@/lib/nextAction';
 import type { Patient, PatientInteraction, PatientTask, TimelineEvent } from '@/lib/types';
+import { validatePatientBody } from '@/lib/validate';
 
 interface UploadRow {
   id: string;
@@ -100,12 +101,27 @@ export default function ReceptionPatientsPage() {
       }
     }
 
-    if (!form.name?.trim()) {
-      setCreateErr('O nome do doente é obrigatório.');
-      return;
-    }
     if (missing.length) {
       setCreateErr(`Preencha os campos obrigatórios: ${missing.join(', ')}`);
+      return;
+    }
+
+    // As MESMAS regras que a rota aplica, corridas aqui primeiro. O formulário não
+    // tem <form> à volta (é um modal), por isso o `type="email"` nunca chegava a
+    // validar nada: um e-mail mal escrito ia à API, voltava recusado, e a pessoa via
+    // a mensagem do servidor — que até há pouco estava em inglês.
+    //
+    // Reusar validatePatientBody em vez de reescrever as regras aqui é o ponto: os
+    // dois lados não podem divergir se forem a mesma função.
+    const erros = validatePatientBody({
+      name: form.name,
+      dob: form.dob || undefined,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      insurance: form.insurance || undefined,
+    });
+    if (erros) {
+      setCreateErr(erros.join(' '));
       return;
     }
 

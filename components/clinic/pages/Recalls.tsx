@@ -11,6 +11,7 @@ import { type ChangeEvent, type FormEvent, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
+  ConfirmModal,
   DangerBtn,
   Empty,
   ErrorState,
@@ -42,6 +43,8 @@ export default function Recalls() {
   const patientsQuery = useQuery<Patient[]>('/patients?q=');
   const patients = patientsQuery.data ?? [];
   const [erroEscrita, setErroEscrita] = useState('');
+  const [aTerminar, setATerminar] = useState<Recall | null>(null);
+  const [terminando, setTerminando] = useState(false);
   const [_search, _setSearch] = useState('');
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState<NewRecallForm>({
@@ -115,12 +118,17 @@ export default function Recalls() {
   }
 
   async function handleDeactivate(id: string) {
+    if (terminando) return;
     setErroEscrita('');
+    setTerminando(true);
     try {
       await api(`/recalls/${id}`, { method: 'PUT', body: { active: false } });
+      setATerminar(null);
       loadRecalls();
     } catch (e) {
       setErroEscrita(e instanceof Error ? e.message : 'Não foi possível desativar o recall.');
+    } finally {
+      setTerminando(false);
     }
   }
 
@@ -216,7 +224,7 @@ export default function Recalls() {
                             <GhostBtn onClick={() => window.open(`tel:${patientPhone(r.patient_id)}`)}>Ligar</GhostBtn>
                           )}
                           {r.active && <GhostBtn onClick={() => handleComplete(r.id)}>Concluir</GhostBtn>}
-                          {r.active && <DangerBtn onClick={() => handleDeactivate(r.id)}>Terminar</DangerBtn>}
+                          {r.active && <DangerBtn onClick={() => setATerminar(r)}>Terminar</DangerBtn>}
                         </div>
                       </td>
                     </tr>
@@ -301,6 +309,20 @@ export default function Recalls() {
             </div>
           </form>
         </Modal>
+      )}
+
+      {aTerminar && (
+        <ConfirmModal
+          title="Terminar recall"
+          confirmLabel="Terminar"
+          busyLabel="A terminar…"
+          emCurso={terminando}
+          onConfirm={() => handleDeactivate(aTerminar.id)}
+          onCancel={() => setATerminar(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aTerminar.patient_name || 'Este doente'}</strong>
+          <br />O doente deixa de ser convocado por este recall. O histórico fica.
+        </ConfirmModal>
       )}
     </div>
   );

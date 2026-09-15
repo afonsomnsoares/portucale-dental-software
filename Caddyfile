@@ -32,14 +32,27 @@
 
 	# ─── O cabeçalho que os limites por IP leem ───────────────────────────────
 	# O getClientIp de lib/rateLimit.ts conta as entradas do X-Forwarded-For de
-	# trás para a frente, tantas quantas TRUSTED_PROXY_HOPS (agora 1). O Caddy
-	# ACRESCENTA a entrada dele ao que o cliente mandou, por isso a última é sempre
-	# a que ele escreveu e é essa que vale — um X-Forwarded-For forjado pelo cliente
-	# fica para trás na lista e deixa de contar.
+	# trás para a frente, tantas quantas TRUSTED_PROXY_HOPS (agora 1). Isso só é
+	# seguro porque o Caddy ACRESCENTA a entrada dele ao que o cliente mandou: a
+	# última é sempre a que ele escreveu, e um X-Forwarded-For forjado pelo cliente
+	# fica para trás na lista e não é lido.
 	#
-	# Não se limpa o cabeçalho de entrada de propósito: com hops=1 já não é lido, e
-	# apagá-lo escondia o rasto de quem o tentou forjar.
-	header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+	# ─── Porque é que aqui NÃO está um header_up ──────────────────────────────
+	# Esteve, e anulava tudo o que este comentário descreve:
+	#
+	#     header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+	#
+	# Um `header_up` sem prefixo DEFINE o cabeçalho em vez de lhe acrescentar, e o
+	# `{http.request.header.X-Forwarded-For}` resolve para o que ENTROU — ou seja,
+	# para o que o cliente escreveu. A linha substituía o valor correto (com o IP
+	# real acrescentado pelo Caddy) pelo valor controlado por quem chama, e a última
+	# entrada — a única que o getClientIp lê — passava a ser escolhida pelo atacante.
+	# Com isso, os tetos por IP do login deixavam de travar o que quer que fosse:
+	# bastava mudar o cabeçalho a cada pedido para ter um balde novo de cada vez.
+	#
+	# O comportamento por omissão do reverse_proxy já é o que se quer. Não se limpa
+	# o cabeçalho de entrada de propósito: com hops=1 não é lido, e apagá-lo
+	# escondia o rasto de quem o tentou forjar.
 
 	# O log de acesso vai para stdout, que é onde o `docker compose logs caddy` o
 	# encontra. Sem isto, um 502 entre o proxy e a app não deixa rasto em lado nenhum.

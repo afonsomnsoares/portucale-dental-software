@@ -30,6 +30,7 @@ import { sendSms } from './sms';
 import type { ScheduleBlock } from './staffAvailabilityCalc';
 import { assignOrphanTasks } from './taskRouting';
 import { ADMIN_TASK_ROLES } from './taskRoutingCalc';
+import { LEGACY_UPLOADS_DIR, UPLOADS_DIR } from './uploads';
 import { toE164 } from './validate';
 import { expireStaleOffers, findCandidates } from './waitlist';
 
@@ -676,13 +677,17 @@ async function cleanupUploads() {
      ORDER BY expires_at
      LIMIT 500`,
   );
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+  const uploadsDirs = [UPLOADS_DIR, LEGACY_UPLOADS_DIR];
   let removed = 0;
   for (const u of expired) {
-    try {
-      await unlink(path.join(uploadsDir, u.storage_key));
-    } catch {
-      // intentional — file may already be deleted or missing; DB row is still cleaned up below
+    // Os dois diretórios: o privado (novo) e o public/uploads das instalações
+    // anteriores. Ver LEGACY_UPLOADS_DIR em lib/uploads.ts.
+    for (const dir of uploadsDirs) {
+      try {
+        await unlink(path.join(dir, path.basename(String(u.storage_key))));
+      } catch {
+        // intentional — file may already be deleted or missing; DB row is still cleaned up below
+      }
     }
     await query(`DELETE FROM uploads WHERE id=$1`, [u.id]);
     removed += 1;
@@ -693,19 +698,22 @@ async function cleanupUploads() {
   let scanned = 0;
   let swept = 0;
   try {
-    const files = await readdir(uploadsDir).catch(() => []);
-    for (const f of files) {
-      scanned += 1;
-      const full = path.join(uploadsDir, f);
-      const st = await stat(full).catch(() => null);
-      if (!st) continue;
-      if (st.isFile() && st.mtimeMs < cutoff) {
-        await unlink(full).catch(() => {}); // intentional — file may already be gone
-        swept += 1;
+    for (const dir of uploadsDirs) {
+      const files = await readdir(dir).catch(() => []);
+      for (const f of files) {
+        scanned += 1;
+        const full = path.join(dir, f);
+        const st = await stat(full).catch(() => null);
+        if (!st) continue;
+        if (st.isFile() && st.mtimeMs < cutoff) {
+          await unlink(full).catch(() => {}); // intentional — file may already be gone
+          swept += 1;
+        }
       }
     }
   } catch {
-    // intentional — uploadsDir may not exist on first run; sweep is non-critical
+    // intentional — os diretórios podem não existir à primeira passagem; a varredura
+    // não é crítica
   }
 
   return { removed, scanned, swept };

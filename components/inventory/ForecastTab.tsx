@@ -3,6 +3,7 @@ import { type ChangeEvent, useCallback, useState } from 'react';
 import type { ApiOptions } from '@/app/providers';
 import {
   Badge,
+  ConfirmModal,
   DataTable,
   Empty,
   ErrorState,
@@ -53,6 +54,8 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
   const [mappingForm, setMappingForm] = useState(EMPTY_MAPPING_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [aRemover, setARemover] = useState<{ id: string; label: string } | null>(null);
+  const [aRemover2, setARemover2] = useState(false);
 
   const load = useCallback(() => {
     dataQuery.refetch();
@@ -85,13 +88,21 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
     }
   }
 
+  // Sem trava nem confirmação, um duplo clique disparava dois DELETE e o segundo
+  // dava 404 dentro da faixa de erro — parecia que a remoção tinha falhado quando
+  // tinha corrido bem duas vezes.
   async function removeMapping(id: string) {
+    if (aRemover2) return;
     setError('');
+    setARemover2(true);
     try {
       await api(`/inventory/procedure-usage/${id}`, { method: 'DELETE' });
+      setARemover(null);
       load();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível remover o consumo.');
+    } finally {
+      setARemover2(false);
     }
   }
 
@@ -281,7 +292,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
                 </TD>
                 <TD right>
                   <GhostBtn
-                    onClick={() => removeMapping(u.id)}
+                    onClick={() => setARemover({ id: u.id, label: `${u.appointment_type} · ${u.item_name}` })}
                     style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
                   >
                     Remover
@@ -291,6 +302,21 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
             ))}
           />
         </div>
+      )}
+
+      {aRemover && (
+        <ConfirmModal
+          title="Remover consumo"
+          confirmLabel="Remover"
+          busyLabel="A remover…"
+          emCurso={aRemover2}
+          onConfirm={() => removeMapping(aRemover.id)}
+          onCancel={() => setARemover(null)}
+        >
+          <strong style={{ color: 'var(--text-primary)' }}>{aRemover.label}</strong>
+          <br />
+          Este tipo de consulta deixa de contar para a previsão de consumo deste artigo.
+        </ConfirmModal>
       )}
     </div>
   );
