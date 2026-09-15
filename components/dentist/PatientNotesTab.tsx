@@ -271,7 +271,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
             }}
           >
             {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
-            {isRecording ? 'Parar' : 'Dictar'}
+            {isRecording ? 'Parar' : 'Ditar'}
           </button>
           {isRecording && (
             <span

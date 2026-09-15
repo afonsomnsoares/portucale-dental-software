@@ -1,5 +1,7 @@
 import { canAutoContact } from './commPrefs';
-import { query, queryOne } from './db';
+import { formatDatePT } from './constants';
+import { query, queryOne, withTransaction } from './db';
+import { requireIsoDate } from './pgDate';
 import { toE164 } from './validate';
 import { type FreedSlot, rankCandidates, type WaitlistCandidate } from './waitlistMatch';
 
@@ -152,37 +154,55 @@ export async function notifyWaitlistOfFreedSlot(
     // automated outreach, not a human typing a message.
     const phone = canAutoContact(patient?.comm_prefs, 'sms') ? toE164(patient?.phone) : '';
 
-    const body = `Olá ${patient?.name || ''}, ficou uma vaga disponível no dia ${slot.date} às ${slot.startTime}. Contacte-nos se quiser ficar com ela.`;
-    const [notification] = phone
-      ? await query(
-          `INSERT INTO notifications
-             (tenant_id, patient_id, channel, to_addr, payload, status, next_retry_at)
-           VALUES ($1,$2,'sms',$3,$4::jsonb,'queued',NOW())
-           RETURNING *`,
-          [tenantId, c.patient_id, phone, JSON.stringify({ kind: 'slot_offer', body })],
-        )
-      : [null];
+    const body = `Olá ${patient?.name || ''}, ficou uma vaga disponível no dia ${formatDatePT(slot.date)} às ${slot.startTime}. Contacte-nos se quiser ficar com ela.`;
 
-    const [offer] = await query(
-      `INSERT INTO slot_offers
-         (tenant_id, waitlist_entry_id, patient_id, cancelled_appointment_id,
-          offered_date, offered_start_time, offered_duration, offered_chair, offered_dentist_id, notification_id)
-       VALUES ($1,$2,$3,$4,$5::date,$6::time,$7,$8,$9,$10)
-       RETURNING *`,
-      [
-        tenantId,
-        c.id,
-        c.patient_id,
-        cancelledAppointmentId,
-        slot.date,
-        slot.startTime,
-        slot.duration,
-        slot.chair,
-        slot.dentistId,
-        notification?.id || null,
-      ],
-    );
-    await query(`UPDATE waitlist_entries SET status='offered', updated_at=NOW() WHERE id=$1`, [c.id]);
+    // ─── As três escritas são uma só, ou não são nenhuma ──────────────────────
+    // Estavam soltas, e o `query()` faz commit a cada statement. A notificação era
+    // inserida PRIMEIRO; se o INSERT da oferta rebentasse a seguir — e rebentava
+    // mesmo, porque `slot.date` chegava aqui como "Wed Aug 05" e o `$5::date` não o
+    // aceita — o SMS ficava em fila para sair e a oferta não existia em lado nenhum.
+    // O doente recebia uma vaga que a rececionista não via na Lista de Espera.
+    //
+    // A data já vai correta (ver lib/pgDate.ts), mas a ordem continuava a ser uma
+    // armadilha para o próximo erro. Numa transação, uma falha em qualquer ponto
+    // desfaz o SMS também.
+    const offer = await withTransaction(async (client) => {
+      const notificationId = phone
+        ? (
+            await client.query(
+              `INSERT INTO notifications
+                 (tenant_id, patient_id, channel, to_addr, payload, status, next_retry_at)
+               VALUES ($1,$2,'sms',$3,$4::jsonb,'queued',NOW())
+               RETURNING id`,
+              [tenantId, c.patient_id, phone, JSON.stringify({ kind: 'slot_offer', body })],
+            )
+          ).rows[0]?.id
+        : null;
+
+      const { rows } = await client.query(
+        `INSERT INTO slot_offers
+           (tenant_id, waitlist_entry_id, patient_id, cancelled_appointment_id,
+            offered_date, offered_start_time, offered_duration, offered_chair, offered_dentist_id, notification_id)
+         VALUES ($1,$2,$3,$4,$5::date,$6::time,$7,$8,$9,$10)
+         RETURNING *`,
+        [
+          tenantId,
+          c.id,
+          c.patient_id,
+          cancelledAppointmentId,
+          slot.date,
+          slot.startTime,
+          slot.duration,
+          slot.chair,
+          slot.dentistId,
+          notificationId || null,
+        ],
+      );
+
+      await client.query(`UPDATE waitlist_entries SET status='offered', updated_at=NOW() WHERE id=$1`, [c.id]);
+      return rows[0];
+    });
+
     if (offer) offered += 1;
   }
   return { offered };
@@ -224,7 +244,7 @@ export async function declineOffer(tenantId: string, offerId: string) {
   await query(`UPDATE waitlist_entries SET status='active', updated_at=NOW() WHERE id=$1`, [offer.waitlist_entry_id]);
 
   const slot: FreedSlot = {
-    date: String(offer.offered_date).slice(0, 10),
+    date: requireIsoDate(offer.offered_date, 'offered_date'),
     startTime: String(offer.offered_start_time).slice(0, 5),
     type: String(offer.treatment_type || ''),
     duration: Number(offer.offered_duration),
@@ -314,7 +334,7 @@ export async function expireStaleOffers(tenantId: string) {
     expired += 1;
 
     const slot: FreedSlot = {
-      date: String(o.offered_date).slice(0, 10),
+      date: requireIsoDate(o.offered_date, 'offered_date'),
       startTime: String(o.offered_start_time).slice(0, 5),
       type: String(o.treatment_type || ''),
       duration: Number(o.offered_duration),

@@ -169,3 +169,65 @@ test('password nunca mudada não invalida nada (bases anteriores à migração 0
   const res = await readSuppliers(admin);
   assert.equal(res.status, 200, 'NULL significa "nunca mudada" e não pode expulsar ninguém');
 });
+
+// ─── As rotas `platform: true` também revalidam ─────────────────────────────
+// lib/route.ts afirma que «os três modos autenticados revalidam a sessão contra a base
+// de dados antes de decidir». Não era verdade para `platform: true`: o requirePlatform
+// só chegava ao revalidateSession quando lhe davam uma permissão nomeada, e as rotas
+// que declaram `platform: true` não nomeiam nenhuma. Decidiam a partir do `role`
+// congelado no token.
+//
+// Ou seja: desativar um super-admin — a resposta padrão a um token roubado — não
+// revogava nada nestas rotas durante os 7 dias de validade do JWT.
+const EMAIL_SA = 'revalidacao-plataforma@portucale.test';
+let superAdmin: TestUser;
+
+async function readPlatformHealth(as: TestUser) {
+  const { GET } = await import('../../app/api/platform/health/route.ts');
+  return GET(authedRequest(as, { method: 'GET', url: '/api/platform/health' }), {
+    params: Promise.resolve({}),
+  });
+}
+
+// `users_role_tenant_consistency` (migração 047) exige que só um super_admin tenha
+// tenant_id NULL — por isso despromover obriga a dar-lhe uma clínica no mesmo UPDATE.
+async function setSuperAdmin(fields: { active?: boolean; role?: string; tenantId?: string | null }) {
+  await query(
+    `UPDATE users
+        SET active    = COALESCE($2, active),
+            role      = COALESCE($3, role),
+            tenant_id = CASE WHEN $4::uuid IS NOT NULL THEN $4::uuid
+                             WHEN COALESCE($3, role) = 'super_admin' THEN NULL
+                             ELSE tenant_id END
+      WHERE email=$1`,
+    [EMAIL_SA, fields.active ?? null, fields.role ?? null, fields.tenantId ?? null],
+  );
+}
+
+test('plataforma — linha de base: um super-admin ativo lê /api/platform/health', async () => {
+  const [row] = await query(
+    `INSERT INTO users (email, password, name, role, clinic, tenant_id, active)
+     VALUES ($1, 'x-sem-login-neste-teste', 'SA Revalidação (teste)', 'super_admin', 'Plataforma', NULL, TRUE)
+     ON CONFLICT (email) DO UPDATE SET role='super_admin', tenant_id=NULL, active=TRUE
+     RETURNING id, name, role, clinic, tenant_id`,
+    [EMAIL_SA],
+  );
+  superAdmin = { id: row.id, name: row.name, role: row.role, clinic: row.clinic, tenantId: row.tenant_id };
+
+  const res = await readPlatformHealth(superAdmin);
+  assert.equal(res.status, 200);
+});
+
+test('plataforma — desativar o super-admin revoga já, e não daqui a 7 dias', async () => {
+  await setSuperAdmin({ active: false });
+  const res = await readPlatformHealth(superAdmin);
+  assert.equal(res.status, 401, 'o mesmo token continuava a ler a configuração da plataforma');
+});
+
+test('plataforma — despromover também tem efeito no pedido seguinte', async () => {
+  await setSuperAdmin({ active: true, role: 'admin', tenantId: tenantAId });
+  const res = await readPlatformHealth(superAdmin);
+  assert.equal(res.status, 403, 'o papel que vale é o da base de dados, não o do token');
+
+  await query(`DELETE FROM users WHERE email=$1`, [EMAIL_SA]);
+});

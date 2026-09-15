@@ -228,6 +228,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
   id          BIGSERIAL PRIMARY KEY,
   user_name   TEXT NOT NULL,
   user_role   TEXT NOT NULL,
+  -- Quem vê a linha decide-se por aqui, não pelo `clinic` abaixo. NULL = linha de
+  -- plataforma (super-admin, ou uma recusa ainda sem sessão), visível só ao
+  -- super-admin. Ver scripts/migrations/056_audit_log_tenant_id.sql.
+  tenant_id   UUID REFERENCES tenants(id) ON DELETE SET NULL,
+  -- Nome que se mostra no ecrã. Texto livre, escrito por pessoas: nunca serve de
+  -- fronteira de segurança.
   clinic      TEXT NOT NULL DEFAULT 'Tower',
   action      TEXT NOT NULL,
   resource    TEXT NOT NULL,
@@ -680,8 +686,13 @@ JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'tenant_id' AND a.attn
 WHERE n.nspname = 'public'
   AND c.relkind = 'r'
   AND NOT EXISTS (
+    -- Prefixo, e não igualdade: uma tabela pode precisar de separar a leitura da
+    -- escrita e ficar com `tenant_isolation_read` + `tenant_isolation_append` em vez
+    -- de uma política só (é o caso do audit_log — ver a migração 056). Continua a
+    -- ser isolamento por tenant, e uma tabela sem política nenhuma continua a
+    -- aparecer aqui, que é o que esta view existe para apanhar.
     SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = c.relname AND policyname = 'tenant_isolation'
+    WHERE schemaname = 'public' AND tablename = c.relname AND policyname LIKE 'tenant_isolation%'
   )
 ORDER BY c.relname;
 

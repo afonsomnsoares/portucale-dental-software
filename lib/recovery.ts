@@ -1,3 +1,4 @@
+import { formatDatePT } from './constants';
 import { query, queryOne } from './db';
 import {
   avgFee,
@@ -379,7 +380,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: recallItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(visitFee),
-        detail: `Recall ${i.recall_type} · vencido a ${String(i.next_due).slice(0, 10)}`,
+        detail: `Recall ${i.recall_type} · vencido a ${formatDatePT(i.next_due)}`,
       })),
     },
     {
@@ -392,7 +393,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: inactiveItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(visitFee),
-        detail: i.last_visit ? `Última visita: ${String(i.last_visit).slice(0, 10)}` : 'Sem visita registada',
+        detail: i.last_visit ? `Última visita: ${formatDatePT(i.last_visit)}` : 'Sem visita registada',
       })),
     },
     {
@@ -405,7 +406,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: neverBookedItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(visitFee),
-        detail: `Registado a ${String(i.created_at).slice(0, 10)}`,
+        detail: `Registado a ${formatDatePT(i.created_at)}`,
       })),
     },
     {
@@ -418,7 +419,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: noShowItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(apptFee),
-        detail: `${i.type || 'Consulta'} · falta a ${String(i.appt_date).slice(0, 10)}`,
+        detail: `${i.type || 'Consulta'} · falta a ${formatDatePT(i.appt_date)}`,
       })),
     },
     {
@@ -431,7 +432,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: cancelledItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(apptFee),
-        detail: `${i.type || 'Consulta'} · cancelada a ${String(i.appt_date).slice(0, 10)}`,
+        detail: `${i.type || 'Consulta'} · cancelada a ${formatDatePT(i.appt_date)}`,
       })),
     },
     {
@@ -444,7 +445,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: leadItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(visitFee),
-        detail: `${i.source ? `${i.source} · ` : ''}Lead registado a ${String(i.created_at).slice(0, 10)}`,
+        detail: `${i.source ? `${i.source} · ` : ''}Lead registado a ${formatDatePT(i.created_at)}`,
       })),
     },
     {
@@ -466,7 +467,7 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
       items: outstandingItems.map((i) => ({
         ...comoItem(i),
         value: roundEUR(i.value),
-        detail: i.due_date ? `Venceu a ${String(i.due_date).slice(0, 10)}` : 'Sem data de vencimento',
+        detail: i.due_date ? `Venceu a ${formatDatePT(i.due_date)}` : 'Sem data de vencimento',
       })),
     },
   ];

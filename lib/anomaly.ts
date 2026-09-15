@@ -19,6 +19,7 @@ import type { ClampedInsight } from './agents/insightCalc';
 import { aiActor, replaceOpenInsights } from './agents/insights';
 import { attributeCause, describeCause, detectAnomaly, type Segment } from './anomalyCalc';
 import { query, queryOne } from './db';
+import { requireIsoDate } from './pgDate';
 import { WORK_MINUTES_PER_DAY } from './scheduleIntel';
 
 const AGENT_ID = 'management';
@@ -78,7 +79,7 @@ function split(rows: readonly WeekSegmentRow[]) {
 async function weekSegmentRows(sql: string, params: unknown[]): Promise<WeekSegmentRow[]> {
   const rows = await query(sql, params);
   return rows.map((r) => ({
-    week: String(r.week).slice(0, 10),
+    week: requireIsoDate(r.week, 'week'),
     segment: r.segment === null || r.segment === undefined ? null : String(r.segment),
     value: Number(r.value) || 0,
   }));

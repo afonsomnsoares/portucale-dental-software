@@ -1,6 +1,10 @@
 node_modules
 .next
+# Todos os .env, e não só o .env — a stage `builder` faz `COPY . .` e é essa que os
+# serviços migrate/jobs/watchdog correm, por isso o .env.test ia parar lá dentro.
 .env
+.env.*
+!.env.example
 .git
 .gitignore
 *.md

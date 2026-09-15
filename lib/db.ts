@@ -3,6 +3,30 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+// ─── DATE chega como string, não como Date ──────────────────────────────────
+// Por omissão o node-postgres converte uma coluna DATE (OID 1082) num `Date` do JS
+// à meia-noite *local*. Isso estraga a data de duas formas, e as duas aconteceram:
+//
+//   1. No servidor, `String(row.appt_date).slice(0, 10)` dava "Wed Aug 05" em vez de
+//      "2026-08-05" — os dez primeiros caracteres de um `Date` impresso por extenso.
+//      Silenciosamente: comparações de string davam sempre o mesmo lado, `new Date()`
+//      dava Invalid Date, `.sort()` ordenava por nome do mês.
+//
+//   2. No cliente, o `Response.json()` serializava esse `Date` em UTC. A meia-noite
+//      de 5 de agosto em Lisboa é 4 de agosto às 23:00Z, por isso a interface mostrava
+//      o DIA ANTERIOR durante toda a hora de verão — de março a outubro, todos os anos:
+//
+//        SELECT '2026-08-05'::date  →  {"d":"2026-08-04T23:00:00.000Z"}  →  "2026-08-04"
+//
+// Uma coluna DATE não tem hora nem fuso: é um dia de calendário. Devolvê-la como a
+// string que o Postgres já escreveu é a única representação que não inventa um
+// instante — e faz com que o `slice(0, 10)` que está espalhado pela interface passe
+// a estar certo, em vez de estar certo só de novembro a março.
+//
+// TIMESTAMP e TIMESTAMPTZ continuam a ser `Date`: esses são instantes, e a conversão
+// é a correta. Isto é só para DATE.
+pg.types.setTypeParser(pg.types.builtins.DATE, (value: string) => value);
+
 declare global {
   // eslint-disable-next-line no-var
   var __pgPool: import('pg').Pool | undefined;
@@ -233,6 +257,42 @@ export async function closePool() {
 }
 
 // Helper — run inside a transaction
+/**
+ * Corre `fn` com um advisory lock de sessão, ou devolve `null` se outra ligação já o
+ * tiver. Não espera — quem chega a segundo desiste.
+ *
+ * ─── Porquê aqui, e não só no script ────────────────────────────────────────
+ * `scripts/run-jobs.ts` já tinha um lock destes, e o comentário dele nomeia a corrida
+ * exata que existe para impedir: «um admin a carregar em POST /api/jobs/run ao mesmo
+ * tempo». Só que o lock estava no script, e a rota HTTP chama `runJob()` diretamente
+ * — ou seja, a corrida que o comentário descrevia não estava coberta do lado que o
+ * comentário nomeava. Duas passagens sobre os mesmos dados duplicam tudo o que é
+ * verificar-e-inserir: lembretes por SMS, tarefas automáticas, avisos de stock,
+ * snapshots de receita. O envio de notificações tinha reserva por linha e escapava;
+ * o resto não.
+ *
+ * Lock de SESSÃO e não de transação: tem de durar a passagem inteira, que são
+ * centenas de statements em transações separadas. Fechar a ligação liberta-o mesmo
+ * que o processo morra a meio, por isso não fica preso.
+ */
+export async function withAdvisoryLock<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
+  const client = await getPool().connect();
+  let held = false;
+  try {
+    const { rows } = await client.query<{ ok: boolean }>('SELECT pg_try_advisory_lock(hashtext($1)) AS ok', [name]);
+    held = rows[0]?.ok === true;
+    if (!held) return null;
+    return await fn();
+  } finally {
+    if (held) {
+      // Se isto falhar, a ligação está partida e o `release(err)` abaixo deita-a
+      // fora — o lock morre com a sessão de qualquer forma.
+      await client.query('SELECT pg_advisory_unlock(hashtext($1))', [name]).catch(() => {});
+    }
+    client.release();
+  }
+}
+
 export async function withTransaction<T>(fn: (client: import('pg').PoolClient) => Promise<T>) {
   const client = await getPool().connect();
   try {

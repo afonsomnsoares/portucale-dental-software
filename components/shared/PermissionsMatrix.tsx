@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, GhostBtn, PageHeader, PrimaryBtn, Sel, Spinner } from '@/components/ui';
+import { Badge, ErrorState, GhostBtn, PageHeader, PrimaryBtn, Sel, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { Tenant } from '@/lib/types';
 
@@ -116,7 +116,15 @@ export default function PermissionsMatrix() {
     <div>
       <PageHeader title="Matriz de Permissões" sub="O que cada papel pode fazer, por clínica">
         {!ownTenantId &&
-          (loading ? (
+          // Sem isto, uma falha em /tenants dava um seletor vazio — e um seletor de
+          // clínicas vazio, a um super-admin, lê-se como «não há clínicas nenhumas».
+          (tenantsQuery.error ? (
+            <ErrorState
+              error={tenantsQuery.error}
+              onRetry={tenantsQuery.refetch}
+              message="Não foi possível carregar a lista de clínicas."
+            />
+          ) : loading ? (
             <Spinner />
           ) : (
             <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ maxWidth: 320 }}>

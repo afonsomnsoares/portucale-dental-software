@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Badge, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { useDebouncedValue } from '@/hooks/useDebouncedEffect';
 import { useQuery } from '@/hooks/useQuery';
 import type { AuditLogEntry } from '@/lib/types';
 
@@ -32,11 +33,13 @@ export type AuditScope = 'clinic' | 'platform';
 export default function AuditLog({ scope }: { scope: AuditScope }) {
   const [expanded, setExpanded] = useState<string | number | null>(null);
   const [search, setSearch] = useState('');
+  // Uma ida à API por tecla escrita, e a chave muda em cada uma — ver useDebouncedValue.
+  const buscaAdiada = useDebouncedValue(search);
   const [action, setAction] = useState('');
 
   const p = new URLSearchParams();
   if (action) p.set('action', action);
-  if (search) p.set('q', search);
+  if (buscaAdiada) p.set('q', buscaAdiada);
   const logsQuery = useQuery<AuditLogEntry[]>(`/audit?${p}`);
   const logs = logsQuery.data ?? [];
 

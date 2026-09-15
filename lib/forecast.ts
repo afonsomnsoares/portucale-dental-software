@@ -12,6 +12,7 @@
 
 import { query, queryOne } from './db';
 import { type ForecastResult, forecast, isReliable, type Observation } from './forecastCalc';
+import { requireIsoDate } from './pgDate';
 import { WORK_MINUTES_PER_DAY } from './scheduleIntel';
 
 export const LOOKBACK_DAYS = 84;
@@ -52,7 +53,7 @@ const META: Record<ForecastMetric, { label: string; unit: MetricForecast['unit']
 
 function rowsToSeries(rows: readonly Record<string, unknown>[]): Observation[] {
   return rows.map((r) => ({
-    date: String(r.day).slice(0, 10),
+    date: requireIsoDate(r.day, 'day'),
     value: Number(r.value) || 0,
   }));
 }
@@ -64,7 +65,7 @@ function rowsToSeries(rows: readonly Record<string, unknown>[]): Observation[] {
  */
 async function revenueSeries(tenantId: string, from: string): Promise<Observation[]> {
   const rows = await query(
-    `SELECT updated_at::date AS day, COALESCE(SUM(fee),0)::numeric AS value
+    `SELECT updated_at::date::text AS day, COALESCE(SUM(fee),0)::numeric AS value
      FROM treatments
      WHERE tenant_id=$1 AND status='completed' AND updated_at::date >= $2::date
      GROUP BY day ORDER BY day`,
@@ -73,12 +74,22 @@ async function revenueSeries(tenantId: string, from: string): Promise<Observatio
   return rowsToSeries(rows);
 }
 
-/** Minutos marcados por dia — a base tanto da ocupação como da capacidade livre. */
+/**
+ * Minutos marcados por dia — a base tanto da ocupação como da capacidade livre.
+ *
+ * O limite superior não é decorativo: esta é a única série indexada por `appt_date`, que é
+ * uma data futura para tudo o que está por acontecer. As outras séries vão por
+ * `created_at`/`updated_at`, que nunca são futuras. Sem `< CURRENT_DATE`, as consultas
+ * marcadas com semanas de antecedência entravam na mediana sazonal como observações
+ * esparsas de dias que ainda não aconteceram — e puxavam a ocupação para baixo e a
+ * capacidade livre para cima, exatamente nos dias que ainda dava para encher.
+ */
 async function bookedMinutesSeries(tenantId: string, from: string): Promise<Observation[]> {
   const rows = await query(
-    `SELECT appt_date AS day, COALESCE(SUM(duration),0)::int AS value
+    `SELECT appt_date::text AS day, COALESCE(SUM(duration),0)::int AS value
      FROM appointments
-     WHERE tenant_id=$1 AND appt_date >= $2::date AND status <> 'no-show'
+     WHERE tenant_id=$1 AND appt_date >= $2::date AND appt_date < CURRENT_DATE
+       AND status <> 'no-show'
      GROUP BY day ORDER BY day`,
     [tenantId, from],
   );
@@ -92,7 +103,7 @@ async function bookedMinutesSeries(tenantId: string, from: string): Promise<Obse
  */
 async function demandSeries(tenantId: string, from: string): Promise<Observation[]> {
   const rows = await query(
-    `SELECT created_at::date AS day, COUNT(*)::int AS value
+    `SELECT created_at::date::text AS day, COUNT(*)::int AS value
      FROM appointments
      WHERE tenant_id=$1 AND created_at::date >= $2::date
      GROUP BY day ORDER BY day`,
@@ -103,7 +114,7 @@ async function demandSeries(tenantId: string, from: string): Promise<Observation
 
 async function cancellationSeries(tenantId: string, from: string): Promise<Observation[]> {
   const rows = await query(
-    `SELECT created_at::date AS day, COUNT(*)::int AS value
+    `SELECT created_at::date::text AS day, COUNT(*)::int AS value
      FROM appointment_cancellations
      WHERE tenant_id=$1 AND created_at::date >= $2::date
      GROUP BY day ORDER BY day`,
@@ -114,7 +125,7 @@ async function cancellationSeries(tenantId: string, from: string): Promise<Obser
 
 async function noShowSeries(tenantId: string, from: string): Promise<Observation[]> {
   const rows = await query(
-    `SELECT appt_date AS day, COUNT(*)::int AS value
+    `SELECT appt_date::text AS day, COUNT(*)::int AS value
      FROM appointments
      WHERE tenant_id=$1 AND appt_date >= $2::date AND status='no-show'
      GROUP BY day ORDER BY day`,

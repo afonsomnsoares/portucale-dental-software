@@ -7,6 +7,7 @@ import {
   ratesByWeekday,
   riskScore,
 } from './noShowRisk';
+import { requireIsoDate } from './pgDate';
 import { businessDays } from './recoveryCalc';
 import { suggestCapacityMoves } from './scheduleIntelCalc';
 
@@ -59,7 +60,7 @@ export async function computeUpcomingRisk(tenantId: string, days = UPCOMING_RISK
 
   const todayUTC = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
   const scored = upcoming.map((a) => {
-    const apptDate = new Date(`${String(a.appt_date).slice(0, 10)}T00:00:00Z`);
+    const apptDate = new Date(`${requireIsoDate(a.appt_date, 'appt_date')}T00:00:00Z`);
     const weekday = apptDate.getUTCDay();
     const hour = Number(String(a.start_time).slice(0, 2));
     const bucket = hourBucketFor(hour);

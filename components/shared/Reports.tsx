@@ -192,9 +192,16 @@ export default function Reports() {
               label="Receita Potencial Perdida"
               value={formatEUR(data.metrics.recoveryPotential)}
               sub={
-                <Link href={isGlobalAdmin ? '/dashboard/super-admin/recovery' : '/dashboard/admin/recovery'}>
-                  Ver detalhe em Recuperação →
-                </Link>
+                // `/dashboard/super-admin/recovery` nunca existiu — este link dava 404
+                // sempre que um super-admin FORA de uma clínica abria os relatórios. E
+                // não pode existir: a Recuperação é por clínica, e um super-admin sem
+                // clínica ativa não tem nenhuma para mostrar. Por isso o link só
+                // aparece quando tem mesmo para onde ir.
+                isGlobalAdmin ? (
+                  <span style={{ color: 'var(--text-muted)' }}>Entre numa clínica para ver o detalhe</span>
+                ) : (
+                  <Link href="/dashboard/admin/recovery">Ver detalhe em Recuperação →</Link>
+                )
               }
               color="var(--urgency-critical)"
             />

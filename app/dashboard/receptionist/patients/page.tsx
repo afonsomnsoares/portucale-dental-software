@@ -15,6 +15,7 @@ import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import type { SchemaField } from '@/components/shared/SchemaFieldInput';
 import { Empty, GhostBtn, PageHeader, Spinner, Tabs, Timeline } from '@/components/ui';
+import { useDebouncedValue } from '@/hooks/useDebouncedEffect';
 import { useQuery } from '@/hooks/useQuery';
 import type { MissingField } from '@/lib/missingData';
 import type { NextAction } from '@/lib/nextAction';
@@ -49,7 +50,8 @@ export default function ReceptionPatientsPage() {
 
   // Mesmo desenho da página equivalente do dentista: o id do doente escolhido
   // comanda as leituras, em vez de um `select()` a orquestrar cinco pedidos.
-  const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(search)}`);
+  const buscaAdiada = useDebouncedValue(search);
+  const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(buscaAdiada)}`);
   const patients = patientsQuery.data ?? [];
 
   const pid = selected?.id ?? null;
@@ -181,6 +183,8 @@ export default function ReceptionPatientsPage() {
           selectedId={selected?.id}
           onSelect={select}
           loading={patientsQuery.loading}
+          error={patientsQuery.error}
+          onRetry={patientsQuery.refetch}
           search={search}
           onSearchChange={setSearch}
         />

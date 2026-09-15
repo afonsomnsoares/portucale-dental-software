@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import { Badge, Empty, RiskBadge, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, RiskBadge, Spinner } from '@/components/ui';
 import type { Patient } from '@/lib/types';
 
 export default function PatientsSidebarList({
@@ -7,15 +7,24 @@ export default function PatientsSidebarList({
   selectedId,
   onSelect,
   loading,
+  error,
+  onRetry,
   search,
   onSearchChange,
   alwaysShowRiskBadge = false,
-  emptyMessage = 'No patients found',
+  emptyMessage = 'Sem doentes para mostrar',
 }: {
   patients: Patient[];
   selectedId: string | undefined;
   onSelect: (p: Patient) => void;
   loading: boolean;
+  /**
+   * Erro da leitura de /patients. Sem isto, uma falha da API entrava aqui como
+   * `patients: []` e a lista mostrava «Sem doentes» — uma rececionista lia isso
+   * como a base de dados estar vazia. Ver o `error` que o useQuery devolve.
+   */
+  error?: Error | null;
+  onRetry?: () => void;
   search: string;
   onSearchChange: (value: string) => void;
   // Dentist view always shows the risk badge; receptionist view only surfaces it once a
@@ -34,7 +43,9 @@ export default function PatientsSidebarList({
         />
       </div>
       <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
-        {loading ? (
+        {error ? (
+          <ErrorState error={error} onRetry={onRetry} message="Não foi possível carregar a lista de doentes." />
+        ) : loading ? (
           <Spinner />
         ) : !patients.length ? (
           <Empty message={emptyMessage} />

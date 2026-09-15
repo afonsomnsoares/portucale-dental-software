@@ -2,7 +2,7 @@ import type { SessionUser } from './auth';
 import { query } from './db';
 
 export async function appendAudit(
-  user: Pick<SessionUser, 'name' | 'role' | 'clinic'>,
+  user: Pick<SessionUser, 'name' | 'role' | 'clinic'> & { tenantId?: string | null },
   action: string,
   resource: string,
   before: unknown = null,
@@ -12,6 +12,10 @@ export async function appendAudit(
   const entry = {
     user_name: user.name,
     user_role: user.role,
+    // `clinic` é o rótulo que se mostra. `tenant_id` é quem pode ler a linha — e é
+    // o único dos dois em que se pode confiar: ver
+    // scripts/migrations/056_audit_log_tenant_id.sql para o porquê.
+    tenant_id: user.tenantId || null,
     clinic: clinic || user.clinic || 'Tower',
     action,
     resource,
@@ -24,9 +28,18 @@ export async function appendAudit(
   // hash would be worthless for tamper-evidence: whoever tampers with a row
   // could just compute a fake chain that verifies against itself.
   await query(
-    `INSERT INTO audit_log (user_name, user_role, clinic, action, resource, before_val, after_val)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [entry.user_name, entry.user_role, entry.clinic, entry.action, entry.resource, entry.before_val, entry.after_val],
+    `INSERT INTO audit_log (user_name, user_role, tenant_id, clinic, action, resource, before_val, after_val)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [
+      entry.user_name,
+      entry.user_role,
+      entry.tenant_id,
+      entry.clinic,
+      entry.action,
+      entry.resource,
+      entry.before_val,
+      entry.after_val,
+    ],
   );
 }
 
@@ -35,11 +48,14 @@ export async function appendAudit(
 // Kept separate from appendAudit's before/after-value shape since there's no "after"
 // state here — the request was rejected before it changed anything.
 export async function logBlockedAccess(
-  user: Pick<SessionUser, 'name' | 'role' | 'clinic'> | null | undefined,
+  user: (Pick<SessionUser, 'name' | 'role' | 'clinic'> & { tenantId?: string | null }) | null | undefined,
   reason: string,
 ) {
   await appendAudit(
-    user || { name: 'Unknown', role: 'anonymous', clinic: 'System' },
+    // Sem sessão não há clínica — a linha fica com tenant_id NULL, que a política de
+    // INSERT da 056 aceita de propósito: são estas as recusas que mais interessa
+    // registar, e são precisamente as que ainda não têm contexto de tenant.
+    user || { name: 'Unknown', role: 'anonymous', clinic: 'System', tenantId: null },
     'FORBIDDEN',
     reason,
     null,

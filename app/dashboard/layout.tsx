@@ -69,7 +69,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           >
             <AppLogo size={36} />
           </div>
-          <span>Loading…</span>
+          <span>A carregar…</span>
         </div>
       </div>
     );

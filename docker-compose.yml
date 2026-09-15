@@ -4,6 +4,11 @@ services:
     container_name: portucale-db
     restart: unless-stopped
     environment:
+      # Fuso do servidor de base de dados. Importa porque há SQL que lê a hora de
+      # parede — EXTRACT(HOUR FROM NOW()) em lib/jobsRunner.ts decide a que horas
+      # saem os lembretes de checklist. Em UTC saíam uma hora fora durante a hora
+      # de verão, sete meses por ano.
+      TZ: ${TZ:-Europe/Lisbon}
       POSTGRES_USER: postgres
       # Sem omissão, ao contrário do resto deste ficheiro: esta é a credencial do
       # SUPERUSER, e é a ligação que aplica DDL e corre os jobs. Um valor por defeito
@@ -49,6 +54,11 @@ services:
     # depois de terminar com sucesso.
     restart: 'no'
     environment:
+      # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
+      # hora de parede de Lisboa. Os turnos (isOnShift, shiftHandoff, taskRouting)
+      # comparam com getHours()/getDay() locais: em UTC, um turno das 09:00 às 18:00
+      # avaliava uma hora deslocado durante toda a hora de verão.
+      TZ: ${TZ:-Europe/Lisbon}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/portucale_dental
     command: ['node', '--import', 'tsx', 'scripts/migrate.ts']
     depends_on:
@@ -111,6 +121,11 @@ services:
       # é o que garante que este volume nasce com dono `nextjs` e não root.
       - uploads:/app/public/uploads
     environment:
+      # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
+      # hora de parede de Lisboa. Os turnos (isOnShift, shiftHandoff, taskRouting)
+      # comparam com getHours()/getDay() locais: em UTC, um turno das 09:00 às 18:00
+      # avaliava uma hora deslocado durante toda a hora de verão.
+      TZ: ${TZ:-Europe/Lisbon}
       # Admin connection — unused by the app itself once APP_DATABASE_URL
       # below is set (lib/db.ts prefers it), kept here only so this service
       # still works unmodified if that var is ever removed.
@@ -153,6 +168,21 @@ services:
       # Não basta o Postgres estar de pé: tem de estar migrado. Ver o serviço `migrate`.
       migrate:
         condition: service_completed_successfully
+    # Sem isto o `app` conta como pronto assim que o contentor arranca, e o Caddy
+    # (que só dizia `depends_on: - app`) começava a encaminhar para um Next.js ainda
+    # a subir — 502 a cada deploy, durante o arranque inteiro.
+    #
+    # Um 401 CONTA COMO SAUDÁVEL, de propósito: /api/platform/health exige
+    # super-admin, por isso uma resposta 401 prova que o Next arrancou, que o
+    # `withRoute` correu e que a autenticação decidiu — que é tudo o que o Caddy
+    # precisa de saber antes de encaminhar. Só 5xx (ou nenhuma resposta) é que é
+    # doença. Não se mete aqui credencial nenhuma por causa disto.
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/api/platform/health').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   # Unattended counterpart to the admin "Run Jobs" action: periodically runs
   # scripts/run-jobs.ts (see that file / lib/jobsRunner.ts) for every active tenant —
@@ -176,6 +206,11 @@ services:
       # apagar nada, e os ficheiros de verdade ficavam no volume do `app` para sempre.
       - uploads:/app/public/uploads
     environment:
+      # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
+      # hora de parede de Lisboa. Os turnos (isOnShift, shiftHandoff, taskRouting)
+      # comparam com getHours()/getDay() locais: em UTC, um turno das 09:00 às 18:00
+      # avaliava uma hora deslocado durante toda a hora de verão.
+      TZ: ${TZ:-Europe/Lisbon}
       # Intentionally the admin connection, not APP_DATABASE_URL — this
       # process reads across every tenant with no per-request session to
       # scope it, so it's exempt from Row-Level Security the same way
@@ -244,7 +279,10 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - app
+      # `- app` esperava só pelo arranque do contentor, não por ele servir. Ver o
+      # healthcheck do serviço `app`.
+      app:
+        condition: service_healthy
 
   # ─── Cópias de segurança ────────────────────────────────────────────────────
   # Não existia nada. Nenhum pg_dump, nenhum procedimento, nada fora do volume
@@ -268,6 +306,11 @@ services:
     container_name: portucale-backup
     restart: unless-stopped
     environment:
+      # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
+      # hora de parede de Lisboa. Os turnos (isOnShift, shiftHandoff, taskRouting)
+      # comparam com getHours()/getDay() locais: em UTC, um turno das 09:00 às 18:00
+      # avaliava uma hora deslocado durante toda a hora de verão.
+      TZ: ${TZ:-Europe/Lisbon}
       PGHOST: postgres
       PGUSER: postgres
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
@@ -299,6 +342,11 @@ services:
     container_name: portucale-watchdog
     restart: unless-stopped
     environment:
+      # Sem isto o contentor corre em UTC, enquanto `appt_date` e `start_time` são
+      # hora de parede de Lisboa. Os turnos (isOnShift, shiftHandoff, taskRouting)
+      # comparam com getHours()/getDay() locais: em UTC, um turno das 09:00 às 18:00
+      # avaliava uma hora deslocado durante toda a hora de verão.
+      TZ: ${TZ:-Europe/Lisbon}
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/portucale_dental
       # Quanto tempo sem uma passagem completa conta como avaria. Por omissão 4x o
       # JOB_INTERVAL_SECONDS do serviço `jobs` (900s), para uma passagem lenta ou um

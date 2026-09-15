@@ -4,7 +4,7 @@ import { useAuth } from '@/app/providers';
 import ChecklistPanel from '@/components/operations/ChecklistPanel';
 import IncidentsPanel from '@/components/operations/IncidentsPanel';
 import TemplateManager from '@/components/operations/TemplateManager';
-import { PageHeader, Tabs } from '@/components/ui';
+import { ErrorState, PageHeader, Spinner, Tabs } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { DbUser } from '@/lib/types';
 
@@ -18,6 +18,11 @@ export default function ClinicOperationsPage() {
   const [tab, setTab] = useState('checklists');
   // A equipa serve para atribuir tarefas e turnos. Falhar em silêncio dava um
   // seletor vazio — e um seletor vazio lê-se como «não há ninguém na clínica».
+  //
+  // Isto esteve escrito aqui durante todo este tempo com um `?? []` por baixo, que é
+  // exatamente o falhar em silêncio que o comentário descrevia. O `useQuery` devolve
+  // `error` de propósito: sem o ler, um 500 em /api/users e uma clínica sem pessoal
+  // dão o mesmo ecrã.
   const teamQuery = useQuery<DbUser[]>('/users');
   const teamUsers = teamQuery.data ?? [];
 
@@ -42,6 +47,14 @@ export default function ClinicOperationsPage() {
           <div className="section-label mb-3">CHECKLISTS DE HOJE</div>
           <ChecklistPanel api={api} />
         </div>
+      ) : teamQuery.error ? (
+        <ErrorState
+          error={teamQuery.error}
+          onRetry={teamQuery.refetch}
+          message="Não foi possível carregar a equipa da clínica."
+        />
+      ) : teamQuery.loading ? (
+        <Spinner />
       ) : (
         <IncidentsPanel api={api} canManage teamUsers={teamUsers} />
       )}

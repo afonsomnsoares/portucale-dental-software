@@ -1,4 +1,11 @@
 FROM node:22-alpine AS base
+# tzdata na base, e não só na imagem final: os serviços `migrate`, `jobs` e
+# `watchdog` do docker-compose.yml correm a stage `builder`, e é o `jobs` que decide
+# turnos, passagens de turno e a que horas saem os lembretes. Sem este pacote o
+# Alpine não conhece "Europe/Lisbon" e qualquer TZ nomeado cai em silêncio para UTC —
+# a variável fica posta e não muda nada, que é a pior das duas maneiras de falhar.
+RUN apk add --no-cache tzdata
+ENV TZ=Europe/Lisbon
 
 FROM base AS deps
 WORKDIR /app
@@ -29,6 +36,11 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# O mesmo fuso que o docker-compose.yml passa, aqui como omissão para quem corre a
+# imagem sem o compose. As datas de consulta são hora de parede de Lisboa e há código
+# que as compara com getHours()/getDay() locais — em UTC ficam deslocadas uma hora
+# durante a hora de verão. `tzdata` é preciso para o Alpine saber o que é "Lisboa".
+ENV TZ=Europe/Lisbon
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs

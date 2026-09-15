@@ -52,7 +52,7 @@ export function useSpeechRecognition(language = 'pt-PT'): SpeechRecognitionHook 
     setInterimText('');
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      setError('Speech recognition is not supported in this browser.');
+      setError('Este navegador não suporta ditado por voz.');
       return;
     }
     if (recognitionRef.current) {
@@ -82,7 +82,7 @@ export function useSpeechRecognition(language = 'pt-PT'): SpeechRecognitionHook 
 
     recognition.onerror = (event: any) => {
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        setError(`Speech error: ${event.error}`);
+        setError(`Não foi possível ditar: ${event.error}`);
       }
       setIsRecording(false);
       setInterimText('');

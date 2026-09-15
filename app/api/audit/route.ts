@@ -6,22 +6,34 @@ export const GET = withRoute({ permission: 'audit:read', tenant: 'optional' }, a
   if (!requireRoles(user, 'admin', 'super_admin')) return forbidden();
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
-  // audit_log has no tenant_id, only a `clinic` name — a tenant-scoped admin
-  // must never see another clinic's log, so their own clinic is forced here
-  // regardless of what ?clinic= they pass. Only a super-admin (no tenantId)
-  // may filter across clinics.
-  const clinic = tenantId ? user.clinic : searchParams.get('clinic');
   const q = searchParams.get('q');
 
+  // ─── O isolamento é por tenant_id, não pelo nome da clínica ────────────────
+  // Isto filtrava por `user.clinic`, que é texto livre escrito num <input> e vinha
+  // por omissão a 'Main'/'Main Clinic'. Duas clínicas que ficassem com o nome por
+  // omissão liam o registo uma da outra — sem ataque nenhum, e com nomes de doentes
+  // e medicamentos lá dentro. Ver scripts/migrations/056_audit_log_tenant_id.sql.
+  //
+  // A política de RLS da 056 já recusa as linhas de outra clínica mesmo que esta
+  // cláusula desapareça; fica aqui à mesma para que a consulta diga o que quer, e
+  // porque o super-admin corre com is_super_admin=true e atravessa a política.
   let sql = `SELECT * FROM audit_log WHERE 1=1`;
-  const vals = [];
+  const vals: unknown[] = [];
   if (action) {
     vals.push(action);
     sql += ` AND action=$${vals.length}`;
   }
-  if (clinic) {
-    vals.push(clinic);
-    sql += ` AND clinic=$${vals.length}`;
+  if (tenantId) {
+    vals.push(tenantId);
+    sql += ` AND tenant_id=$${vals.length}::uuid`;
+  } else {
+    // Só o super-admin chega aqui (tenant: 'optional' + requireRoles acima). O
+    // ?clinic= continua a ser dele, agora como filtro de conveniência sobre o rótulo.
+    const clinic = searchParams.get('clinic');
+    if (clinic) {
+      vals.push(clinic);
+      sql += ` AND clinic=$${vals.length}`;
+    }
   }
   if (q) {
     vals.push(`%${q}%`);

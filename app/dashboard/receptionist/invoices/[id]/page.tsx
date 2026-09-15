@@ -6,6 +6,7 @@ import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
   Badge,
+  ErrorState,
   FormField,
   GhostBtn,
   Inp,
@@ -87,6 +88,22 @@ export default function InvoiceDetailPage() {
   const balance = inv ? Math.max(0, Number(inv.amount) - Number(inv.paid)) : 0;
 
   if (invQuery.loading) return <Spinner />;
+  // Um 500 na API e uma fatura apagada davam os dois a mesma frase — «Fatura não
+  // encontrada» — e a pessoa ficava convencida de que alguém a tinha apagado.
+  if (invQuery.error) {
+    return (
+      <div>
+        <GhostBtn onClick={() => router.back()} style={{ marginBottom: 16 }}>
+          <ArrowLeft size={16} style={{ marginRight: 8 }} /> Voltar
+        </GhostBtn>
+        <ErrorState
+          error={invQuery.error}
+          onRetry={invQuery.refetch}
+          message="Não foi possível carregar esta fatura."
+        />
+      </div>
+    );
+  }
   if (!inv) {
     return (
       <div className="card p-5" style={{ color: 'var(--text-secondary)' }}>

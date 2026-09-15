@@ -1,3 +1,4 @@
+import { isoDate } from './pgDate';
 // Mínimo de caracteres de uma password, partilhado pelo servidor (app/api/users/route.ts,
 // app/api/users/[id]/route.ts) e pelos formulários que lá escrevem. Estava escrito à mão
 // em cada um dos sítios: o formulário deixava submeter qualquer password não-vazia e só o
@@ -370,9 +371,18 @@ export function formatEUR(value: number): string {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
 }
 
-export function formatDatePT(date: string | Date): string {
-  const d = new Date(date);
-  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+/**
+ * Data em português (dd/mm/aaaa). Aceita o que o `pg` devolve numa coluna DATE — um
+ * `Date` à meia-noite local — e também a string ISO, e nunca devolve "Invalid Date"
+ * nem "01/01/1970" para um valor ausente: sem data, devolve string vazia, que é o que
+ * a interface deve mostrar. Ver lib/pgDate.ts para o porquê de não se usar aqui
+ * `String(...).slice(0, 10)`.
+ */
+export function formatDatePT(date: string | Date | null | undefined): string {
+  const iso = isoDate(date);
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 export function formatPhonePT(phone: string): string {

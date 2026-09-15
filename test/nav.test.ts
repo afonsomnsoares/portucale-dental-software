@@ -10,7 +10,7 @@
 // data-subject-requests, suppliers) foram construídos e testados sem que uma única
 // página os chamasse. Um teste não os teria evitado — mas evita o próximo.
 import assert from 'node:assert/strict';
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { NAV } from '../lib/constants.ts';
@@ -123,4 +123,70 @@ test('a raiz de cada papel é alcançável a partir do próprio menu', () => {
       `${role}: a home (${raiz}) não está no menu`,
     );
   }
+});
+
+// ─── Nenhum link escrito à mão pode apontar para o vazio ────────────────────
+// Os testes acima confrontam o NAV com o disco, e é isso que sabem fazer. Passavam
+// todos enquanto QUATRO links escritos directamente no corpo das páginas davam 404 —
+// três deles no ecrã de entrada, o único que toda a gente vê:
+//
+//   app/page.tsx            → /recuperar-palavra-passe, /privacidade, /termos
+//   components/shared/Reports.tsx → /dashboard/super-admin/recovery
+//
+// Nenhum estava no NAV, por isso nenhum era visível a este ficheiro. O «Recuperar
+// acesso» é o exemplo de como isto dói: quem lá carrega está trancado fora da conta.
+//
+// Esta varredura lê os href/push/redirect literais de todo o app/ e components/ e
+// confronta-os com as páginas que existem em disco — dashboard incluído e tudo o resto.
+test('todos os links internos escritos à mão apontam para páginas que existem', () => {
+  const APP = path.join(import.meta.dirname, '..', 'app');
+  const COMPONENTS = path.join(import.meta.dirname, '..', 'components');
+
+  // Rotas de página em TODO o app/, e não só em /dashboard.
+  const todasAsPaginas = new Set(pageRoutes(APP, ''));
+  todasAsPaginas.add('/'); // app/page.tsx dá '' acima
+
+  function ficheiros(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      if (statSync(full).isDirectory()) out.push(...ficheiros(full));
+      else if (/\.tsx?$/.test(entry)) out.push(full);
+    }
+    return out;
+  }
+
+  // href="/x", router.push('/x'), redirect('/x') — só literais, e só internos.
+  const PADRAO = /(?:href=|router\.push\(|\bredirect\()\s*['"`](\/[^'"`\s${}]*)['"`]/g;
+  const raiz = path.join(import.meta.dirname, '..');
+  const partidos: string[] = [];
+
+  for (const ficheiro of [...ficheiros(APP), ...ficheiros(COMPONENTS)]) {
+    const src = readFileSync(ficheiro, 'utf8');
+    for (const m of src.matchAll(PADRAO)) {
+      const alvo = (m[1] as string).split(/[?#]/)[0].replace(/\/$/, '') || '/';
+
+      // Fora de âmbito: a API não tem page.tsx, os ficheiros estáticos vivem em
+      // public/, e um segmento dinâmico não se resolve sem valores.
+      if (alvo.startsWith('/api/') || alvo.includes('[')) continue;
+      if (/\.[a-z0-9]+$/i.test(alvo)) continue;
+
+      // Uma rota dinâmica em disco (/portal/[token]) cobre /portal/<o-que-for>.
+      const cobertaPorDinamica = [...todasAsPaginas].some((p) => {
+        if (!p.includes('[')) return false;
+        const re = new RegExp(`^${p.replace(/\[[^\]]+\]/g, '[^/]+')}$`);
+        return re.test(alvo);
+      });
+
+      if (!todasAsPaginas.has(alvo) && !cobertaPorDinamica) {
+        partidos.push(`${path.relative(raiz, ficheiro)} → ${alvo}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    [...new Set(partidos)].sort(),
+    [],
+    'Links internos para páginas que não existem:\n  ' + [...new Set(partidos)].sort().join('\n  '),
+  );
 });

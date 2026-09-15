@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { AlertBanner, Badge, Empty, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, Empty, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { AgentInsight, AgentStatus } from '@/lib/types/agent';
@@ -71,7 +71,13 @@ export default function ClinicAgentsPage() {
         </div>
       )}
 
-      {agentsQuery.loading ? (
+      {agentsQuery.error ? (
+        <ErrorState
+          error={agentsQuery.error}
+          onRetry={agentsQuery.refetch}
+          message="Não foi possível carregar os agentes."
+        />
+      ) : agentsQuery.loading ? (
         <div className="card p-5">
           <Spinner />
         </div>

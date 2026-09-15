@@ -5,6 +5,7 @@ import {
   AlertBanner,
   Badge,
   Empty,
+  ErrorState,
   FormField,
   GhostBtn,
   Modal,
@@ -123,6 +124,14 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
     }
   }
 
+  if (handoffsQuery.error)
+    return (
+      <ErrorState
+        error={handoffsQuery.error}
+        onRetry={handoffsQuery.refetch}
+        message="Não foi possível carregar as passagens de turno."
+      />
+    );
   if (handoffsQuery.loading) return <Spinner />;
 
   const openForMe = handoffs.filter(

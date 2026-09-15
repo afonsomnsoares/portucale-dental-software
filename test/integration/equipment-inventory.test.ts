@@ -212,3 +212,72 @@ test('fornecedores: sem nome é recusado', async () => {
   );
   assert.equal(res.status, 400);
 });
+
+// ─── O limiar de reposição é por clínica, não do catálogo ───────────────────
+// `inventory_items` é global de propósito (migração 044) — mas PUT
+// /api/inventory/items/[id] escrevia `reorder_at` nessa tabela global com uma
+// permissão que qualquer admin de clínica tem. Mudar o limiar numa clínica mudava-o
+// em todas, que é exatamente o que a migração 044 tinha sido escrita para acabar:
+// ela criou `inventory_item_settings` (por clínica, com RLS) e a interface continuou
+// a escrever na coluna partilhada.
+test('mudar o ponto de reposição não mexe no catálogo que as outras clínicas veem', async () => {
+  const { PUT: putItem } = await import('../../app/api/inventory/items/[id]/route.ts');
+  const { query } = await import('../../lib/db.ts');
+
+  const [item] = await query(
+    `INSERT INTO inventory_items (item, unit, reorder_at) VALUES ($1,'un',10) RETURNING id, item, reorder_at`,
+    [`Teste isolamento ${Date.now()}`],
+  );
+  const globalAntes = Number(item.reorder_at);
+
+  const res = await putItem(
+    authedRequest(adminB, {
+      method: 'PUT',
+      url: `/api/inventory/items/${item.id}`,
+      body: { reorderAt: 99 },
+    }),
+    { params: Promise.resolve({ id: String(item.id) }) },
+  );
+  assert.equal(res.status, 200);
+
+  const [depois] = await query(`SELECT reorder_at FROM inventory_items WHERE id=$1`, [item.id]);
+  assert.equal(
+    Number(depois.reorder_at),
+    globalAntes,
+    'o limiar global mudou — as outras clínicas foram arrastadas nesta alteração',
+  );
+
+  const [porClinica] = await query(
+    `SELECT reorder_at FROM inventory_item_settings WHERE item_id=$1 AND tenant_id=$2`,
+    [item.id, tenantBId],
+  );
+  assert.ok(porClinica, 'não foi gravada política nenhuma para esta clínica');
+  assert.equal(Number(porClinica.reorder_at), 99);
+
+  await query(`DELETE FROM inventory_items WHERE id=$1`, [item.id]);
+});
+
+test('renomear um item do catálogo a partir de uma clínica é recusado', async () => {
+  const { PUT: putItem } = await import('../../app/api/inventory/items/[id]/route.ts');
+  const { query } = await import('../../lib/db.ts');
+
+  const [item] = await query(
+    `INSERT INTO inventory_items (item, unit, reorder_at) VALUES ($1,'un',10) RETURNING id, item`,
+    [`Teste rename ${Date.now()}`],
+  );
+
+  const res = await putItem(
+    authedRequest(adminB, {
+      method: 'PUT',
+      url: `/api/inventory/items/${item.id}`,
+      body: { item: 'Nome imposto a toda a gente' },
+    }),
+    { params: Promise.resolve({ id: String(item.id) }) },
+  );
+  assert.equal(res.status, 403);
+
+  const [depois] = await query(`SELECT item FROM inventory_items WHERE id=$1`, [item.id]);
+  assert.equal(depois.item, item.item, 'o nome do catálogo foi alterado a partir de uma clínica');
+
+  await query(`DELETE FROM inventory_items WHERE id=$1`, [item.id]);
+});

@@ -14,6 +14,7 @@ import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import type { SchemaField } from '@/components/shared/SchemaFieldInput';
 import { Empty, PageHeader, Tabs, Timeline } from '@/components/ui';
+import { useDebouncedValue } from '@/hooks/useDebouncedEffect';
 import { useQuery } from '@/hooks/useQuery';
 import type { MissingField } from '@/lib/missingData';
 import type { NextAction } from '@/lib/nextAction';
@@ -125,7 +126,8 @@ export default function DentistPatientsPage() {
   // Orquestrá-las num só pedido teria duas consequências más: um destino comum
   // para sete falhas independentes, e o separador «Documentos» a mostrar os do
   // doente ANTERIOR até o lote novo chegar todo.
-  const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(search)}`);
+  const buscaAdiada = useDebouncedValue(search);
+  const patientsQuery = useQuery<Patient[]>(`/patients?q=${encodeURIComponent(buscaAdiada)}`);
   const patients = patientsQuery.data ?? [];
 
   const pid = selected?.id ?? null;
@@ -186,6 +188,8 @@ export default function DentistPatientsPage() {
           selectedId={selected?.id}
           onSelect={select}
           loading={patientsQuery.loading}
+          error={patientsQuery.error}
+          onRetry={patientsQuery.refetch}
           search={search}
           onSearchChange={setSearch}
           alwaysShowRiskBadge

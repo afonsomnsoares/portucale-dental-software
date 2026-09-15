@@ -81,27 +81,37 @@ propõe e nunca aplica; nenhum agente fala com alguém de fora sem uma pessoa a 
 
 | | |
 |---|---|
-| Rotas de API | 125 |
-| Páginas de dashboard | 59 |
-| Componentes | 71 |
-| Módulos de lógica | 75 em `lib/` + 15 de agentes |
-| Tabelas PostgreSQL | 68 |
-| Migrações incrementais | 51 |
-| Jobs em segundo plano | 29 por clínica + 1 de plataforma |
-| Testes unitários | 543, em 36 ficheiros — sem base de dados |
-| Testes de integração | 140, em 22 ficheiros — contra PostgreSQL real |
+| Rotas de API | 132 |
+| Páginas de dashboard | 97 (+ 5 públicas, sem sessão) |
+| Componentes | 111 |
+| Módulos de lógica | 81 em `lib/` + 15 de agentes |
+| Tabelas PostgreSQL | 69 |
+| Migrações incrementais | 56 |
+| Jobs em segundo plano | 28 por clínica + 1 de plataforma |
+| Testes unitários | 644, em 44 ficheiros — sem base de dados |
+| Testes de integração | 157, em 25 ficheiros — contra PostgreSQL real |
 
 ---
 
 ## Arranque rápido
 
-```bash
-# 1. Base de dados (PostgreSQL 17 + pgAdmin)
-docker compose up -d postgres pgadmin
+> A ordem destes dois primeiros passos não é indiferente: o Compose lê o `.env` para
+> substituir as variáveis do `docker-compose.yml`, e três delas estão declaradas com
+> `:?` (aborta se faltarem). Arrancar os contentores antes de criar o ficheiro não
+> pode funcionar — era esta a ordem que aqui estava.
 
-# 2. Variáveis de ambiente
+```bash
+# 1. Variáveis de ambiente
 cp .env.example .env
-#    preencher DATABASE_URL, APP_DATABASE_URL e JWT_SECRET (openssl rand -base64 48)
+#    OBRIGATÓRIAS, sem valor por omissão — o `docker compose up` aborta sem elas:
+#      POSTGRES_PASSWORD       openssl rand -base64 32
+#      POSTGRES_APP_PASSWORD   openssl rand -base64 32
+#      PGADMIN_PASSWORD        openssl rand -base64 32
+#      JWT_SECRET              openssl rand -base64 48
+#    E confirmar DATABASE_URL / APP_DATABASE_URL para o desenvolvimento local.
+
+# 2. Base de dados (PostgreSQL 17 + pgAdmin)
+docker compose up -d postgres pgadmin
 
 # 3. Schema + migrações + dados demo
 npm install
@@ -546,7 +556,7 @@ o *cooldown* de 30 dias arrancava na tentativa em vez de no envio.
 ## Jobs em segundo plano
 
 Pipeline central em `lib/jobsRunner.ts`, corrido por `scripts/run-jobs.ts` (cron ou o serviço
-`jobs` do Docker Compose) ou sob pedido de um admin. 29 jobs por clínica, mais `groupReview`,
+`jobs` do Docker Compose) ou sob pedido de um admin. 28 jobs por clínica, mais `groupReview`,
 que corre uma vez por passagem porque é transversal às clínicas:
 
 | Grupo | Jobs |
@@ -734,7 +744,7 @@ O que está de facto implementado, e não apenas previsto no schema:
 ## Testes
 
 ```bash
-npm run test              # 543 unitários, 36 ficheiros — sem base de dados
+npm run test              # 644 unitários, 44 ficheiros — sem base de dados
 npm run test:integration  # 140 de integração, 22 ficheiros — precisa do PostgreSQL de .env.test
 npm run test:all
 ```
@@ -958,7 +968,7 @@ portucale_dental/
 4. **Isolamento em duas camadas**: `tenant_id` na aplicação e RLS no PostgreSQL, para que um
    esquecimento numa não seja suficiente para vazar
 5. **Lógica pura separada da BD**: o que decide (`*Calc.ts`) não sabe SQL, o que sabe SQL não
-   decide. É o que torna 343 testes possíveis sem base de dados
+   decide. É o que torna 644 testes possíveis sem base de dados
 6. **Estado derivado, não guardado**: a etapa da jornada e o estágio de ciclo de vida são
    calculados de fresco a cada leitura. Uma coluna "estágio" dessincroniza-se em silêncio;
    uma derivação não pode
@@ -1001,7 +1011,7 @@ decisão, calibração e contas de terceiros.
 | Cópias de segurança | **Existem.** `scripts/backup.sh` (verificado com `pg_restore --list`) e `scripts/restore.sh` | Não havia nada: nem `pg_dump`, nem procedimento, nada fora do volume `pgdata`. O passo que falta é **offsite** e é de quem administra |
 | Persistência de uploads | **Corrigida.** Volume `uploads` no `app` e no `jobs` | Sem R2, os anexos clínicos e os ficheiros do portal viviam dentro do contentor e desapareciam a cada redeploy, em silêncio |
 | Vigilância do pipeline | **Ativa.** `scripts/check-jobs-fresh.ts` no serviço `watchdog` | O `staleJobs` de `lib/platformStats.ts` já existia mas era por consulta; o ciclo do `jobs` morria calado. Alerta por log, e por SMS com `OPS_ALERT_PHONE` |
-| Testes de interface | **Continuam a não existir.** Nenhum Playwright/Cypress, nenhum teste de componente | Os 771 testes cobrem lógica e rotas; nenhum renderiza uma página. O dashboard é uma SPA cliente, por isso um `curl` vê sempre a casca `Loading…` — um componente que rebente com dados válidos não é apanhado por nada hoje |
+| Testes de interface | **Continuam a não existir.** Nenhum Playwright/Cypress, nenhum teste de componente | Os 801 testes cobrem lógica e rotas; nenhum renderiza uma página. O dashboard é uma SPA cliente, por isso um `curl` vê sempre a casca `Loading…` — um componente que rebente com dados válidos não é apanhado por nada hoje |
 
 > **Nota sobre `.env.test`:** as credenciais da base de dados de testes não correspondem às
 > do `.env`, e por isso a suite de integração não conseguia sequer ligar-se — 128 testes

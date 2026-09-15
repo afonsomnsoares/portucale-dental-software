@@ -15,6 +15,7 @@ import {
   suggestReorderQuantity,
   summarizeReconciliation,
 } from './inventoryCalc';
+import { isoDate } from './pgDate';
 
 // Tunable knobs for the forecast — not per-tenant configurable yet (a natural follow-up,
 // same as most of this project's other fixed constants e.g. lib/scheduleIntel.ts's
@@ -402,7 +403,7 @@ export async function computeStagnantInventory(tenantId: string): Promise<Stagna
         lastConsumedAt: r.last_consumed_at || null,
         consumedInWindow: Number(r.consumed_in_window) || 0,
         windowDays: STAGNANT_WINDOW_DAYS,
-        nearestExpiry: r.nearest_expiry ? String(r.nearest_expiry).slice(0, 10) : null,
+        nearestExpiry: isoDate(r.nearest_expiry),
       },
       today,
     );
@@ -417,7 +418,7 @@ export async function computeStagnantInventory(tenantId: string): Promise<Stagna
       daysSinceConsumed: r.last_consumed_at
         ? Math.floor((today.getTime() - new Date(r.last_consumed_at).getTime()) / 86_400_000)
         : null,
-      nearestExpiry: r.nearest_expiry ? String(r.nearest_expiry).slice(0, 10) : null,
+      nearestExpiry: isoDate(r.nearest_expiry),
     };
   });
 

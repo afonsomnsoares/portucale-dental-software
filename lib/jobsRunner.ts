@@ -14,11 +14,13 @@ import { appendAudit, appendTimeline } from './audit';
 import type { SessionUser } from './auth';
 import { runCarePathways } from './carePathway';
 import { canAutoContact } from './commPrefs';
-import { query, queryOne } from './db';
+import { formatDatePT } from './constants';
+import { query, queryOne, withAdvisoryLock } from './db';
 import { findEquipmentNeedingAttention } from './equipment';
 import { sweepStaleConversations } from './inbound';
 import { computeLifecycleTransitions, markLifecycleOutreachSent } from './lifecycle';
 import { createTask } from './patientTasks';
+import { requireIsoDate } from './pgDate';
 import { sweepRateLimitCounters } from './rateLimitShared';
 import { saveRecoverySnapshot } from './recovery';
 import { enforceRetentionPolicies } from './retention';
@@ -198,7 +200,9 @@ async function queueAppointmentReminders(tenantId: string): Promise<{ requests: 
     );
     if (exists) continue;
 
-    const date = String(r.appt_date).slice(0, 10);
+    // formatDatePT e não a data ISO: isto é o corpo de um SMS para um doente, e
+    // «2026-08-05» é tão estrangeiro como o «Wed Aug 05» que aqui estava antes.
+    const date = formatDatePT(requireIsoDate(r.appt_date, 'appt_date'));
     const time = String(r.start_time).slice(0, 5);
     const body = `Olá ${r.patient_name}, lembramos da sua consulta em ${r.tenant_name} no dia ${date} às ${time} (${r.type}). Para remarcar, contacte-nos.`;
     requests.push({
@@ -253,7 +257,7 @@ async function queueRiskOutreach(tenantId: string): Promise<{ requests: PendingC
     );
     if (exists) continue;
 
-    const date = String(a.appt_date).slice(0, 10);
+    const date = formatDatePT(requireIsoDate(a.appt_date, 'appt_date'));
     const time = String(a.start_time).slice(0, 5);
     const body = `Olá ${a.patient_name}, confirma a sua consulta em ${tenant?.name || ''} no dia ${date} às ${time} (${a.type})? Responda SIM para confirmar ou contacte-nos para remarcar.`;
 
@@ -815,10 +819,42 @@ async function dispatchContacts(tenantId: string, requests: PendingContact[]) {
 // Runs one job (or 'all' of them) for a single tenant and records it — used by both the
 // admin-triggered HTTP route and the unattended cron script. `actor` identifies who/what
 // triggered the run for the audit log; defaults to SYSTEM_ACTOR for unattended callers.
+/**
+ * Uma passagem de cada vez, por clínica e por job.
+ *
+ * `scripts/run-jobs.ts` tem o seu próprio lock para a corrida inteira, mas a rota
+ * POST /api/jobs/run chamava `runJob()` a seco — a corrida que o comentário desse
+ * script nomeia («um admin a carregar em POST /api/jobs/run ao mesmo tempo») não
+ * estava coberta. Isto fecha-a do lado certo: dentro do `runJob`, por isso vale para
+ * os dois pontos de entrada e para dois cliques seguidos no mesmo botão.
+ *
+ * Nome do lock por (clínica, job): duas clínicas continuam a poder correr em
+ * paralelo, que é o comportamento que o serviço `jobs` depende para não demorar o
+ * somatório de todas.
+ */
 export async function runJob(
   tenantId: string,
   job: JobName = 'all',
   actor: Pick<SessionUser, 'id' | 'name' | 'role' | 'clinic'> = SYSTEM_ACTOR,
+) {
+  const resultado = await withAdvisoryLock(`portucale_job:${tenantId}:${job}`, () =>
+    runJobExclusive(tenantId, job, actor),
+  );
+
+  if (resultado === null) {
+    // Não é erro: é a segunda passagem a desistir porque a primeira está a fazer
+    // exatamente o mesmo trabalho. Devolve-se ok para não pintar o ecrã do admin de
+    // vermelho por causa de um segundo clique.
+    console.warn(`[jobs] "${job}" já está a correr para a clínica ${tenantId} — passagem ignorada`);
+    return { ok: true as const, job, tenantId, skipped: 'already-running' as const, details: {} };
+  }
+  return resultado;
+}
+
+async function runJobExclusive(
+  tenantId: string,
+  job: JobName,
+  actor: Pick<SessionUser, 'id' | 'name' | 'role' | 'clinic'>,
 ) {
   const details: Record<string, unknown> = {};
   try {
