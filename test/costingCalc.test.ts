@@ -11,6 +11,7 @@ import {
   isAllocationMethod,
   labourCost,
   materialCostForProcedure,
+  perHour,
   roundEUR,
   stockValue,
   sumMargins,
@@ -213,4 +214,30 @@ test('sem itens nenhuns a cobertura não é fiável', () => {
   const c = costCoverage(0, 0);
   assert.equal(c.coveragePct, 0);
   assert.equal(c.reliable, false);
+});
+
+// ─── Por hora de cadeira ────────────────────────────────────────────────────
+
+test('perHour converte minutos em horas', () => {
+  assert.equal(perHour(300, 60), 300);
+  assert.equal(perHour(150, 30), 300);
+  assert.equal(perHour(100, 120), 50);
+});
+
+// Zero lê-se como «não rende nada»; o que se passa é que não houve tempo nenhum de que
+// o calcular. Mesma regra de pctOf e de todo o resto do módulo.
+test('sem minutos a taxa é null, e nunca zero', () => {
+  assert.equal(perHour(500, 0), null);
+  assert.equal(perHour(500, -30), null);
+  assert.equal(perHour(500, Number.NaN), null);
+});
+
+// O ponto de ter as duas: a receita por hora sozinha põe no topo o tratamento que mais
+// fatura, que pode ser o que menos deixa.
+test('a receita por hora e a margem por hora podem ordenar ao contrário', () => {
+  const caro = { revenue: 600, minutes: 120, net: 60 }; // 300 €/h de receita, 30 €/h de margem
+  const rapido = { revenue: 90, minutes: 30, net: 45 }; // 180 €/h de receita, 90 €/h de margem
+
+  assert.ok(perHour(caro.revenue, caro.minutes)! > perHour(rapido.revenue, rapido.minutes)!);
+  assert.ok(perHour(caro.net, caro.minutes)! < perHour(rapido.net, rapido.minutes)!);
 });

@@ -9,6 +9,7 @@ import {
   labourCost,
   type Margin,
   materialCostForProcedure,
+  perHour,
   sumMargins,
   unitCostFor,
   weightedAverageCost,
@@ -168,6 +169,15 @@ export interface MarginBreakdown {
   label: string;
   appointments: number;
   margin: Margin;
+  // Minutos de cadeira ocupados por este grupo no período — o denominador dos dois
+  // campos seguintes, exposto para o ecrã não ter de o reconstruir.
+  minutes: number;
+  // «Receita por hora» e «margem por hora». As duas juntas de propósito: a receita por
+  // hora sozinha é a métrica que faz uma clínica encher a agenda do tratamento que mais
+  // fatura e menos deixa. Este módulo existe precisamente para não deixar ler receita
+  // sem custo (ver o cabeçalho de costCoverage).
+  revenuePerHour: number | null;
+  netMarginPerHour: number | null;
 }
 
 export interface MarginReport {
@@ -175,6 +185,10 @@ export interface MarginReport {
   to: string;
   method: AllocationMethod;
   total: Margin;
+  // O mesmo par por hora, para a clínica inteira no período.
+  totalMinutes: number;
+  revenuePerHour: number | null;
+  netMarginPerHour: number | null;
   byDentist: MarginBreakdown[];
   byChair: MarginBreakdown[];
   byTreatmentType: MarginBreakdown[];
@@ -207,11 +221,12 @@ export async function computeMarginReport(tenantId: string, from: string, to: st
   ]);
 
   const groups = {
-    dentist: new Map<string, { label: string; margins: Margin[] }>(),
-    chair: new Map<string, { label: string; margins: Margin[] }>(),
-    type: new Map<string, { label: string; margins: Margin[] }>(),
+    dentist: new Map<string, { label: string; margins: Margin[]; minutes: number }>(),
+    chair: new Map<string, { label: string; margins: Margin[]; minutes: number }>(),
+    type: new Map<string, { label: string; margins: Margin[]; minutes: number }>(),
   };
   const all: Margin[] = [];
+  let allMinutes = 0;
   let itemsWithCost = 0;
   let itemsTotal = 0;
 
@@ -234,10 +249,16 @@ export async function computeMarginReport(tenantId: string, from: string, to: st
       allocatedFixedCost: allocatedFixedCost(basis, duration),
     });
     all.push(margin);
+    allMinutes += duration;
 
-    const push = (map: Map<string, { label: string; margins: Margin[] }>, key: string, label: string) => {
-      const entry = map.get(key) || { label, margins: [] };
+    const push = (
+      map: Map<string, { label: string; margins: Margin[]; minutes: number }>,
+      key: string,
+      label: string,
+    ) => {
+      const entry = map.get(key) || { label, margins: [], minutes: 0 };
       entry.margins.push(margin);
+      entry.minutes += duration;
       map.set(key, entry);
     };
     push(groups.dentist, String(r.dentist_id || 'unassigned'), String(r.dentist_name));
@@ -245,9 +266,20 @@ export async function computeMarginReport(tenantId: string, from: string, to: st
     push(groups.type, type, type);
   }
 
-  const toBreakdown = (map: Map<string, { label: string; margins: Margin[] }>): MarginBreakdown[] =>
+  const toBreakdown = (map: Map<string, { label: string; margins: Margin[]; minutes: number }>): MarginBreakdown[] =>
     Array.from(map.entries())
-      .map(([key, v]) => ({ key, label: v.label, appointments: v.margins.length, margin: sumMargins(v.margins) }))
+      .map(([key, v]) => {
+        const margin = sumMargins(v.margins);
+        return {
+          key,
+          label: v.label,
+          appointments: v.margins.length,
+          margin,
+          minutes: v.minutes,
+          revenuePerHour: perHour(margin.revenue, v.minutes),
+          netMarginPerHour: perHour(margin.netMargin, v.minutes),
+        };
+      })
       // Pior margem líquida primeiro. Ordenar por receita poria no topo o que já se
       // sabe; o que interessa descobrir é onde é que se trabalha para trás.
       .sort((a, b) => a.margin.netMargin - b.margin.netMargin);
@@ -265,6 +297,7 @@ export async function computeMarginReport(tenantId: string, from: string, to: st
   if (settings.labourCostPerHour <= 0) {
     warnings.push('Custo/hora de clínico não declarado: a mão de obra está a contar zero.');
   }
+  const total = sumMargins(all);
   const coverage = costCoverage(itemsWithCost, itemsTotal);
   if (!coverage.reliable) {
     warnings.push(
@@ -276,7 +309,10 @@ export async function computeMarginReport(tenantId: string, from: string, to: st
     from,
     to,
     method: settings.allocationMethod,
-    total: sumMargins(all),
+    total,
+    totalMinutes: allMinutes,
+    revenuePerHour: perHour(total.revenue, allMinutes),
+    netMarginPerHour: perHour(total.netMargin, allMinutes),
     byDentist: toBreakdown(groups.dentist),
     byChair: toBreakdown(groups.chair),
     byTreatmentType: toBreakdown(groups.type),

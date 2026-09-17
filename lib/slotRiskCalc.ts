@@ -229,6 +229,11 @@ export interface SlotProjection {
   chair: number;
   durationMinutes: number;
   risk: SlotRisk;
+  // Quanto vale este lugar, em euros, segundo o histórico de faturação do seu tipo de
+  // consulta. null quando não há faturação de que o derivar — e null propaga-se até ao
+  // ecrã em vez de virar zero, porque «este slot vale 0 €» e «não sabemos quanto vale»
+  // levam a decisões opostas: a primeira diz para não telefonar.
+  valueEur?: number | null;
 }
 
 export interface DayProjection {
@@ -238,7 +243,30 @@ export interface DayProjection {
   // Fração dos minutos marcados que se espera perder. É o número comparável entre
   // dias com quantidades de trabalho diferentes.
   expectedLossRate: number;
+  // A mesma perda esperada do dia, em euros. Soma das perdas por slot — só dos slots
+  // que têm valor conhecido. null quando nenhum tem.
+  expectedEmptyValueEur: number | null;
   atRisk: SlotProjection[];
+}
+
+// ─── O euro de UM lugar ─────────────────────────────────────────────────────
+// A perda esperada de um slot é o que ele vale vezes a probabilidade de ficar vazio.
+// Trivial de calcular e, mesmo assim, a peça que faltava: até aqui os euros só existiam
+// no total da clínica (`expectedRevenueLoss`), e um total não se telefona a ninguém.
+//
+// A decisão que isto informa é sempre sobre UM lugar — vale a pena gastar um telefonema
+// de confirmação neste? — e para essa decisão «45 € em risco na terça às 10h» é
+// acionável de uma forma que «1 340 € nas próximas três semanas» não é.
+export function expectedLossEur(risk: SlotRisk, valueEur: number | null | undefined): number | null {
+  if (valueEur == null || !Number.isFinite(Number(valueEur))) return null;
+  return roundEur(Number(valueEur) * risk.emptyProbability);
+}
+
+// Cêntimos, e não euros inteiros: um slot de 45 € com 12% de risco vale 5,40 € — ao
+// arredondar à unidade, meia agenda de risco baixo colapsava para zero e a soma do dia
+// ficava sistematicamente abaixo da verdade.
+function roundEur(v: number): number {
+  return Math.round(v * 100) / 100;
 }
 
 // Limiar acima do qual um slot entra na lista acionável. 0.35 e não 0.5: a decisão que
@@ -258,11 +286,16 @@ export function projectByDay(slots: SlotProjection[], threshold = SLOT_ACTIONABL
     .map(([date, list]) => {
       const bookedMinutes = list.reduce((sum, s) => sum + s.durationMinutes, 0);
       const expectedEmptyMinutes = list.reduce((sum, s) => sum + s.durationMinutes * s.risk.emptyProbability, 0);
+      // Só os slots com valor conhecido entram na soma, e se nenhum entrar o dia fica a
+      // null em vez de a 0 €. Um dia inteiro sem faturação de referência não é um dia
+      // sem nada a perder.
+      const comValor = list.map((s) => expectedLossEur(s.risk, s.valueEur)).filter((v): v is number => v != null);
       return {
         date,
         bookedMinutes,
         expectedEmptyMinutes: Math.round(expectedEmptyMinutes),
         expectedLossRate: bookedMinutes > 0 ? expectedEmptyMinutes / bookedMinutes : 0,
+        expectedEmptyValueEur: comValor.length ? roundEur(comValor.reduce((a, b) => a + b, 0)) : null,
         atRisk: list
           .filter((s) => s.risk.emptyProbability >= threshold)
           .sort((a, b) =>

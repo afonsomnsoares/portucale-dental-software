@@ -12,6 +12,7 @@ import {
   projectByDay,
   SLOT_ACTIONABLE_THRESHOLD,
   slotRisk,
+  expectedLossEur,
   type SlotProjection,
   timelyCancelShareFor,
   TIMELY_NOTICE_DAYS,
@@ -209,6 +210,54 @@ test('projectByDay põe a perda em minutos, na mesma unidade do otimizador', () 
   assert.equal(dia.bookedMinutes, 100);
   assert.equal(dia.expectedEmptyMinutes, 40); // 60*0.5 + 40*0.25
   assert.ok(Math.abs(dia.expectedLossRate - 0.4) < 1e-9);
+});
+
+// ─── O euro de um lugar ─────────────────────────────────────────────────────
+
+test('a perda esperada de um slot é o que ele vale vezes a probabilidade de ficar vazio', () => {
+  const s = slot({ appointmentId: 'a', emptyProbability: 0.4, valueEur: 120 });
+  assert.equal(expectedLossEur(s.risk, s.valueEur), 48);
+});
+
+// «Vale 0 €» e «não sabemos quanto vale» levam a decisões opostas: a primeira diz para
+// não telefonar. Uma clínica sem faturação lançada não deve produzir a primeira.
+test('sem valor conhecido a perda é null, e nunca zero', () => {
+  const s = slot({ appointmentId: 'a', emptyProbability: 0.9 });
+  assert.equal(expectedLossEur(s.risk, s.valueEur), null);
+  assert.equal(expectedLossEur(s.risk, Number.NaN), null);
+});
+
+// Cêntimos: ao arredondar à unidade, meia agenda de risco baixo colapsava para zero e a
+// soma do dia ficava sistematicamente abaixo da verdade.
+test('a perda por slot conta cêntimos', () => {
+  const s = slot({ appointmentId: 'a', emptyProbability: 0.12, valueEur: 45 });
+  assert.equal(expectedLossEur(s.risk, s.valueEur), 5.4);
+});
+
+test('o euro do dia é a soma dos euros dos lugares', () => {
+  const [dia] = projectByDay([
+    slot({ appointmentId: 'a', emptyProbability: 0.5, valueEur: 100 }),
+    slot({ appointmentId: 'b', emptyProbability: 0.25, valueEur: 40 }),
+  ]);
+  assert.equal(dia.expectedEmptyValueEur, 60); // 100*0.5 + 40*0.25
+});
+
+// Um dia inteiro sem faturação de referência não é um dia sem nada a perder — e os
+// minutos continuam a ser reportados na mesma.
+test('um dia sem valor nenhum conhecido fica a null, com os minutos intactos', () => {
+  const [dia] = projectByDay([slot({ appointmentId: 'a', emptyProbability: 0.5, durationMinutes: 60 })]);
+  assert.equal(dia.expectedEmptyValueEur, null);
+  assert.equal(dia.expectedEmptyMinutes, 30);
+});
+
+// Uma clínica pode ter faturação de umas consultas e não de outras. O dia soma o que
+// sabe em vez de desistir por causa do que não sabe.
+test('um dia com valor parcial soma só os lugares que o têm', () => {
+  const [dia] = projectByDay([
+    slot({ appointmentId: 'a', emptyProbability: 0.5, valueEur: 100 }),
+    slot({ appointmentId: 'b', emptyProbability: 0.5 }),
+  ]);
+  assert.equal(dia.expectedEmptyValueEur, 50);
 });
 
 test('projectByDay lista só o que vale um telefonema, do pior para o melhor', () => {

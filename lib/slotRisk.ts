@@ -142,23 +142,66 @@ async function historicalFillRates(tenantId: string): Promise<Map<string, number
   );
 }
 
+// ─── Quanto vale um lugar ───────────────────────────────────────────────────
+// Por TIPO de consulta, e não uma média única da clínica: uma Reabilitação Oral e uma
+// Destartarização não valem o mesmo, e tratá-las por igual é precisamente o erro que
+// leva a receção a telefonar às pessoas erradas — a média enterra a consulta cara no
+// meio das baratas e faz as baratas parecerem valer o triplo.
+//
+// A ligação fatura↔consulta existe desde a migração 042 (invoices.appointment_id, única
+// por consulta). Tipos com poucas observações caem na média da clínica em vez de
+// produzirem um valor a partir de duas faturas — mesmo raciocínio do clinicShares acima.
+const MIN_INVOICES_PER_TYPE = 3;
+
+async function valuePerAppointmentType(tenantId: string) {
+  const [porTipo, global] = await Promise.all([
+    queryRead(
+      `SELECT a.type, AVG(i.amount)::numeric AS fee, COUNT(*)::int AS n
+       FROM invoices i
+       JOIN appointments a ON a.id = i.appointment_id
+       WHERE i.tenant_id=$1 AND i.status <> 'cancelled'
+         AND i.invoice_date >= CURRENT_DATE - ($2::int * INTERVAL '1 month')
+       GROUP BY a.type`,
+      [tenantId, HISTORY_MONTHS],
+    ),
+    queryOne(
+      `SELECT AVG(amount)::numeric AS fee FROM invoices
+       WHERE tenant_id=$1 AND status <> 'cancelled'
+         AND invoice_date >= CURRENT_DATE - ($2::int * INTERVAL '1 month')`,
+      [tenantId, HISTORY_MONTHS],
+    ),
+  ]);
+
+  const fallback = global?.fee == null ? null : Number(global.fee);
+  const byType = new Map<string, number>();
+  for (const r of porTipo) {
+    if (Number(r.n) >= MIN_INVOICES_PER_TYPE && r.fee != null) byType.set(String(r.type), Number(r.fee));
+  }
+  // Uma clínica sem faturação nenhuma devolve null em tudo — e null chega ao ecrã como
+  // «—», que é a resposta honesta. Ver o comentário de SlotProjection.valueEur.
+  return (type: string): number | null => byType.get(type) ?? fallback;
+}
+
 export interface SlotRiskReport {
   horizonDays: number;
   generatedAt: string;
   days: ReturnType<typeof projectByDay>;
   totals: { bookedMinutes: number; expectedEmptyMinutes: number; atRisk: number };
-  // A perda esperada em euros, quando há valor médio de consulta para a converter.
+  // A perda esperada em euros, quando há faturação de que a derivar. Passou a ser a soma
+  // das perdas por slot (valor do tipo × P(fica vazio)) em vez de uma regra de três
+  // sobre a média da clínica — ver o cabeçalho de valuePerAppointmentType.
   expectedRevenueLoss: number | null;
   explanations: Record<string, string>;
 }
 
 export async function computeSlotRisk(tenantId: string, days = DEFAULT_HORIZON_DAYS): Promise<SlotRiskReport> {
-  const [history, waitlist, fillRates, upcoming, avgFee] = await Promise.all([
+  const [history, waitlist, fillRates, upcoming, valorDoTipo] = await Promise.all([
     vacancyHistory(tenantId),
     waitlistDepthByCell(tenantId),
     historicalFillRates(tenantId),
     queryRead(
       `SELECT a.id, a.appt_date::text AS appt_date, a.start_time::text AS start_time, a.chair, a.duration,
+              a.type,
               COALESCE(a.risk_score, 0)::int AS risk_score,
               COALESCE(p.name, a.patient_name, '—') AS patient_name
        FROM appointments a
@@ -168,11 +211,7 @@ export async function computeSlotRisk(tenantId: string, days = DEFAULT_HORIZON_D
        ORDER BY a.appt_date, a.start_time`,
       [tenantId, days],
     ),
-    queryOne(
-      `SELECT AVG(amount)::numeric AS fee FROM invoices
-       WHERE tenant_id=$1 AND status <> 'cancelled' AND invoice_date >= CURRENT_DATE - INTERVAL '12 months'`,
-      [tenantId],
-    ),
+    valuePerAppointmentType(tenantId),
   ]);
 
   const cells = aggregateVacancyHistory(history);
@@ -213,13 +252,14 @@ export async function computeSlotRisk(tenantId: string, days = DEFAULT_HORIZON_D
       chair: Number(a.chair),
       durationMinutes: Number(a.duration) || 30,
       risk,
+      valueEur: valorDoTipo(String(a.type)),
     };
   });
 
   const byDay = projectByDay(slots);
   const bookedMinutes = byDay.reduce((s, d) => s + d.bookedMinutes, 0);
   const expectedEmptyMinutes = byDay.reduce((s, d) => s + d.expectedEmptyMinutes, 0);
-  const fee = avgFee?.fee == null ? null : Number(avgFee.fee);
+  const diasComValor = byDay.filter((d) => d.expectedEmptyValueEur != null);
 
   return {
     horizonDays: days,
@@ -230,13 +270,17 @@ export async function computeSlotRisk(tenantId: string, days = DEFAULT_HORIZON_D
       expectedEmptyMinutes,
       atRisk: byDay.reduce((s, d) => s + d.atRisk.length, 0),
     },
-    // Converte minutos em euros pelo valor médio de uma consulta, prorrateado pela
-    // duração média. null quando não há faturação nenhuma de que o derivar — inventar
-    // um valor de mercado daria uma perda com aparência de rigor e nenhum.
-    expectedRevenueLoss:
-      fee == null || bookedMinutes === 0
-        ? null
-        : Math.round((expectedEmptyMinutes / bookedMinutes) * fee * upcoming.length),
+    // Agora é a soma do que cada lugar vale vezes a probabilidade de cada lugar ficar
+    // vazio, e não uma regra de três sobre a média da clínica. A diferença não é de
+    // precisão decimal: a fórmula anterior espalhava o risco uniformemente pelas
+    // consultas todas, por isso uma agenda com uma Reabilitação Oral em risco e vinte
+    // higienes seguras dava o mesmo total que o contrário — que é exatamente a distinção
+    // pela qual alguém consulta este número. null quando não há faturação nenhuma de que
+    // o derivar: inventar um valor de mercado daria uma perda com aparência de rigor e
+    // nenhum.
+    expectedRevenueLoss: diasComValor.length
+      ? Math.round(diasComValor.reduce((s, d) => s + (d.expectedEmptyValueEur ?? 0), 0))
+      : null,
     explanations,
   };
 }

@@ -28,12 +28,14 @@ interface SlotProjection {
   duration: number;
   risk: SlotRisk;
   reason?: string;
+  valueEur?: number | null;
 }
 interface DayProjection {
   date: string;
   expectedEmptyMinutes: number;
   bookedMinutes: number;
   expectedLossRate: number;
+  expectedEmptyValueEur: number | null;
   atRisk: SlotProjection[];
 }
 export interface SlotRiskReport {
@@ -105,6 +107,7 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                 <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                   espera-se perder {Math.round(d.expectedLossRate * 100)}% do dia · {Math.round(d.expectedEmptyMinutes)}{' '}
                   min
+                  {d.expectedEmptyValueEur !== null && ` · ${formatEUR(d.expectedEmptyValueEur)}`}
                 </span>
               </div>
 
@@ -116,7 +119,7 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                       key={s.appointmentId}
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '58px minmax(0,1fr) 62px',
+                        gridTemplateColumns: '58px minmax(0,1fr) 74px',
                         gap: 12,
                         alignItems: 'baseline',
                         fontSize: 'var(--text-xs)',
@@ -136,15 +139,32 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                           </div>
                         )}
                       </span>
-                      <span
-                        style={{
-                          textAlign: 'right',
-                          fontWeight: 'var(--weight-bold)',
-                          fontVariantNumeric: 'tabular-nums',
-                          color: p >= 55 ? 'var(--urgency-critical)' : 'var(--urgency-soon)',
-                        }}
-                      >
-                        {p}%
+                      <span style={{ textAlign: 'right' }}>
+                        <span
+                          style={{
+                            fontWeight: 'var(--weight-bold)',
+                            fontVariantNumeric: 'tabular-nums',
+                            color: p >= 55 ? 'var(--urgency-critical)' : 'var(--urgency-soon)',
+                          }}
+                        >
+                          {p}%
+                        </span>
+                        {/* O euro daquele lugar, e não o do dia: é o que distingue o
+                            telefonema que vale a pena fazer primeiro do que pode
+                            esperar. Ausente — e não «0 €» — quando não há faturação
+                            daquele tipo de consulta de que o derivar. */}
+                        {s.valueEur != null && (
+                          <div
+                            style={{
+                              fontSize: 'var(--text-2xs)',
+                              color: 'var(--text-muted)',
+                              fontVariantNumeric: 'tabular-nums',
+                              marginTop: 1,
+                            }}
+                          >
+                            {formatEUR(s.valueEur * s.risk.emptyProbability)}
+                          </div>
+                        )}
                       </span>
                     </div>
                   );

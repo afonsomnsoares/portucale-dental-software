@@ -34,12 +34,18 @@ interface Breakdown {
   label: string;
   appointments: number;
   margin: Margin;
+  minutes: number;
+  revenuePerHour: number | null;
+  netMarginPerHour: number | null;
 }
 interface Report {
   from: string;
   to: string;
   method: string;
   total: Margin;
+  totalMinutes: number;
+  revenuePerHour: number | null;
+  netMarginPerHour: number | null;
   byDentist: Breakdown[];
   byChair: Breakdown[];
   byTreatmentType: Breakdown[];
@@ -91,7 +97,16 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
         <thead>
           <tr>
-            {['', 'Consultas', 'Receita', 'Material', 'Margem de contribuição', 'Margem líquida'].map((h) => (
+            {[
+              '',
+              'Consultas',
+              'Receita',
+              'Receita/hora',
+              'Material',
+              'Margem de contribuição',
+              'Margem líquida',
+              'Margem/hora',
+            ].map((h) => (
               <th
                 key={h}
                 style={{
@@ -120,6 +135,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
               {[
                 { k: 'consultas', v: String(b.appointments) },
                 { k: 'receita', v: formatEUR(b.margin.revenue) },
+                { k: 'receita_hora', v: b.revenuePerHour == null ? '—' : formatEUR(b.revenuePerHour) },
                 { k: 'material', v: formatEUR(b.margin.materialCost) },
                 {
                   k: 'contribuicao',
@@ -129,6 +145,11 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
                 {
                   k: 'liquida',
                   v: `${formatEUR(b.margin.netMargin)} · ${pct(b.margin.netMarginPct)}`,
+                  margem: true,
+                },
+                {
+                  k: 'margem_hora',
+                  v: b.netMarginPerHour == null ? '—' : formatEUR(b.netMarginPerHour),
                   margem: true,
                 },
               ].map((c) => (
@@ -297,6 +318,18 @@ export default function Costing({
                 l: 'Margem líquida',
                 v: `${formatEUR(rel.total.netMargin)} · ${pct(rel.total.netMarginPct)}`,
                 cor: rel.total.netMargin < 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
+              },
+              // Por hora de cadeira OCUPADA, e não por hora de expediente: é a mesma base
+              // com que o custo fixo é imputado (ver allocationBasisFor em lib/costing.ts),
+              // por isso os dois números do ecrã falam da mesma hora.
+              {
+                l: 'Receita por hora de cadeira',
+                v: rel.revenuePerHour == null ? '—' : formatEUR(rel.revenuePerHour),
+              },
+              {
+                l: 'Margem por hora de cadeira',
+                v: rel.netMarginPerHour == null ? '—' : formatEUR(rel.netMarginPerHour),
+                cor: (rel.netMarginPerHour ?? 0) < 0 ? 'var(--urgency-critical)' : 'var(--urgency-ok)',
               },
             ].map((m) => (
               <div

@@ -233,6 +233,22 @@ export function computeMargin(inputs: MarginInputs): Margin {
   };
 }
 
+// ─── Por hora de cadeira ────────────────────────────────────────────────────
+// A margem diz quanto sobra de cada euro faturado; isto diz quanto se faz por cada hora
+// de cadeira ocupada. São perguntas diferentes e a segunda é a que decide a agenda: um
+// tratamento com 70% de margem que ocupa duas horas rende menos por cadeira do que um
+// com 40% que ocupa vinte minutos, e é o segundo que se quer marcar mais vezes.
+//
+// null — e não 0 — sem minutos, pela mesma razão de pctOf acima: zero lê-se como «não
+// rende nada», quando o que se passa é que não houve tempo nenhum de que o calcular.
+export function perHour(valueEur: unknown, minutes: unknown): number | null {
+  const mins = Number(minutes);
+  if (!Number.isFinite(mins) || mins <= 0) return null;
+  const v = Number(valueEur);
+  if (!Number.isFinite(v)) return null;
+  return roundEUR(v / (mins / 60));
+}
+
 // Soma margens já calculadas — por dentista, por cadeira, por tratamento. Recalcula as
 // percentagens sobre os totais em vez de as somar, que é o erro clássico: a média das
 // percentagens não é a percentagem do total.
