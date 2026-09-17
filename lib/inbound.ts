@@ -1,5 +1,13 @@
 import crypto from 'node:crypto';
 import {
+  cancelForPatient,
+  hasPendingOffer,
+  offerSlotToPatient,
+  pendingOfferFor,
+  upcomingAppointments,
+} from './agents/schedulingAutonomy';
+import { formatDatePT } from './constants';
+import {
   type AutonomyLevel,
   buildEscalationBrief,
   type ConversationChannel,
@@ -11,11 +19,13 @@ import {
   isStale,
   routeInbound,
   stateAfterInbound,
+  writesToSchedule,
 } from './conversationCalc';
 import { query, queryOne, queryRead, withSystemContext } from './db';
 import { createTask } from './patientTasks';
 import { sendSms } from './sms';
 import { toE164 } from './validate';
+import { acceptOfferAndBook } from './waitlist';
 
 // Liga lib/conversationCalc.ts (a decisão, pura e testada) às tabelas da migração 049.
 //
@@ -88,7 +98,9 @@ export async function resolveChannelAccount(channel: string, toAddress: string, 
   return { ok: true as const, tenantId: String(account.tenant_id), accountId: String(account.id) };
 }
 
-async function getAutonomy(tenantId: string): Promise<{ level: AutonomyLevel; settings: Record<string, unknown> }> {
+export async function getAutonomy(
+  tenantId: string,
+): Promise<{ level: AutonomyLevel; settings: Record<string, unknown> }> {
   const row = await queryOne(`SELECT * FROM tenant_comms_settings WHERE tenant_id=$1`, [tenantId]);
   return {
     // Uma clínica que nunca abriu o ecrã fica com 'off'. Ver a nota da migração 049: a
@@ -188,7 +200,20 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
     conversation.patient_id = patient.id;
   }
 
-  const decision = routeInbound(msg.body, level, msg.channel, conversation.state as ConversationState);
+  // O contexto de agenda só se lê quando o degrau o usa: nos outros, são duas consultas
+  // à base de dados por cada SMS recebido para não mudar decisão nenhuma.
+  let agenda: { upcomingAppointmentCount: number; confidence: 'high'; hasPendingOffer: boolean } | undefined;
+  if (writesToSchedule(level) && patient?.id) {
+    const [futuras, pendente] = await Promise.all([
+      upcomingAppointments(tenantId, String(patient.id)),
+      hasPendingOffer(tenantId, String(patient.id)),
+    ]);
+    // A confiança real vem da classificação, dentro de routeInbound; aqui vai 'high'
+    // porque este objeto só transporta os factos da agenda. Ver canActOnSchedule.
+    agenda = { upcomingAppointmentCount: futuras.length, confidence: 'high', hasPendingOffer: pendente };
+  }
+
+  const decision = routeInbound(msg.body, level, msg.channel, conversation.state as ConversationState, agenda);
 
   const [inbound] = await query(
     `INSERT INTO conversation_messages (tenant_id, conversation_id, direction, body, intent, routing, provider_id)
@@ -202,6 +227,63 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
   if (decision.action === 'process_optout') {
     await processOptOut(tenantId, conversation, msg);
     replyBody = 'Registámos o seu pedido. Não voltará a receber mensagens automáticas desta clínica.';
+  } else if (decision.action === 'cancel_appointment') {
+    // A resposta é escrita DEPOIS de a consulta estar mesmo cancelada, e só se estiver.
+    // Um «cancelámos a sua consulta» enviado sobre um cancelamento que falhou é pior do
+    // que não responder: o doente deixa de aparecer a uma consulta que continua marcada.
+    const r = await cancelForPatient(tenantId, String(patient?.id), 'pedido por SMS');
+    if (r) {
+      replyBody = `A sua consulta de ${formatDatePT(r.cancelled.date)} às ${r.cancelled.startTime} fica cancelada. Quando quiser remarcar, é só dizer.`;
+    } else {
+      // A agenda mudou entre a leitura e a escrita. Vai para uma pessoa em vez de o
+      // doente ficar sem resposta nenhuma.
+      await createTask(tenantId, null, {
+        patientId: conversation.patient_id || null,
+        type: 'generic',
+        title: `Cancelamento por SMS — confirmar com ${msg.fromName || patient?.name || msg.fromAddress}`,
+        notes: 'O doente pediu para cancelar, mas a consulta deixou de ser identificável sem ambiguidade.',
+        autoAssign: true,
+      });
+      replyBody = 'Recebemos o seu pedido de cancelamento. Confirmamos consigo dentro de momentos.';
+    }
+  } else if (decision.action === 'offer_slot') {
+    const oferta = await offerSlotToPatient(tenantId, String(patient?.id), {
+      origin: 'inbound',
+      conversationId: String(conversation.id),
+    });
+    if (oferta) {
+      // O corpo da oferta é a própria resposta: a mensagem que o doente recebe É a
+      // proposta, e o SIM dele refere-se a ela.
+      replyBody = oferta.body;
+    } else {
+      await createTask(tenantId, null, {
+        patientId: conversation.patient_id || null,
+        type: 'generic',
+        title: `Pedido de marcação — sem vaga automática para ${msg.fromName || patient?.name || msg.fromAddress}`,
+        notes: 'Não havia horário compatível nos próximos 21 dias, ou o doente já tinha uma oferta pendente.',
+        autoAssign: true,
+      });
+      replyBody = 'Recebemos o seu pedido. Vamos ver a agenda e entramos em contacto com uma proposta.';
+    }
+  } else if (decision.action === 'accept_offer') {
+    const pendente = await pendingOfferFor(tenantId, String(patient?.id));
+    const marcada = pendente ? await acceptOfferAndBook(tenantId, String(pendente.id)) : null;
+    if (marcada) {
+      const d = String(marcada.appointment.appt_date).slice(0, 10);
+      const h = String(marcada.appointment.start_time).slice(0, 5);
+      replyBody = `Consulta marcada para ${formatDatePT(d)} às ${h}. Até lá!`;
+    } else {
+      // acceptOfferAndBook devolve null quando o lugar foi ocupado entretanto — ver o
+      // claimSlot lá dentro. É o caso que torna esta mensagem necessária.
+      await createTask(tenantId, null, {
+        patientId: conversation.patient_id || null,
+        type: 'generic',
+        title: `Aceitação de vaga falhada — ${msg.fromName || patient?.name || msg.fromAddress}`,
+        notes: 'O doente aceitou o lugar oferecido, mas ele já não estava livre. É preciso propor outro.',
+        autoAssign: true,
+      });
+      replyBody = 'Esse horário acabou de ser ocupado. Entramos em contacto com uma alternativa.';
+    }
   } else if (decision.action === 'auto_reply') {
     replyBody = factualReply(decision.intent, settings);
   } else if (decision.action === 'auto_acknowledge') {
@@ -211,7 +293,14 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
   // A confirmação de um opt-out sai SEMPRE, mesmo em horário de silêncio: é a prova de
   // que o pedido foi processado, e negá-la por ser tarde seria transformar uma
   // obrigação legal numa questão de conveniência.
-  const suppressedByQuietHours = decision.action !== 'process_optout' && replyBody !== null && inQuietHours(settings);
+  //
+  // As três ações do degrau 'agenda' saem pela mesma razão, que não é legal mas é do
+  // mesmo tipo: quando chegam aqui, a agenda JÁ mudou. Guardar a confirmação para as 8h
+  // deixaria o doente a achar que tem consulta quando a acabámos de cancelar, ou que não
+  // tem quando a acabámos de marcar. O silêncio existe para não acordar ninguém com
+  // outreach; isto é o recibo de uma coisa que ele próprio acabou de pedir.
+  const ALWAYS_SEND = new Set(['process_optout', 'cancel_appointment', 'accept_offer', 'offer_slot']);
+  const suppressedByQuietHours = !ALWAYS_SEND.has(decision.action) && replyBody !== null && inQuietHours(settings);
 
   if (replyBody && !suppressedByQuietHours) {
     autoReplySent = await sendAutoReply(tenantId, String(conversation.id), msg, replyBody, decision.intent);

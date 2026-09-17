@@ -1,4 +1,5 @@
 import { query } from './db';
+import { inactiveAfterMonths } from './lifecycle';
 import { computeLifecycleStage } from './lifecycleCalc';
 import { computeNextAction } from './nextAction';
 import { computeJourneyStage, JOURNEY_STAGES, type JourneyStageKey } from './patientJourneyCalc';
@@ -14,6 +15,23 @@ const ITEMS_LIMIT = 50;
 // row in this list — full detail already lives one click away on the patient's own
 // next-action card (app/api/patients/[id]/next-action/route.ts).
 export async function computeJourneyPipeline(tenantId: string) {
+  // Os leads abertos entram como a PRIMEIRA etapa da jornada, e não como uma lista à
+  // parte que o ecrã desenha ao lado. Ver o comentário de 'lead' em JOURNEY_STAGES: a
+  // ponte nos dados já existia, o que faltava era o modelo de leitura dizer o mesmo.
+  //
+  // A contagem vem de um COUNT(*) e não do comprimento da lista: a lista é truncada em
+  // ITEMS_LIMIT, por isso uma clínica com 200 leads abertos via «50» no topo do funil —
+  // que é precisamente o número que alguém consulta esta página para saber.
+  const [leadRows, leadCountRow] = await Promise.all([
+    query(
+      `SELECT id, name, phone, email, source, created_at
+         FROM leads WHERE tenant_id=$1 AND status='open'
+        ORDER BY created_at DESC LIMIT ${ITEMS_LIMIT}`,
+      [tenantId],
+    ),
+    query(`SELECT COUNT(*)::int AS n FROM leads WHERE tenant_id=$1 AND status='open'`, [tenantId]),
+  ]);
+
   const rows = await query(
     `SELECT p.id, p.name, p.phone, p.email, p.visit_count, p.last_visit, p.created_at,
             EXISTS (
@@ -48,6 +66,11 @@ export async function computeJourneyPipeline(tenantId: string) {
   );
 
   const now = new Date();
+  // O limiar da clínica (migração 060), e não o valor por omissão. Sem isto, a próxima
+  // ação mostrada neste quadro raciocinaria sobre «desaparecido aos 6 meses» enquanto o
+  // motor de reativação usava o número que a clínica escolheu — duas respostas para a
+  // mesma pergunta, no mesmo produto, sobre o mesmo doente.
+  const inactiveMonths = await inactiveAfterMonths(tenantId);
   const buckets = new Map<JourneyStageKey, typeof rows>();
   for (const s of JOURNEY_STAGES) buckets.set(s.key, []);
 
@@ -65,6 +88,30 @@ export async function computeJourneyPipeline(tenantId: string) {
   }
 
   const stages = JOURNEY_STAGES.map((s) => {
+    if (s.key === 'lead') {
+      return {
+        key: s.key,
+        label: s.label,
+        description: s.description,
+        count: Number(leadCountRow[0]?.n || 0),
+        patients: leadRows.map((l) => ({
+          id: String(l.id),
+          name: String(l.name),
+          phone: (l.phone as string | null) ?? null,
+          email: (l.email as string | null) ?? null,
+          visit_count: 0,
+          last_visit: null,
+          created_at: String(l.created_at),
+          // A próxima ação de um lead é sempre a mesma e não depende de sinal nenhum:
+          // alguém tem de lhe responder. Calculá-la com computeNextAction() daria a
+          // resposta errada, porque essa função raciocina sobre um doente que existe.
+          next_action: { code: 'respond_lead', label: 'Responder ao primeiro contacto' },
+          isLead: true,
+          source: (l.source as string | null) ?? null,
+        })),
+      };
+    }
+
     const bucket = buckets.get(s.key) || [];
     return {
       key: s.key,
@@ -81,6 +128,7 @@ export async function computeJourneyPipeline(tenantId: string) {
             hasFutureAppointment: !!r.has_future_appointment,
           },
           now,
+          inactiveMonths,
         );
         const oldestPendingPlanDays = r.oldest_open_plan_at
           ? Math.floor((now.getTime() - new Date(r.oldest_open_plan_at).getTime()) / 86400000)

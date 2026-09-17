@@ -292,6 +292,10 @@ const SUPER_ADMIN_NAV: NavItem[] = [
 
   { label: 'Clínicas', href: '/dashboard/super-admin/tenants', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
   { label: 'Onboarding', href: '/dashboard/super-admin/onboarding', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
+  // O nível de grupo: capacidade, equipa, equipamento, audiência de campanha e previsão
+  // somados das unidades todas. Fica com 'tenants:manage' (ação de plataforma) porque
+  // nenhuma clínica pode ler o que aqui está sobre as outras.
+  { label: 'Grupo', href: '/dashboard/super-admin/group', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
 
   {
     label: 'Todos os Utilizadores',

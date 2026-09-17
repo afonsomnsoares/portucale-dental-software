@@ -41,7 +41,21 @@
 // lembrete estraga uma consulta que já está marcada e paga, adiar o plano um dia
 // custa um dia. Prioridade é sobre o que se perde por esperar, não sobre quanto vale.
 export const CONTACT_PRIORITY = [
+  // No topo de tudo, e isento do orçamento diário (ver CORRECTIVE_KINDS abaixo). Não é
+  // uma mensagem nova: é a CORREÇÃO de uma que a clínica já enviou. Tudo o resto nesta
+  // lista informa o doente de alguma coisa que ele pode ignorar sem consequência; esta
+  // impede-o de aparecer no dia errado por acreditar no que lhe dissemos antes.
+  'appointment_reschedule',
   'waitlist_offer',
+  // Acima do lembrete de propósito. Os dois carregam a mesma informação — dia, hora e
+  // tipo — e por isso competem; o que os distingue é a validade. Uma confirmação só
+  // significa alguma coisa enquanto estiver perto da marcação que a motivou: chegar
+  // três dias depois de marcar é ruído. O lembrete, esse, tem uma data para onde
+  // apontar, e se for diferido hoje volta a ser pedido amanhã com a mesma razão
+  // intacta (ver queueAppointmentReminders — a janela é de 0 a 2 dias, não um
+  // instante). Pela ordem inversa, quem marcasse para o dia seguinte recebia o
+  // lembrete e nunca chegava a receber a confirmação, que expirava à espera da vez.
+  'appointment_confirmation',
   'appointment_reminder',
   'risk_outreach',
   'plan_followup',
@@ -52,7 +66,9 @@ export const CONTACT_PRIORITY = [
 export type ContactKind = (typeof CONTACT_PRIORITY)[number];
 
 export const CONTACT_KIND_LABELS: Record<ContactKind, string> = {
+  appointment_reschedule: 'Remarcação',
   waitlist_offer: 'Oferta de vaga',
+  appointment_confirmation: 'Confirmação de marcação',
   appointment_reminder: 'Lembrete de consulta',
   risk_outreach: 'Confirmação preventiva',
   plan_followup: 'Seguimento de plano',
@@ -73,10 +89,40 @@ export function priorityOf(kind: string): number {
 // para lhe ser oferecida. Estes não gastam o orçamento semanal — se gastassem, um
 // doente em tratamento ativo, com consultas todas as semanas, esgotaria a quota nos
 // lembretes e deixaria de poder ser contactado sobre o que interessa.
-const OPERATIONAL_KINDS = new Set<ContactKind>(['waitlist_offer', 'appointment_reminder', 'risk_outreach']);
+const OPERATIONAL_KINDS = new Set<ContactKind>([
+  'appointment_reschedule',
+  'waitlist_offer',
+  'appointment_confirmation',
+  'appointment_reminder',
+  'risk_outreach',
+]);
 
 export function isOperational(kind: string): boolean {
   return OPERATIONAL_KINDS.has(kind as ContactKind);
+}
+
+// ─── Contactos corretivos ───────────────────────────────────────────────────
+// O orçamento diário abaixo existe para um doente não receber cinco mensagens no mesmo
+// dia. Há uma categoria a que essa razão não se aplica: a mensagem que corrige
+// informação que a própria clínica já deu.
+//
+// O caso concreto apareceu a testar a remarcação. Marca-se uma consulta, sai a
+// confirmação — um contacto gasto. Uma hora depois a clínica muda-lhe o dia. Com o
+// orçamento a valer para tudo, a remarcação era DIFERIDA para o dia seguinte, e o doente
+// ficava com a data antiga escrita por nós. Se a consulta fosse no dia seguinte, ficava
+// com ela para sempre.
+//
+// Isso não é proteger o doente de excesso de contacto: é a clínica saber que ele tem a
+// informação errada e escolher não a corrigir hoje. O contrato do orçamento é sobre
+// mensagens que o doente pode ignorar sem consequência, e esta não é uma delas.
+//
+// O que NÃO fica isento: o consentimento. Quem disse para não o contactarem não é
+// contactado, nem para corrigir — a correção alternativa é um telefonema de uma pessoa,
+// e essa decisão é de quem atende. Ver a primeira guarda de arbitrateContacts.
+const CORRECTIVE_KINDS = new Set<ContactKind>(['appointment_reschedule']);
+
+export function isCorrective(kind: string): boolean {
+  return CORRECTIVE_KINDS.has(kind as ContactKind);
 }
 
 // ─── 2. Orçamento de contacto ───────────────────────────────────────────────
@@ -163,6 +209,16 @@ export function arbitrateContacts(
     seen.add(requestKey);
 
     const used = budget.get(request.patientId) || { today: state.contactsToday, week: state.promotionalThisWeek };
+
+    // Uma correção passa sempre. Continua a contar para o orçamento do dia — o que ela
+    // não faz é ser bloqueada por ele, e a diferença importa: a mensagem seguinte
+    // continua a ser travada, por isso isto abre uma exceção e não uma porta.
+    if (isCorrective(request.kind)) {
+      used.today += 1;
+      budget.set(request.patientId, used);
+      decisions.push({ granted: true, request });
+      continue;
+    }
 
     if (used.today >= MAX_CONTACTS_PER_DAY) {
       decisions.push({

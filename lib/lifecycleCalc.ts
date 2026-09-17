@@ -7,32 +7,47 @@
 // lifecycle stage can never live there; computing it fresh also means it can never
 // drift out of sync the way a stored "stage" column would.
 
-// Kept in sync with RECOVERY_DEFAULTS.inactiveMonths in lib/recoveryCalc.ts (same "6
-// months lapsed" threshold as the Revenue Recovery inactive_patients category) — not
-// imported from there, because lib/*Calc.ts pure modules are deliberately leaf modules
-// (no cross-imports) so `node --test` can run them directly without a bundler.
-const LIFECYCLE_INACTIVE_MONTHS = 6;
+// O valor por omissão — o que vale para uma clínica que nunca mexeu na definição, e o
+// que o código inteiro fazia antes de a definição existir. A partir da migração 060 o
+// número real vive em `tenants.inactive_after_months` e chega aqui por parâmetro: seis
+// meses não é um facto sobre medicina dentária, é uma opinião sobre o intervalo normal
+// entre visitas, e esse intervalo muda com o tipo de clínica (ver o cabeçalho da
+// migração).
+//
+// Continua repetido em RECOVERY_DEFAULTS.inactiveMonths (lib/recoveryCalc.ts) e não
+// importado de lá porque os módulos *Calc.ts são folhas por convenção — é o que permite
+// correr `node --test` sobre eles sem empacotador. A diferença face ao que aqui estava
+// antes é que já não são duas VERDADES a precisarem de sincronia: são dois valores por
+// omissão para o mesmo campo, e quem manda é a coluna.
+export const DEFAULT_INACTIVE_MONTHS = 6;
 
 export type LifecycleStageKey = 'new' | 'in_treatment' | 'stable' | 'inactive';
 
-export const LIFECYCLE_STAGES: Array<{ key: LifecycleStageKey; label: string; description: string }> = [
-  { key: 'new', label: 'Novo Paciente', description: 'Registado mas ainda sem consultas concluídas.' },
-  {
-    key: 'in_treatment',
-    label: 'Em Tratamento',
-    description: 'Tratamento ou plano em aberto, ou consulta futura marcada.',
-  },
-  {
-    key: 'stable',
-    label: 'Terminado',
-    description: 'Sem tratamento em aberto, visitado recentemente — ciclo de manutenção/recall.',
-  },
-  {
-    key: 'inactive',
-    label: 'Desaparecido',
-    description: `Sem visita (ou registo) há mais de ${LIFECYCLE_INACTIVE_MONTHS} meses, sem nada agendado.`,
-  },
-];
+export function lifecycleStages(
+  inactiveMonths: number = DEFAULT_INACTIVE_MONTHS,
+): Array<{ key: LifecycleStageKey; label: string; description: string }> {
+  return [
+    { key: 'new', label: 'Novo Paciente', description: 'Registado mas ainda sem consultas concluídas.' },
+    {
+      key: 'in_treatment',
+      label: 'Em Tratamento',
+      description: 'Tratamento ou plano em aberto, ou consulta futura marcada.',
+    },
+    {
+      key: 'stable',
+      label: 'Terminado',
+      description: 'Sem tratamento em aberto, visitado recentemente — ciclo de manutenção/recall.',
+    },
+    {
+      key: 'inactive',
+      label: 'Desaparecido',
+      description: `Sem visita (ou registo) há mais de ${inactiveMonths} meses, sem nada agendado.`,
+    },
+  ];
+}
+
+/** O catálogo com o limiar por omissão, para quem não tem clínica à mão. */
+export const LIFECYCLE_STAGES = lifecycleStages();
 
 export interface LifecycleSignals {
   visitCount: number;
@@ -73,7 +88,7 @@ function monthsBefore(date: Date, months: number) {
 export function computeLifecycleStage(
   signals: LifecycleSignals,
   now: Date = new Date(),
-  inactiveMonths: number = LIFECYCLE_INACTIVE_MONTHS,
+  inactiveMonths: number = DEFAULT_INACTIVE_MONTHS,
 ): LifecycleStageKey {
   if (signals.hasOpenTreatment || signals.hasFutureAppointment) return 'in_treatment';
 
@@ -97,7 +112,7 @@ export function computeLifecycleStage(
 export type DormancyBand = '6-12m' | '12-24m' | '24m+';
 export type ValueTier = 'high' | 'standard';
 
-// Same 6-months floor as LIFECYCLE_INACTIVE_MONTHS — a candidate is only ever
+// Same floor as the clinic's inactivity threshold — a candidate is only ever
 // segmented once they're already 'inactive', so the bands start where that ends.
 export function dormancyBand(monthsInactive: number): DormancyBand {
   if (monthsInactive >= 24) return '24m+';

@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   allowsAutoReply,
   AUTONOMY_LEVELS,
+  canActOnSchedule,
   buildEscalationBrief,
   canTransition,
   classifyIntent,
@@ -14,6 +15,7 @@ import {
   isStale,
   normalize,
   routeInbound,
+  writesToSchedule,
   STALE_AWAITING_STAFF_HOURS,
   STALE_ESCALATED_HOURS,
   stateAfterInbound,
@@ -292,4 +294,97 @@ test('a justificação de uma chamada diz que é devolvida por uma pessoa', () =
   const d = routeInbound('quero marcar uma consulta', 'transactional', 'voice');
   assert.match(d.reason, /Chamada/);
   assert.match(d.reason, /pessoa/);
+});
+
+// ─── O degrau 'agenda' (migração 062) ───────────────────────────────────────
+// O degrau que escreve. A diferença face a 'transactional' não está em que intenções
+// trata — está em que ali a resposta é a ação, e aqui a ação acontece mesmo.
+
+const AGENDA = { upcomingAppointmentCount: 1, confidence: 'high' as const, hasPendingOffer: false };
+
+test("só o degrau 'agenda' escreve na agenda", () => {
+  assert.equal(writesToSchedule('agenda'), true);
+  for (const nivel of AUTONOMY_LEVELS.filter((l) => l !== 'agenda')) {
+    assert.equal(writesToSchedule(nivel), false, `${nivel} não pode escrever`);
+  }
+});
+
+test('um pedido de cancelamento com uma só consulta marcada cancela-a', () => {
+  const d = routeInbound('não vou poder ir, cancelem por favor', 'agenda', 'sms', 'awaiting_staff', AGENDA);
+  assert.equal(d.action, 'cancel_appointment');
+});
+
+// A regra é a ambiguidade, não a confiança no modelo: com duas consultas marcadas,
+// escolher qual cancelar é escolher pelo doente.
+test('com duas consultas marcadas, o cancelamento vai para uma pessoa', () => {
+  const d = routeInbound('não vou poder ir, cancelem por favor', 'agenda', 'sms', 'awaiting_staff', {
+    ...AGENDA,
+    upcomingAppointmentCount: 2,
+  });
+  assert.equal(d.action, 'human_task');
+  assert.match(d.reason, /2 consultas/);
+});
+
+// Descoberto a escrever os testes acima, e vale a pena ficar escrito: «cancelem a
+// consulta» classifica como 'book' com confiança baixa, porque «consulta» pesa mais do
+// que «cancelem» em classifyIntent. Não é perigoso — confiança baixa nunca age, e o
+// caminho acaba numa tarefa para uma pessoa — mas é uma fraqueza real da classificação
+// por palavras-chave, e este teste existe para que ela não passe a ser perigosa em
+// silêncio no dia em que alguém mexer nos pesos.
+test('uma frase ambígua nunca chega a escrever na agenda', () => {
+  const d = routeInbound('cancelem a consulta', 'agenda', 'sms', 'awaiting_staff', AGENDA);
+  assert.notEqual(d.action, 'cancel_appointment');
+  assert.equal(d.confidence, 'low');
+});
+
+test('sem consulta marcada não há nada a cancelar', () => {
+  const d = routeInbound('quero cancelar', 'agenda', 'sms', 'awaiting_staff', {
+    ...AGENDA,
+    upcomingAppointmentCount: 0,
+  });
+  assert.equal(d.action, 'human_task');
+});
+
+// O mesmo texto, um degrau abaixo: responde e não mexe em nada. É a garantia de que
+// ligar o degrau novo é uma decisão, e não um efeito de atualizar o código.
+test("no degrau 'transactional' o mesmo pedido não cancela nada", () => {
+  const d = routeInbound('não vou poder ir, cancelem', 'transactional', 'sms', 'awaiting_staff', AGENDA);
+  assert.equal(d.action, 'auto_reply');
+});
+
+test('um pedido de marcação passa a propor um lugar concreto', () => {
+  const d = routeInbound('queria marcar uma consulta', 'agenda', 'sms', 'awaiting_staff', {
+    ...AGENDA,
+    upcomingAppointmentCount: 0,
+  });
+  assert.equal(d.action, 'offer_slot');
+  assert.equal(d.nextState, 'awaiting_patient');
+});
+
+// «Sim» significa coisas diferentes consoante o que a clínica perguntou por último.
+test('um SIM com oferta pendente aceita a oferta, e sem ela confirma a consulta', () => {
+  const comOferta = routeInbound('sim', 'agenda', 'sms', 'awaiting_patient', { ...AGENDA, hasPendingOffer: true });
+  assert.equal(comOferta.action, 'accept_offer');
+
+  const semOferta = routeInbound('sim', 'agenda', 'sms', 'awaiting_patient', AGENDA);
+  assert.equal(semOferta.action, 'auto_reply');
+});
+
+// As duas fronteiras que nenhum degrau atravessa continuam intactas.
+test('nem o degrau da agenda toca no clínico nem ignora um STOP', () => {
+  assert.equal(routeInbound('dói-me muito o dente', 'agenda', 'sms', 'awaiting_staff', AGENDA).action, 'escalate');
+  assert.equal(routeInbound('não enviem mais mensagens', 'agenda', 'sms', 'awaiting_staff', AGENDA).action, 'process_optout');
+});
+
+// Uma chamada nunca chega a escrever na agenda: responder a uma chamada é falar.
+test('por voz, o degrau da agenda continua a devolver para uma pessoa', () => {
+  const d = routeInbound('quero cancelar', 'agenda', 'voice', 'awaiting_staff', AGENDA);
+  assert.equal(d.action, 'human_task');
+});
+
+test('canActOnSchedule exige certeza e uma consulta só', () => {
+  assert.equal(canActOnSchedule({ upcomingAppointmentCount: 1, confidence: 'high' }).ok, true);
+  assert.equal(canActOnSchedule({ upcomingAppointmentCount: 1, confidence: 'low' }).ok, false);
+  assert.equal(canActOnSchedule({ upcomingAppointmentCount: 0, confidence: 'high' }).ok, false);
+  assert.equal(canActOnSchedule({ upcomingAppointmentCount: 3, confidence: 'high' }).ok, false);
 });

@@ -128,7 +128,28 @@ export interface WaitlistData {
 // Ver lib/scheduleOptimizerCalc.ts. `gainMinutes` é 0 nas propostas que
 // melhoram a qualidade da marcação sem alterar a ocupação (dentista em falta,
 // preferência do doente violada) — só as outras somam para recoverableMinutes.
-export type OptimizerMoveKind = 'gap_fill' | 'unassigned_dentist' | 'equipment_block' | 'preference_mismatch';
+// Espelha OptimizerMoveKind de lib/scheduleOptimizerCalc.ts. Estava três tipos atrás do
+// servidor — 'group_visit', 'pull_forward' e 'consolidate' já eram calculados e chegavam
+// ao ecrã sem etiqueta, porque o KIND_META do componente é indexado por este tipo e não
+// os conhecia. Falhava em silêncio: a proposta aparecia sem categoria em vez de dar erro.
+export type OptimizerMoveKind =
+  | 'gap_fill'
+  | 'unassigned_dentist'
+  | 'equipment_block'
+  | 'preference_mismatch'
+  | 'group_visit'
+  | 'pull_forward'
+  | 'consolidate';
+
+/** O destino de uma proposta aplicável — ver OptimizerApply em lib/scheduleOptimizerCalc.ts. */
+export interface OptimizerApply {
+  appointmentId: string;
+  date: string;
+  startTime: string;
+  chair: number;
+  dentistId: string | null;
+  notifiesPatient: boolean;
+}
 
 export interface OptimizerMove {
   kind: OptimizerMoveKind;
@@ -137,15 +158,20 @@ export interface OptimizerMove {
   detail: string;
   gainMinutes: number;
   appointmentId?: string;
+  appointmentIds?: string[];
+  advanceDays?: number;
+  consolidatedMinutes?: number;
   patientName?: string;
   date?: string;
+  /** Ausente nas propostas cuja execução é uma conversa e não um UPDATE. */
+  apply?: OptimizerApply;
 }
 
 export interface ScheduleOptimization {
   windowDays: number;
   generatedAt: string;
   moves: OptimizerMove[];
-  totals: { moves: number; recoverableMinutes: number };
+  totals: { moves: number; recoverableMinutes: number; advancedDays?: number; consolidatedMinutes?: number };
   warnings: string[];
 }
 

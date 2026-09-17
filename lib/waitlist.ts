@@ -1,9 +1,11 @@
 import { canAutoContact } from './commPrefs';
-import { formatDatePT } from './constants';
+import { formatDatePT, getAppointmentTypeOption } from './constants';
 import { query, queryOne, withTransaction } from './db';
+import { type EquipmentStatus, isEquipmentAvailable } from './equipmentCalc';
 import { requireIsoDate } from './pgDate';
+import { claimSlot, SlotTakenError } from './scheduling';
 import { toE164 } from './validate';
-import { type FreedSlot, rankCandidates, type WaitlistCandidate } from './waitlistMatch';
+import { type FreedSlot, missingEquipmentTags, rankCandidates, type WaitlistCandidate } from './waitlistMatch';
 
 const MAX_OFFERS_PER_SLOT = 3;
 export const OFFER_EXPIRY_HOURS = 24;
@@ -133,6 +135,24 @@ export async function findCandidates(
   return rankCandidates(candidates, slot, new Date(), limit);
 }
 
+// Que etiquetas de equipamento é que a cadeira da vaga tem mesmo disponíveis agora.
+// Equipamento sem cadeira atribuída conta para todas — é móvel por definição. Só entra
+// o que está ativo E operacional: isEquipmentAvailable é a mesma regra que o ecrã de
+// equipamento usa, para não haver duas definições de "disponível" na aplicação.
+async function availableTagsForChair(tenantId: string, chair: number): Promise<string[]> {
+  const rows = await query(
+    `SELECT tags, active, status FROM clinic_equipment
+      WHERE tenant_id=$1 AND (chair IS NULL OR chair=$2)`,
+    [tenantId, chair],
+  );
+  const tags = new Set<string>();
+  for (const r of rows) {
+    if (!isEquipmentAvailable({ active: !!r.active, status: String(r.status) as EquipmentStatus })) continue;
+    for (const t of Array.isArray(r.tags) ? r.tags : []) tags.add(String(t));
+  }
+  return [...tags];
+}
+
 // Called when a future appointment is cancelled: finds waitlist candidates for the freed
 // slot, offers it to up to MAX_OFFERS_PER_SLOT of them (SMS, via the existing
 // notifications queue), and marks those entries 'offered'. The receptionist confirms the
@@ -143,6 +163,19 @@ export async function notifyWaitlistOfFreedSlot(
   cancelledAppointmentId: string | null,
   excludeEntryIds: string[] = [],
 ) {
+  // Antes de procurar a quem oferecer: a clínica consegue fazer isto hoje? Ver o
+  // cabeçalho de missingEquipmentTags em lib/waitlistMatch.ts. Não oferecer é o
+  // resultado certo — a alternativa seria contactar três pessoas para um tratamento que
+  // teria de ser desmarcado outra vez, e a segunda desmarcação já é da clínica.
+  const requiredTags = getAppointmentTypeOption(slot.type)?.requiredEquipmentTags || [];
+  if (requiredTags.length) {
+    const emFalta = missingEquipmentTags({
+      requiredTags,
+      availableTags: await availableTagsForChair(tenantId, slot.chair),
+    });
+    if (emFalta.length) return { offered: 0, blockedByEquipment: emFalta };
+  }
+
   const ranked = await findCandidates(tenantId, slot, MAX_OFFERS_PER_SLOT, excludeEntryIds);
   if (!ranked.length) return { offered: 0 };
 
@@ -182,8 +215,9 @@ export async function notifyWaitlistOfFreedSlot(
       const { rows } = await client.query(
         `INSERT INTO slot_offers
            (tenant_id, waitlist_entry_id, patient_id, cancelled_appointment_id,
-            offered_date, offered_start_time, offered_duration, offered_chair, offered_dentist_id, notification_id)
-         VALUES ($1,$2,$3,$4,$5::date,$6::time,$7,$8,$9,$10)
+            offered_date, offered_start_time, offered_duration, offered_chair, offered_dentist_id,
+            notification_id, origin, offered_type)
+         VALUES ($1,$2,$3,$4,$5::date,$6::time,$7,$8,$9,$10,'waitlist',$11)
          RETURNING *`,
         [
           tenantId,
@@ -196,6 +230,7 @@ export async function notifyWaitlistOfFreedSlot(
           slot.chair,
           slot.dentistId,
           notificationId || null,
+          slot.type,
         ],
       );
 
@@ -208,10 +243,13 @@ export async function notifyWaitlistOfFreedSlot(
   return { offered };
 }
 
+// LEFT JOIN desde a migração 062: uma oferta de recall ou da caixa de entrada não tem
+// entrada na lista de espera, e um INNER JOIN fazia-a desaparecer — a oferta existia, o
+// doente recebia-a, e aceitá-la devolvia «não encontrada».
 async function getOffer(tenantId: string, offerId: string) {
   return queryOne(
-    `SELECT o.*, w.treatment_type
-     FROM slot_offers o JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
+    `SELECT o.*, COALESCE(o.offered_type, w.treatment_type) AS treatment_type
+     FROM slot_offers o LEFT JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
      WHERE o.id=$1 AND o.tenant_id=$2`,
     [offerId, tenantId],
   );
@@ -286,24 +324,61 @@ export async function acceptOfferAndBook(tenantId: string, offerId: string): Pro
       ])
     : null;
 
-  const [appointment] = await query(
-    `INSERT INTO appointments
-       (tenant_id, patient_id, patient_name, dentist_id, chair, appt_date, start_time, duration, type, status, notes)
-     VALUES ($1,$2,$3,$4,$5,$6::date,$7::time,$8,$9,'confirmed',$10)
-     RETURNING *`,
-    [
-      tenantId,
-      patient.id,
-      patient.name,
-      dentist?.id || null,
-      offer.offered_chair || 1,
-      offer.offered_date,
-      offer.offered_start_time,
-      offer.offered_duration,
-      offer.treatment_type,
-      'Marcado a partir da lista de espera',
-    ],
-  );
+  // ─── A vaga ainda está livre? ────────────────────────────────────────────
+  // Não era verificado. Uma oferta vive até 24 horas (OFFER_EXPIRY_HOURS) e nesse tempo a
+  // receção pode ter marcado outra coisa naquele lugar — aceitar inseria por cima, sem
+  // erro. Com as ofertas a virem agora também do recall e da caixa de entrada, e a
+  // poderem ser aceites por SMS sem ninguém a olhar para a agenda, deixou de ser um caso
+  // improvável para passar a ser o caminho normal.
+  const origem = String(offer.origin || 'waitlist');
+  const notas =
+    origem === 'recall'
+      ? 'Marcado a partir de um recall aceite por SMS'
+      : origem === 'inbound'
+        ? 'Marcado a partir de um pedido do doente por SMS'
+        : 'Marcado a partir da lista de espera';
+
+  let appointment: Record<string, unknown>;
+  try {
+    appointment = await withTransaction(async (client) => {
+      await claimSlot(client, {
+        tenantId,
+        dentistId: (dentist?.id as string) || null,
+        date: requireIsoDate(offer.offered_date, 'offered_date'),
+        startTime: String(offer.offered_start_time).slice(0, 5),
+        duration: Number(offer.offered_duration) || 30,
+        chair: Number(offer.offered_chair) || 1,
+      });
+
+      const { rows } = await client.query(
+        `INSERT INTO appointments
+           (tenant_id, patient_id, patient_name, dentist_id, chair, appt_date, start_time, duration, type, status, notes)
+         VALUES ($1,$2,$3,$4,$5,$6::date,$7::time,$8,$9,'confirmed',$10)
+         RETURNING *`,
+        [
+          tenantId,
+          patient.id,
+          patient.name,
+          dentist?.id || null,
+          offer.offered_chair || 1,
+          offer.offered_date,
+          offer.offered_start_time,
+          offer.offered_duration,
+          offer.treatment_type,
+          notas,
+        ],
+      );
+      return rows[0];
+    });
+  } catch (e) {
+    if (e instanceof SlotTakenError) {
+      // A oferta morre aqui, e morre marcada: deixá-la 'sent' fazia o doente poder
+      // aceitá-la outra vez e receber a mesma recusa.
+      await query(`UPDATE slot_offers SET status='expired', responded_at=NOW() WHERE id=$1`, [offerId]);
+      return null;
+    }
+    throw e;
+  }
 
   await query(`UPDATE slot_offers SET status='accepted', responded_at=NOW() WHERE id=$1`, [offerId]);
   await query(`UPDATE waitlist_entries SET status='fulfilled', updated_at=NOW() WHERE id=$1`, [
@@ -318,8 +393,8 @@ export async function acceptOfferAndBook(tenantId: string, offerId: string): Pro
 // 'active' so it can be matched again, and tries the next candidate for that same slot.
 export async function expireStaleOffers(tenantId: string) {
   const stale = await query(
-    `SELECT o.*, w.treatment_type
-     FROM slot_offers o JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
+    `SELECT o.*, COALESCE(o.offered_type, w.treatment_type) AS treatment_type
+     FROM slot_offers o LEFT JOIN waitlist_entries w ON w.id = o.waitlist_entry_id
      WHERE o.tenant_id=$1 AND o.status='sent' AND o.created_at < NOW() - ($2::int * INTERVAL '1 hour')`,
     [tenantId, OFFER_EXPIRY_HOURS],
   );

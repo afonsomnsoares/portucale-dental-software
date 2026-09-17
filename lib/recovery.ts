@@ -56,10 +56,15 @@ export async function computeRecovery(tenantId: string): Promise<{ total: number
   const apptFee = avgFee(fees, RECOVERY_DEFAULTS.avgAppointmentFee);
   const visitFee = avgFee(fees, RECOVERY_DEFAULTS.visitFee);
 
-  const tenantRow = await queryOne(`SELECT operatories FROM tenants WHERE id=$1`, [tenantId]);
+  const tenantRow = await queryOne(`SELECT operatories, inactive_after_months FROM tenants WHERE id=$1`, [tenantId]);
   const operatories = Math.max(1, Number(tenantRow?.operatories || 1));
 
-  const inactiveMonths = RECOVERY_DEFAULTS.inactiveMonths;
+  // Da clínica desde a migração 060. RECOVERY_DEFAULTS.inactiveMonths passa a ser só o
+  // valor por omissão de quem nunca mexeu na definição — e o mesmo número tem de reger
+  // as duas leituras que falam de inatividade (esta e a de lib/lifecycle.ts), senão a
+  // categoria «Pacientes inativos» conta gente que o ciclo de vida não considera
+  // desaparecida.
+  const inactiveMonths = Number(tenantRow?.inactive_after_months) || RECOVERY_DEFAULTS.inactiveMonths;
   const noShowWindowDays = RECOVERY_DEFAULTS.noShowWindowDays;
   const cancelledWindowDays = RECOVERY_DEFAULTS.cancelledWindowDays;
   const slotWindowDays = RECOVERY_DEFAULTS.emptySlotDays;

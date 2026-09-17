@@ -2,13 +2,9 @@ import { appendAudit, appendTimeline } from '@/lib/audit';
 import { queryRead, withTransaction } from '@/lib/db';
 import { conflict } from '@/lib/http';
 import { withRoute } from '@/lib/route';
+import { claimSlot, SlotTakenError } from '@/lib/scheduling';
 import { getOwnedPatient, getOwnedUser } from '@/lib/tenantGuard';
 import { asDate, requireFields, validateAppointmentBody } from '@/lib/validate';
-
-// Internal-only signal from the transaction below to the catch block — never
-// serialized or exposed, just a way to distinguish "slot taken" from any
-// other failure without stringly-typed error matching.
-class SlotTakenError extends Error {}
 
 export const GET = withRoute(
   {
@@ -103,20 +99,14 @@ export const POST = withRoute(
     let apt: Record<string, unknown>;
     try {
       apt = await withTransaction(async (client) => {
-        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`${tenantId}|${dentist.id}|${body.date}`]);
-
-        const { rows: clashes } = await client.query(
-          `SELECT id FROM appointments
-         WHERE tenant_id=$1 AND appt_date=$2::date
-           AND (dentist_id=$3 OR chair=$4)
-           AND start_time < ($5::time + make_interval(mins => $6::int))
-           AND (start_time + make_interval(mins => duration)) > $5::time
-         LIMIT 1`,
-          [tenantId, body.date, dentist.id, chair, body.startTime, duration],
-        );
-        if (clashes.length) {
-          throw new SlotTakenError();
-        }
+        await claimSlot(client, {
+          tenantId,
+          dentistId: dentist.id as string,
+          date: String(body.date),
+          startTime: String(body.startTime),
+          duration,
+          chair,
+        });
 
         const { rows } = await client.query(
           `INSERT INTO appointments (tenant_id, patient_id, patient_name, dentist_id, chair, appt_date, start_time, duration, type, status, notes)

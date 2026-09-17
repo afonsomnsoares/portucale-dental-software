@@ -1,6 +1,7 @@
-import { query } from './db';
+import { query, queryOne } from './db';
 import {
   computeLifecycleStage,
+  DEFAULT_INACTIVE_MONTHS,
   isOutreachDue,
   type LifecycleStageKey,
   REACTIVATION_CONSENT_TYPE,
@@ -8,15 +9,6 @@ import {
   segmentReactivationCandidate,
 } from './lifecycleCalc';
 import type { CommPrefs } from './types/patient';
-
-const ITEMS_LIMIT = 50;
-
-export async function listOpenLeads(tenantId: string) {
-  return query(
-    `SELECT * FROM leads WHERE tenant_id=$1 AND status='open' ORDER BY created_at DESC LIMIT ${ITEMS_LIMIT}`,
-    [tenantId],
-  );
-}
 
 export interface LifecycleTransition {
   patientId: string;
@@ -47,6 +39,14 @@ export interface ReactivationCandidate {
 // On the very first run for a tenant nothing has a stored stage yet, so every patient
 // looks like a "transition" and every currently-inactive patient becomes an immediate
 // outreach candidate — an intentional one-time catch-up, not a bug.
+// Quantos meses sem aparecer é que esta clínica considera «desaparecido». Ver o
+// cabeçalho da migração 060 — a constante fixa fazia uma clínica de manutenção reativar
+// toda a gente e uma de ortodontia não reativar ninguém a tempo.
+export async function inactiveAfterMonths(tenantId: string): Promise<number> {
+  const row = await queryOne(`SELECT inactive_after_months FROM tenants WHERE id=$1`, [tenantId]);
+  return Number(row?.inactive_after_months) || DEFAULT_INACTIVE_MONTHS;
+}
+
 export async function computeLifecycleTransitions(tenantId: string): Promise<{
   transitions: LifecycleTransition[];
   outreachCandidates: ReactivationCandidate[];
@@ -78,6 +78,9 @@ export async function computeLifecycleTransitions(tenantId: string): Promise<{
     [tenantId, REACTIVATION_CONSENT_TYPE],
   );
 
+  // O limiar da clínica (migração 060). Lido uma vez e passado a todas as linhas: lê-lo
+  // por doente daria o mesmo resultado e N consultas.
+  const inactiveMonths = await inactiveAfterMonths(tenantId);
   const now = new Date();
   const transitions: LifecycleTransition[] = [];
   const outreachCandidates: ReactivationCandidate[] = [];
@@ -92,6 +95,7 @@ export async function computeLifecycleTransitions(tenantId: string): Promise<{
         hasFutureAppointment: !!row.has_future_appointment,
       },
       now,
+      inactiveMonths,
     );
     const storedStage = (row.stored_stage as LifecycleStageKey) || null;
 

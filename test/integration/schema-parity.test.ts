@@ -53,6 +53,10 @@ const REQUIRED: Record<string, string[]> = {
   ai_calls: ['tenant_id', 'agent', 'model', 'status'],
   leads: ['tenant_id', 'name', 'status', 'created_at'],
   rate_limit_counters: ['key', 'window_start', 'count'],
+  // lib/lifecycle.ts:inactiveAfterMonths e lib/recovery.ts nomeiam inactive_after_months
+  // (migração 060). Sem ela, as duas caem no valor por omissão em silêncio — o pior modo
+  // de falha possível para uma definição: continua a funcionar, com o número errado.
+  tenants: ['operatories', 'inactive_after_months'],
 };
 
 test('todas as colunas que o código nomeia existem mesmo nesta base', async () => {

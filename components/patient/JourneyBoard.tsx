@@ -5,6 +5,7 @@ import { formatPhonePT } from '@/lib/constants';
 import type { JourneyPatient, JourneyStageKey, Lead, LifecycleData } from '@/lib/types';
 
 const STAGE_COLOR: Record<JourneyStageKey, string> = {
+  lead: 'var(--urgency-soon)',
   booked: 'var(--accent)',
   first_visit_done: 'var(--cat-teal)',
   plan_presented: 'var(--urgency-soon)',
@@ -74,10 +75,15 @@ function SegmentBadge({ segment }: { segment: { dormancyBand: string; valueTier:
   );
 }
 
-function PatientCard({ p }: { p: JourneyPatient }) {
-  const meta = p.last_visit
-    ? `Última visita: ${String(p.last_visit).slice(0, 10)}`
-    : `Registado: ${String(p.created_at).slice(0, 10)}`;
+// Um cartão só, para leads e doentes. Eram dois blocos de JSX quase iguais em dois
+// sítios do ficheiro, e a diferença real entre eles é uma linha de metadados e os botões
+// — o resto era duplicação à espera de divergir.
+function PatientCard({ p, actions }: { p: JourneyPatient; actions?: ReactNode }) {
+  const meta = p.isLead
+    ? `${p.source ? `${p.source} · ` : ''}${String(p.created_at).slice(0, 10)}`
+    : p.last_visit
+      ? `Última visita: ${String(p.last_visit).slice(0, 10)}`
+      : `Registado: ${String(p.created_at).slice(0, 10)}`;
   return (
     <div className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
       <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{p.name}</div>
@@ -88,6 +94,7 @@ function PatientCard({ p }: { p: JourneyPatient }) {
         {meta}
       </div>
       <ActionChip action={p.next_action} />
+      {actions}
     </div>
   );
 }
@@ -137,37 +144,22 @@ interface JourneyBoardProps {
 export default function JourneyBoard({ data, leadActions }: JourneyBoardProps) {
   return (
     <div className="flex gap-3" style={{ overflowX: 'auto', paddingBottom: 8 }}>
-      <Column
-        title="Leads"
-        count={data.leads.length}
-        color="var(--urgency-soon)"
-        description="Primeiro contacto, ainda sem consulta marcada."
-      >
-        {data.leads.length === 0 ? (
-          <Empty message="Sem leads abertos." />
-        ) : (
-          data.leads.map((lead) => (
-            <div key={lead.id} className="card p-3 mb-2" style={{ border: '1px solid var(--border-subtle)' }}>
-              <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{lead.name}</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
-                {lead.phone ? formatPhonePT(lead.phone) : lead.email || '—'}
-              </div>
-              <div className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {lead.source ? `${lead.source} · ` : ''}
-                {String(lead.created_at).slice(0, 10)}
-              </div>
-              {leadActions?.(lead)}
-            </div>
-          ))
-        )}
-      </Column>
-
+      {/* A coluna dos leads deixou de ser desenhada à parte: 'lead' é a primeira etapa
+          do modelo (ver JOURNEY_STAGES), por isso vem do mesmo sítio que as outras. Além
+          de acabar com a duplicação, a contagem passa a ser a verdadeira — antes era o
+          comprimento da lista truncada, e uma clínica com 200 leads abertos lia «50». */}
       {data.stages.map((s) => (
         <Column key={s.key} title={s.label} count={s.count} color={STAGE_COLOR[s.key]} description={s.description}>
           {s.patients.length === 0 ? (
-            <Empty message="Sem pacientes." />
+            <Empty message={s.key === 'lead' ? 'Sem leads abertos.' : 'Sem pacientes.'} />
           ) : (
-            s.patients.map((p) => <PatientCard key={p.id} p={p} />)
+            s.patients.map((p) => (
+              <PatientCard
+                key={p.id}
+                p={p}
+                actions={p.isLead ? leadActions?.({ ...(p as unknown as Lead) }) : undefined}
+              />
+            ))
           )}
           {s.count > s.patients.length && (
             <div className="text-xs text-center mt-1" style={{ color: 'var(--text-muted)' }}>

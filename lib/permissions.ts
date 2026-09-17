@@ -129,6 +129,13 @@ export const PERMISSION_ACTIONS = [
   'conversations:read',
   'conversations:reply',
   'conversations:configure',
+  // ─── Limiar de inatividade (migração 060) ─────────────────────────────────
+  // Ler o ciclo de vida vai com 'lifecycle:read', que a receção já tem. Mudar o número
+  // de meses a partir do qual um doente conta como desaparecido é outra coisa: reclassifica
+  // a base de doentes inteira de uma vez, muda quem entra em campanha de reativação e muda
+  // a categoria «Pacientes inativos» do ecrã de recuperação. Fica com a direção, pela mesma
+  // razão que 'costs:manage'.
+  'lifecycle:configure',
 ];
 
 // Ações que só fazem sentido ao nível da plataforma. Até aqui 'admin' e 'super_admin'

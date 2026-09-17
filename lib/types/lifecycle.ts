@@ -28,6 +28,7 @@ export interface Lead {
 // from lib/, which is server-only) the same way the rest of this file mirrors its
 // server-side counterparts for client consumption.
 export type JourneyStageKey =
+  | 'lead'
   | 'booked'
   | 'first_visit_done'
   | 'plan_presented'
@@ -51,6 +52,12 @@ export interface JourneyPatient {
   last_visit: string | null;
   created_at: string;
   next_action: JourneyNextAction;
+  // Só na etapa 'lead': ainda não há ficha de doente, por isso `id` é o id do LEAD e não
+  // de um paciente. A distinção existe porque os cartões desta coluna têm ações próprias
+  // (converter/fechar) que não se aplicam a mais nenhuma etapa, e porque clicar num lead
+  // para abrir uma ficha de doente que não existe seria um 404.
+  isLead?: boolean;
+  source?: string | null;
 }
 
 export interface JourneyStageGroup {
@@ -76,7 +83,8 @@ export interface ReactivationCandidate {
 
 export interface LifecycleData {
   generatedAt: string;
-  leads: Lead[];
+  // Não há campo `leads`: os leads abertos são a etapa 'lead' de `stages`. Ver o
+  // comentário de JOURNEY_STAGES em lib/patientJourneyCalc.ts.
   stages: JourneyStageGroup[];
   reactivationCandidates: ReactivationCandidate[];
 }

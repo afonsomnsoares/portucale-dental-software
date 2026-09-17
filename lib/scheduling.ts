@@ -193,10 +193,19 @@ export interface SuggestSlotsParams {
   fromDate?: string;
   days?: number;
   limit?: number;
+  /**
+   * Uma consulta a ignorar ao calcular as ocupações. Existe para a remarcação: a
+   * consulta que se está a mover ocupa o seu próprio lugar, e sem isto bloqueava as
+   * alternativas mais próximas dela — mover das 10:00 para as 10:30 no mesmo dia é
+   * precisamente o pedido mais comum ao telefone, e era o único que o motor não
+   * conseguia propor.
+   */
+  excludeAppointmentId?: string | null;
 }
 
 export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promise<SuggestSlotsResult> {
   const { tenantId, type, patientId, preferredDentistId } = params;
+  const excludeAppointmentId = params.excludeAppointmentId || null;
   const duration = params.duration ?? getDefaultDuration(type);
   const fromDate = params.fromDate || new Date().toISOString().slice(0, 10);
   const days = params.days ?? DEFAULT_SUGGEST_DAYS;
@@ -281,8 +290,9 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
     query(
       `SELECT dentist_id, chair, appt_date::text AS appt_date, start_time, duration
        FROM appointments
-       WHERE tenant_id=$1 AND appt_date BETWEEN $2::date AND $3::date`,
-      [tenantId, fromDate, toDate],
+       WHERE tenant_id=$1 AND appt_date BETWEEN $2::date AND $3::date
+         AND ($4::uuid IS NULL OR id <> $4::uuid)`,
+      [tenantId, fromDate, toDate, excludeAppointmentId],
     ),
     patientId
       ? query(
@@ -383,4 +393,52 @@ export async function suggestAppointmentSlots(params: SuggestSlotsParams): Promi
     };
   });
   return { duration, slots, warnings };
+}
+
+// ─── Reservar um lugar sem o dar a dois doentes ─────────────────────────────
+// A mesma verificação estava escrita à mão em app/api/appointments/route.ts (criar) e em
+// .../[id]/reschedule (mover), e FALTAVA em .../[id] (editar) — onde mudar a data de uma
+// consulta à mão a podia sobrepor a outra sem aviso nenhum. Três cópias, uma delas
+// ausente, é o padrão que garante que a próxima rota a nascer também se esquece.
+//
+// O advisory lock é por (clínica, dentista, dia) e vive dentro da transação de quem
+// chama: serializa duas marcações concorrentes para o mesmo dentista no mesmo dia, e a
+// verificação volta a correr lá dentro — sem isso, dois pedidos em corrida passam os dois
+// pela leitura antes de qualquer um escrever. Mesmo padrão do gatilho da cadeia de hash
+// do audit_log (migração 015).
+export class SlotTakenError extends Error {}
+
+export interface ClaimSlotParams {
+  tenantId: string;
+  dentistId: string | null;
+  date: string;
+  startTime: string;
+  duration: number;
+  chair: number;
+  /** A consulta que se está a mover: não pode competir consigo própria. */
+  excludeAppointmentId?: string | null;
+}
+
+interface MinimalPgClient {
+  query: (sql: string, values?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }>;
+}
+
+export async function claimSlot(client: MinimalPgClient, p: ClaimSlotParams): Promise<void> {
+  await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`${p.tenantId}|${p.dentistId}|${p.date}`]);
+
+  const { rows } = await client.query(
+    `SELECT id FROM appointments
+      WHERE tenant_id=$1 AND appt_date=$2::date
+        AND ($7::uuid IS NULL OR id <> $7::uuid)
+        -- Uma consulta a que o doente faltou, ou que já terminou, não ocupa nada: o
+        -- lugar está livre de facto, e recusá-lo obrigaria a receção a contornar o
+        -- sistema para marcar em cima de uma falta.
+        AND status NOT IN ('no-show','departed')
+        AND (dentist_id=$3 OR chair=$4)
+        AND start_time < ($5::time + make_interval(mins => $6::int))
+        AND (start_time + make_interval(mins => duration)) > $5::time
+      LIMIT 1`,
+    [p.tenantId, p.date, p.dentistId, p.chair, p.startTime, p.duration, p.excludeAppointmentId ?? null],
+  );
+  if (rows.length) throw new SlotTakenError();
 }

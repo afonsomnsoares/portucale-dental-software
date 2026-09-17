@@ -4,7 +4,9 @@ import {
   computeLifecycleStage,
   dormancyBand,
   isOutreachDue,
+  DEFAULT_INACTIVE_MONTHS,
   LIFECYCLE_STAGES,
+  lifecycleStages,
   segmentReactivationCandidate,
   valueTier,
 } from '../lib/lifecycleCalc.ts';
@@ -111,4 +113,57 @@ test('valueTier crosses over at the high-value threshold', () => {
 test('segmentReactivationCandidate: 18-months-dormant high-value patient (the spec example)', () => {
   const segment = segmentReactivationCandidate({ monthsInactive: 18, lifetimeValue: 1200 });
   assert.deepEqual(segment, { dormancyBand: '12-24m', valueTier: 'high' });
+});
+
+// ─── O limiar é da clínica (migração 060) ───────────────────────────────────
+// Seis meses não é um facto sobre medicina dentária: numa clínica de manutenção é o
+// ciclo normal e ninguém desapareceu; numa de ortodontia, dois meses de silêncio já é
+// um doente perdido.
+
+test('o mesmo doente é "desaparecido" ou não consoante o limiar da clínica', () => {
+  const agora = new Date('2026-09-17T12:00:00Z');
+  const sinais = {
+    visitCount: 3,
+    lastVisit: '2026-05-17', // quatro meses antes
+    createdAt: '2024-01-01',
+    hasOpenTreatment: false,
+    hasFutureAppointment: false,
+  };
+
+  assert.equal(computeLifecycleStage(sinais, agora, 6), 'stable', 'quatro meses não chega a seis');
+  assert.equal(computeLifecycleStage(sinais, agora, 3), 'inactive', 'mas passa três');
+});
+
+test('sem limiar declarado vale o valor por omissão', () => {
+  const agora = new Date('2026-09-17T12:00:00Z');
+  const sinais = {
+    visitCount: 1,
+    lastVisit: '2026-01-01',
+    createdAt: '2024-01-01',
+    hasOpenTreatment: false,
+    hasFutureAppointment: false,
+  };
+  assert.equal(computeLifecycleStage(sinais, agora), computeLifecycleStage(sinais, agora, DEFAULT_INACTIVE_MONTHS));
+});
+
+// O ecrã não pode dizer «mais de 6 meses» a uma clínica que escolheu três.
+test('a descrição da etapa traz o limiar da clínica', () => {
+  const tres = lifecycleStages(3).find((s) => s.key === 'inactive');
+  assert.match(String(tres?.description), /3 meses/);
+  const catorze = lifecycleStages(14).find((s) => s.key === 'inactive');
+  assert.match(String(catorze?.description), /14 meses/);
+});
+
+// Um tratamento em aberto ou uma consulta marcada ganham a qualquer limiar: quem tem
+// consulta para a semana não desapareceu, tenha a clínica posto o limiar em que puser.
+test('nenhum limiar torna "desaparecido" quem tem consulta marcada', () => {
+  const agora = new Date('2026-09-17T12:00:00Z');
+  const sinais = {
+    visitCount: 2,
+    lastVisit: '2019-01-01',
+    createdAt: '2018-01-01',
+    hasOpenTreatment: false,
+    hasFutureAppointment: true,
+  };
+  assert.equal(computeLifecycleStage(sinais, agora, 1), 'in_treatment');
 });

@@ -11,6 +11,15 @@
 // mover uma consulta implica avisar o doente, o que o software não pode decidir
 // sozinho.
 
+// Os construtores recebem o formatador de quem chama (lib/scheduleOptimizer.ts passa o
+// minutesToTime de lib/scheduling.ts, que é a única definição verdadeira). Este existe só
+// para os testes e para quem não o passa — repeti-lo aqui é a convenção dos módulos
+// *Calc.ts, que são folhas e não importam de mais lado nenhum.
+function defaultFormatTime(minutes: number): string {
+  const m = Math.max(0, Math.round(minutes));
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+}
+
 export interface Booking {
   appointmentId: string;
   chair: number;
@@ -96,6 +105,29 @@ export type OptimizerMoveKind =
   | 'pull_forward'
   | 'consolidate';
 
+// ─── O destino, em vez de só a prosa ───────────────────────────────────────
+// Até aqui uma proposta dizia QUAL consulta mexer e explicava PARA ONDE em português,
+// dentro de `detail`. Enquanto o otimizador era read-only isso chegava: quem lia ia
+// fazer a alteração à mão de qualquer maneira. Para a proposta poder ser aplicada com um
+// clique, o destino tem de existir como dados.
+//
+// Só as propostas que têm um destino ÚNICO e não ambíguo o declaram. 'gap_fill' (marcar
+// gente da lista de espera num buraco) e 'preference_mismatch' (esta marcação viola o
+// que o doente pediu) ficam sem `apply` de propósito — a primeira é criar consultas e
+// contactar pessoas, a segunda não diz para onde mover. Não são propostas incompletas:
+// são propostas cuja execução é uma conversa, não um UPDATE.
+export interface OptimizerApply {
+  appointmentId: string;
+  date: string;
+  startTime: string; // 'HH:MM'
+  chair: number;
+  dentistId: string | null;
+  // Se o doente tem de saber. Mudar de cadeira ou atribuir o dentista em falta não muda
+  // nada do que lhe foi dito; mudar o dia ou a hora muda. Quem aplica usa isto para
+  // decidir se carimba rescheduled_at — ver a migração 061.
+  notifiesPatient: boolean;
+}
+
 export interface OptimizerMove {
   kind: OptimizerMoveKind;
   // Chave estável para o React e para deduplicação — sem ids aleatórios, para a
@@ -120,6 +152,8 @@ export interface OptimizerMove {
   consolidatedMinutes?: number;
   patientName?: string;
   date?: string;
+  /** Presente só nas propostas aplicáveis — ver OptimizerApply acima. */
+  apply?: OptimizerApply;
 }
 
 export interface WaitlistFit {
@@ -243,6 +277,7 @@ export function buildGapFillMoves(
 export function buildUnassignedDentistMoves(
   bookings: Booking[],
   suggestFor: (b: Booking) => { dentistId: string; dentistName: string; utilizationPct: number } | null,
+  formatTime: (minutes: number) => string = defaultFormatTime,
 ): OptimizerMove[] {
   const moves: OptimizerMove[] = [];
   for (const b of bookings) {
@@ -259,6 +294,19 @@ export function buildUnassignedDentistMoves(
       appointmentId: b.appointmentId,
       patientName: b.patientName,
       date: b.date,
+      // Sem dentista sugerido não há nada a aplicar: a proposta passa a ser «é preciso
+      // remarcar ou abrir turno», que é trabalho de uma pessoa e não um UPDATE.
+      apply: pick
+        ? {
+            appointmentId: b.appointmentId,
+            date: b.date,
+            startTime: formatTime(b.startMinutes),
+            chair: b.chair,
+            dentistId: pick.dentistId,
+            // O doente nunca soube que a consulta estava sem dentista atribuído.
+            notifiesPatient: false,
+          }
+        : undefined,
     });
   }
   return moves;
@@ -271,6 +319,7 @@ export function buildUnassignedDentistMoves(
 export function buildEquipmentBlockMoves(
   bookings: Booking[],
   isBlockingScarceChair: (b: Booking) => { tags: string[]; alternativeChair: number } | null,
+  formatTime: (minutes: number) => string = defaultFormatTime,
 ): OptimizerMove[] {
   const moves: OptimizerMove[] = [];
   for (const b of bookings) {
@@ -285,6 +334,16 @@ export function buildEquipmentBlockMoves(
       appointmentId: b.appointmentId,
       patientName: b.patientName,
       date: b.date,
+      apply: {
+        appointmentId: b.appointmentId,
+        date: b.date,
+        startTime: formatTime(b.startMinutes),
+        chair: blocking.alternativeChair,
+        dentistId: b.dentistId,
+        // A cadeira não vai no SMS nem em lado nenhum que o doente leia. Avisá-lo de que
+        // mudou de cadeira seria ruído sobre uma coisa que ele descobre ao entrar.
+        notifiesPatient: false,
+      },
     });
   }
   return moves;
@@ -509,6 +568,16 @@ export function buildPullForwardMoves(
       appointmentId: c.booking.appointmentId,
       patientName: c.booking.patientName,
       date: c.booking.date,
+      apply: {
+        appointmentId: c.booking.appointmentId,
+        date: c.target.date,
+        startTime: formatTime(c.target.startMinutes),
+        chair: c.target.chair,
+        dentistId: c.booking.dentistId,
+        // Muda o DIA. É a única coisa nesta lista que o doente tem mesmo de saber antes
+        // de aparecer à porta no dia errado.
+        notifiesPatient: true,
+      },
     });
   }
   return moves;
@@ -586,6 +655,17 @@ export function buildConsolidateMoves(
       patientName: a.patientName,
       date: a.date,
       appointmentIds: [a.appointmentId, b.appointmentId],
+      apply: {
+        // Move-se a SEGUNDA, encostando-a ao fim da primeira. Mover a primeira para trás
+        // adiantaria uma consulta a quem já está a caminho.
+        appointmentId: b.appointmentId,
+        date: b.date,
+        startTime: formatTime(a.startMinutes + a.durationMinutes),
+        chair: b.chair,
+        dentistId: b.dentistId,
+        // Muda a HORA, no mesmo dia. O doente combinou uma hora e passa a ser outra.
+        notifiesPatient: true,
+      },
     });
   }
   return moves;

@@ -101,7 +101,7 @@ export default function CommsSettings() {
         partido) <b>escala sempre</b> para uma pessoa, sem resposta automática.
       </div>
 
-      {/* ── Os quatro degraus ── */}
+      {/* ── Os degraus ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
         {niveis.map((n) => {
           const escolhido = n.value === s.autonomyLevel;
@@ -142,6 +142,35 @@ export default function CommsSettings() {
           );
         })}
       </div>
+
+      {/* ── O degrau que escreve ──
+          Um aviso próprio, e só para este. Os outros quatro decidem o que o sistema DIZ;
+          este decide o que ele FAZ, e a diferença não se lê numa lista de opções todas
+          com o mesmo aspeto. Quem liga isto tem de saber exatamente o que muda. */}
+      {s.autonomyLevel === 'agenda' && (
+        <div
+          style={{
+            border: '1px solid var(--urgency-soon-border)',
+            background: 'var(--urgency-soon-bg)',
+            borderRadius: 'var(--radius-card)',
+            padding: '12px 16px',
+            marginBottom: 20,
+            fontSize: 'var(--text-xs)',
+            lineHeight: 'var(--text-xs-leading)',
+          }}
+        >
+          <div style={{ fontWeight: 'var(--weight-bold)', marginBottom: 4, color: 'var(--urgency-soon)' }}>
+            Este degrau altera a agenda sem ninguém a confirmar
+          </div>
+          Um SMS do doente a cancelar <b>cancela mesmo</b> a consulta e liberta a vaga para a lista de espera. Um pedido
+          de marcação recebe uma proposta com dia e hora reais, e um «sim» marca a consulta.
+          <div style={{ marginTop: 6 }}>
+            O sistema só age quando não há dúvida: um doente com <b>mais do que uma</b> consulta marcada vai sempre para
+            uma pessoa, e uma mensagem ambígua também. Tudo o que for feito assim fica no registo de auditoria e na
+            ficha do doente identificado como automático.
+          </div>
+        </div>
+      )}
 
       {/* ── Os factos que a IA pode citar ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

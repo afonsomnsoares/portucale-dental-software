@@ -6,6 +6,7 @@ import {
   CONTACT_PRIORITY,
   type ContactRequest,
   coordinateContacts,
+  isCorrective,
   isIncoherent,
   isOperational,
   MAX_CONTACTS_PER_DAY,
@@ -53,6 +54,38 @@ test('a prioridade é sobre o que se perde por esperar, não sobre euros', () =>
   assert.ok(priorityOf('waitlist_offer') < priorityOf('plan_followup'));
   assert.ok(priorityOf('appointment_reminder') < priorityOf('plan_followup'));
   assert.ok(priorityOf('recall_reminder') < priorityOf('lifecycle_reactivation'));
+});
+
+// A confirmação e o lembrete dizem a mesma coisa (dia, hora, tipo) e por isso competem
+// pelo mesmo contacto do dia. Quem marca hoje para amanhã tem as duas pedidas na mesma
+// passagem; se ganhasse o lembrete, a confirmação expirava à espera da vez e o doente
+// nunca sabia que a marcação tinha ficado registada.
+test('a confirmação ganha ao lembrete — o lembrete volta amanhã, a confirmação não', () => {
+  assert.ok(priorityOf('appointment_confirmation') < priorityOf('appointment_reminder'));
+
+  const decisões = arbitrateContacts(
+    [
+      pedido({ kind: 'appointment_reminder', dedupeKey: 'a1' }),
+      pedido({ kind: 'appointment_confirmation', dedupeKey: 'a1' }),
+    ],
+    new Map([['p1', estado()]]),
+  );
+
+  const concedido = decisões.filter((d) => d.granted);
+  assert.equal(concedido.length, 1);
+  assert.equal(concedido[0].request.kind, 'appointment_confirmation');
+
+  const recusado = decisões.find((d) => !d.granted);
+  assert.equal(recusado?.request.kind, 'appointment_reminder');
+  // Diferido, não descartado: amanhã a consulta continua marcada e o lembrete continua
+  // a fazer sentido.
+  assert.equal(recusado && 'deferred' in recusado ? recusado.deferred : null, true);
+});
+
+// Uma consulta que o doente marcou não é comunicação promocional. Se gastasse o teto
+// semanal, quem está em tratamento ativo esgotava a quota a confirmar consultas.
+test('a confirmação de marcação é operacional, não promocional', () => {
+  assert.equal(isOperational('appointment_confirmation'), true);
 });
 
 // Um agente novo não pode passar à frente dos existentes por ninguém se ter lembrado
@@ -253,5 +286,48 @@ test('todos os agentes que pedem contactos existem no catálogo', () => {
   const ids = new Set(AGENTS.map((a) => a.id));
   for (const agentId of ['patient', 'scheduling', 'lead']) {
     assert.ok(ids.has(agentId as never), `${agentId} devia estar em lib/agents/registry.ts`);
+  }
+});
+
+// ─── Contactos corretivos ───────────────────────────────────────────────────
+
+// O caso real: marca-se uma consulta, sai a confirmação (um contacto gasto), e uma hora
+// depois a clínica muda-lhe o dia. Diferir a remarcação para amanhã é a clínica saber que
+// o doente tem a data errada — escrita por ela — e escolher não a corrigir hoje.
+test('uma remarcação passa mesmo com o orçamento do dia esgotado', () => {
+  const decisões = arbitrateContacts(
+    [pedido({ kind: 'appointment_reschedule', dedupeKey: 'a1' })],
+    new Map([['p1', estado({ contactsToday: MAX_CONTACTS_PER_DAY })]]),
+  );
+  assert.equal(decisões[0].granted, true);
+  assert.equal(isCorrective('appointment_reschedule'), true);
+});
+
+// A exceção é uma exceção, não uma porta: a mensagem seguinte continua a ser travada.
+test('a correção gasta o orçamento que ignorou', () => {
+  const decisões = arbitrateContacts(
+    [
+      pedido({ kind: 'appointment_reschedule', dedupeKey: 'a1' }),
+      pedido({ kind: 'recall_reminder', dedupeKey: 'r1' }),
+    ],
+    new Map([['p1', estado()]]),
+  );
+  assert.equal(decisões.filter((d) => d.granted).length, 1);
+  assert.equal(decisões.find((d) => d.granted)?.request.kind, 'appointment_reschedule');
+});
+
+// O consentimento não é orçamento. Quem disse para não o contactarem não é contactado,
+// nem para corrigir — a correção alternativa é um telefonema de uma pessoa.
+test('nem uma correção passa por cima da vontade do doente', () => {
+  const decisões = arbitrateContacts(
+    [pedido({ kind: 'appointment_reschedule', dedupeKey: 'a1' })],
+    new Map([['p1', estado({ canContact: false })]]),
+  );
+  assert.equal(decisões[0].granted, false);
+});
+
+test('a remarcação está à frente de tudo o resto na prioridade', () => {
+  for (const outro of CONTACT_PRIORITY.filter((k) => k !== 'appointment_reschedule')) {
+    assert.ok(priorityOf('appointment_reschedule') < priorityOf(outro), `devia ganhar a ${outro}`);
   }
 });

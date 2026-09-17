@@ -239,32 +239,36 @@ export async function computeScheduleOptimization(
     busyByDentist.set(b.dentistId, list);
   }
 
-  const unassigned = buildUnassignedDentistMoves(bookings, (b) => {
-    const weekday = weekdayOf(b.date);
-    const end = b.startMinutes + b.durationMinutes;
-    const free = dentists.filter((d) => {
-      if (onLeave.get(d.dentistId)?.some((r) => b.date >= r.start && b.date <= r.end)) return false;
-      const blocks = shifts.filter((s) => s.user_id === d.dentistId && Number(s.weekday) === weekday);
-      const covers = blocks.some(
-        (s) => b.startMinutes >= toMinutes(String(s.start_time)) && end <= toMinutes(String(s.end_time)),
-      );
-      if (!covers) return false;
-      const clash = (busyByDentist.get(d.dentistId) || []).some(
-        (o) => o.date === b.date && b.startMinutes < o.startMinutes + o.durationMinutes && end > o.startMinutes,
-      );
-      return !clash;
-    });
-    if (!free.length) return null;
-    // Menos ocupado primeiro — é isso que "maximizar a utilização" significa ao
-    // nível do dentista: espalhar, não concentrar.
-    free.sort((a, z) => a.bookedMinutes - z.bookedMinutes);
-    const pick = free[0];
-    return {
-      dentistId: pick.dentistId,
-      dentistName: pick.dentistName,
-      utilizationPct: Math.round((pick.bookedMinutes / maxBooked) * 100),
-    };
-  });
+  const unassigned = buildUnassignedDentistMoves(
+    bookings,
+    (b) => {
+      const weekday = weekdayOf(b.date);
+      const end = b.startMinutes + b.durationMinutes;
+      const free = dentists.filter((d) => {
+        if (onLeave.get(d.dentistId)?.some((r) => b.date >= r.start && b.date <= r.end)) return false;
+        const blocks = shifts.filter((s) => s.user_id === d.dentistId && Number(s.weekday) === weekday);
+        const covers = blocks.some(
+          (s) => b.startMinutes >= toMinutes(String(s.start_time)) && end <= toMinutes(String(s.end_time)),
+        );
+        if (!covers) return false;
+        const clash = (busyByDentist.get(d.dentistId) || []).some(
+          (o) => o.date === b.date && b.startMinutes < o.startMinutes + o.durationMinutes && end > o.startMinutes,
+        );
+        return !clash;
+      });
+      if (!free.length) return null;
+      // Menos ocupado primeiro — é isso que "maximizar a utilização" significa ao
+      // nível do dentista: espalhar, não concentrar.
+      free.sort((a, z) => a.bookedMinutes - z.bookedMinutes);
+      const pick = free[0];
+      return {
+        dentistId: pick.dentistId,
+        dentistName: pick.dentistName,
+        utilizationPct: Math.round((pick.bookedMinutes / maxBooked) * 100),
+      };
+    },
+    minutesToTime,
+  );
 
   // ─── Regra 3: cadeira equipada ocupada sem necessidade ───────────────────
   const tagsByChair = new Map<number, string[]>();
@@ -286,26 +290,30 @@ export async function computeScheduleOptimization(
   // exigir de facto — senão a etiqueta é decorativa.
   const demandedTags = new Set(APPOINTMENT_TYPES.flatMap((t) => t.requiredEquipmentTags || []));
 
-  const equipmentBlocks = buildEquipmentBlockMoves(bookings, (b) => {
-    const chairTags = (tagsByChair.get(b.chair) || []).filter((t) => scarceTags.has(t) && demandedTags.has(t));
-    if (!chairTags.length) return null;
-    const needed = getAppointmentTypeOption(b.type)?.requiredEquipmentTags || [];
-    // A consulta precisa mesmo de alguma delas? Então está no sítio certo.
-    if (chairTags.some((t) => needed.includes(t))) return null;
+  const equipmentBlocks = buildEquipmentBlockMoves(
+    bookings,
+    (b) => {
+      const chairTags = (tagsByChair.get(b.chair) || []).filter((t) => scarceTags.has(t) && demandedTags.has(t));
+      if (!chairTags.length) return null;
+      const needed = getAppointmentTypeOption(b.type)?.requiredEquipmentTags || [];
+      // A consulta precisa mesmo de alguma delas? Então está no sítio certo.
+      if (chairTags.some((t) => needed.includes(t))) return null;
 
-    const end = b.startMinutes + b.durationMinutes;
-    for (let chair = 1; chair <= chairCount; chair++) {
-      if (chair === b.chair) continue;
-      // A alternativa não pode ser outra cadeira escassa — trocar um bloqueio por
-      // outro não é otimização.
-      if ((tagsByChair.get(chair) || []).some((t) => scarceTags.has(t) && demandedTags.has(t))) continue;
-      const busy = (bookingsByChairDay.get(`${b.date}|${chair}`) || []).some(
-        (o) => b.startMinutes < o.startMinutes + o.durationMinutes && end > o.startMinutes,
-      );
-      if (!busy) return { tags: chairTags, alternativeChair: chair };
-    }
-    return null;
-  });
+      const end = b.startMinutes + b.durationMinutes;
+      for (let chair = 1; chair <= chairCount; chair++) {
+        if (chair === b.chair) continue;
+        // A alternativa não pode ser outra cadeira escassa — trocar um bloqueio por
+        // outro não é otimização.
+        if ((tagsByChair.get(chair) || []).some((t) => scarceTags.has(t) && demandedTags.has(t))) continue;
+        const busy = (bookingsByChairDay.get(`${b.date}|${chair}`) || []).some(
+          (o) => b.startMinutes < o.startMinutes + o.durationMinutes && end > o.startMinutes,
+        );
+        if (!busy) return { tags: chairTags, alternativeChair: chair };
+      }
+      return null;
+    },
+    minutesToTime,
+  );
 
   // ─── Regra 4: marcações contra as preferências do doente ─────────────────
   const patientIds = [...new Set(bookings.map((b) => b.patientId).filter((id): id is string => !!id))];

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import AppointmentEditModal, { type AppointmentEditForm } from '@/components/receptionist/AppointmentEditModal';
 import AppointmentsTable from '@/components/receptionist/AppointmentsTable';
+import RescheduleModal from '@/components/receptionist/RescheduleModal';
 import { DangerBtn, ErrorState, GhostBtn, Modal, PageHeader, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { Appointment } from '@/lib/types';
@@ -39,6 +40,7 @@ export default function ReceptionAppointmentsPage() {
     type: '',
     notes: '',
   });
+  const [rescheduling, setRescheduling] = useState<Appointment | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editErr, setEditErr] = useState('');
   const [statusPending, setStatusPending] = useState<Record<string, boolean>>({});
@@ -237,6 +239,7 @@ export default function ReceptionAppointmentsPage() {
             settings={settings}
             removingId={removing}
             onEdit={openEdit}
+            onReschedule={setRescheduling}
             onCancel={(a) => setConfirm(a)}
             onChangeStatus={changeStatus}
             statusPending={statusPending}
@@ -267,6 +270,14 @@ export default function ReceptionAppointmentsPage() {
             <GhostBtn onClick={() => setConfirm(null)}>Cancelar</GhostBtn>
           </div>
         </Modal>
+      )}
+
+      {rescheduling && (
+        <RescheduleModal
+          appointment={rescheduling}
+          onClose={() => setRescheduling(null)}
+          onDone={() => apptsQuery.refetch()}
+        />
       )}
 
       <AppointmentEditModal

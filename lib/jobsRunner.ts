@@ -9,15 +9,17 @@ import { reviewManagement } from './agents/managementAgent';
 import { reviewPatients } from './agents/patientAgent';
 import { generateReorderSuggestionsAI } from './agents/reorderAgent';
 import { reviewSchedule } from './agents/schedulingAgent';
+import { findOfferableSlot, type OfferableSlot, persistOffer } from './agents/schedulingAutonomy';
 import { runAnomalyReview } from './anomaly';
 import { appendAudit, appendTimeline } from './audit';
 import type { SessionUser } from './auth';
 import { runCarePathways } from './carePathway';
 import { canAutoContact } from './commPrefs';
 import { formatDatePT } from './constants';
+import { writesToSchedule } from './conversationCalc';
 import { query, queryOne, withAdvisoryLock } from './db';
 import { findEquipmentNeedingAttention } from './equipment';
-import { sweepStaleConversations } from './inbound';
+import { getAutonomy, sweepStaleConversations } from './inbound';
 import { computeLifecycleTransitions, markLifecycleOutreachSent } from './lifecycle';
 import { createTask } from './patientTasks';
 import { requireIsoDate } from './pgDate';
@@ -101,6 +103,13 @@ export const SYSTEM_ACTOR: Pick<SessionUser, 'id' | 'name' | 'role' | 'clinic'> 
 };
 
 export const JOB_NAMES = [
+  // A confirmação que sai LOGO a seguir a marcar, e não na véspera. É uma tarefa e não
+  // um efeito da rota POST /api/appointments porque tudo o que fala com um doente passa
+  // pelo árbitro (lib/agents/coordination.ts) — e o árbitro corre por passagem, não por
+  // pedido HTTP. Marcar deixaria de ser uma escrita e passaria a ser uma escrita mais um
+  // SMS que pode falhar; e a receção ficaria à espera do operador de rede para ver o
+  // 201. Ver queueAppointmentConfirmations.
+  'confirmations',
   'reminders',
   'risk',
   'riskOutreach',
@@ -169,6 +178,98 @@ async function logJobRun(tenantId: string | null, jobName: string, status: strin
     [tenantId, jobName, status, JSON.stringify(details || {})],
   );
   return row;
+}
+
+// ─── Confirmação de marcação ────────────────────────────────────────────────
+// A primeira mensagem que um doente recebia depois de marcar era o lembrete, na véspera.
+// Entre marcar e a véspera havia silêncio — e num silêncio desses o que a clínica sabe e
+// o que o doente sabe divergem sem que nenhum dos dois dê por isso: uma hora mal ouvida
+// ao telefone só aparecia no dia anterior, quando já não há agenda para a corrigir.
+//
+// Varre por `created_at` e não por um gatilho na rota de marcação, pela mesma razão que
+// justifica o nome do job em JOB_NAMES: o que fala com doentes passa pelo árbitro, e o
+// árbitro corre por passagem. A consequência boa é que uma passagem falhada não perde a
+// confirmação — a seguinte apanha-a, desde que ainda esteja dentro da janela.
+//
+// A janela existe por causa do outro lado disso: sem ela, uma clínica que ligasse isto
+// pela primeira vez confirmaria de uma vez só todas as consultas futuras já marcadas,
+// incluindo as que o doente combinou há um mês. Doze horas é mais do que o intervalo do
+// cron e menos do que o tempo que uma confirmação demora a deixar de fazer sentido.
+const CONFIRMATION_WINDOW_HOURS = 12;
+
+async function queueAppointmentConfirmations(
+  tenantId: string,
+): Promise<{ requests: PendingContact[]; scanned: number }> {
+  const rows = await query(
+    `SELECT a.id as appointment_id, a.patient_id, a.appt_date, a.start_time, a.type,
+            a.rescheduled_at IS NOT NULL AS moved,
+            GREATEST(a.created_at, COALESCE(a.rescheduled_at, a.created_at)) AS touched_at,
+            p.name as patient_name, p.phone as patient_phone, p.comm_prefs,
+            t.name as tenant_name
+     FROM appointments a
+     JOIN patients p ON p.id=a.patient_id
+     JOIN tenants t ON t.id=a.tenant_id
+     WHERE a.tenant_id=$1
+       AND GREATEST(a.created_at, COALESCE(a.rescheduled_at, a.created_at)) >= NOW() - ($2::int * INTERVAL '1 hour')
+       AND a.appt_date >= CURRENT_DATE
+       AND a.status IN ('confirmed','registered','waiting')`,
+    [tenantId, CONFIRMATION_WINDOW_HOURS],
+  );
+
+  const requests: PendingContact[] = [];
+  for (const r of rows) {
+    const phone = canAutoContact(r.comm_prefs, 'sms') ? toE164(r.patient_phone) : '';
+    if (!phone) continue;
+    // A guarda é sobre QUALQUER mensagem já enviada para esta consulta DEPOIS de ela ter
+    // sido mexida pela última vez, e não só sobre uma confirmação anterior. Duas razões,
+    // e as duas morderiam:
+    //
+    //   • uma marcação feita para o próprio dia entra nesta janela e na do lembrete ao
+    //     mesmo tempo; se o lembrete já saiu, confirmar a seguir é repetir a mesma
+    //     informação, e o doente não sabe que são dois sistemas a falar — vê uma clínica
+    //     a repetir-se;
+    //   • uma consulta remarcada JÁ TEM mensagens (a confirmação original, talvez um
+    //     lembrete para a data antiga). Sem o corte no tempo, a remarcação nunca seria
+    //     comunicada — e o doente ficaria com a data errada, que é pior do que não ter
+    //     recebido nada.
+    const exists = await queryOne(
+      `SELECT 1 FROM notifications
+       WHERE tenant_id=$1 AND appointment_id=$2 AND channel='sms' AND created_at >= $3
+       LIMIT 1`,
+      [tenantId, r.appointment_id, r.touched_at],
+    );
+    if (exists) continue;
+
+    const date = formatDatePT(requireIsoDate(r.appt_date, 'appt_date'));
+    const time = String(r.start_time).slice(0, 5);
+    // Textos diferentes porque são factos diferentes. «Fica marcada» a quem já tinha
+    // consulta e lhe mudaram o dia deixa o doente sem saber se é a mesma ou uma segunda.
+    const body = r.moved
+      ? `Olá ${r.patient_name}, a sua consulta em ${r.tenant_name} foi remarcada para ${date} às ${time} (${r.type}). Se não lhe der jeito, contacte-nos.`
+      : `Olá ${r.patient_name}, a sua consulta em ${r.tenant_name} fica marcada para ${date} às ${time} (${r.type}). Se precisar de alterar, contacte-nos.`;
+    // Dois tipos e não um, porque o árbitro trata-os de forma diferente e deve: uma
+    // remarcação é CORRETIVA (ver CORRECTIVE_KINDS em lib/agents/coordinationCalc.ts) e
+    // passa à frente do orçamento diário; uma confirmação de marcação nova não é — se o
+    // doente já foi contactado hoje, sabê-lo amanhã não lhe custa nada.
+    const kind = r.moved ? 'appointment_reschedule' : 'appointment_confirmation';
+    requests.push({
+      agentId: 'scheduling',
+      kind,
+      patientId: String(r.patient_id),
+      // A chave inclui o instante da última mexida: sem isso, a remarcação de uma
+      // consulta já confirmada seria «o mesmo pedido» para o árbitro (que deduplica por
+      // patientId:kind:dedupeKey) e seria descartada como repetida.
+      dedupeKey: `${r.appointment_id}:${new Date(String(r.touched_at)).getTime()}`,
+      body,
+      queued: {
+        patientId: String(r.patient_id),
+        phone,
+        appointmentId: String(r.appointment_id),
+        payload: { kind, body, moved: !!r.moved },
+      },
+    });
+  }
+  return { requests, scanned: rows.length };
 }
 
 async function queueAppointmentReminders(tenantId: string): Promise<{ requests: PendingContact[]; scanned: number }> {
@@ -370,12 +471,25 @@ async function queueRecallOutreach(tenantId: string): Promise<{ requests: Pendin
     [tenantId, RECALL_OUTREACH_COOLDOWN_DAYS],
   );
   const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
+  // Com a autonomia de agenda ligada, o recall deixa de dizer «contacte-nos» e passa a
+  // propor um lugar concreto que o doente aceita por SMS. É a diferença entre pedir ao
+  // doente que faça o trabalho e fazê-lo por ele — e é exatamente o que o degrau novo
+  // autoriza. Ver lib/agents/schedulingAutonomy.ts.
+  const podeOferecer = writesToSchedule((await getAutonomy(tenantId)).level);
 
   const requests: PendingContact[] = [];
   for (const r of rows) {
     const phone = canAutoContact(r.comm_prefs, 'sms') ? toE164(r.phone) : '';
     if (!phone) continue;
-    const body = `Olá ${r.patient_name}, está na altura de marcar a sua consulta de ${r.recall_type} em ${tenant?.name || ''}. Contacte-nos para agendar.`;
+
+    // O lugar é escolhido AGORA e gravado só se o árbitro autorizar — ver o cabeçalho de
+    // findOfferableSlot. Se o pedido for diferido, não fica oferta nenhuma pendente a
+    // bloquear a de amanhã.
+    const slot = podeOferecer ? await findOfferableSlot(tenantId, String(r.patient_id), r.recall_type) : null;
+    const body =
+      slot?.body ||
+      `Olá ${r.patient_name}, está na altura de marcar a sua consulta de ${r.recall_type} em ${tenant?.name || ''}. Contacte-nos para agendar.`;
+
     requests.push({
       agentId: 'patient',
       kind: 'recall_reminder',
@@ -383,11 +497,12 @@ async function queueRecallOutreach(tenantId: string): Promise<{ requests: Pendin
       dedupeKey: `recall:${r.id}`,
       body,
       // O id do recall viaja no payload para dispatchContacts poder marcar
-      // last_notified_at só nos que saíram, pela mesma razão da reativação.
+      // last_notified_at só nos que saíram, pela mesma razão da reativação. O `slot`
+      // viaja pela mesma razão: a oferta nasce depois da decisão, não antes.
       queued: {
         patientId: String(r.patient_id),
         phone,
-        payload: { kind: 'recall_reminder', body, recallId: r.id },
+        payload: { kind: 'recall_reminder', body, recallId: r.id, slot: slot || null },
       },
     });
   }
@@ -818,6 +933,16 @@ async function dispatchContacts(tenantId: string, requests: PendingContact[]) {
     }
     if (g.kind === 'recall_reminder' && g.payload.recallId) {
       await query(`UPDATE recalls SET last_notified_at=NOW() WHERE id=$1`, [g.payload.recallId]);
+      // A oferta nasce aqui e não em queueRecallOutreach: se o árbitro tivesse diferido
+      // este contacto, ficaria uma oferta pendente para um SMS que nunca saiu — e o
+      // índice único da migração 062 impediria a de amanhã de sequer ser tentada.
+      if (g.payload.slot) {
+        await persistOffer(tenantId, g.patientId, g.payload.slot as OfferableSlot, {
+          origin: 'recall',
+          recallId: String(g.payload.recallId),
+          notificationId: g.notificationId,
+        });
+      }
     }
   }
 
@@ -873,6 +998,11 @@ async function runJobExclusive(
     // o orçamento diário lido da base já contém o que as outras enviaram.
     const contactRequests: PendingContact[] = [];
 
+    if (job === 'all' || job === 'confirmations') {
+      const { requests, scanned } = await queueAppointmentConfirmations(tenantId);
+      contactRequests.push(...requests);
+      details.appointmentConfirmations = { requested: requests.length, scanned };
+    }
     if (job === 'all' || job === 'reminders') {
       const { requests, scanned } = await queueAppointmentReminders(tenantId);
       contactRequests.push(...requests);

@@ -229,7 +229,7 @@ export default function ClinicScheduleIntelPage() {
             ))}
 
           {tab === 'efficiency' && <EfficiencyTab efficiency={efficiency} />}
-          {tab === 'optimizer' && <OptimizerTab optimization={optimization} />}
+          {tab === 'optimizer' && <OptimizerTab optimization={optimization} onApplied={load} />}
 
           {tab === 'waitlist' && (
             <div>

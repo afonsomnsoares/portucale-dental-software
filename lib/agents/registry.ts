@@ -62,7 +62,7 @@ export const AGENTS: readonly AgentDefinition[] = [
     icon: '📅',
     summary: 'Encaixa procura nos recursos: cadeiras, especialidade do dentista, lista de espera e risco de falta.',
     boundary: 'Agenda de doentes. Turnos e férias do pessoal são de Operações.',
-    jobs: ['reminders', 'risk', 'riskOutreach', 'waitlistExpire', 'scheduleReview'],
+    jobs: ['confirmations', 'reminders', 'risk', 'riskOutreach', 'waitlistExpire', 'scheduleReview'],
     reads: [
       'lib/scheduleOptimizer.ts',
       'lib/waitlistMatch.ts',

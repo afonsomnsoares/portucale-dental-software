@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { matchesSlot, rankCandidates, type FreedSlot, type WaitlistCandidate } from '../lib/waitlistMatch.ts';
+import {
+  type FreedSlot,
+  matchesSlot,
+  missingEquipmentTags,
+  rankCandidates,
+  slotIsServiceable,
+  type WaitlistCandidate,
+} from '../lib/waitlistMatch.ts';
 
 const NOW = new Date('2026-08-24T10:00:00Z'); // Monday
 
@@ -96,4 +103,32 @@ test('rankCandidates respects the limit', () => {
   const candidates = [candidate({ id: 'a' }), candidate({ id: 'b' }), candidate({ id: 'c' })];
   const ranked = rankCandidates(candidates, MONDAY_SLOT, NOW, 2);
   assert.equal(ranked.length, 2);
+});
+
+// ─── A vaga é oferecível de todo? ───────────────────────────────────────────
+// O caso real: o motor de endodontia avaria de manhã, a Endodontia das 15h é cancelada,
+// e o sistema oferece o lugar a três pessoas para um tratamento que hoje não se faz.
+
+test('uma vaga cujo equipamento está em baixo não é oferecível', () => {
+  assert.deepEqual(missingEquipmentTags({ requiredTags: ['endo_motor'], availableTags: [] }), ['endo_motor']);
+  assert.equal(slotIsServiceable({ requiredTags: ['endo_motor'], availableTags: [] }), false);
+});
+
+test('com o equipamento disponível a vaga é oferecível', () => {
+  assert.equal(slotIsServiceable({ requiredTags: ['endo_motor'], availableTags: ['endo_motor', 'xray'] }), true);
+});
+
+// Um tratamento sem exigências não pode ficar bloqueado por um catálogo de equipamento
+// vazio — a esmagadora maioria das consultas não precisa de nada.
+test('um tratamento sem exigências é sempre oferecível', () => {
+  assert.equal(slotIsServiceable({ requiredTags: [], availableTags: [] }), true);
+});
+
+test('falta uma de duas etiquetas e a vaga continua bloqueada', () => {
+  const faltam = missingEquipmentTags({
+    requiredTags: ['endo_motor', 'xray'],
+    availableTags: ['xray'],
+  });
+  assert.deepEqual(faltam, ['endo_motor']);
+  assert.equal(slotIsServiceable({ requiredTags: ['endo_motor', 'xray'], availableTags: ['xray'] }), false);
 });

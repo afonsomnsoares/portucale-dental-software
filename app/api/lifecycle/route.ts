@@ -1,5 +1,5 @@
 import { queryOne } from '@/lib/db';
-import { computeLifecycleTransitions, listOpenLeads } from '@/lib/lifecycle';
+import { computeLifecycleTransitions } from '@/lib/lifecycle';
 import { computeJourneyPipeline } from '@/lib/patientJourney';
 import { withRoute } from '@/lib/route';
 
@@ -7,9 +7,12 @@ export const GET = withRoute({ permission: 'lifecycle:read', tenant: 'required' 
   const tenant = await queryOne(`SELECT id FROM tenants WHERE id=$1`, [tenantId]);
   if (!tenant) return Response.json({ error: 'Not found' }, { status: 404 });
 
-  const [{ stages }, leads, { outreachCandidates }] = await Promise.all([
+  // `leads` deixou de vir à parte: os leads abertos são a primeira etapa de `stages`
+  // desde que JOURNEY_STAGES passou a incluí-los (ver lib/patientJourneyCalc.ts). Uma
+  // lista paralela era a mesma informação com outra contagem — e a contagem da lista
+  // estava truncada.
+  const [{ stages }, { outreachCandidates }] = await Promise.all([
     computeJourneyPipeline(tenantId),
-    listOpenLeads(tenantId),
     // Item 7's segmentação: same candidates lib/jobsRunner.ts's queueLifecycleOutreach
     // acts on, surfaced here read-only so staff can see who's overdue for reactivation
     // and why (dormancy/value) before — or instead of — the automated SMS.
@@ -18,7 +21,6 @@ export const GET = withRoute({ permission: 'lifecycle:read', tenant: 'required' 
 
   return Response.json({
     generatedAt: new Date().toISOString(),
-    leads,
     stages,
     reactivationCandidates: outreachCandidates.map((c) => ({
       patientId: c.patientId,

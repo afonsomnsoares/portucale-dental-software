@@ -1,6 +1,8 @@
 import { appendAudit, appendTimeline } from '@/lib/audit';
-import { query, queryOne } from '@/lib/db';
+import { query, queryOne, withTransaction } from '@/lib/db';
+import { conflict } from '@/lib/http';
 import { withRoute } from '@/lib/route';
+import { claimSlot, SlotTakenError } from '@/lib/scheduling';
 import { getOwnedUser } from '@/lib/tenantGuard';
 import { notifyWaitlistOfFreedSlot } from '@/lib/waitlist';
 
@@ -19,28 +21,71 @@ export const PUT = withRoute<{ id: string }>(
       if (!d) return Response.json({ error: 'Invalid dentist' }, { status: 400 });
     }
 
-    const chair = body.chair ?? prev.chair;
-    const duration = body.duration ?? prev.duration;
+    const chair = Math.max(1, Number((body.chair ?? prev.chair) || 1));
+    const duration = Math.max(5, Number((body.duration ?? prev.duration) || 30));
     const apptDate = body.date ?? body.appt_date ?? prev.appt_date;
     const startTime = body.startTime ?? body.start_time ?? prev.start_time;
 
-    const [updated] = await query(
-      `UPDATE appointments
-     SET dentist_id=$1, chair=$2, appt_date=$3, start_time=$4, duration=$5, type=$6, notes=$7
-     WHERE id=$8 AND tenant_id=$9
-     RETURNING *`,
-      [
-        dentistId,
-        Math.max(1, Number(chair || 1)),
-        apptDate,
-        startTime,
-        Math.max(5, Number(duration || 30)),
-        body.type ?? prev.type,
-        body.notes ?? prev.notes,
-        id,
-        tenantId,
-      ],
-    );
+    // Mudou de lugar na agenda, ou só de notas/tipo? A distinção decide duas coisas: se
+    // é preciso verificar sobreposição, e se o doente tem de ser avisado. Comparar em
+    // texto porque `prev` vem do Postgres como Date/string conforme a coluna.
+    const iso = (v: unknown) => String(v ?? '').slice(0, 10);
+    const hhmm = (v: unknown) => String(v ?? '').slice(0, 5);
+    const moveu =
+      iso(apptDate) !== iso(prev.appt_date) ||
+      hhmm(startTime) !== hhmm(prev.start_time) ||
+      Number(duration) !== Number(prev.duration) ||
+      Number(chair) !== Number(prev.chair) ||
+      String(dentistId ?? '') !== String(prev.dentist_id ?? '');
+
+    let updated: Record<string, unknown>;
+    try {
+      updated = await withTransaction(async (client) => {
+        // A verificação que faltava aqui. Sem ela, editar a data de uma consulta à mão
+        // podia pô-la em cima de outra, na mesma cadeira ou com o mesmo dentista, sem
+        // erro nenhum — e só se descobria com os dois doentes na sala de espera.
+        if (moveu) {
+          await claimSlot(client, {
+            tenantId,
+            dentistId,
+            date: iso(apptDate),
+            startTime: hhmm(startTime),
+            duration,
+            chair,
+            excludeAppointmentId: id,
+          });
+        }
+
+        const { rows } = await client.query(
+          `UPDATE appointments
+              SET dentist_id=$1, chair=$2, appt_date=$3, start_time=$4, duration=$5, type=$6, notes=$7,
+                  -- Só quando muda mesmo de lugar: é o que faz a tarefa 'confirmations'
+                  -- avisar o doente da data nova (ver a migração 061). Carimbar em cada
+                  -- gravação mandaria uma mensagem por cada correção de uma nota.
+                  rescheduled_at = CASE WHEN $10 THEN NOW() ELSE rescheduled_at END
+            WHERE id=$8 AND tenant_id=$9
+            RETURNING *`,
+          [
+            dentistId,
+            chair,
+            apptDate,
+            startTime,
+            duration,
+            body.type ?? prev.type,
+            body.notes ?? prev.notes,
+            id,
+            tenantId,
+            moveu,
+          ],
+        );
+        return rows[0];
+      });
+    } catch (e) {
+      if (e instanceof SlotTakenError) {
+        return conflict('Este horário já está ocupado — escolha outro.');
+      }
+      throw e;
+    }
 
     const full = await queryOne(
       `SELECT a.*, p.name as patient_name, d.name as dentist_name,
@@ -55,10 +100,14 @@ export const PUT = withRoute<{ id: string }>(
     await appendAudit(user, 'UPDATE', `Appointment — edit`, null, String(updated.id).slice(0, 8), user.clinic);
     if (updated.patient_id) {
       await appendTimeline(
-        updated.patient_id,
+        String(updated.patient_id),
         user,
         'admin',
-        `Consulta atualizada: ${String(updated.appt_date).slice(0, 10)} ${String(updated.start_time).slice(0, 5)} · ${updated.type}`,
+        // Diz-se o que aconteceu: mudar de lugar na agenda e corrigir uma nota são
+        // factos diferentes na história do doente, e a timeline é imutável.
+        moveu
+          ? `Consulta remarcada: ${iso(prev.appt_date)} ${hhmm(prev.start_time)} → ${iso(updated.appt_date)} ${hhmm(updated.start_time)}`
+          : `Consulta atualizada: ${iso(updated.appt_date)} ${hhmm(updated.start_time)} · ${updated.type}`,
       );
     }
 

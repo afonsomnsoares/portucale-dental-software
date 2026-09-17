@@ -623,3 +623,69 @@ test('rankMoves: as propostas sem capacidade não ficam todas no fundo por empat
     ['gf', 'pf', 'pm'],
   );
 });
+
+// ─── O destino das propostas aplicáveis ─────────────────────────────────────
+// Enquanto o otimizador era read-only, «para onde» vivia só na prosa do `detail`. Para
+// a proposta poder ser aplicada, o destino tem de existir como dados — e tem de estar
+// certo, porque é ele que vai para o UPDATE.
+
+test('antecipar declara o destino e avisa o doente', () => {
+  const [m] = buildPullForwardMoves(
+    [
+      {
+        booking: booking({ appointmentId: 'a1', date: '2026-04-20', startMinutes: 600, durationMinutes: 45 }),
+        target: { chair: 3, date: '2026-04-06', startMinutes: 540, endMinutes: 660, durationMinutes: 120, kind: 'gap' },
+      },
+    ],
+    hhmm,
+  );
+  assert.equal(m.apply?.appointmentId, 'a1');
+  assert.equal(m.apply?.date, '2026-04-06');
+  assert.equal(m.apply?.startTime, '09:00');
+  assert.equal(m.apply?.chair, 3);
+  // Muda o DIA — é a única coisa que o doente tem mesmo de saber.
+  assert.equal(m.apply?.notifiesPatient, true);
+});
+
+test('mudar de cadeira não avisa ninguém', () => {
+  const [m] = buildEquipmentBlockMoves([booking({ appointmentId: 'a2', chair: 1, startMinutes: 555 })], () => ({
+    tags: ['xray'],
+    alternativeChair: 4,
+  }));
+  assert.equal(m.apply?.chair, 4);
+  assert.equal(m.apply?.startTime, '09:15');
+  // A cadeira não vai no SMS nem em lado nenhum que o doente leia.
+  assert.equal(m.apply?.notifiesPatient, false);
+});
+
+test('atribuir o dentista em falta não avisa ninguém', () => {
+  const [m] = buildUnassignedDentistMoves([booking({ appointmentId: 'a3', dentistId: null })], () => ({
+    dentistId: 'd9',
+    dentistName: 'Dra. X',
+    utilizationPct: 40,
+  }));
+  assert.equal(m.apply?.dentistId, 'd9');
+  assert.equal(m.apply?.notifiesPatient, false);
+});
+
+// Sem dentista sugerido a proposta passa a ser «remarcar ou abrir turno» — trabalho de
+// uma pessoa, não um UPDATE. Um botão «Aplicar» aqui não teria o que fazer.
+test('sem dentista disponível não há nada a aplicar', () => {
+  const [m] = buildUnassignedDentistMoves([booking({ appointmentId: 'a4', dentistId: null })], () => null);
+  assert.equal(m.apply, undefined);
+});
+
+// As duas que ficam sem destino de propósito: a sua execução é uma conversa.
+test('encaixar da lista de espera e violação de preferência não se aplicam sozinhas', () => {
+  const [encaixe] = buildGapFillMoves(
+    [{ chair: 1, date: '2026-04-06', startMinutes: 540, endMinutes: 600, durationMinutes: 60, kind: 'gap' }],
+    [{ waitlistEntryId: 'w1', patientName: 'Ana', treatmentType: 'Destartarização', minDuration: 45 }],
+    () => true,
+    hhmm,
+  );
+  assert.equal(encaixe.apply, undefined);
+
+  const [pref] = buildPreferenceMismatchMoves([booking({ appointmentId: 'a5' })], () => ['manhãs']);
+  assert.equal(pref.apply, undefined);
+});
+

@@ -15,10 +15,14 @@ function signals(overrides: Partial<JourneySignals> = {}): JourneySignals {
   };
 }
 
-test('JOURNEY_STAGES lists exactly the 8 patient stages in pipeline order', () => {
+test('JOURNEY_STAGES começa no Lead e lista as 8 etapas de doente por ordem', () => {
   assert.deepEqual(
     JOURNEY_STAGES.map((s) => s.key),
     [
+      // O funil começa antes de haver doente. 'lead' é povoado a partir da tabela
+      // `leads` por computeJourneyPipeline, nunca por computeJourneyStage — ver o teste
+      // seguinte.
+      'lead',
       'booked',
       'first_visit_done',
       'plan_presented',
@@ -29,6 +33,24 @@ test('JOURNEY_STAGES lists exactly the 8 patient stages in pipeline order', () =
       'booked_again',
     ],
   );
+});
+
+// A garantia que separa as duas metades do modelo: um lead não é um doente, e os sinais
+// que esta função recebe (visitas, planos, tratamentos) nunca descrevem um. Se algum dia
+// devolvesse 'lead', um doente real cairia na coluna dos contactos por responder.
+test('computeJourneyStage nunca devolve a etapa lead', () => {
+  const combinacoes = [
+    signals(),
+    signals({ visitCount: 0, hasFutureAppointment: true }),
+    signals({ visitCount: 3, hasCompletedTreatment: true }),
+    signals({ recallDue: true }),
+    signals({ hasOpenPlan: true }),
+    signals({ hasOpenTreatment: true }),
+    signals({ hasAcceptedPlanNoTreatment: true }),
+  ];
+  for (const s of combinacoes) {
+    assert.notEqual(computeJourneyStage(s), 'lead');
+  }
 });
 
 test('never visited, nothing scheduled -> booked', () => {

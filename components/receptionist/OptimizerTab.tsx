@@ -1,17 +1,29 @@
 'use client';
-import { AlertBanner, Badge, Empty, MetricCard, Spinner } from '@/components/ui';
-import type { OptimizerMoveKind, ScheduleOptimization } from '@/lib/types';
+import { useState } from 'react';
+import { useAuth } from '@/app/providers';
+import { AlertBanner, Badge, Empty, MetricCard, SecondaryBtn, Spinner } from '@/components/ui';
+import type { OptimizerMove, OptimizerMoveKind, ScheduleOptimization } from '@/lib/types';
 
 // Item 9 — "otimizar: dentista + cadeira + paciente + horário". A aba Eficiência
 // mostra o diagnóstico (ocupação, fragmentação); esta mostra o que fazer com ele.
-// Nada aqui executa nada: cada linha é uma proposta para alguém decidir, porque
-// mover uma consulta implica falar com o doente.
+//
+// As propostas com destino único podem agora ser APLICADAS aqui, com um clique de uma
+// pessoa (POST /api/schedule-intel/optimizer/apply). O que mudou face ao read-only
+// original está no cabeçalho dessa rota: a razão da restrição era «mover uma consulta
+// obriga a avisar o doente», e o aviso passou a sair sozinho. As que não têm destino
+// único continuam a ser só propostas — encaixar gente da lista de espera ou corrigir uma
+// marcação contra as preferências do doente são conversas, não UPDATEs.
 
 const KIND_META: Record<OptimizerMoveKind, { label: string; bg: string; color: string }> = {
   gap_fill: { label: 'Encaixe', bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
   unassigned_dentist: { label: 'Sem dentista', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
   equipment_block: { label: 'Equipamento', bg: 'var(--accent-bg)', color: 'var(--accent)' },
   preference_mismatch: { label: 'Preferência', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
+  // Os três que faltavam: eram calculados pelo servidor e chegavam aqui sem etiqueta,
+  // porque este mapa é indexado pelo tipo do cliente e o tipo estava desatualizado.
+  group_visit: { label: 'Agrupar', bg: 'var(--cat-purple-bg, var(--bg-sunken))', color: 'var(--cat-purple)' },
+  pull_forward: { label: 'Antecipar', bg: 'var(--cat-teal-bg, var(--bg-sunken))', color: 'var(--cat-teal)' },
+  consolidate: { label: 'Encostar', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
 };
 
 function formatHours(minutes: number) {
@@ -24,10 +36,41 @@ function formatHours(minutes: number) {
 export default function OptimizerTab({
   optimization,
   loading,
+  onApplied,
 }: {
   optimization: ScheduleOptimization | null;
   loading?: boolean;
+  /** Recarregar a lista: aplicar uma proposta invalida as outras que tocavam no mesmo lugar. */
+  onApplied?: () => void;
 }) {
+  const { api } = useAuth();
+  const [aAplicar, setAAplicar] = useState<string | null>(null);
+  const [erro, setErro] = useState('');
+  const [feito, setFeito] = useState<string>('');
+
+  async function aplicar(m: OptimizerMove) {
+    setAAplicar(m.key);
+    setErro('');
+    setFeito('');
+    try {
+      const r: { from: string; to: string; patientWillBeNotified: boolean } = await api(
+        '/schedule-intel/optimizer/apply',
+        { method: 'POST', body: { key: m.key } },
+      );
+      setFeito(
+        `${r.from} → ${r.to}.${r.patientWillBeNotified ? ' O doente vai ser avisado.' : ' Nada muda para o doente.'}`,
+      );
+      onApplied?.();
+    } catch (e) {
+      // 409 quando a agenda mudou desde que esta lista foi desenhada — a proposta já não
+      // existe no recálculo do servidor. Recarregar é a resposta certa, não insistir.
+      setErro(e instanceof Error ? e.message : 'Não foi possível aplicar.');
+      onApplied?.();
+    } finally {
+      setAAplicar(null);
+    }
+  }
+
   if (loading) return <Spinner />;
   if (!optimization) return <Empty message="Sem dados de otimização disponíveis." />;
 
@@ -66,6 +109,9 @@ export default function OptimizerTab({
           color="var(--accent)"
         />
       </div>
+
+      {erro && <AlertBanner type="danger">{erro}</AlertBanner>}
+      {feito && <AlertBanner type="success">{feito}</AlertBanner>}
 
       {!moves.length ? (
         <Empty message="Nada a otimizar — a agenda está sem buracos preenchíveis nem marcações incompletas." />
@@ -107,6 +153,20 @@ export default function OptimizerTab({
                 <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   {m.detail}
                 </div>
+                {m.apply && (
+                  <div className="flex items-center gap-3 mt-2">
+                    <SecondaryBtn onClick={() => aplicar(m)} disabled={aAplicar !== null}>
+                      {aAplicar === m.key ? 'A aplicar…' : 'Aplicar'}
+                    </SecondaryBtn>
+                    {/* Dito antes do clique e não depois: quem aplica precisa de saber se
+                        tem de telefonar ao doente ou se a mensagem sai sozinha. */}
+                    <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
+                      {m.apply.notifiesPatient
+                        ? 'Muda o dia/hora — o doente é avisado automaticamente.'
+                        : 'Não muda nada do que foi dito ao doente.'}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}

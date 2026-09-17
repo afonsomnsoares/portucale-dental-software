@@ -335,7 +335,7 @@ export function classifyIntent(text: unknown): IntentMatch {
 // A escada. Cada degrau é uma decisão separada, e uma clínica pode parar em qualquer
 // um deles. O valor de repouso é 'off' porque é o único que não pressupõe uma decisão
 // que ainda não foi tomada.
-export const AUTONOMY_LEVELS = ['off', 'acknowledge', 'informational', 'transactional'] as const;
+export const AUTONOMY_LEVELS = ['off', 'acknowledge', 'informational', 'transactional', 'agenda'] as const;
 export type AutonomyLevel = (typeof AUTONOMY_LEVELS)[number];
 
 export const AUTONOMY_LABELS: Record<AutonomyLevel, string> = {
@@ -343,6 +343,7 @@ export const AUTONOMY_LABELS: Record<AutonomyLevel, string> = {
   acknowledge: 'Só acusa a receção',
   informational: 'Responde a factos verificáveis',
   transactional: 'Confirma, cancela e propõe remarcação',
+  agenda: 'Escreve na agenda: cancela e oferece lugares concretos',
 };
 
 export const AUTONOMY_NOTES: Record<AutonomyLevel, string> = {
@@ -353,6 +354,8 @@ export const AUTONOMY_NOTES: Record<AutonomyLevel, string> = {
     'Responde a perguntas cuja resposta está escrita em algum lado e não muda com o doente: horário, morada, estacionamento. Nunca preços de tratamento (dependem do caso), nunca nada clínico.',
   transactional:
     'Além do acima, pode registar uma confirmação, registar um cancelamento e propor horários a partir da disponibilidade real. Continua a NÃO poder marcar sozinha uma primeira consulta nem alterar um tratamento.',
+  agenda:
+    'Além do acima, ALTERA A AGENDA sozinha: cancela a consulta quando o doente o pede e oferece-lhe um lugar concreto que ele pode aceitar por SMS. Só age quando não há ambiguidade — um doente com duas consultas marcadas vai sempre para uma pessoa. Continua a NÃO poder tocar em tratamentos, nem decidir nada clínico, nem contactar quem recusou contacto automático.',
 };
 
 export function isAutonomyLevel(v: unknown): v is AutonomyLevel {
@@ -370,7 +373,46 @@ const AUTONOMY_SCOPE: Record<AutonomyLevel, Set<Intent>> = {
   acknowledge: new Set(),
   informational: new Set<Intent>(['hours', 'location']),
   transactional: new Set<Intent>(['hours', 'location', 'confirm', 'cancel', 'reschedule']),
+  // 'book' só aparece aqui: nos degraus abaixo, responder a «quero marcar» sem poder
+  // marcar nada é acusar a receção com outras palavras.
+  agenda: new Set<Intent>(['hours', 'location', 'confirm', 'cancel', 'reschedule', 'book']),
 };
+
+// ─── O degrau 'agenda' escreve; os outros falam ─────────────────────────────
+// A diferença entre 'transactional' e 'agenda' não está em QUE intenções cada um trata —
+// está no que acontece a seguir. Nos dois, um pedido de cancelamento produz uma resposta;
+// só no segundo a consulta é mesmo cancelada.
+export function writesToSchedule(autonomy: AutonomyLevel): boolean {
+  return autonomy === 'agenda';
+}
+
+// ─── Quando é que o software pode agir sobre uma consulta ───────────────────
+// A regra é a ambiguidade, não a confiança no modelo. Um doente com UMA consulta futura
+// que escreve «não posso ir» está a falar daquela; um doente com três não está a falar de
+// nenhuma em particular, e adivinhar qual delas cancelar é escolher por ele.
+//
+// `low` de confiança também não age: a classificação é por palavras-chave
+// (classifyIntent), e «não sei se vou poder ir» não é um cancelamento.
+export interface ScheduleActionContext {
+  upcomingAppointmentCount: number;
+  confidence: 'high' | 'low';
+}
+
+export function canActOnSchedule(ctx: ScheduleActionContext): { ok: boolean; reason: string } {
+  if (ctx.confidence !== 'high') {
+    return { ok: false, reason: 'Sem certeza suficiente sobre o que o doente pediu.' };
+  }
+  if (ctx.upcomingAppointmentCount === 0) {
+    return { ok: false, reason: 'O doente não tem consulta marcada.' };
+  }
+  if (ctx.upcomingAppointmentCount > 1) {
+    return {
+      ok: false,
+      reason: `O doente tem ${ctx.upcomingAppointmentCount} consultas marcadas — não se sabe de qual está a falar.`,
+    };
+  }
+  return { ok: true, reason: '' };
+}
 
 // ─── 4. A decisão ───────────────────────────────────────────────────────────
 
@@ -385,7 +427,14 @@ export type ConversationAction =
   // Enviar só o acuso de receção.
   | 'auto_acknowledge'
   // Responder automaticamente ao que foi perguntado.
-  | 'auto_reply';
+  | 'auto_reply'
+  // ─── Só no degrau 'agenda' ────────────────────────────────────────────────
+  // Cancelar mesmo a consulta e libertar a vaga para a lista de espera.
+  | 'cancel_appointment'
+  // Oferecer um lugar concreto que o doente pode aceitar por SMS (slot_offers).
+  | 'offer_slot'
+  // Aceitar a oferta que estava pendente para este doente e marcar a consulta.
+  | 'accept_offer';
 
 export interface RoutingDecision {
   action: ConversationAction;
@@ -408,6 +457,9 @@ export function routeInbound(
   autonomy: AutonomyLevel,
   channel: ConversationChannel,
   currentState: ConversationState = 'awaiting_staff',
+  // Só o degrau 'agenda' olha para isto. Vem de quem chama porque é uma leitura à base
+  // de dados e este módulo é puro — ver o cabeçalho do ficheiro.
+  schedule?: ScheduleActionContext & { hasPendingOffer?: boolean },
 ): RoutingDecision {
   const { intent, confidence, matched } = classifyIntent(text);
 
@@ -449,6 +501,74 @@ export function routeInbound(
   }
 
   const scope = AUTONOMY_SCOPE[autonomy] || AUTONOMY_SCOPE.off;
+
+  // ─── O degrau que escreve ─────────────────────────────────────────────────
+  // Antes da resposta automática, porque aqui a resposta não é a ação — é a confirmação
+  // dela. Um «cancelámos a sua consulta» enviado sem a ter cancelado é pior do que não
+  // responder nada.
+  if (writesToSchedule(autonomy) && schedule) {
+    // Um SIM a uma oferta pendente é a aceitação dela, e não uma confirmação de consulta.
+    // A ordem importa: o mesmo «sim» significa coisas diferentes consoante o que a
+    // clínica lhe perguntou por último.
+    if (intent === 'confirm' && schedule.hasPendingOffer && confidence === 'high') {
+      return {
+        action: 'accept_offer',
+        intent,
+        confidence,
+        nextState: 'resolved',
+        reason: 'Aceitou o lugar que lhe foi oferecido — a consulta fica marcada.',
+        urgent: false,
+      };
+    }
+
+    if (intent === 'cancel') {
+      const pode = canActOnSchedule(schedule);
+      if (pode.ok) {
+        return {
+          action: 'cancel_appointment',
+          intent,
+          confidence,
+          nextState: 'resolved',
+          reason: 'Pedido de cancelamento sobre a única consulta marcada — cancelada e vaga libertada.',
+          urgent: false,
+        };
+      }
+      // Não agir é o resultado certo, e a razão vai escrita para quem receber a tarefa
+      // saber porque é que ela lhe chegou.
+      return {
+        action: 'human_task',
+        intent,
+        confidence,
+        nextState: stateAfterInbound(currentState),
+        reason: `Pedido de cancelamento não executado automaticamente: ${pode.reason}`,
+        urgent: false,
+      };
+    }
+
+    if ((intent === 'book' || intent === 'reschedule') && confidence === 'high') {
+      // Remarcar exige ter o que remarcar; marcar de novo não.
+      const pode = intent === 'reschedule' ? canActOnSchedule(schedule) : { ok: true, reason: '' };
+      if (pode.ok) {
+        return {
+          action: 'offer_slot',
+          intent,
+          confidence,
+          // Fica à espera do doente: a oferta só vale se ele responder.
+          nextState: 'awaiting_patient',
+          reason: `${INTENT_LABELS[intent]} — vai ser proposto um lugar concreto da agenda real.`,
+          urgent: false,
+        };
+      }
+      return {
+        action: 'human_task',
+        intent,
+        confidence,
+        nextState: stateAfterInbound(currentState),
+        reason: `Pedido de remarcação não executado automaticamente: ${pode.reason}`,
+        urgent: false,
+      };
+    }
+  }
 
   if (scope.has(intent) && confidence === 'high') {
     return {

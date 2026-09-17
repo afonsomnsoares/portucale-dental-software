@@ -8,6 +8,7 @@ interface AppointmentsTableProps {
   settings: AppSettings | null;
   removingId: string | null;
   onEdit: (a: Appointment) => void;
+  onReschedule: (a: Appointment) => void;
   onCancel: (a: Appointment) => void;
   onChangeStatus: (a: Appointment, nextStatus: string) => void;
   statusPending: Record<string, boolean>;
@@ -18,6 +19,7 @@ export default function AppointmentsTable({
   settings,
   removingId,
   onEdit,
+  onReschedule,
   onCancel,
   onChangeStatus,
   statusPending,
@@ -94,6 +96,13 @@ export default function AppointmentsTable({
                     <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => onEdit(a)}>
                         Editar
+                      </button>
+                      {/* Separado de «Editar» de propósito. Editar é mudar os dados desta
+                          consulta; remarcar é encontrar-lhe outro lugar na agenda, com as
+                          alternativas já calculadas. Eram o mesmo gesto, e por isso a
+                          procura era feita de cabeça. */}
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => onReschedule(a)}>
+                        Remarcar
                       </button>
                       <button
                         type="button"

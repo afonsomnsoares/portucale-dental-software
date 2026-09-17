@@ -14,6 +14,7 @@
 // (already converted) can be in.
 
 export type JourneyStageKey =
+  | 'lead'
   | 'booked'
   | 'first_visit_done'
   | 'plan_presented'
@@ -24,6 +25,19 @@ export type JourneyStageKey =
   | 'booked_again';
 
 export const JOURNEY_STAGES: Array<{ key: JourneyStageKey; label: string; description: string }> = [
+  // ─── A jornada começa antes de haver doente ───────────────────────────────
+  // 'lead' é a única etapa que computeJourneyStage() NUNCA devolve, e é de propósito:
+  // essa função recebe sinais de um DOENTE (visitas, planos, tratamentos) e um lead não
+  // é um doente — não tem ficha, não tem histórico, e pode nunca vir a ter. Quem povoa
+  // esta etapa é computeJourneyPipeline (lib/patientJourney.ts), a partir da tabela
+  // `leads`.
+  //
+  // Está aqui na mesma porque o funil é um só. Enquanto o catálogo começava em
+  // «Marcação», qualquer leitura do modelo — a página, um agente, um relatório — via uma
+  // jornada que começa a meio, e a pergunta «quantas pessoas estão em cada fase» tinha
+  // duas respostas em dois sítios. A ponte nos dados já existia (leads.patient_id, escrito
+  // na conversão em app/api/leads/route.ts); o que faltava era o catálogo dizer o mesmo.
+  { key: 'lead', label: 'Lead', description: 'Primeiro contacto, ainda sem consulta marcada.' },
   { key: 'booked', label: 'Marcação', description: 'Marcado mas ainda sem primeira consulta realizada.' },
   {
     key: 'first_visit_done',
@@ -57,7 +71,8 @@ export interface JourneySignals {
 // clinical work (in_treatment) always wins over a newer plan being proposed in parallel;
 // an already-rebooked patient (booked_again) wins over a merely-overdue recall, since
 // they've effectively already returned before the automation caught up with them.
-export function computeJourneyStage(signals: JourneySignals): JourneyStageKey {
+// Devolve sempre uma etapa de DOENTE — nunca 'lead'. Ver o comentário em JOURNEY_STAGES.
+export function computeJourneyStage(signals: JourneySignals): Exclude<JourneyStageKey, 'lead'> {
   if (signals.hasOpenTreatment) return 'in_treatment';
   if (signals.hasOpenPlan) return 'plan_presented';
   if (signals.hasAcceptedPlanNoTreatment) return 'plan_accepted';

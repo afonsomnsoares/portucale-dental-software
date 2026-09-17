@@ -24,6 +24,37 @@ export interface FreedSlot {
   chair: number;
 }
 
+// ─── A vaga é oferecível de todo? ───────────────────────────────────────────
+// A correspondência abaixo compara o candidato com a vaga. Isto é a pergunta anterior, e
+// não é sobre nenhum candidato: a clínica consegue MESMO fazer aquele tratamento naquela
+// cadeira, agora?
+//
+// Não era verificado porque parecia não ser preciso — a vaga nasce de uma consulta que
+// já estava marcada ali, logo a cadeira já servia. O que muda entre marcar e cancelar é
+// o equipamento: o motor de endodontia avariou esta manhã, a consulta das 15h é
+// cancelada, e o sistema oferece o lugar a três pessoas para um tratamento que hoje não
+// se pode fazer. A consulta original teria sido remarcada por uma pessoa que sabe da
+// avaria; a oferta automática não sabe nada.
+//
+// A etiqueta está na cadeira (clinic_equipment.chair), tal como o otimizador assume em
+// buildEquipmentBlockMoves. Equipamento sem cadeira atribuída conta como móvel e serve
+// qualquer uma — é o que é: um aparelho que anda no carrinho.
+export interface EquipmentAvailability {
+  /** Etiquetas exigidas pelo tipo de tratamento da vaga (APPOINTMENT_TYPES). */
+  requiredTags: string[];
+  /** Etiquetas cobertas por equipamento ativo e operacional na cadeira da vaga (ou móvel). */
+  availableTags: string[];
+}
+
+export function missingEquipmentTags(availability: EquipmentAvailability): string[] {
+  const disponiveis = new Set(availability.availableTags.map((t) => String(t)));
+  return availability.requiredTags.map((t) => String(t)).filter((t) => !disponiveis.has(t));
+}
+
+export function slotIsServiceable(availability: EquipmentAvailability): boolean {
+  return missingEquipmentTags(availability).length === 0;
+}
+
 function normalizedType(v: string) {
   return String(v || '')
     .trim()
