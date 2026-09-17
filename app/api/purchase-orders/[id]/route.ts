@@ -52,6 +52,8 @@ export const PUT = withRoute<{ id: string }>(
         `UPDATE purchase_orders SET status=$1, ordered_at=$2, updated_at=NOW() WHERE id=$3 RETURNING *`,
         [status, status === 'ordered' ? new Date().toISOString() : prev.ordered_at, id],
       );
+      // A linha pode desaparecer entre o SELECT e este UPDATE — 404, e não um 500 em row.X.
+      if (!row) return notFound('Purchase order not found');
       await appendAudit(user, 'UPDATE', `Purchase order`, `status:${prev.status}`, `status:${row.status}`, user.clinic);
       return Response.json(row);
     }

@@ -42,6 +42,8 @@ export const PUT = withRoute<{ id: string }>(
      RETURNING *`,
       [name, chair, tags, active, id, tenantId],
     );
+    // A linha pode desaparecer entre o SELECT e este UPDATE — 404, e não um 500 em row.X.
+    if (!row) return notFound('Equipment not found');
 
     await appendAudit(
       user,

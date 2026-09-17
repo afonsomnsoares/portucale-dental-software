@@ -31,6 +31,8 @@ export const PUT = withRoute<{ id: string }>(
      RETURNING id, tenant_id, label, token_prefix, active, created_by, created_at, updated_at, last_used_at, lead_count`,
       [body.active, id, tenantId],
     );
+    // A linha pode desaparecer entre o SELECT e este UPDATE — 404, e não um 500 em row.X.
+    if (!row) return notFound('Lead capture source not found');
 
     await appendAudit(
       user,

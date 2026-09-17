@@ -68,6 +68,8 @@ export const PUT = withRoute<{ id: string }>(
       ...vals,
       id,
     ]);
+    // A linha pode desaparecer entre o SELECT e este UPDATE — 404, e não um 500 em updated.X.
+    if (!updated) return Response.json({ error: 'Not found' }, { status: 404 });
 
     await appendAudit(user, 'UPDATE', `Invoice ${formatId(id)} updated`, inv.status, updated.status, user.clinic);
 

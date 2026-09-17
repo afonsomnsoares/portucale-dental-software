@@ -112,9 +112,49 @@ async function doEnsureSeeded() {
 // Os testes que exercitam mesmo os travões (rate-limit-shared, login-oracle) não são
 // afetados: montam as suas próprias chaves e contam a partir do zero, que é o que isto
 // lhes garante.
+//
+// ─── Porque é que isto limpa UMA vez por corrida, e não uma por processo ────
+// `ensureSeeded()` corre uma vez por processo, e `node --test` arranca os ficheiros em
+// vagas (aqui: 26 ficheiros para 4 CPUs). O advisory lock serializa a secção, mas um
+// processo que já a atravessou está a correr os seus testes enquanto o seguinte ainda
+// entra nela — e o TRUNCATE incondicional apagava os contadores por baixo de quem
+// estava a contar. Sintoma: `rate-limit-shared` falhava ~1 em cada 13 corridas, com
+// «Cannot read properties of undefined (reading 'count')» quando a linha desaparecia
+// entre o Promise.all e o SELECT, sem nada no output a dizer que a causa estava noutro
+// ficheiro.
+//
+// O sentinela resolve-o sem coordenação nova: a primeira chegada de cada corrida limpa e
+// deixa marca; as vagas seguintes encontram-na e não tocam em contadores já em uso.
+//
+// A marca é carimbada com o PID do processo `node --test` que lançou todos os ficheiros
+// (`process.ppid`) e não só com a hora. Com hora apenas, uma SEGUNDA corrida lançada um
+// minuto depois encontrava a marca ainda fresca, não limpava, e voltava a apanhar os
+// 429 que esta função existe para evitar — trocava-se uma corrida por outra. O ppid é
+// igual para todos os ficheiros da mesma corrida e diferente entre corridas, que é
+// exatamente a distinção que aqui é precisa. O TTL fica só como rede contra reutilização
+// de PID pelo sistema.
+//
+// `__suite_cleared__` não colide com chave nenhuma da aplicação (essas trazem sempre
+// prefixo de rota ou de IP/email) e o sweep de 24h recolhe-a sozinho.
+const CLEAR_SENTINEL = `__suite_cleared__:${process.ppid}`;
+// Uma corrida completa da suite demora ~20s. 10 minutos dá folga larga a uma máquina
+// lenta e limita a janela em que um PID reutilizado poderia herdar a marca.
+const CLEAR_TTL_MS = 10 * 60 * 1000;
+
 async function clearRuntimeCounters(client: import('pg').PoolClient) {
   try {
+    const marca = await client.query(
+      `SELECT 1 FROM rate_limit_counters
+        WHERE key = $1
+          AND window_start > NOW() - ($2::bigint * INTERVAL '1 millisecond')`,
+      [CLEAR_SENTINEL, CLEAR_TTL_MS],
+    );
+    if ((marca.rowCount ?? 0) > 0) return; // outra vaga desta mesma corrida já limpou
+
     await client.query('TRUNCATE rate_limit_counters');
+    await client.query(`INSERT INTO rate_limit_counters (key, window_start, count) VALUES ($1, NOW(), 0)`, [
+      CLEAR_SENTINEL,
+    ]);
   } catch (e) {
     // 42P01 = a tabela ainda não existe (base sem a migração 036). Não é motivo para
     // impedir a suite de arrancar.

@@ -84,6 +84,8 @@ export const PUT = withRoute<{ id: string }>(
       `UPDATE inventory_items SET item=$1, unit=$2, reorder_at=$3, updated_at=NOW() WHERE id=$4 RETURNING *`,
       [item, unit, reorderAt, itemId],
     );
+    // A linha pode desaparecer entre o SELECT e este UPDATE — 404, e não um 500 em row.X.
+    if (!row) return notFound('Inventory item not found');
 
     await appendAudit(
       user,
