@@ -25,8 +25,30 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 10; // keep in step with MIN_PASSWORD_LENGTH in lib/constants.ts
 // (not imported: this script runs standalone under tsx, outside the app's module graph)
 
+// ─── Sem DATABASE_URL não se adivinha ───────────────────────────────────────
+// Aqui esteve um fallback para 'postgresql://postgres:password@localhost:5432/...'.
+// Um valor por omissão numa cadeia de ligação não é uma conveniência: é este script a
+// escolher sozinho uma base de dados quando quem o corre não escolheu nenhuma — com
+// credenciais adivinháveis, como superuser, e em silêncio. O modo de falha é sempre o
+// mesmo e nunca é o esperado: em vez de dizer «falta configuração», aplica migrações
+// (ou semeia, ou cria um admin) na base errada e dá-se por isso mais tarde.
+//
+// Falhar é a resposta certa e é barata: quem corre isto tem o .env à mão.
+function requireDatabaseUrl() {
+  const url = String(process.env.DATABASE_URL || '').trim();
+  if (!url) {
+    console.error(
+      'DATABASE_URL não está definida.\n' +
+        'Estes comandos correm com --env-file=.env (ver os scripts do package.json);\n' +
+        'a correr à mão, defina-a explicitamente.',
+    );
+    process.exit(1);
+  }
+  return url;
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/portucale_dental',
+  connectionString: requireDatabaseUrl(),
 });
 
 function fail(message: string): never {

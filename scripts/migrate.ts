@@ -9,8 +9,30 @@ const { Pool } = pg;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(__dirname, 'migrations');
 
+// ─── Sem DATABASE_URL não se adivinha ───────────────────────────────────────
+// Aqui esteve um fallback para 'postgresql://postgres:password@localhost:5432/...'.
+// Um valor por omissão numa cadeia de ligação não é uma conveniência: é este script a
+// escolher sozinho uma base de dados quando quem o corre não escolheu nenhuma — com
+// credenciais adivinháveis, como superuser, e em silêncio. O modo de falha é sempre o
+// mesmo e nunca é o esperado: em vez de dizer «falta configuração», aplica migrações
+// (ou semeia, ou cria um admin) na base errada e dá-se por isso mais tarde.
+//
+// Falhar é a resposta certa e é barata: quem corre isto tem o .env à mão.
+function requireDatabaseUrl() {
+  const url = String(process.env.DATABASE_URL || '').trim();
+  if (!url) {
+    console.error(
+      'DATABASE_URL não está definida.\n' +
+        'Estes comandos correm com --env-file=.env (ver os scripts do package.json);\n' +
+        'a correr à mão, defina-a explicitamente.',
+    );
+    process.exit(1);
+  }
+  return url;
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/portucale_dental',
+  connectionString: requireDatabaseUrl(),
 });
 
 interface PgClient {

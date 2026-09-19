@@ -154,6 +154,11 @@ services:
       # por IP contavam um valor forjado. Atrás de Cloudflare + caddy seriam 2 —
       # contar a mais é pior do que contar a menos (ver .env.example).
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      # O endereço público, para a validação da assinatura dos webhooks da Twilio: ela
+      # assina o URL a que fez o pedido, e aqui dentro o Next vê `http://app:3000`.
+      # Deriva do mesmo APP_DOMAIN que o Caddy usa, para os dois não poderem divergir.
+      # Ver lib/twilioSignature.ts e .env.example.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://${APP_DOMAIN:-localhost}}
       # Optional — leaving these unset just makes the SMS send step and the AI
       # report insight degrade gracefully (see lib/jobsRunner.ts and
       # app/api/reports/insight/route.ts), not error.

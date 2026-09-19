@@ -300,6 +300,12 @@ export interface LiveUser {
   tenantId: string | null;
   /** `users.password_changed_at`, em milissegundos, ou null se nunca foi mudada. */
   passwordChangedAt: number | null;
+  /**
+   * Este token concreto foi revogado — tem linha em `revoked_sessions` (migração 064).
+   * Distinto de `passwordChangedAt`, que invalida TODOS os tokens da pessoa: aqui morre
+   * só o que fez logout, e as outras sessões dela continuam de pé.
+   */
+  sessionRevoked: boolean;
 }
 
 // Memo pelo tempo de vida do pedido. Uma rota pode verificar várias ações
@@ -309,10 +315,50 @@ export interface LiveUser {
 // um pedido HTTP.
 const liveUserByRequest = new WeakMap<object, Promise<LiveUser | null>>();
 
-async function fetchLiveUser(userId: string): Promise<LiveUser | null> {
-  const row = await withSystemContext(() =>
-    safeQueryOne(`SELECT id, role, tenant_id, active, password_changed_at FROM users WHERE id=$1`, [userId]),
-  );
+// ─── Porque é que a revogação vai na MESMA consulta ──────────────────────────
+// Esta função corre uma vez por pedido autenticado, nas 138 rotas. Uma segunda ida à
+// base de dados só para perguntar "este token foi revogado?" seria um round-trip que a
+// aplicação inteira paga, e um segundo cliente tirado a um pool de 10 — precisamente o
+// recurso que escasseia quando há carga. Como subconsulta, custa um índice único.
+const LIVE_USER_WITH_REVOCATION = `
+  SELECT u.id, u.role, u.tenant_id, u.active, u.password_changed_at,
+         EXISTS (SELECT 1 FROM revoked_sessions r WHERE r.jti = $2) AS session_revoked
+    FROM users u WHERE u.id=$1`;
+
+// ─── O mesmo, para uma base onde a migração 064 ainda não correu ─────────────
+// Sem esta variante, o 42P01 da tabela inexistente seria engolido pelo safeQueryOne
+// acima (que devolve null em 42P01, e null aqui significa "sem autorização a
+// conceder"). O resultado não seria uma degradação: seria a aplicação inteira a
+// recusar toda a gente, com um aviso de schema no log e nada mais. Fail-closed levado
+// ao ponto de ser uma avaria.
+//
+// A tabela não aparece e desaparece: ou a migração correu, ou não. Por isso a
+// descoberta é UMA vez por processo e não uma tentativa por pedido — o primeiro 42P01
+// baixa a flag e a partir daí pergunta-se o que a base sabe responder.
+const LIVE_USER_WITHOUT_REVOCATION = `
+  SELECT u.id, u.role, u.tenant_id, u.active, u.password_changed_at,
+         FALSE AS session_revoked
+    FROM users u WHERE u.id=$1`;
+
+let revocationTableMissing = false;
+
+async function fetchLiveUser(userId: string, jti: string | null): Promise<LiveUser | null> {
+  let row: Record<string, unknown> | null;
+  if (revocationTableMissing) {
+    row = await withSystemContext(() => safeQueryOne(LIVE_USER_WITHOUT_REVOCATION, [userId]));
+  } else {
+    try {
+      // Com `jti` nulo (token anterior à migração 064) o parâmetro é NULL, a subconsulta
+      // não casa com nada e o resultado é `false`: um token sem identificador não é
+      // revogável, e continua a depender do `exp` e da 046 como antes.
+      row = await withSystemContext(() => queryOne(LIVE_USER_WITH_REVOCATION, [userId, jti]));
+    } catch (e) {
+      if ((e as { code?: string })?.code !== '42P01') throw e;
+      warnSchemaGap('permissions.revoked_sessions', e);
+      revocationTableMissing = true;
+      row = await withSystemContext(() => safeQueryOne(LIVE_USER_WITHOUT_REVOCATION, [userId]));
+    }
+  }
   // Apagado, desativado, ou a tabela nem existe (safeQueryOne devolve null num schema
   // por migrar): em qualquer dos casos não há autorização a conceder. Fail-closed.
   if (row?.active !== true) return null;
@@ -324,15 +370,21 @@ async function fetchLiveUser(userId: string): Promise<LiveUser | null> {
     role: String(row.role || ''),
     tenantId: (row.tenant_id as string) ?? null,
     passwordChangedAt: Number.isFinite(changedAt) ? changedAt : null,
+    sessionRevoked: row.session_revoked === true,
   };
 }
 
-function liveUser(userId: string): Promise<LiveUser | null> {
+// O `jti` entra na chave do memo, e não só na consulta: o WeakMap é por PEDIDO, e um
+// pedido tem um só token — mas passar o valor pelo argumento (em vez de o ir buscar a
+// um sítio global) é o que mantém esta função pura em relação ao pedido em curso, como
+// já era. Dois tokens diferentes nunca partilham a mesma chave de memo porque nunca
+// partilham o mesmo pedido.
+function liveUser(userId: string, jti: string | null): Promise<LiveUser | null> {
   const key = currentRequestKey();
-  if (!key) return fetchLiveUser(userId);
+  if (!key) return fetchLiveUser(userId, jti);
   const memo = liveUserByRequest.get(key);
   if (memo) return memo;
-  const pending = fetchLiveUser(userId);
+  const pending = fetchLiveUser(userId, jti);
   liveUserByRequest.set(key, pending);
   return pending;
 }
@@ -384,8 +436,12 @@ export async function revalidateSession(user: SessionUser | null | undefined): P
   // Sem id não há nada que confirmar contra a base de dados, e conceder às cegas é
   // precisamente o que este bloco existe para impedir.
   if (!user?.id) return null;
-  const live = await liveUser(user.id);
+  const live = await liveUser(user.id, user.jti ?? null);
   if (!live) return null;
+  // Terminou sessão com ESTE token. Verificado antes da mudança de password porque é o
+  // mais específico dos dois e porque é o mais provável: um logout acontece todos os
+  // dias, uma mudança de password não.
+  if (live.sessionRevoked) return null;
   if (isTokenOlderThanPasswordChange(user, live)) return null;
 
   if (live.role !== user.role || (live.tenantId ?? null) !== (user.tenantId ?? null)) {
@@ -397,6 +453,49 @@ export async function revalidateSession(user: SessionUser | null | undefined): P
     enterTenantContext({ tenantId: live.tenantId, role: live.role });
   }
   return live;
+}
+
+/**
+ * Marca ESTE token como terminado. A partir daqui nenhuma rota o aceita, mesmo que a
+ * assinatura continue boa e o `exp` ainda esteja longe — ver revalidateSession acima.
+ *
+ * Chamada pelo logout, que até aqui apagava o cookie e mais nada: um token copiado
+ * antes do clique continuava a valer os 7 dias que lhe faltavam.
+ *
+ * ─── Não lança, e porquê ────────────────────────────────────────────────────
+ * O logout tem de terminar sempre — é a operação que uma pessoa faz quando quer sair,
+ * muitas vezes com pressa e num computador que não é dela. Rebentar aqui devolveria um
+ * 500 e deixaria o cookie no sítio, que é o pior dos dois mundos: nem termina a sessão
+ * nem o diz. Falhar a gravar a revogação deixa o sistema como estava antes da migração
+ * 064 (cookie apagado, token válido até expirar) e grita no log.
+ *
+ * Devolve se a revogação ficou mesmo gravada, para quem chama poder dizer a verdade.
+ */
+export async function revokeSession(user: SessionUser): Promise<boolean> {
+  // Sem `jti` não há o que revogar: é um token de formato anterior à migração 064. O
+  // cookie é apagado à mesma pelo chamador; este token continua a depender do `exp`.
+  if (!user.jti) return false;
+  // Sem `exp` não se sabe até quando a linha tem de durar. Um ano é muito mais do que
+  // qualquer JWT_TTL_SECONDS plausível, por isso a varredura nunca a apaga cedo demais
+  // — e é finito, por isso a tabela também não cresce para sempre.
+  const expiresAt = Number.isFinite(Number(user.exp))
+    ? new Date(Number(user.exp) * 1000)
+    : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  try {
+    // ON CONFLICT porque carregar duas vezes no botão não é um erro. A primeira linha
+    // é a que conta; a segunda não tem nada para acrescentar.
+    await withSystemContext(() =>
+      query(
+        `INSERT INTO revoked_sessions (jti, user_id, expires_at)
+         VALUES ($1,$2,$3) ON CONFLICT (jti) DO NOTHING`,
+        [user.jti, user.id, expiresAt],
+      ),
+    );
+    return true;
+  } catch (e) {
+    console.error('[auth] falhou a revogar a sessão:', e instanceof Error ? e.message : e);
+    return false;
+  }
 }
 
 export async function hasPermission(user: SessionUser | null | undefined, action: string) {
@@ -520,5 +619,37 @@ export async function setPermissionOverrides(
         [tenantId, role, action, !!u.allowed],
       );
     }
+  }
+}
+
+/**
+ * Apaga revogações de tokens que já expiraram sozinhos. Chamado pelo pipeline de jobs,
+ * a par de sweepRateLimitCounters e pelo mesmo motivo: sem varredura a tabela cresce
+ * com uma linha por cada logout que a clínica alguma vez fez.
+ *
+ * Apagar não reabre nada. Passado o `exp`, o token é recusado por verifyToken antes de
+ * chegar aqui — a linha deixou de ter função no instante em que o relógio passou por
+ * ela. A margem de um dia existe só para não depender de relógios perfeitamente
+ * sincronizados entre o processo que assinou e o que varre.
+ */
+export async function sweepRevokedSessions(graceMs = 24 * 60 * 60 * 1000) {
+  try {
+    const row = await withSystemContext(() =>
+      queryOne(
+        `WITH deleted AS (
+           DELETE FROM revoked_sessions
+           WHERE expires_at < NOW() - ($1::bigint * INTERVAL '1 millisecond')
+           RETURNING 1
+         )
+         SELECT COUNT(*)::int AS removed FROM deleted`,
+        [Math.trunc(graceMs)],
+      ),
+    );
+    return { removed: Number(row?.removed || 0) };
+  } catch (e) {
+    // Numa base por migrar a tabela não existe. Não é motivo para falhar a passagem
+    // inteira de jobs — o resto da limpeza tem de correr na mesma.
+    warnSchemaGap('permissions.revoked_sessions', e);
+    return { removed: 0 };
   }
 }

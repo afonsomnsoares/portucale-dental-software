@@ -24,6 +24,7 @@ import {
 import { query, queryOne, queryRead, withSystemContext } from './db';
 import { createTask } from './patientTasks';
 import { sendSms } from './sms';
+import { verifyTwilioSignature } from './twilioSignature';
 import { toE164 } from './validate';
 import { acceptOfferAndBook } from './waitlist';
 
@@ -71,28 +72,71 @@ export function hashChannelSecret(secret: string) {
 }
 
 /**
+ * O que o webhook apresenta para provar que é quem diz ser. Qual destes campos conta
+ * depende do `auth_scheme` da conta — ver resolveChannelAccount abaixo.
+ */
+export interface ChannelProof {
+  /** X-Portucale-Signature: o segredo estático, para o esquema 'shared_secret'. */
+  sharedSecret: string | null;
+  /** X-Twilio-Signature: o HMAC do pedido, para o esquema 'twilio'. */
+  twilioSignature: string | null;
+  /** O URL que a Twilio assinou (ver twilioRequestUrl) e os campos do corpo. */
+  requestUrl: string;
+  params: Record<string, unknown>;
+}
+
+/**
  * Resolve a clínica a partir do endereço de destino e verifica a assinatura.
  *
  * withSystemContext porque isto corre ANTES de existir clínica — é precisamente o que
  * se está a descobrir. É a mesma exceção que o login e a revalidação de sessão já usam
  * (ver lib/db.ts), e pelo mesmo motivo: a tabela tem de ser lida sem um tenant
  * estabelecido, porque o tenant é a resposta e não a pergunta.
+ *
+ * ─── Dois esquemas, escolhidos pela conta e não pelo cabeçalho ──────────────
+ * Ver scripts/migrations/065_channel_auth_scheme.sql. O que aqui estava aceitava o
+ * cabeçalho que viesse e comparava-o sempre da mesma maneira — o que fazia a
+ * assinatura real da Twilio falhar sempre, porque ela muda a cada pedido. Deixar a
+ * conta declarar o esquema é o que impede que um remetente escolha a verificação mais
+ * fraca simplesmente mandando o cabeçalho dessa.
  */
-export async function resolveChannelAccount(channel: string, toAddress: string, providedSecret: string | null) {
+export async function resolveChannelAccount(channel: string, toAddress: string, proof: ChannelProof) {
   const account = await withSystemContext(() =>
     queryOne(
-      `SELECT id, tenant_id, secret_hash FROM channel_accounts
-       WHERE channel=$1 AND lower(address)=lower($2) AND active=TRUE`,
+      `SELECT id, tenant_id, secret_hash, COALESCE(auth_scheme, 'shared_secret') AS auth_scheme
+         FROM channel_accounts
+        WHERE channel=$1 AND lower(address)=lower($2) AND active=TRUE`,
       [channel, toAddress],
     ),
   );
   if (!account) return { ok: false as const, status: 404, error: 'Unknown channel address' };
 
+  if (String(account.auth_scheme) === 'twilio') {
+    // O auth token da conta Twilio, o mesmo que lib/sms.ts usa para enviar. Não está na
+    // base de dados de propósito — ver o cabeçalho de lib/twilioSignature.ts.
+    const authToken = String(process.env.TWILIO_AUTH_TOKEN || '');
+    // Mesma regra do 'shared_secret' abaixo: sem com que verificar, recusa-se. Um canal
+    // que aceita qualquer coisa é pior do que um canal que não existe.
+    if (!authToken) return { ok: false as const, status: 403, error: 'TWILIO_AUTH_TOKEN not configured' };
+    if (
+      !proof.twilioSignature ||
+      !verifyTwilioSignature({
+        url: proof.requestUrl,
+        params: proof.params,
+        signature: proof.twilioSignature,
+        authToken,
+      })
+    ) {
+      return { ok: false as const, status: 403, error: 'Invalid Twilio signature' };
+    }
+    return { ok: true as const, tenantId: String(account.tenant_id), accountId: String(account.id) };
+  }
+
   // Uma conta sem segredo configurado é recusada em vez de aceite: um webhook que
   // aceita qualquer coisa é pior do que um webhook que não existe, porque parece que
   // está protegido.
   if (!account.secret_hash) return { ok: false as const, status: 403, error: 'Channel has no secret configured' };
-  if (!providedSecret || !safeEqual(hashChannelSecret(providedSecret), String(account.secret_hash))) {
+  if (!proof.sharedSecret || !safeEqual(hashChannelSecret(proof.sharedSecret), String(account.secret_hash))) {
     return { ok: false as const, status: 403, error: 'Invalid signature' };
   }
   return { ok: true as const, tenantId: String(account.tenant_id), accountId: String(account.id) };

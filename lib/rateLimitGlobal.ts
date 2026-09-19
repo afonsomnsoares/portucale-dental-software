@@ -14,6 +14,7 @@
 // entre instâncias, para além do rate limit in-memory do proxy.
 
 import { queryOne, withSystemContext } from './db';
+import { rateLimit } from './rateLimit';
 
 export interface GlobalRateLimitResult {
   ok: boolean;
@@ -21,7 +22,26 @@ export interface GlobalRateLimitResult {
   retryAfterMs: number;
 }
 
-const FAIL_OPEN: GlobalRateLimitResult = { ok: true, remaining: 0, retryAfterMs: 0 };
+// ─── Quando o contador partilhado não responde ──────────────────────────────
+// Isto começou como uma cópia do FAIL_OPEN de lib/rateLimitShared.ts, mas o argumento
+// que lá está não se transporta para cá. Lá o raciocínio é: se o Postgres está em
+// baixo, o login já não funciona de qualquer maneira — logo "fechado" não protege nada.
+//
+// Aqui a falha que interessa não é "o Postgres está em baixo": é o POOL ESGOTADO.
+// getPool().connect() espera 15s e desiste (lib/db.ts), e o que esgota o pool é
+// precisamente uma rajada de escritas — ou seja, o travão desaparecia exatamente no
+// momento para que foi escrito, e desaparecia por causa da própria coisa que devia
+// travar. Um limite que se desliga sozinho sob carga não é um limite.
+//
+// A resposta não é fechar (um problema de base de dados passaria a recusar escritas
+// legítimas, e o 429 mentiria sobre a causa). É cair para o travão que NÃO precisa da
+// base de dados: o contador em memória de lib/rateLimit.ts. Vale por instância — com N
+// réplicas o teto efetivo é N × o configurado — o que é pior do que o partilhado e
+// muito melhor do que nada. É a mesma degradação que o proxy já aceita como normal.
+function fallbackLimit(key: string, limit: number, windowMs: number): GlobalRateLimitResult {
+  const rl = rateLimit(`fallback:${key}`, { limit, windowMs });
+  return { ok: rl.ok, remaining: rl.remaining, retryAfterMs: rl.retryAfterMs };
+}
 
 export async function rateLimitGlobal(
   key: string,
@@ -48,7 +68,9 @@ export async function rateLimitGlobal(
         [key, Math.trunc(windowMs)],
       ),
     );
-    if (!row) return FAIL_OPEN;
+    // Sem linha devolvida não se sabe a contagem — mesma situação de não ter chegado
+    // a falar com a base, e portanto o mesmo tratamento.
+    if (!row) return fallbackLimit(key, limit, windowMs);
     const count = Number(row.count || 0);
     return {
       ok: count <= limit,
@@ -56,7 +78,10 @@ export async function rateLimitGlobal(
       retryAfterMs: Math.max(0, Math.ceil(Number(row.retry_after_ms || 0))),
     };
   } catch (e) {
-    console.error('[rate-limit global] indisponível:', e instanceof Error ? e.message : e);
-    return FAIL_OPEN;
+    console.error(
+      '[rate-limit global] indisponível, a usar o contador em memória:',
+      e instanceof Error ? e.message : e,
+    );
+    return fallbackLimit(key, limit, windowMs);
   }
 }

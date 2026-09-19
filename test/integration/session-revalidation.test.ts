@@ -72,7 +72,10 @@ test('linha de base: com a conta ativa e admin, o token passa', async () => {
 test('conta desativada é recusada no pedido seguinte, com o mesmo token', async () => {
   await setUser({ active: false });
   const res = await readSuppliers(admin);
-  assert.equal(res.status, 403, 'uma conta desativada não devia poder usar um token ainda válido');
+  // 401 e não 403: a sessão deixou de valer, e isso não é o mesmo que estar autenticado
+  // sem a permissão — ver a nota em lib/route.ts:authorize. O teste de despromoção mais
+  // abaixo continua a esperar 403, que é o caso em que a sessão está viva e a ação falta.
+  assert.equal(res.status, 401, 'uma conta desativada não devia poder usar um token ainda válido');
 });
 
 test('reativar devolve o acesso — a decisão é da base de dados, não do token', async () => {
@@ -100,7 +103,7 @@ test('utilizador apagado: um token bem assinado deixa de valer', async () => {
     tenantId: tenantAId,
   };
   const res = await readSuppliers(fantasma);
-  assert.equal(res.status, 403, 'um id que não corresponde a nenhuma linha de users não devia autorizar nada');
+  assert.equal(res.status, 401, 'um id que não corresponde a nenhuma linha de users não devia autorizar nada');
 });
 
 test('mudar de clínica reposiciona o contexto de tenant do pedido', async () => {
@@ -151,7 +154,7 @@ test('um token emitido antes da mudança de password deixa de autorizar', async 
   await query(`UPDATE users SET password_changed_at = NOW() + interval '30 seconds' WHERE email=$1`, [EMAIL]);
 
   const res = await readSuppliers(admin);
-  assert.equal(res.status, 403, 'o token é anterior à mudança de password e não devia valer mais nada');
+  assert.equal(res.status, 401, 'o token é anterior à mudança de password e não devia valer mais nada');
 });
 
 test('a sessão volta a valer quando o token é posterior à mudança', async () => {

@@ -27,6 +27,15 @@ export interface SessionUser {
   // password. Opcional porque signToken o preenche sempre — quem constrói um
   // SessionUser para assinar não o fornece (e se o fornecer, é sobreposto).
   iat?: number;
+  // Identificador único deste token, escrito por signToken desde sempre e até à
+  // migração 064 lido por ninguém. É o que permite revogar UM token — o `logout` —
+  // em vez de todos os da pessoa. Ver lib/permissions.ts's sessionIsRevoked.
+  jti?: string;
+  // Expiração (segundos Unix). Declarada pela mesma razão que o `jti`: quem revoga
+  // precisa de saber até quando a revogação tem de durar, e a resposta é "até o token
+  // expirar sozinho" — a partir daí a linha em `revoked_sessions` deixa de proteger
+  // nada e pode ser varrida. verifyToken já a lia para recusar tokens expirados.
+  exp?: number;
 }
 
 export type AuthRequest = Request & {

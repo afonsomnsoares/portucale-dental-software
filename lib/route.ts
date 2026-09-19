@@ -196,8 +196,9 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const DENIAL_LOG_LIMIT = { limit: 5, windowMs: 60 * 1000 };
 
 // A frase que descreve uma sessão revogada, num sítio só: o `authorize` abaixo chega
-// a ela por dois caminhos diferentes (o 401 do authOnly e o 403 de uma rota com
-// `permission`) e a auditoria deve chamar-lhe o mesmo nas duas.
+// a ela por dois caminhos diferentes (o authOnly e uma rota com `permission`) e a
+// auditoria deve chamar-lhe o mesmo nas duas. Os dois devolvem 401 — ver a nota sobre
+// 401 e 403 no próprio authorize.
 const SESSION_REVOKED = 'sessão já não é válida (conta desativada, movida de clínica ou password alterada)';
 
 // ─── A chave tem de ser o PADRÃO da rota, não o caminho ─────────────────────
@@ -230,6 +231,64 @@ function routePattern(pathname: string): string {
       return seg;
     })
     .join('/');
+}
+
+// ─── Uma falha que ninguém regista também não aconteceu ─────────────────────
+// O irmão do recordDenial abaixo, para o outro lado da mesma lacuna. Até aqui um
+// handler que lançasse subia até ao Next, que devolve um 500 genérico — sem corpo e
+// sem stack, por isso nada VAZA. O que se perdia era o registo: a recusa ficava
+// gravada, a avaria não, e as duas são o mesmo sinal visto de ângulos diferentes.
+// Quem esteja a martelar uma rota até ela partir não deixava rasto nenhum no sítio
+// onde alguém iria procurar.
+//
+// ─── O que sai para o cliente, e porquê ─────────────────────────────────────
+// Um corpo JSON fixo, com o mesmo formato do resto da aplicação (lib/http.ts) e com um
+// `code` estável. Nunca a mensagem do erro: `e.message` de um erro do Postgres traz
+// nomes de colunas, fragmentos da consulta e por vezes o valor que a violou — que num
+// sistema com processos clínicos pode ser o nome de um doente. O que se devolve é o
+// mesmo para todas as causas; o que as distingue fica no log do servidor.
+//
+// `requestId` é o único fio entre os dois: quem reporta «deu erro» traz seis caracteres
+// que se encontram no log. Não é adivinhável e não identifica nada por si.
+function serverError(requestId: string) {
+  return Response.json(
+    {
+      code: 'INTERNAL_ERROR',
+      message: 'Ocorreu um erro a processar o pedido. Se persistir, indique a referência abaixo.',
+      requestId,
+    },
+    { status: 500 },
+  );
+}
+
+// Nunca lança: uma falha a REGISTAR a falha não pode ser o que rebenta a resposta.
+async function recordFailure(request: NextRequest, user: SessionUser | null, error: unknown, requestId: string) {
+  try {
+    const identity = user ? `user:${user.id}` : `ip:${getClientIp(request)}`;
+    const path = new URL(request.url).pathname;
+    const message = error instanceof Error ? error.message : String(error);
+    // O código do Postgres, quando existe, é o que distingue "schema por migrar" de
+    // "restrição violada" de "ligação em baixo" num relance.
+    const code = (error as { code?: string })?.code;
+    console.error(
+      `[error] ${request.method} ${path} ${identity} req=${requestId}${code ? ` pg=${code}` : ''}: ${message}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+    // Na auditoria só o que tem identidade e só com coalescência, pelas mesmas duas
+    // razões do recordDenial: sem utilizador é ruído, e sem travão seria uma
+    // amplificação de escrita oferecida a quem descobrir como provocar o erro.
+    if (user && rateLimit(`failure:${identity}:${routePattern(path)}`, DENIAL_LOG_LIMIT).ok) {
+      await logBlockedAccess(user, `${request.method} ${path} — erro interno [500] req=${requestId}`);
+    }
+  } catch (e) {
+    console.error('[error] falhou a registar a falha:', e instanceof Error ? e.message : e);
+  }
+}
+
+// Seis caracteres de base36. Não é um identificador global — é o que chega para
+// encontrar uma linha no log de um dia.
+function newRequestId() {
+  return Math.random().toString(36).slice(2, 8);
 }
 
 // Nunca lança e nunca atrasa a resposta por mais do que um INSERT. Um problema a
@@ -317,7 +376,18 @@ async function authorize(options: RouteOptions, user: SessionUser): Promise<Deni
     // (WeakMap em lib/permissions.ts), por isso isto não é uma segunda ida à base
     // de dados — é a mesma promessa outra vez.
     const live = await revalidateSession(user);
-    return { response: forbidden(), reason: live ? `sem a ação "${options.permission}"` : SESSION_REVOKED };
+    // ─── 401 e 403 não são a mesma recusa ─────────────────────────────────
+    // Este ramo devolvia 403 aos dois casos. São coisas diferentes e o cliente
+    // trata-as de forma diferente: um 401 manda a pessoa autenticar-se outra vez,
+    // um 403 diz-lhe que está autenticada e não pode. Com 403 no caso da sessão
+    // revogada, quem terminasse sessão num separador via no outro um «não tem
+    // permissão» — em vez de voltar ao ecrã de entrada, que é o que aconteceu.
+    //
+    // É também o que alinha este ramo com os outros dois: `requirePlatform`
+    // (lib/platform.ts) e o `authOnly` abaixo já devolvem 401 para sessão inválida.
+    // Os três modos autenticados passam a recusar da mesma maneira pelo mesmo motivo.
+    if (!live) return { response: unauthorized(), reason: SESSION_REVOKED };
+    return { response: forbidden(), reason: `sem a ação "${options.permission}"` };
   }
   if (await revalidateSession(user)) return null;
   return { response: unauthorized(), reason: SESSION_REVOKED };
@@ -352,66 +422,100 @@ async function authorize(options: RouteOptions, user: SessionUser): Promise<Deni
 // biome-ignore lint/complexity/noBannedTypes: `{}` é a forma que o validador do Next exige para rotas sem params
 export function withRoute<P = {}>(options: RouteOptions, handler: Handler<P>) {
   return async (request: NextRequest, ctx: { params: Promise<P> }): Promise<Response> => {
-    // requireSameOrigin já é no-op em GET/HEAD/OPTIONS, por isso a única condição
-    // aqui é a exceção declarada — e essa tem de ser escrita à mão, rota a rota.
-    if (!options.crossOrigin) {
-      const originCheck = requireSameOrigin(request);
-      if (originCheck) return originCheck;
+    // ─── Uma rede por baixo dos 138 handlers ────────────────────────────────
+    // 122 deles não têm try/catch nenhum — e não é descuido, é a escolha certa: um
+    // handler que apanhe as suas próprias exceções só para as reescrever acaba a
+    // escondê-las. O que faltava era o sítio onde a exceção é REGISTADA antes de
+    // virar resposta, e esse sítio é este, pela mesma razão que o preâmbulo todo
+    // vive aqui: uma rota nova nasce coberta sem ninguém se lembrar de nada.
+    //
+    // `user` vive fora do try para o registo saber de quem foi a falha mesmo quando
+    // ela acontece depois da autenticação — que é o caso de quase todas.
+    let user: SessionUser | null = null;
+    const requestId = newRequestId();
+    try {
+      return await runRoute(options, handler, request, ctx, (u) => {
+        user = u;
+      });
+    } catch (e) {
+      await recordFailure(request, user, e, requestId);
+      return serverError(requestId);
     }
-
-    // Resolvido uma vez: a validação abaixo e o handler falam do mesmo objeto, e
-    // `ctx.params` é uma promessa que não se deve consumir duas vezes.
-    const params = (await ctx?.params) as P;
-    if (!idParamsAreWellFormed(params)) return malformedId();
-
-    if (options.public) {
-      return handler({ request, user: null as never, tenantId: '', params });
-    }
-
-    const user = getAuth(request);
-    if (!user) {
-      await recordDenial(request, null, 'sem sessão válida', 401);
-      return unauthorized();
-    }
-
-    const blocked = await authorize(options, user);
-    if (blocked) {
-      await recordDenial(request, user, blocked.reason, blocked.response.status);
-      return blocked.response;
-    }
-
-    // Depois da autorização, de propósito: a chave é o utilizador autenticado, e gastar
-    // orçamento de escrita de alguém antes de saber se ele sequer podia fazer aquilo
-    // deixaria um 403 repetido a esgotar a quota da própria vítima.
-    if (MUTATING_METHODS.has(request.method)) {
-      const rl = await rateLimitGlobal(`write:${user.id}`, WRITE_LIMIT);
-      if (!rl.ok) {
-        return Response.json(
-          { error: 'Demasiadas alterações seguidas. Aguarde um momento.', code: 'RATE_LIMIT' },
-          { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
-        );
-      }
-    }
-
-    // O body é lido uma só vez e passado adiante: Request.json() só pode ser
-    // consumido uma vez, e a política 'resolved' precisa de espreitar lá dentro.
-    let body: unknown = null;
-    const needsBody = options.tenant === 'resolved' && request.method !== 'GET';
-    if (needsBody) body = await request.json().catch(() => null);
-
-    const tenantId = resolveTenantId(request, user, options.tenant ?? 'required', body);
-    if (tenantId instanceof Response) {
-      await recordDenial(request, user, 'sem clínica resolvível para um pedido que exige uma', tenantId.status);
-      return tenantId;
-    }
-
-    return handler({
-      request: needsBody ? withParsedBody(request, body) : request,
-      user,
-      tenantId: tenantId as string,
-      params,
-    });
   };
+}
+
+// O corpo do wrapper, separado só para o try/catch acima não engolir a leitura do
+// resto. A ordem e as razões de cada passo estão no comentário de withRoute.
+// biome-ignore lint/complexity/noBannedTypes: `{}` é a forma que o validador do Next exige para rotas sem params
+async function runRoute<P = {}>(
+  options: RouteOptions,
+  handler: Handler<P>,
+  request: NextRequest,
+  ctx: { params: Promise<P> },
+  onUser: (user: SessionUser) => void,
+): Promise<Response> {
+  // requireSameOrigin já é no-op em GET/HEAD/OPTIONS, por isso a única condição
+  // aqui é a exceção declarada — e essa tem de ser escrita à mão, rota a rota.
+  if (!options.crossOrigin) {
+    const originCheck = requireSameOrigin(request);
+    if (originCheck) return originCheck;
+  }
+
+  // Resolvido uma vez: a validação abaixo e o handler falam do mesmo objeto, e
+  // `ctx.params` é uma promessa que não se deve consumir duas vezes.
+  const params = (await ctx?.params) as P;
+  if (!idParamsAreWellFormed(params)) return malformedId();
+
+  if (options.public) {
+    return handler({ request, user: null as never, tenantId: '', params });
+  }
+
+  const user = getAuth(request);
+  if (!user) {
+    await recordDenial(request, null, 'sem sessão válida', 401);
+    return unauthorized();
+  }
+  // A partir daqui a falha tem dono: o registo de uma exceção passa a dizer quem a
+  // provocou, em vez de só o endereço.
+  onUser(user);
+
+  const blocked = await authorize(options, user);
+  if (blocked) {
+    await recordDenial(request, user, blocked.reason, blocked.response.status);
+    return blocked.response;
+  }
+
+  // Depois da autorização, de propósito: a chave é o utilizador autenticado, e gastar
+  // orçamento de escrita de alguém antes de saber se ele sequer podia fazer aquilo
+  // deixaria um 403 repetido a esgotar a quota da própria vítima.
+  if (MUTATING_METHODS.has(request.method)) {
+    const rl = await rateLimitGlobal(`write:${user.id}`, WRITE_LIMIT);
+    if (!rl.ok) {
+      return Response.json(
+        { error: 'Demasiadas alterações seguidas. Aguarde um momento.', code: 'RATE_LIMIT' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } },
+      );
+    }
+  }
+
+  // O body é lido uma só vez e passado adiante: Request.json() só pode ser
+  // consumido uma vez, e a política 'resolved' precisa de espreitar lá dentro.
+  let body: unknown = null;
+  const needsBody = options.tenant === 'resolved' && request.method !== 'GET';
+  if (needsBody) body = await request.json().catch(() => null);
+
+  const tenantId = resolveTenantId(request, user, options.tenant ?? 'required', body);
+  if (tenantId instanceof Response) {
+    await recordDenial(request, user, 'sem clínica resolvível para um pedido que exige uma', tenantId.status);
+    return tenantId;
+  }
+
+  return handler({
+    request: needsBody ? withParsedBody(request, body) : request,
+    user,
+    tenantId: tenantId as string,
+    params,
+  });
 }
 
 // Devolve um NextRequest cujo .json() entrega o body já lido, para o handler

@@ -22,6 +22,7 @@ import { findEquipmentNeedingAttention } from './equipment';
 import { getAutonomy, sweepStaleConversations } from './inbound';
 import { computeLifecycleTransitions, markLifecycleOutreachSent } from './lifecycle';
 import { createTask } from './patientTasks';
+import { sweepRevokedSessions } from './permissions';
 import { requireIsoDate } from './pgDate';
 import { sweepRateLimitCounters } from './rateLimitShared';
 import { saveRecoverySnapshot } from './recovery';
@@ -1061,6 +1062,11 @@ async function runJobExclusive(
       // quem chama (IP + email tentado), por isso sem varredura a tabela cresce
       // sem limite — mesmo raciocínio do sweep em lib/rateLimit.ts.
       details.rateLimitSweep = await sweepRateLimitCounters();
+      // Revogações de tokens que entretanto expiraram sozinhos (migração 064). Mesmo
+      // raciocínio da varredura acima: sem ela a tabela cresce com uma linha por cada
+      // logout que a clínica alguma vez fez. Apagar não reabre sessão nenhuma — o token
+      // já era recusado por ter expirado.
+      details.revokedSessionSweep = await sweepRevokedSessions();
     }
     // Separado de 'retention' (que é limpeza de ficheiros por variável de
     // ambiente): este aplica as políticas que a clínica declarou em

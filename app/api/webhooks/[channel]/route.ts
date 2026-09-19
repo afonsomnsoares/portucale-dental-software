@@ -1,9 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { isConversationChannel } from '@/lib/conversationCalc';
 import { enterTenantContext } from '@/lib/db';
-import { handleInbound, resolveChannelAccount } from '@/lib/inbound';
+import { type ChannelProof, handleInbound, resolveChannelAccount } from '@/lib/inbound';
 import { getClientIp, rateLimit } from '@/lib/rateLimit';
 import { withRoute } from '@/lib/route';
+import { twilioRequestUrl } from '@/lib/twilioSignature';
 
 // ═══ A rota mais exposta da aplicação ═══════════════════════════════════════
 // Um endpoint público que aceita conteúdo de terceiros e escreve na base de dados de
@@ -38,11 +39,22 @@ import { withRoute } from '@/lib/route';
 
 const WEBHOOK_LIMIT = { limit: 120, windowMs: 60 * 1000 };
 
-// Cada fornecedor põe a assinatura num cabeçalho diferente. A lista é explícita para
-// que um fornecedor novo obrigue a uma linha aqui, em vez de o código aceitar qualquer
-// cabeçalho que se pareça com um segredo.
-function extractSecret(request: NextRequest): string | null {
-  return request.headers.get('x-portucale-signature') || request.headers.get('x-twilio-signature') || null;
+// ─── Cada esquema tem o SEU cabeçalho, e não se misturam ────────────────────
+// O que aqui estava devolvia o primeiro dos dois cabeçalhos que aparecesse e entregava-o
+// à mesma comparação. Isso não é uma lista de fornecedores suportados: é uma forma de
+// quem chama escolher qual das verificações quer que lhe façam. E, pior, fazia a
+// assinatura verdadeira da Twilio — que muda a cada pedido — ser comparada com um
+// segredo estático, ou seja, falhar sempre.
+//
+// Agora os dois cabeçalhos são lidos em separado e é a CONTA que declara qual deles
+// conta (channel_accounts.auth_scheme, migração 065). Mandar o outro não serve de nada.
+function extractProof(request: NextRequest, raw: Record<string, unknown>): ChannelProof {
+  return {
+    sharedSecret: request.headers.get('x-portucale-signature'),
+    twilioSignature: request.headers.get('x-twilio-signature'),
+    requestUrl: twilioRequestUrl(request),
+    params: raw,
+  };
 }
 
 // Normaliza o que cada fornecedor chama às mesmas quatro coisas. Deliberadamente
@@ -98,7 +110,7 @@ export const POST = withRoute<{ channel: string }>({ public: true, crossOrigin: 
     return Response.json({ error: 'Too many requests' }, { status: 429 });
   }
 
-  const account = await resolveChannelAccount(channel, msg.toAddress, extractSecret(request));
+  const account = await resolveChannelAccount(channel, msg.toAddress, extractProof(request, raw));
   if (!account.ok) {
     // Não distingue "endereço desconhecido" de "assinatura errada" no corpo, pela mesma
     // razão que o login não distingue email inexistente de password errada: as duas

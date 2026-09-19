@@ -672,6 +672,19 @@ CREATE TABLE IF NOT EXISTS rate_limit_counters (
 );
 CREATE INDEX IF NOT EXISTS idx_rate_limit_counters_window ON rate_limit_counters(window_start);
 
+-- ─── Sessões terminadas antes de expirarem ───────────────────────────────────
+-- Ver scripts/migrations/064_session_revocation.sql para o porquê. Sem tenant_id pela
+-- mesma razão que rate_limit_counters acima: é estado do sistema de autenticação, não
+-- de nenhuma clínica, e por isso também não leva política de RLS.
+-- Repetida aqui porque uma instalação de raiz corre só este ficheiro.
+CREATE TABLE IF NOT EXISTS revoked_sessions (
+  jti        TEXT PRIMARY KEY,
+  user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_revoked_sessions_expires ON revoked_sessions(expires_at);
+
 -- ─── Rede de aviso contra deriva de RLS ──────────────────────────────────────
 -- Lista qualquer tabela com coluna `tenant_id` que não tenha política
 -- `tenant_isolation`. Definida também em scripts/migrations/033_waitlist_entries_rls.sql
