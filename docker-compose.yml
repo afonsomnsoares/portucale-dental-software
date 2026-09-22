@@ -1,5 +1,14 @@
+# ─── Tetos de memória ────────────────────────────────────────────────────────
+# Cada serviço tem um `mem_limit`, e a razão é concreta: sem teto, um `docker
+# compose up` nesta máquina (5,8 GB) leva o sistema inteiro à frente — o
+# oom-killer do kernel escolhe a vítima, e a vítima costuma ser outra coisa
+# qualquer que estava a trabalhar.
+#
+# Com teto, quem passa dos limites é o contentor que se portou mal, e só esse.
+# Os valores são para desenvolvimento; num servidor dedicado sobem.
 services:
   postgres:
+    mem_limit: 512m
     image: postgres:17-alpine
     container_name: portucale-db
     restart: unless-stopped
@@ -45,6 +54,7 @@ services:
   # ROLLBACK em erro, e salta as migrações já registadas em schema_migrations, por isso
   # um `docker compose up` numa base de dados já migrada é um no-op.
   migrate:
+    mem_limit: 512m
     build:
       context: .
       dockerfile: Dockerfile
@@ -68,6 +78,7 @@ services:
         condition: service_healthy
 
   pgadmin:
+    mem_limit: 512m
     image: dpage/pgadmin4:9
     container_name: portucale-pgadmin
     # Uma consola de administração da base de dados não arranca sozinha em todos os
@@ -85,6 +96,7 @@ services:
         condition: service_healthy
 
   app:
+    mem_limit: 1g
     build:
       context: .
       dockerfile: Dockerfile
@@ -203,6 +215,7 @@ services:
   # directly (via lib/db.ts) rather than calling the app's HTTP API, so it needs no
   # session/CSRF credentials of its own — same trust boundary as scripts/migrate.ts.
   jobs:
+    mem_limit: 512m
     build:
       context: .
       dockerfile: Dockerfile
@@ -277,6 +290,7 @@ services:
   # sem pedir um domínio a ninguém. Com um domínio a sério, o mesmo ficheiro passa a
   # ir buscar um certificado Let's Encrypt sem mais nenhuma alteração.
   caddy:
+    mem_limit: 128m
     image: caddy:2-alpine
     container_name: portucale-caddy
     restart: unless-stopped
@@ -319,6 +333,7 @@ services:
   # ISTO NÃO É AINDA OFFSITE. Cópias no mesmo servidor protegem de "apaguei a tabela
   # errada", não de o servidor se perder. Ver o cabeçalho de scripts/backup.sh.
   backup:
+    mem_limit: 256m
     image: postgres:17-alpine
     container_name: portucale-backup
     restart: unless-stopped
@@ -352,6 +367,7 @@ services:
   # Processo à parte do `jobs` de propósito, e esse é o ponto todo: um vigia que
   # corresse dentro do ciclo que vigia morria com ele.
   watchdog:
+    mem_limit: 256m
     build:
       context: .
       dockerfile: Dockerfile

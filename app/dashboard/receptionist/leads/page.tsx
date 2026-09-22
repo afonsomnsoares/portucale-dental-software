@@ -8,7 +8,7 @@ import type { Lead } from '@/lib/types';
 const QUALIFICATION_BADGE: Record<string, { label: string; bg: string; color: string }> = {
   hot: { label: 'Quente', bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
   warm: { label: 'Morno', bg: 'var(--urgency-soon-bg)', color: 'var(--urgency-soon)' },
-  cold: { label: 'Frio', bg: 'var(--bg-page)', color: 'var(--text-secondary)' },
+  cold: { label: 'Frio', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
 };
 
 interface LeadForm {
@@ -175,12 +175,12 @@ export default function ReceptionLeadsPage() {
                           )}
                         </td>
                         <td className="data-td" style={{ textAlign: 'right' }}>
-                          <GhostBtn onClick={() => updateStatus(lead.id, 'converted')} style={{ padding: '5px 10px' }}>
+                          <GhostBtn onClick={() => updateStatus(lead.id, 'converted')} style={{ padding: '4px 8px' }}>
                             Marcação feita
                           </GhostBtn>
                           <GhostBtn
                             onClick={() => updateStatus(lead.id, 'lost')}
-                            style={{ padding: '5px 10px', marginLeft: 8 }}
+                            style={{ padding: '4px 8px', marginLeft: 8 }}
                           >
                             Fechar
                           </GhostBtn>
@@ -188,7 +188,7 @@ export default function ReceptionLeadsPage() {
                       </tr>
                       {hasDraft && (
                         <tr>
-                          <td className="data-td" colSpan={6} style={{ background: 'var(--bg-page)' }}>
+                          <td className="data-td" colSpan={6} style={{ background: 'var(--bg-sunken)' }}>
                             <div className="text-xs" style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>
                               {lead.ai_intent ? `Intenção: ${lead.ai_intent} — ` : ''}Rascunho de resposta (SMS):
                             </div>
@@ -201,7 +201,7 @@ export default function ReceptionLeadsPage() {
                             <PrimaryBtn
                               onClick={() => sendReply(lead)}
                               disabled={sendingId === lead.id}
-                              style={{ padding: '5px 12px' }}
+                              style={{ padding: '4px 12px' }}
                             >
                               {sendingId === lead.id ? 'A enviar...' : 'Enviar por SMS'}
                             </PrimaryBtn>

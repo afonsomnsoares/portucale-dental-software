@@ -96,7 +96,7 @@ export default function Roles() {
                   DESVIOS À OMISSÃO ({deviations.length} em {byClinic.size} clínicas)
                 </div>
                 {[...byClinic.entries()].map(([clinic, items]) => (
-                  <div key={clinic} style={{ padding: '8px 0', borderBottom: '1px solid var(--bg-page)' }}>
+                  <div key={clinic} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div
                       style={{
                         fontSize: 'var(--text-sm)',

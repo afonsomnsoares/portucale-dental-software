@@ -128,7 +128,7 @@ export default function PrescriptionsPage() {
       ) : null}
       <div className="grid-sidebar" style={{ gap: 16 }}>
         <div className="card" style={{ padding: 0 }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--bg-sunken)' }}>
+          <div style={{ padding: 12, borderBottom: '1px solid var(--bg-sunken)' }}>
             <input
               className="input"
               placeholder="Procurar por nome ou nº…"
@@ -159,10 +159,10 @@ export default function PrescriptionsPage() {
                     border: 'none',
                     font: 'inherit',
                     textAlign: 'left',
-                    padding: '11px 16px',
+                    padding: '12px 16px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid var(--bg-page)',
-                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'white',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    background: selected?.id === p.id ? 'var(--accent-bg)' : 'var(--bg-surface)',
                     borderLeft: `3px solid ${selected?.id === p.id ? 'var(--accent)' : 'transparent'}`,
                   }}
                 >

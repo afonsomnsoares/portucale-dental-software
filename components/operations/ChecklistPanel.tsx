@@ -91,7 +91,7 @@ export default function ChecklistPanel({ api, tenantId }: ChecklistPanelProps) {
                 <PrimaryBtn
                   onClick={() => startRun(t.id)}
                   disabled={busyId === t.id}
-                  style={{ padding: '5px 12px', fontSize: 'var(--text-xs)' }}
+                  style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}
                 >
                   Iniciar
                 </PrimaryBtn>

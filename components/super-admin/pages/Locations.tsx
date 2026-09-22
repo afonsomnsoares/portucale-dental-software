@@ -75,8 +75,8 @@ export default function Locations({ initialData }: { initialData?: UsageRow[] } 
                     display: 'flex',
                     alignItems: 'center',
                     gap: 12,
-                    padding: '9px 0',
-                    borderBottom: '1px solid var(--bg-page)',
+                    padding: '8px 0',
+                    borderBottom: '1px solid var(--border-subtle)',
                   }}
                 >
                   <span

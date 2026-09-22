@@ -110,7 +110,7 @@ export default function TreatmentTable({
                         background: 'var(--cat-purple-bg)',
                         color: 'var(--cat-purple)',
                         borderRadius: 'var(--radius-control)',
-                        padding: '2px 7px',
+                        padding: '2px 8px',
                         fontWeight: 'var(--weight-semibold)',
                       }}
                     >

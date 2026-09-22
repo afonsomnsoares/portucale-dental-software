@@ -136,7 +136,7 @@ export default function CarePathways() {
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -245,7 +245,7 @@ export default function CarePathways() {
               }
               style={{
                 fontSize: 'var(--text-xs)',
-                padding: '6px 12px',
+                padding: '4px 12px',
                 borderRadius: 'var(--radius-control)',
                 border: '1px solid var(--border-subtle)',
                 background: 'transparent',
@@ -259,7 +259,7 @@ export default function CarePathways() {
               onClick={() => setRascunho(null)}
               style={{
                 fontSize: 'var(--text-xs)',
-                padding: '6px 12px',
+                padding: '4px 12px',
                 borderRadius: 'var(--radius-control)',
                 border: 'none',
                 background: 'transparent',
@@ -293,7 +293,7 @@ export default function CarePathways() {
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-card)',
                 background: 'var(--bg-surface)',
-                padding: '14px 16px',
+                padding: '12px 16px',
                 opacity: t.active ? 1 : 0.6,
               }}
             >

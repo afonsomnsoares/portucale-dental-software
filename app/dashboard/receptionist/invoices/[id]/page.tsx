@@ -122,7 +122,7 @@ export default function InvoiceDetailPage() {
           <ArrowLeft size={16} style={{ marginRight: 8 }} /> Voltar
         </GhostBtn>
         {balance > 0 && (
-          <PrimaryBtn onClick={() => setPayModal(true)} style={{ padding: '8px 14px' }}>
+          <PrimaryBtn onClick={() => setPayModal(true)} style={{ padding: '8px 12px' }}>
             <Check size={16} style={{ marginRight: 8 }} /> Registar pagamento
           </PrimaryBtn>
         )}

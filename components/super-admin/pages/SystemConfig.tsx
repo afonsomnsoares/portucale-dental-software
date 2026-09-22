@@ -20,8 +20,8 @@ const linha = {
   justifyContent: 'space-between',
   alignItems: 'baseline',
   gap: 12,
-  padding: '9px 0',
-  borderBottom: '1px solid var(--bg-page)',
+  padding: '8px 0',
+  borderBottom: '1px solid var(--border-subtle)',
 } as const;
 
 const mono = { fontFamily: '"JetBrains Mono",monospace', fontSize: 'var(--text-xs)' } as const;

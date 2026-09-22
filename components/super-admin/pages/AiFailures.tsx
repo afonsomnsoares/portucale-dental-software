@@ -77,7 +77,7 @@ export default function AiFailures() {
           <Empty message="Nenhuma passagem falhada" />
         ) : (
           runs.map((r) => (
-            <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--bg-page)' }}>
+            <div key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <Badge label="FALHOU" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />
                 <span
@@ -104,7 +104,7 @@ export default function AiFailures() {
                     fontFamily: '"JetBrains Mono",monospace',
                     color: 'var(--urgency-critical)',
                     background: 'var(--urgency-critical-bg)',
-                    padding: '6px 10px',
+                    padding: '4px 8px',
                     borderRadius: 'var(--radius-control)',
                     overflowX: 'auto',
                   }}
@@ -129,8 +129,8 @@ export default function AiFailures() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '9px 0',
-                borderBottom: '1px solid var(--bg-page)',
+                padding: '8px 0',
+                borderBottom: '1px solid var(--border-subtle)',
               }}
             >
               <span

@@ -78,7 +78,7 @@ export default function PlatformIncidents() {
             const clinics = new Set(occurrences.map((o) => o.tenant_name || 'Plataforma'));
             const widespread = clinics.size > 1;
             return (
-              <div key={job} style={{ padding: '12px 0', borderBottom: '1px solid var(--bg-page)' }}>
+              <div key={job} style={{ padding: '12px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
                   <Badge
                     label={widespread ? 'TRANSVERSAL' : 'UMA CLÍNICA'}
@@ -106,7 +106,7 @@ export default function PlatformIncidents() {
                       fontFamily: '"JetBrains Mono",monospace',
                       color: 'var(--urgency-critical)',
                       background: 'var(--urgency-critical-bg)',
-                      padding: '6px 10px',
+                      padding: '4px 8px',
                       borderRadius: 'var(--radius-control)',
                       marginBottom: 8,
                       overflowX: 'auto',
@@ -131,7 +131,7 @@ export default function PlatformIncidents() {
           <Empty message="Nenhum alerta crítico por tratar" />
         ) : (
           critical.map((c) => (
-            <div key={c.id} style={{ padding: '10px 0', borderBottom: '1px solid var(--bg-page)' }}>
+            <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                 <Badge label="CRÍTICO" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />
                 <span

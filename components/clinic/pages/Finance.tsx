@@ -41,14 +41,14 @@ export default function ClinicFinanceDashboard() {
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="input"
-          style={{ width: 140, fontSize: 'var(--text-xs)', padding: '6px 10px' }}
+          style={{ width: 140, fontSize: 'var(--text-xs)', padding: '4px 8px' }}
         />
         <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="input"
-          style={{ width: 140, fontSize: 'var(--text-xs)', padding: '6px 10px' }}
+          style={{ width: 140, fontSize: 'var(--text-xs)', padding: '4px 8px' }}
         />
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
@@ -113,7 +113,7 @@ export default function ClinicFinanceDashboard() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: 'var(--bg-page)',
+                        background: 'var(--bg-sunken)',
                         borderRadius: 'var(--radius-control)',
                       }}
                     >
@@ -153,7 +153,7 @@ export default function ClinicFinanceDashboard() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '8px 12px',
-                        background: 'var(--bg-page)',
+                        background: 'var(--bg-sunken)',
                         borderRadius: 'var(--radius-control)',
                       }}
                     >

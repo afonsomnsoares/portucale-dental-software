@@ -129,7 +129,7 @@ export default function ReceptionistNotificationsPage() {
                   };
                   const kind = n.payload?.kind || '';
                   return (
-                    <tr key={n.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                    <tr key={n.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {n.patient_name || n.patient_id?.slice(0, 8) || '—'}
                       </td>

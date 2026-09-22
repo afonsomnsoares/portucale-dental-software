@@ -91,8 +91,8 @@ export default function AdminOverview() {
                     display: 'flex',
                     gap: 12,
                     alignItems: 'center',
-                    padding: '10px 0',
-                    borderBottom: '1px solid var(--bg-page)',
+                    padding: '8px 0',
+                    borderBottom: '1px solid var(--border-subtle)',
                   }}
                 >
                   <Badge label={l.action} bg={m.bg} color={m.color} />
@@ -137,8 +137,8 @@ export default function AdminOverview() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '9px 0',
-                borderBottom: '1px solid var(--bg-page)',
+                padding: '8px 0',
+                borderBottom: '1px solid var(--border-subtle)',
               }}
             >
               <div>

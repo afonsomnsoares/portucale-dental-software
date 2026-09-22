@@ -37,7 +37,7 @@ function ActionChip({ action }: { action: JourneyPatient['next_action'] }) {
         background: c.bg,
         color: c.color,
         borderRadius: 'var(--radius-control)',
-        padding: '3px 7px',
+        padding: '2px 8px',
         fontWeight: 'var(--weight-semibold)',
       }}
     >
@@ -64,7 +64,7 @@ function SegmentBadge({ segment }: { segment: { dormancyBand: string; valueTier:
         background: isHighValue ? 'var(--urgency-critical-bg)' : 'var(--bg-sunken)',
         color: isHighValue ? 'var(--urgency-critical)' : 'var(--text-secondary)',
         borderRadius: 'var(--radius-control)',
-        padding: '3px 7px',
+        padding: '2px 8px',
         fontWeight: 'var(--weight-semibold)',
         display: 'inline-block',
       }}

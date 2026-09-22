@@ -82,7 +82,7 @@ export default function AiModels({ initialData }: { initialData?: AiUsage } = {}
                   {m.model === d.configuredModel ? (
                     <Badge label="EM VIGOR" bg="var(--urgency-ok-bg)" color="var(--urgency-ok)" />
                   ) : (
-                    <Badge label="HISTÓRICO" bg="var(--bg-page)" color="var(--text-secondary)" />
+                    <Badge label="HISTÓRICO" bg="var(--bg-sunken)" color="var(--text-secondary)" />
                   )}
                 </td>
               </tr>

@@ -58,7 +58,7 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
     <div
       className="card"
       style={{
-        padding: '14px 18px',
+        padding: '12px 16px',
         border: '1px solid var(--border-subtle)',
         gridColumn: '1 / -1',
       }}
@@ -66,7 +66,7 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div className="section-label">Preferências de Comunicação</div>
         {!editing && (
-          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}>
+          <GhostBtn onClick={() => setEditing(true)} style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}>
             Editar
           </GhostBtn>
         )}
@@ -140,10 +140,10 @@ export default function CommPrefsCard({ api, patient, onUpdated }: CommPrefsCard
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <PrimaryBtn onClick={save} disabled={saving} style={{ padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
+            <PrimaryBtn onClick={save} disabled={saving} style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}>
               {saving ? 'A guardar…' : 'Guardar'}
             </PrimaryBtn>
-            <GhostBtn onClick={() => setEditing(false)} style={{ padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
+            <GhostBtn onClick={() => setEditing(false)} style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}>
               Cancelar
             </GhostBtn>
           </div>

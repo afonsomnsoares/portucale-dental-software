@@ -148,7 +148,7 @@ export function PorPreencher({ children }: { children: React.ReactNode }) {
     <p
       style={{
         margin: '12px 0',
-        padding: '12px 14px',
+        padding: 12,
         borderLeft: '3px solid var(--amber-700)',
         background: 'var(--bg-surface)',
         color: 'var(--text-secondary)',

@@ -124,14 +124,11 @@ export default function EquipmentTab({ api }: EquipmentTabProps) {
                 <TD right>
                   <GhostBtn
                     onClick={() => openEdit(it)}
-                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)', marginRight: 8 }}
+                    style={{ padding: '4px 8px', fontSize: 'var(--text-xs)', marginRight: 8 }}
                   >
                     Editar
                   </GhostBtn>
-                  <GhostBtn
-                    onClick={() => toggleActive(it)}
-                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
-                  >
+                  <GhostBtn onClick={() => toggleActive(it)} style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}>
                     {it.active ? 'Desativar' : 'Ativar'}
                   </GhostBtn>
                 </TD>

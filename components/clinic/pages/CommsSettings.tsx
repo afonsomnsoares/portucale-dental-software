@@ -112,7 +112,7 @@ export default function CommsSettings() {
               onClick={() => setS({ ...s, autonomyLevel: n.value })}
               style={{
                 textAlign: 'left',
-                padding: '11px 14px',
+                padding: 12,
                 borderRadius: 'var(--radius-card)',
                 border: `1px solid ${escolhido ? 'var(--accent)' : 'var(--border-subtle)'}`,
                 background: escolhido ? 'var(--accent-bg)' : 'var(--bg-surface)',
@@ -225,7 +225,7 @@ export default function CommsSettings() {
             marginTop: 16,
             background: 'var(--urgency-soon-bg)',
             color: 'var(--urgency-soon)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             fontSize: 'var(--text-xs)',
           }}

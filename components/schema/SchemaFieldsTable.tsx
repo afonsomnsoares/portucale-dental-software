@@ -89,7 +89,7 @@ export default function SchemaFieldsTable({
                         style={{
                           width: 80,
                           height: 5,
-                          background: 'var(--bg-page)',
+                          background: 'var(--bg-sunken)',
                           borderRadius: 'var(--radius-pill)',
                         }}
                       >

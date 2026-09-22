@@ -223,7 +223,7 @@ export default function UsersAndAccess() {
                     style={{
                       fontSize: 'var(--text-2xs)',
                       fontWeight: 'var(--weight-bold)',
-                      padding: '3px 8px',
+                      padding: '2px 8px',
                       borderRadius: 'var(--radius-card)',
                       background: `${roleColors[u.role]}15`,
                       color: roleColors[u.role],
@@ -239,7 +239,7 @@ export default function UsersAndAccess() {
                   <Badge s={u.active ? 'active' : 'suspended'} />
                 </TD>
                 <TD right>
-                  <GhostBtn onClick={() => openEdit(u)} style={{ padding: '6px 12px', fontSize: 'var(--text-xs)' }}>
+                  <GhostBtn onClick={() => openEdit(u)} style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}>
                     Editar
                   </GhostBtn>
                 </TD>

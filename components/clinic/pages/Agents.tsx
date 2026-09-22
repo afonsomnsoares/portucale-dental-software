@@ -151,7 +151,7 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
         </div>
         <Badge
           label={agent.ai === 'none' ? 'IA por ligar' : agent.ai === 'partial' ? 'IA parcial' : 'IA ativa'}
-          bg={agent.ai === 'none' ? 'var(--bg-page)' : 'var(--urgency-ok-bg)'}
+          bg={agent.ai === 'none' ? 'var(--bg-sunken)' : 'var(--urgency-ok-bg)'}
           color={agent.ai === 'none' ? 'var(--text-secondary)' : 'var(--urgency-ok)'}
         />
       </div>
@@ -172,10 +172,10 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
             style={{
               fontFamily: '"JetBrains Mono",monospace',
               fontSize: 'var(--text-2xs)',
-              background: 'var(--bg-page)',
+              background: 'var(--bg-sunken)',
               color: 'var(--text-secondary)',
               borderRadius: 'var(--radius-control)',
-              padding: '2px 7px',
+              padding: '2px 8px',
             }}
           >
             {job}
@@ -183,7 +183,7 @@ function AgentCard({ agent }: { agent: AgentStatus }) {
         ))}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--bg-page)', paddingTop: 12 }}>
+      <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 12 }}>
         {!run ? (
           <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
             Sem execuções registadas nesta clínica.
@@ -212,7 +212,7 @@ const SEVERITY_STYLE: Record<string, { label: string; bg: string; color: string;
     color: 'var(--urgency-soon)',
     border: 'var(--urgency-soon)',
   },
-  info: { label: 'Nota', bg: 'var(--bg-page)', color: 'var(--text-secondary)', border: 'var(--border-subtle)' },
+  info: { label: 'Nota', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)', border: 'var(--border-subtle)' },
 };
 
 function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: () => void }) {
@@ -250,7 +250,7 @@ function InsightRow({ insight, onResolve }: { insight: AgentInsight; onResolve: 
             </p>
           )}
         </div>
-        <GhostBtn onClick={onResolve} style={{ padding: '5px 10px', whiteSpace: 'nowrap' }}>
+        <GhostBtn onClick={onResolve} style={{ padding: '4px 8px', whiteSpace: 'nowrap' }}>
           Tratado
         </GhostBtn>
       </div>

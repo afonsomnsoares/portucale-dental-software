@@ -126,7 +126,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
     <div
       className="card"
       style={{
-        padding: '14px 18px',
+        padding: '12px 16px',
         border: '1px solid var(--border-subtle)',
         gridColumn: '1 / -1',
       }}
@@ -170,7 +170,7 @@ export default function SchedulingPrefsCard({ api, patient }: SchedulingPrefsCar
                     background: on ? 'var(--accent-bg)' : 'var(--bg-surface)',
                     color: on ? 'var(--accent)' : 'var(--text-secondary)',
                     borderRadius: 'var(--radius-control)',
-                    padding: '4px 10px',
+                    padding: '4px 8px',
                     fontSize: 'var(--text-xs)',
                     fontWeight: on ? 700 : 500,
                     cursor: 'pointer',

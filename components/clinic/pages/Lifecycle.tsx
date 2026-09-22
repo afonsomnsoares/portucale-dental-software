@@ -47,7 +47,7 @@ function LimiarInatividade({ onSaved }: { onSaved: () => void }) {
 
   return (
     <div className="card p-4 mb-4">
-      <div style={{ display: 'flex', gap: 14, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <FormField
           label="Considerar desaparecido após"
           hint={`Entre ${limites.min} e ${limites.max} meses sem visita nem nada agendado. Por omissão: ${limites.defaultMonths}.`}

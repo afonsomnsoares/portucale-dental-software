@@ -19,7 +19,7 @@ export default function PatientOverviewTab({
   return (
     <div className="grid-pair" style={{ gap: 12 }}>
       {fields.map(([k, v]) => (
-        <div key={k} className="card" style={{ padding: '14px 18px', border: '1px solid var(--border-subtle)' }}>
+        <div key={k} className="card" style={{ padding: '12px 16px', border: '1px solid var(--border-subtle)' }}>
           <div className="section-label mb-1">{k}</div>
           <div
             style={{ fontSize: 'var(--text-base)', fontWeight: 'var(--weight-medium)', color: 'var(--text-primary)' }}
@@ -32,7 +32,7 @@ export default function PatientOverviewTab({
         <div
           className="card"
           style={{
-            padding: '14px 18px',
+            padding: '12px 16px',
             border: '1px solid var(--border-subtle)',
             gridColumn: '1 / -1',
           }}
@@ -48,7 +48,7 @@ export default function PatientOverviewTab({
           >
             <div className="section-label">Extra Fields</div>
             {onEditExtra && (
-              <GhostBtn onClick={onEditExtra} style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}>
+              <GhostBtn onClick={onEditExtra} style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}>
                 Edit
               </GhostBtn>
             )}
@@ -60,9 +60,9 @@ export default function PatientOverviewTab({
                 <div
                   key={k}
                   style={{
-                    border: '1px solid var(--bg-page)',
+                    border: '1px solid var(--border-subtle)',
                     borderRadius: 'var(--radius-control)',
-                    padding: '10px 12px',
+                    padding: '8px 12px',
                   }}
                 >
                   <div

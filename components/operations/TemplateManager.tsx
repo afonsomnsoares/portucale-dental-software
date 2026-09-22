@@ -126,7 +126,7 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
               style={{
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-control)',
-                padding: '10px 12px',
+                padding: '8px 12px',
                 opacity: t.active ? 1 : 0.55,
               }}
             >
@@ -139,13 +139,13 @@ export default function TemplateManager({ api, tenantId }: TemplateManagerProps)
                 {!t.active && <Badge label="Inativa" bg="var(--urgency-critical-bg)" color="var(--urgency-critical)" />}
               </div>
               <div className="flex items-center gap-2">
-                <GhostBtn onClick={() => openEdit(t)} style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}>
+                <GhostBtn onClick={() => openEdit(t)} style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}>
                   Editar
                 </GhostBtn>
                 <GhostBtn
                   disabled={busyId === t.id}
                   onClick={() => toggleActive(t)}
-                  style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                  style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                 >
                   {t.active ? 'Desativar' : 'Ativar'}
                 </GhostBtn>

@@ -1,9 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
 import { useAuth } from '@/app/providers';
-import { NAV, ROLE_HOME, ROLE_META } from '@/lib/constants';
+import { NAV, ROLE_HOME } from '@/lib/constants';
 import { AppLogo, Avatar } from './ui';
 
 function ToothIcon({ size = 18, color = 'currentColor' }) {
@@ -20,7 +19,9 @@ function ToothIcon({ size = 18, color = 'currentColor' }) {
 }
 
 function Icon({ name, active }: { name: string; active: boolean }) {
-  const c = active ? 'var(--accent)' : 'var(--text-muted)';
+  // A barra é escura: o ícone ativo assenta sobre o azul cheio da entrada e o
+  // inativo sobre a tinta. Nenhum dos dois pode usar as cores da página.
+  const c = active ? 'var(--sidebar-active-text)' : 'var(--sidebar-muted)';
   const s = 18;
   const common = { size: s, color: c };
   if (name === 'Visão Geral' || name === 'Painel') {
@@ -281,21 +282,6 @@ function Icon({ name, active }: { name: string; active: boolean }) {
   );
 }
 
-const ROLE_ICONS = {
-  super_admin: { icon: <ToothIcon size={18} color="var(--cat-purple)" />, color: 'var(--cat-purple)' },
-  admin: { icon: <ToothIcon size={18} color="var(--cat-purple)" />, color: 'var(--cat-purple)' },
-  receptionist: {
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M4 21V7l8-4 8 4v14" stroke="var(--urgency-ok)" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M9 21v-7h6v7" stroke="var(--urgency-ok)" strokeWidth="1.8" strokeLinejoin="round" />
-      </svg>
-    ),
-    color: 'var(--urgency-ok)',
-  },
-  dentist: { icon: <ToothIcon size={18} color="var(--accent)" />, color: 'var(--accent)' },
-};
-
 // `open` e `onNavigate` só contam abaixo de 900 px, onde a barra é uma gaveta
 // (ver .app-sidebar em app/globals.css). Acima disso a barra está sempre no
 // fluxo e os dois são inertes — daí serem opcionais: quem a usa em largura
@@ -320,11 +306,9 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
     (item) => !item.requires || !permissions || permissions.includes(item.requires),
   );
   const grouped = nav.some((item) => item.group);
-  const meta: { label?: string; sub?: string } = (role && ROLE_META[role]) || {};
   // Segue navRole: dentro de uma clínica a raiz é a Visão Geral do admin, para o logótipo
   // e para o realce da entrada de raiz não apontarem para fora da clínica.
   const roleHome = (navRole && (ROLE_HOME as Record<string, string>)[navRole]) || '';
-  const roleIcon: { icon?: ReactNode; color?: string } = (role && ROLE_ICONS[role]) || {};
   const tenantLabel = user?.tenantName ? `${user.tenantName}${user.tenantCity ? ` · ${user.tenantCity}` : ''}` : '';
   const sidebarClinic = tenantLabel || user?.clinic || '';
 
@@ -334,8 +318,8 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
       data-open={open ? 'true' : 'false'}
       style={{
         width: 240,
-        background: 'white',
-        borderRight: '1px solid var(--bg-sunken)',
+        background: 'var(--sidebar-bg)',
+        borderRight: '1px solid var(--sidebar-border)',
         display: 'flex',
         flexDirection: 'column',
         flexShrink: 0,
@@ -346,7 +330,7 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
       }}
     >
       {/* ── Brand ── */}
-      <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--bg-sunken)' }}>
+      <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
             style={{ width: 32, height: 32, borderRadius: 'var(--radius-control)', overflow: 'hidden', flexShrink: 0 }}
@@ -357,41 +341,13 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
             <div
               style={{
                 fontSize: 'var(--text-base)',
-                fontWeight: 'var(--weight-bold)',
-                color: 'var(--accent)',
+                fontWeight: 'var(--weight-semibold)',
+                color: 'var(--sidebar-text)',
                 letterSpacing: 'var(--text-base-tracking)',
                 fontFamily: '"Plus Jakarta Sans",sans-serif',
               }}
             >
               Portucale Software
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Role badge ── */}
-      <div className="px-4 pt-4 pb-2">
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 10px',
-            background: 'var(--bg-page)',
-            borderRadius: 'var(--radius-control)',
-          }}
-        >
-          <span
-            style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            {roleIcon.icon}
-          </span>
-          <div className="min-w-0">
-            <div className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-              {meta.label}
-            </div>
-            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-              {tenantLabel || meta.sub}
             </div>
           </div>
         </div>
@@ -440,8 +396,12 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
                     <Icon name={item.label} active={active} />
                   </span>
                 )}
+                {/* O ponto que marcava a entrada ativa saiu por duas razões: a
+                    classe `bg-accent` não existe desde que as utilidades de cor
+                    do Tailwind foram removidas (era um ponto transparente), e a
+                    entrada ativa passou a ser uma barra azul cheia — um ponto
+                    branco dentro dela não acrescentava nada. */}
                 <span>{item.label}</span>
-                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
               </Link>
             </div>
           );
@@ -449,17 +409,17 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
       </nav>
 
       {/* ── Divider ── */}
-      <div style={{ borderTop: '1px solid var(--bg-sunken)' }} />
+      <div style={{ borderTop: '1px solid var(--sidebar-border)' }} />
 
       {/* ── User ── */}
       <div className="p-4">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
           <Avatar name={user?.name || ''} size={34} color="var(--accent)" />
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+            <div className="text-sm font-semibold truncate" style={{ color: 'var(--sidebar-text)' }}>
               {user?.name}
             </div>
-            <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+            <div className="text-xs truncate" style={{ color: 'var(--sidebar-muted)' }}>
               {sidebarClinic}
             </div>
           </div>
@@ -473,25 +433,25 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
           style={{
             width: '100%',
             background: 'transparent',
-            border: '1.5px solid var(--border-subtle)',
+            border: '1px solid var(--sidebar-border)',
             borderRadius: 'var(--radius-control)',
-            padding: '6px 12px',
+            padding: '4px 12px',
             fontSize: 'var(--text-xs)',
             fontWeight: 'var(--weight-medium)',
-            color: 'var(--urgency-critical)',
+            color: 'var(--sidebar-danger)',
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.15s',
           }}
           onMouseEnter={(e) => {
             const t = e.target as HTMLElement;
-            t.style.background = 'var(--urgency-critical-bg)';
-            t.style.borderColor = 'var(--urgency-critical-border)';
+            t.style.background = 'var(--sidebar-hover-bg)';
+            t.style.borderColor = 'var(--sidebar-danger)';
           }}
           onMouseLeave={(e) => {
             const t = e.target as HTMLElement;
             t.style.background = 'transparent';
-            t.style.borderColor = 'var(--border-subtle)';
+            t.style.borderColor = 'var(--sidebar-border)';
           }}
         >
           Terminar sessão

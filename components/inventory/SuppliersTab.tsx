@@ -128,7 +128,7 @@ export default function SuppliersTab({ api }: Props) {
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -171,7 +171,7 @@ export default function SuppliersTab({ api }: Props) {
             overflowX: 'auto',
           }}
         >
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
             <thead>
               <tr>
                 {['Fornecedor', 'Contacto', 'Notas', ''].map((h) => (
@@ -179,13 +179,6 @@ export default function SuppliersTab({ api }: Props) {
                     key={h}
                     style={{
                       textAlign: 'left',
-                      padding: '9px 14px',
-                      fontSize: 'var(--text-2xs)',
-                      letterSpacing: 'var(--text-2xs-tracking)',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted)',
-                      fontWeight: 'var(--weight-medium)',
-                      borderBottom: '1px solid var(--border-strong)',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -197,15 +190,11 @@ export default function SuppliersTab({ api }: Props) {
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid var(--border-subtle)', opacity: s.active ? 1 : 0.55 }}>
-                  <td
-                    style={{ padding: '11px 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}
-                  >
+                  <td style={{ fontWeight: 'var(--weight-semibold)' }}>
                     {s.name}
                     {!s.active && (
                       <span
                         style={{
-                          fontSize: 'var(--text-2xs)',
-                          color: 'var(--text-muted)',
                           fontWeight: 'var(--weight-normal)',
                         }}
                       >
@@ -214,22 +203,20 @@ export default function SuppliersTab({ api }: Props) {
                       </span>
                     )}
                   </td>
-                  <td style={{ padding: '11px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                  <td style={{ color: 'var(--text-secondary)' }}>
                     {s.email || '—'}
                     {s.phone && (
                       <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{s.phone}</div>
                     )}
                   </td>
-                  <td style={{ padding: '11px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                    {s.notes || '—'}
-                  </td>
-                  <td style={{ padding: '11px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td style={{ color: 'var(--text-muted)' }}>{s.notes || '—'}</td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
                       onClick={() => alternarAtivo(s)}
                       style={{
                         fontSize: 'var(--text-xs)',
-                        padding: '4px 10px',
+                        padding: '4px 8px',
                         borderRadius: 'var(--radius-control)',
                         border: '1px solid var(--border-subtle)',
                         background: 'transparent',

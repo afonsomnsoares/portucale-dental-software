@@ -115,7 +115,7 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -147,7 +147,7 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
               overflowX: 'auto',
             }}
           >
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
               <thead>
                 <tr>
                   {['Doente', 'Envolvimento', 'Risco de abandono', 'Probabilidade de marcar'].map((h) => (
@@ -155,13 +155,6 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
                       key={h}
                       style={{
                         textAlign: 'left',
-                        padding: '9px 14px',
-                        fontSize: 'var(--text-2xs)',
-                        letterSpacing: 'var(--text-2xs-tracking)',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-muted)',
-                        fontWeight: 'var(--weight-medium)',
-                        borderBottom: '1px solid var(--border-strong)',
                         whiteSpace: 'nowrap',
                       }}
                     >
@@ -173,19 +166,19 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
               <tbody>
                 {ordenados.map((p) => (
                   <tr key={p.patientId} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td style={{ padding: '11px 14px', verticalAlign: 'top', minWidth: 170 }}>
+                    <td style={{ verticalAlign: 'top', minWidth: 170 }}>
                       <div style={{ fontWeight: 'var(--weight-semibold)', fontSize: 'var(--text-sm)' }}>{p.name}</div>
                       {p.phone && (
                         <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{p.phone}</div>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', verticalAlign: 'top', minWidth: 175 }}>
+                    <td style={{ verticalAlign: 'top', minWidth: 175 }}>
                       <Medidor s={p.scores.engagement} />
                     </td>
-                    <td style={{ padding: '11px 14px', verticalAlign: 'top', minWidth: 175 }}>
+                    <td style={{ verticalAlign: 'top', minWidth: 175 }}>
                       <Medidor s={p.scores.churnRisk} invertido />
                     </td>
-                    <td style={{ padding: '11px 14px', verticalAlign: 'top', minWidth: 175 }}>
+                    <td style={{ verticalAlign: 'top', minWidth: 175 }}>
                       <Medidor s={p.scores.bookingPropensity} />
                     </td>
                   </tr>

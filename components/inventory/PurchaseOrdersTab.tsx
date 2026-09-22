@@ -196,14 +196,14 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         <GhostBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'cancelled')}
-                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Cancelar
                         </GhostBtn>
                         <PrimaryBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'ordered')}
-                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Marcar como encomendado
                         </PrimaryBtn>
@@ -213,7 +213,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                       <GhostBtn
                         disabled={reconBusy === o.id}
                         onClick={() => verReconciliacao(o.id)}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         {recon[o.id] ? 'Fechar reconciliação' : 'Reconciliar'}
                       </GhostBtn>
@@ -223,14 +223,14 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         <GhostBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'cancelled')}
-                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Cancelar
                         </GhostBtn>
                         <PrimaryBtn
                           disabled={busyId === o.id}
                           onClick={() => setStatus(o, 'received')}
-                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Marcar como recebido
                         </PrimaryBtn>
@@ -257,7 +257,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                   <div
                     style={{
                       marginTop: 12,
-                      padding: '11px 13px',
+                      padding: 12,
                       borderRadius: 'var(--radius-control)',
                       background: recon[o.id].clean ? 'var(--urgency-ok-bg)' : 'var(--urgency-soon-bg)',
                       fontSize: 'var(--text-xs)',
@@ -287,7 +287,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                         <GhostBtn
                           disabled={reconBusy === o.id}
                           onClick={() => congelar(o.id)}
-                          style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Congelar reconciliação
                         </GhostBtn>
@@ -338,7 +338,7 @@ export default function PurchaseOrdersTab({ api, tenantId, items, onReceived }: 
                 <GhostBtn
                   onClick={() => setLines((ls) => ls.filter((l) => l.key !== line.key))}
                   disabled={lines.length === 1}
-                  style={{ padding: '8px 10px' }}
+                  style={{ padding: 8 }}
                 >
                   ×
                 </GhostBtn>

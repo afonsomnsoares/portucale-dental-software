@@ -156,7 +156,7 @@ export default function Inbox() {
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -194,7 +194,7 @@ export default function Inbox() {
                     display: 'block',
                     width: '100%',
                     textAlign: 'left',
-                    padding: '11px 13px',
+                    padding: 12,
                     border: 'none',
                     borderBottom: '1px solid var(--border-subtle)',
                     borderLeft: `3px solid ${tom ? tom.color : 'transparent'}`,
@@ -229,7 +229,7 @@ export default function Inbox() {
                         style={{
                           fontSize: 'var(--text-2xs)',
                           fontWeight: 'var(--weight-bold)',
-                          padding: '1px 6px',
+                          padding: '2px 4px',
                           borderRadius: 'var(--radius-pill)',
                           background: tom.bg,
                           color: tom.color,
@@ -294,7 +294,7 @@ export default function Inbox() {
                         onClick={() => marcar('resolved')}
                         style={{
                           fontSize: 'var(--text-xs)',
-                          padding: '4px 10px',
+                          padding: '4px 8px',
                           borderRadius: 'var(--radius-control)',
                           border: '1px solid var(--border-subtle)',
                           background: 'transparent',

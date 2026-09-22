@@ -113,7 +113,7 @@ export default function RescheduleModal({
         <label
           style={{
             display: 'flex',
-            gap: 7,
+            gap: 8,
             alignItems: 'center',
             marginTop: 9,
             fontSize: 'var(--text-2xs)',
@@ -132,7 +132,7 @@ export default function RescheduleModal({
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
             borderRadius: 'var(--radius-card)',
-            padding: '9px 12px',
+            padding: '8px 12px',
             fontSize: 'var(--text-xs)',
             marginBottom: 12,
           }}
@@ -152,7 +152,7 @@ export default function RescheduleModal({
       ) : !data?.slots.length ? (
         <Empty message="Sem horários compatíveis nos próximos 21 dias. Tenta aceitar outro dentista, ou põe o doente em lista de espera." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 7, maxHeight: '22rem', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '22rem', overflowY: 'auto' }}>
           {data.slots.map((s) => {
             const chave = `${s.date}|${s.startTime}`;
             return (
@@ -165,7 +165,7 @@ export default function RescheduleModal({
                   gap: 12,
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-card)',
-                  padding: '9px 12px',
+                  padding: '8px 12px',
                 }}
               >
                 <div style={{ minWidth: 0 }}>

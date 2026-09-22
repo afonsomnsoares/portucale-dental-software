@@ -46,13 +46,13 @@ export default function ClinicInvoicesPage() {
               key={value || 'all'}
               onClick={() => setStatus(value)}
               style={{
-                padding: '6px 12px',
+                padding: '4px 12px',
                 fontSize: 'var(--text-xs)',
                 fontWeight: status === value ? 700 : 500,
                 border: '1px solid',
                 borderColor: status === value ? 'var(--accent)' : 'var(--border-subtle)',
                 borderRadius: 'var(--radius-control)',
-                background: status === value ? 'var(--accent-bg)' : 'white',
+                background: status === value ? 'var(--accent-bg)' : 'var(--bg-surface)',
                 color: status === value ? 'var(--accent)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',

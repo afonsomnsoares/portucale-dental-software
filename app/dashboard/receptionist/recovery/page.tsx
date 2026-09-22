@@ -204,7 +204,7 @@ export default function RecoveryReceptionistPage() {
                   </thead>
                   <tbody>
                     {filtered.map((r) => (
-                      <tr key={rowKey(r)} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                      <tr key={rowKey(r)} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                         <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {r.patient_name}
                         </td>
@@ -244,7 +244,7 @@ export default function RecoveryReceptionistPage() {
                             <GhostBtn
                               disabled={busyId === r.id}
                               onClick={() => completeRecall(r)}
-                              style={{ padding: '5px 10px' }}
+                              style={{ padding: '4px 8px' }}
                             >
                               {busyId === r.id ? '…' : 'Concluir recall'}
                             </GhostBtn>
@@ -262,7 +262,7 @@ export default function RecoveryReceptionistPage() {
                                   <GhostBtn
                                     disabled={busyId === rowKey(r)}
                                     onClick={() => createFollowUp(r)}
-                                    style={{ padding: '5px 10px' }}
+                                    style={{ padding: '4px 8px' }}
                                   >
                                     {busyId === rowKey(r) ? '…' : 'Criar tarefa'}
                                   </GhostBtn>
@@ -272,7 +272,7 @@ export default function RecoveryReceptionistPage() {
                                   onClick={() => {
                                     window.location.href = r.phone ? `tel:${r.phone}` : `mailto:${r.email}`;
                                   }}
-                                  style={{ padding: '5px 10px' }}
+                                  style={{ padding: '4px 8px' }}
                                 >
                                   Contactar
                                 </GhostBtn>
@@ -284,7 +284,7 @@ export default function RecoveryReceptionistPage() {
                                 'cancelled_90d',
                                 'unbooked_leads',
                               ].includes(r.categoryKey) ? (
-                                <GhostBtn onClick={() => openSchedule(r)} style={{ padding: '5px 10px' }}>
+                                <GhostBtn onClick={() => openSchedule(r)} style={{ padding: '4px 8px' }}>
                                   Agendar
                                 </GhostBtn>
                               ) : (
@@ -292,7 +292,7 @@ export default function RecoveryReceptionistPage() {
                                   onClick={() =>
                                     router.push(CATEGORY_ROUTES[r.categoryKey] || '/dashboard/receptionist')
                                   }
-                                  style={{ padding: '5px 10px' }}
+                                  style={{ padding: '4px 8px' }}
                                 >
                                   Abrir
                                 </GhostBtn>

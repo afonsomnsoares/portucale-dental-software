@@ -123,7 +123,7 @@ export default function ClinicLeadSourcesPage() {
                   <GhostBtn
                     disabled={busyId === s.id}
                     onClick={() => toggleActive(s)}
-                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                    style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                   >
                     {busyId === s.id ? '…' : s.active ? 'Desativar' : 'Ativar'}
                   </GhostBtn>
@@ -184,15 +184,15 @@ export default function ClinicLeadSourcesPage() {
               display: 'flex',
               gap: 8,
               alignItems: 'center',
-              background: 'var(--bg-page)',
+              background: 'var(--bg-sunken)',
               border: '1px solid var(--border-subtle)',
               borderRadius: 'var(--radius-control)',
-              padding: '10px 12px',
+              padding: '8px 12px',
               marginBottom: 16,
             }}
           >
             <code style={{ fontSize: 'var(--text-xs)', wordBreak: 'break-all', flex: 1 }}>{revealed.token}</code>
-            <GhostBtn onClick={copyToken} style={{ padding: '5px 10px', fontSize: 'var(--text-xs)', flexShrink: 0 }}>
+            <GhostBtn onClick={copyToken} style={{ padding: '4px 8px', fontSize: 'var(--text-xs)', flexShrink: 0 }}>
               {copied ? 'Copiado ✓' : 'Copiar'}
             </GhostBtn>
           </div>
@@ -203,7 +203,7 @@ export default function ClinicLeadSourcesPage() {
               fontSize: 'var(--text-2xs)',
               background: 'var(--text-primary)',
               color: 'var(--bg-sunken)',
-              padding: '12px 14px',
+              padding: 12,
               borderRadius: 'var(--radius-control)',
               overflowX: 'auto',
               whiteSpace: 'pre',

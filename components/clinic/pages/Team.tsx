@@ -250,14 +250,14 @@ export default function ClinicTeamPage() {
                             <GhostBtn
                               disabled={busyId === t.id}
                               onClick={() => setTimeOffStatus(t.id, 'approved')}
-                              style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                              style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                             >
                               Aprovar
                             </GhostBtn>
                             <DangerBtn
                               disabled={busyId === t.id}
                               onClick={() => setTimeOffStatus(t.id, 'rejected')}
-                              style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                              style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                             >
                               Rejeitar
                             </DangerBtn>

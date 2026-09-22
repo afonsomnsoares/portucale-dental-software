@@ -21,7 +21,7 @@ export default function RiskTab({ appointments }: { appointments: RiskAppointmen
           </thead>
           <tbody>
             {appointments.map((a) => (
-              <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+              <tr key={a.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                 <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                   {a.patient_name}
                 </td>
@@ -38,7 +38,7 @@ export default function RiskTab({ appointments }: { appointments: RiskAppointmen
                       onClick={() => {
                         window.location.href = `tel:${a.phone}`;
                       }}
-                      style={{ padding: '5px 10px' }}
+                      style={{ padding: '4px 8px' }}
                     >
                       Contactar
                     </GhostBtn>

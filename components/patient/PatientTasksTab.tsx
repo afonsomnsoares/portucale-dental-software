@@ -175,7 +175,7 @@ export default function PatientTasksTab({ api, user, patientId, tasks, onChanged
                 style={{
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-control)',
-                  padding: '10px 12px',
+                  padding: '8px 12px',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
@@ -223,20 +223,20 @@ export default function PatientTasksTab({ api, user, patientId, tasks, onChanged
                       <GhostBtn
                         onClick={() => generatePortalLink(t)}
                         disabled={linkBusyId === t.id}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         {linkBusyId === t.id ? '…' : 'Gerar link'}
                       </GhostBtn>
                     )}
                     <GhostBtn
                       onClick={() => setStatus(t.id, { complete: true })}
-                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                     >
                       Concluir
                     </GhostBtn>
                     <DangerBtn
                       onClick={() => setStatus(t.id, { cancel: true })}
-                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                     >
                       Cancelar
                     </DangerBtn>

@@ -114,9 +114,9 @@ export default function Onboarding({ initialData }: { initialData?: UsageRow[] }
                         alignItems: 'center',
                         gap: 8,
                         fontSize: 'var(--text-xs)',
-                        padding: '4px 10px',
+                        padding: '4px 8px',
                         borderRadius: 'var(--radius-control)',
-                        background: ok ? 'var(--urgency-ok-bg)' : 'var(--bg-page)',
+                        background: ok ? 'var(--urgency-ok-bg)' : 'var(--bg-sunken)',
                         color: ok ? 'var(--urgency-ok)' : 'var(--text-muted)',
                         fontWeight: ok ? 600 : 400,
                       }}

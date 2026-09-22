@@ -63,7 +63,7 @@ export default function PatientDetailHeader({
             background: 'var(--urgency-critical-bg)',
             border: '1px solid var(--urgency-critical-border)',
             borderRadius: 'var(--radius-control)',
-            padding: '8px 14px',
+            padding: '8px 12px',
             marginTop: 12,
             display: 'flex',
             gap: 12,

@@ -162,14 +162,14 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
                   <div className="flex items-center justify-end gap-2">
                     <GhostBtn
                       onClick={() => openEditItem(it)}
-                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                     >
                       Editar
                     </GhostBtn>
                     <PrimaryBtn
                       onClick={() => openMove(it)}
                       disabled={!tenantId}
-                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                     >
                       Registar movimento
                     </PrimaryBtn>

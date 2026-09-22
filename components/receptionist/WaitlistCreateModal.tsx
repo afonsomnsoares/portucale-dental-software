@@ -96,7 +96,7 @@ export default function WaitlistCreateModal({
                 onClick={() => toggleDay(d.key)}
                 className="btn"
                 style={{
-                  padding: '5px 10px',
+                  padding: '4px 8px',
                   fontSize: 'var(--text-xs)',
                   borderRadius: 'var(--radius-control)',
                   border: '1px solid var(--border-subtle)',

@@ -125,7 +125,7 @@ export default function DataSubjectRequests() {
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -148,7 +148,7 @@ export default function DataSubjectRequests() {
             overflowX: 'auto',
           }}
         >
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
             <thead>
               <tr>
                 {['Doente', 'Direito exercido', 'Entrada', 'Estado', ''].map((h) => (
@@ -156,13 +156,6 @@ export default function DataSubjectRequests() {
                     key={h}
                     style={{
                       textAlign: 'left',
-                      padding: '9px 14px',
-                      fontSize: 'var(--text-2xs)',
-                      letterSpacing: 'var(--text-2xs-tracking)',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted)',
-                      fontWeight: 'var(--weight-medium)',
-                      borderBottom: '1px solid var(--border-strong)',
                       whiteSpace: 'nowrap',
                     }}
                   >
@@ -178,12 +171,8 @@ export default function DataSubjectRequests() {
                 const atrasado = dias !== null && dias > 30;
                 return (
                   <tr key={p.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                    <td
-                      style={{ padding: '11px 14px', fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)' }}
-                    >
-                      {p.patient_name || 'Doente removido'}
-                    </td>
-                    <td style={{ padding: '11px 14px', fontSize: 'var(--text-sm)' }}>
+                    <td style={{ fontWeight: 'var(--weight-semibold)' }}>{p.patient_name || 'Doente removido'}</td>
+                    <td style={{ fontSize: 'var(--text-sm)' }}>
                       {TIPO_LABEL[p.request_type] || p.request_type}
                       {p.notes && (
                         <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -191,12 +180,11 @@ export default function DataSubjectRequests() {
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       {data(p.created_at)}
                       {dias !== null && (
                         <div
                           style={{
-                            fontSize: 'var(--text-2xs)',
                             color: atrasado ? 'var(--urgency-critical)' : 'var(--text-muted)',
                           }}
                         >
@@ -204,7 +192,7 @@ export default function DataSubjectRequests() {
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span
                         style={{
                           fontSize: 'var(--text-2xs)',
@@ -223,7 +211,7 @@ export default function DataSubjectRequests() {
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '11px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {p.status !== 'completed' && p.status !== 'rejected' && EXECUTAVEIS.has(p.request_type) && (
                         <button
                           type="button"
@@ -231,7 +219,7 @@ export default function DataSubjectRequests() {
                           disabled={aExecutar === p.id}
                           style={{
                             fontSize: 'var(--text-xs)',
-                            padding: '4px 11px',
+                            padding: '4px 12px',
                             borderRadius: 'var(--radius-control)',
                             border: `1px solid ${p.request_type === 'erasure' ? 'var(--urgency-critical)' : 'var(--border-strong)'}`,
                             color: p.request_type === 'erasure' ? 'var(--urgency-critical)' : 'var(--text-primary)',

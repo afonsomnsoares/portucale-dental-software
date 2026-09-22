@@ -12,7 +12,7 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           top: 6,
           height: 24,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? tint(color, 10) : 'var(--bg-page)',
+          background: occupied ? tint(color, 10) : 'var(--bg-sunken)',
           border: `2px solid ${occupied ? tint(color, 33) : 'var(--border-subtle)'}`,
         }}
       />
@@ -24,7 +24,7 @@ export default function ChairGraphic({ color, occupied }: { color: string; occup
           top: 30,
           height: 18,
           borderRadius: 'var(--radius-control)',
-          background: occupied ? tint(color, 13) : 'var(--bg-page)',
+          background: occupied ? tint(color, 13) : 'var(--bg-sunken)',
           border: `2px solid ${occupied ? tint(color, 40) : 'var(--border-subtle)'}`,
         }}
       />

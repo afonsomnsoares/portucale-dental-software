@@ -139,20 +139,20 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
                       <GhostBtn
                         onClick={() => autoAssign(t.id)}
                         disabled={assigning === t.id}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         {assigning === t.id ? 'A atribuir…' : 'Atribuir automaticamente'}
                       </GhostBtn>
                     )}
                     <GhostBtn
                       onClick={() => setStatus(t.id, { complete: true })}
-                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                     >
                       Concluir
                     </GhostBtn>
                     <DangerBtn
                       onClick={() => setStatus(t.id, { cancel: true })}
-                      style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                      style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                     >
                       Cancelar
                     </DangerBtn>

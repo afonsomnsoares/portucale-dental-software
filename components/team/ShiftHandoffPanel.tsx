@@ -191,7 +191,7 @@ export default function ShiftHandoffPanel({ api, currentUserId }: ShiftHandoffPa
                       <GhostBtn
                         onClick={() => acknowledge(h.id)}
                         disabled={busy}
-                        style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         Confirmar leitura
                       </GhostBtn>

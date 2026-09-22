@@ -101,10 +101,10 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                     textAlign: 'left',
                     gap: 12,
                     alignItems: 'center',
-                    padding: '13px 20px',
+                    padding: '12px 20px',
                     cursor: 'pointer',
-                    background: open ? 'var(--bg-page)' : 'white',
-                    borderBottom: '1px solid var(--bg-page)',
+                    background: open ? 'var(--bg-sunken)' : 'var(--bg-surface)',
+                    borderBottom: '1px solid var(--border-subtle)',
                     transition: 'background 0.1s',
                   }}
                 >
@@ -160,7 +160,7 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                     style={{
                       gap: 12,
                       padding: '16px 20px',
-                      background: 'var(--bg-page)',
+                      background: 'var(--bg-sunken)',
                       borderBottom: '1px solid var(--border-subtle)',
                     }}
                   >
@@ -184,10 +184,10 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
                         </div>
                         <div
                           style={{
-                            background: 'white',
+                            background: 'var(--bg-surface)',
                             border: '1px solid var(--border-subtle)',
                             borderRadius: 'var(--radius-control)',
-                            padding: '12px 14px',
+                            padding: 12,
                             fontSize: 'var(--text-xs)',
                             fontFamily: '"JetBrains Mono",monospace',
                             color: 'var(--text-primary)',

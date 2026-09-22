@@ -84,7 +84,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
     >
       <div
         style={{
-          padding: '11px 14px',
+          padding: 12,
           fontSize: 'var(--text-2xs)',
           fontWeight: 'var(--weight-bold)',
           letterSpacing: 'var(--text-2xs-tracking)',
@@ -94,7 +94,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
       >
         {titulo}
       </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
+      <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
         <thead>
           <tr>
             {[
@@ -111,13 +111,6 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
                 key={h}
                 style={{
                   textAlign: h ? 'right' : 'left',
-                  padding: '7px 14px',
-                  fontSize: 'var(--text-2xs)',
-                  letterSpacing: 'var(--text-2xs-tracking)',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                  fontWeight: 'var(--weight-medium)',
-                  borderBottom: '1px solid var(--border-strong)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -129,9 +122,7 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
         <tbody>
           {linhas.map((b) => (
             <tr key={b.key} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-              <td style={{ padding: '9px 14px', fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)' }}>
-                {b.label}
-              </td>
+              <td style={{ fontWeight: 'var(--weight-semibold)' }}>{b.label}</td>
               {[
                 { k: 'consultas', v: String(b.appointments) },
                 { k: 'receita', v: formatEUR(b.margin.revenue) },
@@ -156,7 +147,6 @@ function Tabela({ titulo, linhas }: { titulo: string; linhas: Breakdown[] }) {
                 <td
                   key={c.k}
                   style={{
-                    padding: '9px 14px',
                     fontSize: 'var(--text-xs)',
                     textAlign: 'right',
                     fontVariantNumeric: 'tabular-nums',
@@ -254,7 +244,7 @@ export default function Costing({
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -276,7 +266,7 @@ export default function Costing({
               style={{
                 background: 'var(--urgency-soon-bg)',
                 color: 'var(--urgency-soon)',
-                padding: '11px 15px',
+                padding: '12px 16px',
                 borderRadius: 'var(--radius-card)',
                 marginBottom: 16,
                 fontSize: 'var(--text-xs)',
@@ -338,7 +328,7 @@ export default function Costing({
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-card)',
                   background: 'var(--bg-surface)',
-                  padding: '12px 14px',
+                  padding: 12,
                 }}
               >
                 <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>{m.l}</div>
@@ -390,7 +380,7 @@ export default function Costing({
                     onClick={() => setDef({ ...def, allocationMethod: m.value })}
                     style={{
                       textAlign: 'left',
-                      padding: '9px 12px',
+                      padding: '8px 12px',
                       borderRadius: 'var(--radius-control)',
                       border: `1px solid ${m.value === def.allocationMethod ? 'var(--accent)' : 'var(--border-subtle)'}`,
                       background: m.value === def.allocationMethod ? 'var(--accent-bg)' : 'transparent',

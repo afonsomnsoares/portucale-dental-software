@@ -144,7 +144,7 @@ export default function Forecast({
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -173,7 +173,7 @@ export default function Forecast({
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-card)',
                 background: 'var(--bg-surface)',
-                padding: '14px 16px 12px',
+                padding: '12px 16px 12px',
                 opacity: f.reliable ? 1 : 0.72,
               }}
             >

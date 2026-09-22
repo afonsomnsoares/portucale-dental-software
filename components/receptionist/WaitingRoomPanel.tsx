@@ -6,7 +6,7 @@ const WAITING_SEATS = 8;
 
 export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }) {
   return (
-    <div className="card" style={{ padding: '18px 18px 16px' }}>
+    <div className="card" style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
@@ -30,8 +30,8 @@ export default function WaitingRoomPanel({ waiting }: { waiting: Appointment[] }
               style={{
                 border: '1px solid var(--bg-sunken)',
                 borderRadius: 'var(--radius-card)',
-                padding: '12px 12px 10px',
-                background: 'white',
+                padding: '12px 12px 8px',
+                background: 'var(--bg-surface)',
                 display: 'flex',
                 gap: 12,
                 alignItems: 'center',

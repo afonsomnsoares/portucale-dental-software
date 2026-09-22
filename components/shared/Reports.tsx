@@ -273,7 +273,7 @@ export default function Reports() {
                   </thead>
                   <tbody>
                     {comparison.clinics.map((c) => (
-                      <tr key={c.tenantId} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                      <tr key={c.tenantId} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                         <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                           {c.name}
                           {c.tenantId === comparison.gap?.bestTenantId && (
@@ -320,7 +320,7 @@ export default function Reports() {
                 <PrimaryBtn
                   disabled={insightLoading}
                   onClick={() => generateInsight('clinic')}
-                  style={{ padding: '6px 12px' }}
+                  style={{ padding: '4px 12px' }}
                 >
                   {insightLoading && insightScope === 'clinic' ? 'A gerar…' : 'Gerar análise desta clínica'}
                 </PrimaryBtn>
@@ -328,7 +328,7 @@ export default function Reports() {
                   <GhostBtn
                     disabled={insightLoading}
                     onClick={() => generateInsight('compare')}
-                    style={{ padding: '6px 12px' }}
+                    style={{ padding: '4px 12px' }}
                   >
                     {insightLoading && insightScope === 'compare' ? 'A gerar…' : 'Comparar clínicas'}
                   </GhostBtn>

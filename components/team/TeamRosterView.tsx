@@ -201,7 +201,7 @@ export default function TeamRosterView({ api, currentUserId }: TeamRosterViewPro
                         <GhostBtn
                           disabled={busyId === t.id}
                           onClick={() => cancelRequest(t.id)}
-                          style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Cancelar
                         </GhostBtn>

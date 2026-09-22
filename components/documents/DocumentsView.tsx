@@ -303,13 +303,13 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                           setMissing([]);
                           setPreview(d);
                         }}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         Ver
                       </GhostBtn>
                       <GhostBtn
                         onClick={() => printDocument(d)}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         Imprimir
                       </GhostBtn>
@@ -357,14 +357,14 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                           setTemplateForm({ name: t.name, type: t.type, subject: t.subject, body: t.body });
                           setTemplateModal(t);
                         }}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         Editar
                       </GhostBtn>
                       <DangerBtn
                         onClick={() => setADesativarModelo(t)}
                         disabled={busy}
-                        style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                        style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                       >
                         Desativar
                       </DangerBtn>
@@ -459,7 +459,7 @@ export default function DocumentsView({ api, canManageTemplates = false }: Docum
                 style={{
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-control)',
-                  padding: '3px 8px',
+                  padding: '2px 8px',
                   fontSize: 'var(--text-2xs)',
                   fontFamily: 'ui-monospace, monospace',
                   background: 'var(--bg-sunken)',

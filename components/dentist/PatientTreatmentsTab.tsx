@@ -16,7 +16,7 @@ export default function PatientTreatmentsTab({ treatments }: { treatments: Treat
               gap: 12,
               alignItems: 'center',
               padding: '12px 0',
-              borderBottom: '1px solid var(--bg-page)',
+              borderBottom: '1px solid var(--border-subtle)',
             }}
           >
             <div

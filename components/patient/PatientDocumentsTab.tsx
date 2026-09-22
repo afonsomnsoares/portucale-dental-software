@@ -112,7 +112,7 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
       <div className="card p-5" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div className="section-label">PEDIDOS PENDENTES ({pendingRequests.length})</div>
-          <GhostBtn onClick={() => setRequestOpen(true)} style={{ padding: '6px 12px', fontSize: 'var(--text-xs)' }}>
+          <GhostBtn onClick={() => setRequestOpen(true)} style={{ padding: '4px 12px', fontSize: 'var(--text-xs)' }}>
             + Pedir documento
           </GhostBtn>
         </div>
@@ -142,7 +142,7 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
                   gap: 12,
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 'var(--radius-control)',
-                  padding: '10px 12px',
+                  padding: '8px 12px',
                 }}
               >
                 <div>
@@ -209,7 +209,7 @@ export default function PatientDocumentsTab({ api, patientId, tasks, onChanged, 
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      background: 'var(--bg-page)',
+                      background: 'var(--bg-sunken)',
                       border: '1px solid var(--bg-sunken)',
                       borderRadius: 'var(--radius-control)',
                       padding: '8px 12px',

@@ -223,7 +223,7 @@ export default function PermissionsMatrix() {
                             ) : isOverride ? (
                               <Badge label="Alterado" bg="var(--accent-bg)" color="var(--accent)" />
                             ) : (
-                              <Badge label="Omissão" bg="var(--bg-page)" color="var(--text-secondary)" />
+                              <Badge label="Omissão" bg="var(--bg-sunken)" color="var(--text-secondary)" />
                             )}
                           </div>
                         </td>

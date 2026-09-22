@@ -44,7 +44,7 @@ export default function DentistAppointmentsPage() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         />
       </PageHeader>
       <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>

@@ -50,7 +50,7 @@ export default function DentistDashboard() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         />
       </PageHeader>
       {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
@@ -74,7 +74,7 @@ export default function DentistDashboard() {
             background: 'var(--urgency-ok-bg)',
             border: '1px solid var(--urgency-ok-border)',
             borderRadius: 'var(--radius-control)',
-            padding: '12px 18px',
+            padding: '12px 16px',
             marginBottom: 20,
             display: 'flex',
             gap: 12,
@@ -90,7 +90,7 @@ export default function DentistDashboard() {
             <span
               key={a.id}
               style={{
-                background: 'white',
+                background: 'var(--bg-surface)',
                 borderRadius: 'var(--radius-control)',
                 padding: '4px 12px',
                 fontSize: 'var(--text-xs)',

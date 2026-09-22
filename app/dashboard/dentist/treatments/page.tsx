@@ -119,15 +119,15 @@ export default function DentistTreatmentsPage() {
               key={m}
               onClick={() => setViewMode(m)}
               style={{
-                padding: '7px 14px',
+                padding: '8px 12px',
                 fontSize: 'var(--text-xs)',
                 fontWeight: 'var(--weight-semibold)',
                 borderRadius: 'var(--radius-control)',
                 cursor: 'pointer',
                 border: 'none',
                 fontFamily: 'inherit',
-                background: viewMode === m ? 'var(--accent)' : 'white',
-                color: viewMode === m ? 'white' : 'var(--text-secondary)',
+                background: viewMode === m ? 'var(--accent)' : 'var(--bg-surface)',
+                color: viewMode === m ? 'var(--text-onAccent)' : 'var(--text-secondary)',
                 boxShadow: viewMode !== m ? 'var(--elev-1)' : 'var(--elev-0)',
               }}
             >
@@ -187,7 +187,7 @@ export default function DentistTreatmentsPage() {
                 <div
                   className="card"
                   style={{
-                    padding: '14px 18px',
+                    padding: '12px 16px',
                     marginBottom: 0,
                     borderRadius: 'var(--radius-card) var(--radius-card) 0 0',
                     borderTop: `3px solid ${ph.color}`,
@@ -233,7 +233,7 @@ export default function DentistTreatmentsPage() {
                 </div>
                 <div
                   style={{
-                    background: 'var(--bg-page)',
+                    background: 'var(--bg-sunken)',
                     border: '1px solid var(--border-subtle)',
                     borderTop: 'none',
                     borderRadius: '0 0 var(--radius-card) var(--radius-card)',
@@ -245,7 +245,7 @@ export default function DentistTreatmentsPage() {
                     <div
                       key={t.id}
                       className="card mb-2"
-                      style={{ padding: '12px 14px', border: '1px solid var(--border-subtle)' }}
+                      style={{ padding: 12, border: '1px solid var(--border-subtle)' }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <span
@@ -284,11 +284,11 @@ export default function DentistTreatmentsPage() {
                           width: '100%',
                           border: '1px solid var(--border-subtle)',
                           borderRadius: 'var(--radius-control)',
-                          padding: '5px 8px',
+                          padding: '4px 8px',
                           fontSize: 'var(--text-2xs)',
                           fontFamily: 'inherit',
                           color: 'var(--text-primary)',
-                          background: 'white',
+                          background: 'var(--bg-surface)',
                           cursor: 'pointer',
                         }}
                       >

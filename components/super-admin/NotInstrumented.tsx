@@ -35,7 +35,7 @@ export default function NotInstrumented({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 8,
-            padding: '4px 10px',
+            padding: '4px 8px',
             borderRadius: 'var(--radius-pill)',
             background: 'var(--urgency-soon-bg)',
             color: 'var(--urgency-soon)',

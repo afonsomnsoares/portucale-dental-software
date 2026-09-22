@@ -103,7 +103,7 @@ export default function PatientInteractionsTab({
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {interactions.map((i) => (
-              <div key={i.id} style={{ borderBottom: '1px solid var(--bg-page)', paddingBottom: 12 }}>
+              <div key={i.id} style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: 12 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
                   <Badge bg="var(--cat-teal-bg)" color="var(--cat-teal)" label={CHANNEL_LABELS[i.channel]} />
                   <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>

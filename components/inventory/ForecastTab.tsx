@@ -293,7 +293,7 @@ export default function ForecastTab({ api, tenantId }: ForecastTabProps) {
                 <TD right>
                   <GhostBtn
                     onClick={() => setARemover({ id: u.id, label: `${u.appointment_type} · ${u.item_name}` })}
-                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                    style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                   >
                     Remover
                   </GhostBtn>

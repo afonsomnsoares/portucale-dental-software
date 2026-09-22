@@ -76,7 +76,7 @@ export default function AppointmentsTable({
                         disabled={pending}
                         style={{
                           width: 'auto',
-                          padding: '6px 10px',
+                          padding: '4px 8px',
                           fontSize: 'var(--text-xs)',
                           opacity: pending ? 0.6 : 1,
                         }}

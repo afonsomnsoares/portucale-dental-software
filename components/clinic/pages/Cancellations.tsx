@@ -104,7 +104,7 @@ export default function Cancellations() {
           style={{
             background: 'var(--urgency-critical-bg)',
             color: 'var(--urgency-critical)',
-            padding: '10px 14px',
+            padding: '8px 12px',
             borderRadius: 'var(--radius-control)',
             marginBottom: 12,
             fontSize: 'var(--text-sm)',
@@ -151,7 +151,7 @@ export default function Cancellations() {
               overflowX: 'auto',
             }}
           >
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
               <thead>
                 <tr>
                   {['Doente', 'Consulta', 'Antecedência', 'Dentista', 'Voltou?'].map((h) => (
@@ -159,13 +159,6 @@ export default function Cancellations() {
                       key={h}
                       style={{
                         textAlign: 'left',
-                        padding: '9px 14px',
-                        fontSize: 'var(--text-2xs)',
-                        letterSpacing: 'var(--text-2xs-tracking)',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-muted)',
-                        fontWeight: 'var(--weight-medium)',
-                        borderBottom: '1px solid var(--border-strong)',
                         whiteSpace: 'nowrap',
                       }}
                     >
@@ -181,14 +174,13 @@ export default function Cancellations() {
                     <tr key={c.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td
                         style={{
-                          padding: '10px 14px',
                           fontSize: 'var(--text-sm)',
                           fontWeight: 'var(--weight-semibold)',
                         }}
                       >
                         {c.patient_name || 'Doente removido'}
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         {dataHora(c)}
                         <div style={{ fontSize: 'var(--text-2xs)', color: 'var(--text-muted)' }}>
                           {c.type || 'Consulta'} · {c.duration} min
@@ -196,7 +188,6 @@ export default function Cancellations() {
                       </td>
                       <td
                         style={{
-                          padding: '10px 14px',
                           fontSize: 'var(--text-xs)',
                           color: f.color,
                           fontWeight: 'var(--weight-semibold)',
@@ -205,10 +196,8 @@ export default function Cancellations() {
                       >
                         {f.label}
                       </td>
-                      <td style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                        {c.dentist_name || '—'}
-                      </td>
-                      <td style={{ padding: '10px 14px', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>
+                      <td style={{ color: 'var(--text-secondary)' }}>{c.dentist_name || '—'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         {c.rebooked ? (
                           <span style={{ color: 'var(--urgency-ok)' }}>Sim</span>
                         ) : (

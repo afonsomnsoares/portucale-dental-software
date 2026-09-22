@@ -131,11 +131,11 @@ export default function AiRuns() {
                     display: 'block',
                     width: '100%',
                     textAlign: 'left',
-                    padding: '11px 16px',
+                    padding: '12px 16px',
                     border: 'none',
-                    borderBottom: '1px solid var(--bg-page)',
+                    borderBottom: '1px solid var(--border-subtle)',
                     borderLeft: `3px solid ${isSel ? 'var(--accent)' : 'transparent'}`,
-                    background: isSel ? 'var(--bg-page)' : 'transparent',
+                    background: isSel ? 'var(--bg-sunken)' : 'transparent',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                   }}
@@ -241,7 +241,7 @@ export default function AiRuns() {
                           style={{
                             fontSize: 'var(--text-2xs)',
                             fontFamily: '"JetBrains Mono",monospace',
-                            background: 'var(--bg-page)',
+                            background: 'var(--bg-sunken)',
                             padding: 12,
                             borderRadius: 'var(--radius-control)',
                             margin: 0,

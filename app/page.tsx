@@ -14,8 +14,11 @@ const CHAVE_EMAIL = 'portucale:ultimo-email';
 
 type RespostaAuth = { user: AuthUser };
 
+// Pela VARIÁVEL e não pelo nome da família: escrito 'Newsreader' à mão, isto
+// dependia de a fonte estar instalada na máquina de quem abre a página — e
+// como não está em praticamente nenhuma, caía em Georgia sempre.
 const serif: CSSProperties = {
-  fontFamily: "'Newsreader', ui-serif, Georgia, 'Times New Roman', serif",
+  fontFamily: "var(--font-newsreader), ui-serif, Georgia, 'Times New Roman', serif",
 };
 
 /* O servidor devolve mensagens técnicas; aqui traduzimos para o que a pessoa pode fazer.

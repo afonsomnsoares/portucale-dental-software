@@ -66,8 +66,8 @@ export default function Health({ initialData }: { initialData?: PlatformHealth }
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  padding: '9px 0',
-                  borderBottom: '1px solid var(--bg-page)',
+                  padding: '8px 0',
+                  borderBottom: '1px solid var(--border-subtle)',
                 }}
               >
                 <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{r.status}</span>
@@ -98,8 +98,8 @@ export default function Health({ initialData }: { initialData?: PlatformHealth }
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  padding: '9px 0',
-                  borderBottom: '1px solid var(--bg-page)',
+                  padding: '8px 0',
+                  borderBottom: '1px solid var(--border-subtle)',
                 }}
               >
                 <span

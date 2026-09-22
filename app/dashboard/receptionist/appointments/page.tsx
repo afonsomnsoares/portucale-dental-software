@@ -187,27 +187,27 @@ export default function ReceptionAppointmentsPage() {
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         />
         <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         />
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Procurar doente, tipo, dentista…"
           className="input"
-          style={{ width: 260, padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 260, padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         />
         <select
           className="select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         >
           <option value="">Todos os estados</option>
           {Object.keys(settings?.STATUS_META || {}).map((s) => (

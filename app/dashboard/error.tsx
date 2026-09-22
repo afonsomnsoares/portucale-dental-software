@@ -65,7 +65,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
           color: 'var(--bg-surface)',
           border: 'none',
           borderRadius: 'var(--radius-control)',
-          padding: '9px 16px',
+          padding: '8px 16px',
           fontSize: 'var(--text-base)',
           fontWeight: 'var(--weight-semibold)',
           cursor: 'pointer',

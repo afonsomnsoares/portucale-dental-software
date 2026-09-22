@@ -83,7 +83,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                 gap: 12,
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-control)',
-                padding: '10px 14px',
+                padding: '8px 12px',
                 flexWrap: 'wrap',
               }}
             >
@@ -164,7 +164,7 @@ export default function DailyBriefingPanel({ api, rows }: DailyBriefingPanelProp
                   <GhostBtn
                     disabled={busyId === r.appointmentId}
                     onClick={() => createFollowUp(r)}
-                    style={{ padding: '5px 10px', fontSize: 'var(--text-xs)', flexShrink: 0 }}
+                    style={{ padding: '4px 8px', fontSize: 'var(--text-xs)', flexShrink: 0 }}
                   >
                     {busyId === r.appointmentId ? '…' : 'Criar follow-up'}
                   </GhostBtn>

@@ -145,7 +145,7 @@ export default function ClinicScheduleIntelPage() {
                     </thead>
                     <tbody>
                       {risk.appointments.map((a) => (
-                        <tr key={a.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                        <tr key={a.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                           <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                             {a.patient_name}
                           </td>
@@ -248,7 +248,7 @@ export default function ClinicScheduleIntelPage() {
                         </thead>
                         <tbody>
                           {(waitlist?.pendingOffers || []).map((o) => (
-                            <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                            <tr key={o.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                               <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                                 {o.patient_name || '—'}
                               </td>
@@ -281,7 +281,7 @@ export default function ClinicScheduleIntelPage() {
                       </thead>
                       <tbody>
                         {waitlist.entries.map((w) => (
-                          <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                          <tr key={w.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                             <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                               {w.patient_name}
                             </td>

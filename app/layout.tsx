@@ -1,5 +1,5 @@
 import './globals.css';
-import { JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
+import { JetBrains_Mono, Newsreader, Plus_Jakarta_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { AuthProvider } from './providers';
 
@@ -18,6 +18,15 @@ const jetbrainsMono = JetBrains_Mono({
   variable: '--font-jetbrains-mono',
 });
 
+// A entrada da equipa e o portal do doente pedem-na desde sempre (o `serif` de
+// app/page.tsx), mas ninguém a carregava: o browser caía em Georgia sem falhar
+// nada, e as duas únicas páginas com tipografia própria mostravam a errada.
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-newsreader',
+});
+
 export const metadata = {
   title: 'Portucale Software',
   description: 'Sistema de Gestão de Clínica Dentária',
@@ -25,7 +34,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt" className={`${plusJakarta.variable} ${jetbrainsMono.variable}`}>
+    <html lang="pt" className={`${plusJakarta.variable} ${jetbrainsMono.variable} ${newsreader.variable}`}>
       <body>
         <AuthProvider>{children}</AuthProvider>
       </body>

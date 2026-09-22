@@ -120,11 +120,7 @@ export default function OptimizerTab({
           {moves.map((m) => {
             const meta = KIND_META[m.kind];
             return (
-              <div
-                key={m.key}
-                className="card"
-                style={{ padding: '12px 14px', border: '1px solid var(--border-subtle)' }}
-              >
+              <div key={m.key} className="card" style={{ padding: 12, border: '1px solid var(--border-subtle)' }}>
                 <div className="flex items-center justify-between mb-1" style={{ gap: 12 }}>
                   <span
                     style={{

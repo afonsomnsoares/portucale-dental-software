@@ -185,7 +185,7 @@ export default function Recalls() {
                 {recalls.map((r) => {
                   const sm = statusMeta(r);
                   return (
-                    <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                       <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                         {patientName(r.patient_id)}
                       </td>

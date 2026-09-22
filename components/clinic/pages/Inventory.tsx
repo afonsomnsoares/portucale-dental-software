@@ -98,7 +98,7 @@ export default function ClinicInventoryPage() {
           </div>
           <div className="card" style={{ padding: 0 }}>
             {!rows.length ? (
-              <div style={{ padding: '18px 16px', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
+              <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
                 {/* Sem esta distinção, uma falha de carregamento passava-se por catálogo
                     vazio e convidava a criar um item que já existe. */}
                 {error

@@ -157,7 +157,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
               onChange={(e) => uploadAttachment(e.target.files?.[0] || null)}
               disabled={uploading}
               className="input"
-              style={{ width: 280, padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+              style={{ width: 280, padding: '8px 12px', fontSize: 'var(--text-sm)' }}
               accept="image/png,image/jpeg,image/webp,application/pdf"
             />
             {uploading && (
@@ -190,10 +190,10 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                     justifyContent: 'space-between',
                     gap: 12,
                     alignItems: 'center',
-                    background: 'var(--bg-page)',
+                    background: 'var(--bg-sunken)',
                     border: '1px solid var(--bg-sunken)',
                     borderRadius: 'var(--radius-control)',
-                    padding: '8px 10px',
+                    padding: 8,
                   }}
                 >
                   <a
@@ -221,7 +221,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                       cursor: 'pointer',
                       fontSize: 'var(--text-lg)',
                       lineHeight: 'var(--leading-none)',
-                      padding: '0 6px',
+                      padding: '0 4px',
                     }}
                     aria-label="Remover anexo"
                   >
@@ -255,7 +255,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              padding: '6px 14px',
+              padding: '4px 12px',
               borderRadius: 'var(--radius-control)',
               border: 'none',
               fontSize: 'var(--text-xs)',
@@ -265,7 +265,7 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                 ? 'var(--urgency-critical)'
                 : speechError
                   ? 'var(--urgency-critical-bg)'
-                  : 'var(--bg-page)',
+                  : 'var(--bg-sunken)',
               color: isRecording ? '#FFF' : speechError ? 'var(--urgency-critical)' : 'var(--text-primary)',
               opacity: !isSupported ? 0.5 : 1,
             }}
@@ -392,8 +392,8 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
                   fontSize: 'var(--text-2xs)',
                   color: 'var(--text-secondary)',
                   fontFamily: '"JetBrains Mono",monospace',
-                  background: 'var(--bg-page)',
-                  padding: '12px 14px',
+                  background: 'var(--bg-sunken)',
+                  padding: 12,
                   borderRadius: 'var(--radius-control)',
                   border: '1px solid var(--border-subtle)',
                   whiteSpace: 'pre-wrap',
@@ -404,7 +404,9 @@ export default function PatientNotesTab({ api, user, patientId, notes, onChanged
               >
                 {n.event}
               </pre>
-              {i < notes.length - 1 && <div style={{ borderBottom: '1px solid var(--bg-page)', marginTop: 20 }} />}
+              {i < notes.length - 1 && (
+                <div style={{ borderBottom: '1px solid var(--border-subtle)', marginTop: 20 }} />
+              )}
             </div>
           ))
         )}

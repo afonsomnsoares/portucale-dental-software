@@ -31,7 +31,7 @@ export default function WaitlistEntriesTable({
           </thead>
           <tbody>
             {entries.map((w) => (
-              <tr key={w.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+              <tr key={w.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                 <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                   {w.patient_name}
                 </td>
@@ -54,7 +54,7 @@ export default function WaitlistEntriesTable({
                 </td>
                 <td className="data-td" style={{ textAlign: 'right' }}>
                   {(w.status === 'active' || w.status === 'offered') && (
-                    <GhostBtn disabled={busyId === w.id} onClick={() => onCancel(w)} style={{ padding: '5px 10px' }}>
+                    <GhostBtn disabled={busyId === w.id} onClick={() => onCancel(w)} style={{ padding: '4px 8px' }}>
                       {busyId === w.id ? '…' : 'Cancelar'}
                     </GhostBtn>
                   )}

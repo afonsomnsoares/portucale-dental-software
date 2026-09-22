@@ -24,7 +24,7 @@ interface AgentUsage {
 
 const AI_META: Record<string, { label: string; bg: string; color: string }> = {
   wired: { label: 'IA LIGADA', bg: 'var(--cat-purple-bg)', color: 'var(--cat-purple)' },
-  none: { label: 'REGRA FIXA', bg: 'var(--bg-page)', color: 'var(--text-secondary)' },
+  none: { label: 'REGRA FIXA', bg: 'var(--bg-sunken)', color: 'var(--text-secondary)' },
 };
 
 // O catálogo de agentes ao nível da rede: o que cada um é, se usa mesmo um modelo, e

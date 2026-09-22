@@ -17,59 +17,110 @@
    ========================================================================== */
 
 :root {
-  /* ---------- 1. Primitivos ---------- */
+  /* ---------- 1. Primitivos ----------
+     A escala era a do Tailwind por omissão — slate-950 a slate-50, blue-600.
+     Funcionava e não dizia nada: é a paleta de todos os dashboards feitos desde
+     2021, e uma clínica não se reconhece nela.
+
+     Esta é mais fria, mais escura nos extremos e MUITO mais separada no meio.
+     O que a torna diferente não é o tom: é a distância entre degraus. Numa
+     ferramenta que se usa oito horas por dia, a borda tem de se ver sem ser
+     procurada, e por isso o cinzento de borda está dois degraus acima do que
+     estava. */
   --white:      #FFFFFF;
 
-  --slate-950:  #0F172A;
-  --slate-800:  #334155;
-  --slate-600:  #64748B;
-  --slate-400:  #94A3B8;
-  --slate-300:  #CBD5E1;
-  --slate-200:  #E2E8F0;
-  --slate-100:  #F1F5F9;
-  --slate-50:   #F6F8FB;
+  /* Tinta — o escuro do produto. Os três primeiros são superfície (a barra
+     lateral e as suas divisórias), o --ink-950 é texto. */
+  --ink-950:    #0A0C0E;
+  --ink-900:    #111417;
+  --ink-800:    #23282D;
+  --ink-700:    #3A4048;
+  --ink-600:    #1A1F24;   /* hover dentro da barra lateral escura */
 
-  --blue-700:   #1D4ED8;
-  --blue-600:   #2563EB;
-  --blue-100:   #E0ECFF;
+  --gray-600:   #5A626B;
+  --gray-500:   #7E868F;
+  --gray-400:   #8B939C;
+  --gray-300:   #C4CAD0;
+  --gray-250:   #D4D8DD;
+  --gray-200:   #E4E7EA;
+  --gray-150:   #E8EBEE;
+  --gray-100:   #F2F4F6;
+  --gray-50:    #FAFBFC;
 
-  --red-700:    #B91C1C;
-  --red-300:    #FCA5A5;
-  --red-100:    #FEE2E2;
+  --blue-700:   #1B37A8;
+  --blue-600:   #2547D0;
+  --blue-100:   #E7ECFD;
 
-  --amber-700:  #B45309;
-  --amber-200:  #FDE68A;
-  --amber-50:   #FFF7ED;
+  --red-700:    #8E1F14;
+  --red-600:    #C0271A;
+  --red-300:    #F0B4AC;
+  --red-100:    #FDECEA;
+  --red-50:     #FFF5F4;
 
-  --green-700:  #0F766E;
-  --green-300:  #5EEAD4;
-  --green-50:   #E7F7F4;
+  --amber-700:  #7A5200;
+  --amber-200:  #EBCF8A;
+  --amber-50:   #FDF4E0;
 
-  --purple-700: #6D28D9;
-  --purple-50:  #F3E8FF;
+  --green-700:  #0B6B3A;
+  --green-300:  #A8DCBE;
+  --green-50:   #E6F5EC;
 
-  --teal-700:   #0369A1;
-  --teal-50:    #E0F2FE;
+  --purple-700: #4B2A9E;
+  --purple-300: #CDBAF3;
+  --purple-50:  #F1EBFD;
+
+  --teal-700:   #0B5A7A;
+  --teal-50:    #E4F3F9;
 
   /* ---------- 2. Semânticos ---------- */
 
-  /* Superfícies */
-  --bg-page:      var(--slate-50);
+  /* Superfícies
+     A página era #F6F8FB e o cartão branco: 2% de diferença, que a olho não é
+     diferença nenhuma. O resultado era uma aplicação sem figura nem fundo, com
+     tudo a flutuar no mesmo cinzento claro.
+
+     Agora a página é BRANCA e o que a estrutura são BORDAS. É a mesma regra da
+     elevação, levada até ao fim: se a sombra é para o que flutua, então o que
+     está assente tem de se distinguir por linha — e então a linha tem de se
+     ver. Daí o --border-strong dois degraus acima do que era. */
+  --bg-page:      var(--white);
   --bg-surface:   var(--white);
-  --bg-sunken:    var(--slate-100);   /* insets: cabeçalho de tabela, vazios */
-  --bg-raised:    var(--white);       /* o que flutua: modal, dropdown       */
+  --bg-sunken:    var(--gray-100);   /* insets: cabeçalho de tabela, vazios */
+  --bg-raised:    var(--white);      /* o que flutua: modal, dropdown       */
+  --bg-zebra:     var(--gray-50);    /* linha alternada de tabela longa     */
 
   /* Texto — todos os valores passam WCAG AA (4.5:1) sobre --bg-surface */
-  --text-primary:   var(--slate-950);  /* 17.9:1 */
-  --text-secondary: var(--slate-800);  /* 10.4:1 */
-  --text-muted:     var(--slate-600);  /*  4.8:1 */
-  --text-disabled:  var(--slate-400);  /* nunca para conteúdo que se leia    */
+  --text-primary:   var(--ink-950);   /* 19.6:1 */
+  --text-secondary: var(--ink-700);   /*  9.9:1 */
+  --text-muted:     var(--gray-600);  /*  5.3:1 */
+  --text-disabled:  var(--gray-400);  /* nunca para conteúdo que se leia    */
   --text-onAccent:  var(--white);
 
   /* Bordas */
-  --border-subtle: var(--slate-200);
-  --border-strong: var(--slate-300);
+  --border-subtle: var(--gray-200);  /* divisória dentro de um bloco        */
+  --border-strong: var(--gray-250);  /* o contorno de um bloco              */
   --border-focus:  var(--blue-600);
+
+  /* ---------- A barra lateral ----------
+     É a única superfície escura do produto, e é escura de propósito: separa o
+     sítio onde se navega do sítio onde se trabalha sem gastar uma única borda,
+     e dá à página branca um limite que ela sozinha não tem.
+
+     Tem tokens próprios porque os de cima assumem fundo claro. Escrever
+     `var(--text-primary)` aqui dava tinta sobre tinta — que foi exatamente o
+     que aconteceu enquanto a barra era branca e ninguém teve de pensar nisso. */
+  --sidebar-bg:          var(--ink-900);
+  --sidebar-border:      var(--ink-800);
+  --sidebar-text:        #E4E8EB;      /* 13.8:1 sobre --sidebar-bg */
+  --sidebar-item:        var(--gray-300);  /* 10.1:1 */
+  --sidebar-muted:       var(--gray-400);  /*  6.2:1 */
+  --sidebar-label:       var(--gray-500);  /*  4.8:1 — maiúsculas de 11px */
+  --sidebar-hover-bg:    var(--ink-600);
+  --sidebar-active-bg:   var(--blue-600);
+  --sidebar-active-text: var(--white);
+  /* O vermelho da página é escuro para passar sobre branco; sobre a barra dava
+     3:1. Aqui a mesma ideia precisa do tom claro da escala. */
+  --sidebar-danger:      var(--red-300);
 
   /* Acento — reservado à ação primária e ao foco. Se estiver em todo o lado,
      deixa de apontar para nada. */
@@ -103,12 +154,12 @@
      sombra é o que diz ao olho que há uma camada por baixo. Quando tudo tem
      sombra, ela deixa de significar profundidade e passa a ser textura. */
   --elev-0: none;                                  /* assente: cartão, painel   */
-  --elev-1: 0 1px 2px rgba(15, 23, 42, 0.06);      /* hover, linha selecionada  */
-  --elev-2: 0 4px 12px rgba(15, 23, 42, 0.08);     /* dropdown, popover, tooltip*/
-  --elev-3: 0 16px 48px rgba(15, 23, 42, 0.18);    /* modal, drawer             */
+  --elev-1: 0 1px 2px rgba(10, 12, 14, 0.07);      /* hover, linha selecionada  */
+  --elev-2: 0 4px 12px rgba(10, 12, 14, 0.10);     /* dropdown, popover, tooltip*/
+  --elev-3: 0 16px 48px rgba(10, 12, 14, 0.22);    /* modal, drawer             */
 
-  --ring-focus: 0 0 0 3px rgba(37, 99, 235, 0.22); /* foco — nunca é elevação   */
-  --overlay:    rgba(15, 23, 42, 0.54);            /* fundo por trás do modal   */
+  --ring-focus: 0 0 0 3px rgba(37, 71, 208, 0.24); /* foco — nunca é elevação   */
+  --overlay:    rgba(10, 12, 14, 0.58);            /* fundo por trás do modal   */
 
   /* ---------- Medida ----------
      A cor deste ficheiro tinha escala, nomes e contraste verificado. O tamanho
@@ -201,12 +252,19 @@
   --space-8: 32px;
   --space-10: 40px;
 
-  /* Forma — três valores, e não há um quarto.
-     O rácio de 2:1 entre controlo e cartão é o que mantém um input dentro de
-     um cartão a parecer encaixado em vez de colado. */
-  --radius-control: 6px;    /* botão, input, select, chip, separador   */
-  --radius-card:    12px;   /* cartão, modal, painel                   */
-  --radius-pill:    999px;  /* badge, avatar, barra de progresso       */
+  /* Forma — quatro valores, e não há um quinto.
+     Eram 6/12/999 e o rácio de 2:1 entre controlo e cartão. Um canto de 12px
+     é uma decisão de produto de consumo: diz «isto é acolhedor». Uma
+     ferramenta de operação diz outra coisa, e diz-se com cantos quase retos —
+     o que também faz as tabelas encostarem melhor ao contorno do bloco.
+
+     O --radius-chip existe porque a etiqueta deixou de ser uma pílula. Uma
+     pílula num código de estado (CREATE, DELETE) lê-se como um botão; um
+     retângulo de canto mínimo lê-se como o que é, uma marca. */
+  --radius-chip:    3px;    /* etiqueta de estado, código, atalho      */
+  --radius-control: 5px;    /* botão, input, select, separador         */
+  --radius-card:    6px;    /* cartão, modal, painel                   */
+  --radius-pill:    999px;  /* avatar, barra de progresso              */
 
   /* ---------- 3. Superfícies públicas ----------
      As duas páginas que alguém de fora da clínica vê — a entrada da equipa
@@ -261,8 +319,13 @@
 
 @layer components {
   .btn         { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-weight: var(--weight-semibold); font-size: var(--text-sm); line-height: var(--text-sm-leading); border-radius: var(--radius-control); border: none; transition: transform 0.12s, background 0.12s, box-shadow 0.12s, border-color 0.12s; white-space: nowrap; cursor: pointer; }
-  .btn-primary { background: var(--accent); color: var(--text-onAccent); padding: var(--space-2) var(--space-4); box-shadow: var(--elev-0); }
-  .btn-primary:hover { background: var(--accent-hover); }
+  /* A ação primária é TINTA, não acento.
+     Enquanto o botão era azul competia com tudo o resto que também é azul —
+     a entrada ativa do menu, as ligações, o anel de foco. O azul deixava de
+     apontar. Preto quase puro é a coisa mais forte no ecrã sem ser uma cor,
+     e devolve ao acento o seu único trabalho: dizer onde estás. */
+  .btn-primary { background: var(--ink-950); color: var(--text-onAccent); padding: var(--space-2) var(--space-4); box-shadow: var(--elev-0); }
+  .btn-primary:hover { background: var(--ink-800); }
   .btn-primary:active { transform: translateY(1px); }
   .btn-secondary { background: var(--bg-surface); color: var(--text-secondary); padding: var(--space-2) var(--space-4); border: 1px solid var(--border-subtle); }
   .btn-secondary:hover { background: var(--bg-sunken); color: var(--text-primary); }
@@ -282,20 +345,49 @@
   .select { width: 100%; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); padding: var(--space-3); font-size: var(--text-sm); font-family: inherit; color: var(--text-primary); background: var(--bg-surface); outline: none; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
   .select:focus { border-color: var(--border-focus); box-shadow: var(--ring-focus); }
 
-  .card { background: var(--bg-surface); border-radius: var(--radius-card); border: 1px solid var(--border-subtle); box-shadow: var(--elev-0); }
+  /* O contorno de um bloco é --border-strong; --border-subtle é para dividir
+     POR DENTRO dele. Com a página branca, um cartão de borda subtil não tinha
+     contorno nenhum. */
+  .card { background: var(--bg-surface); border-radius: var(--radius-card); border: 1px solid var(--border-strong); box-shadow: var(--elev-0); }
   /* Só o cartão que responde ao rato é que se levanta — e só ao ser tocado. */
   .card-interactive { transition: box-shadow 0.12s, border-color 0.12s; cursor: pointer; }
   .card-interactive:hover { box-shadow: var(--elev-1); border-color: var(--border-strong); }
 
-  .data-th { padding: var(--space-3) var(--space-4); font-size: var(--text-2xs); line-height: var(--text-2xs-leading); letter-spacing: var(--text-2xs-tracking); font-weight: var(--weight-bold); color: var(--text-muted); text-align: left; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; text-transform: uppercase; background: var(--bg-surface); }
-  .data-td { padding: var(--space-3) var(--space-4); font-size: var(--text-sm); line-height: var(--text-sm-leading); color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); }
-  tr:hover .data-td { background: var(--bg-sunken); }
+  /* ─── A tabela ───────────────────────────────────────────────────────────
+     Onde a densidade se nota mais. A linha era de 12px acima e abaixo; passou
+     a 8, e o cabeçalho ganhou fundo próprio em vez de ser branco sobre branco.
+     São mais três ou quatro linhas por ecrã, e numa lista de marcações do dia
+     isso é a diferença entre rolar e não rolar.
 
-  .nav-item { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--text-secondary); transition: background 0.12s, color 0.12s; cursor: pointer; text-decoration: none; border: none; background: transparent; width: 100%; }
-  .nav-item:hover { background: var(--bg-sunken); color: var(--text-primary); }
-  .nav-item-active { background: var(--accent-bg); color: var(--accent); font-weight: var(--weight-semibold); border-left: none; border-radius: var(--radius-control); padding-left: 12px; }
+     A zebra não é decoração: numa linha de seis colunas é o que impede o olho
+     de saltar de linha a meio. Vem antes do hover de propósito — as duas
+     regras têm a mesma especificidade, e quem vier depois ganha. */
+  .data-th,
+  .data-table thead th { padding: var(--space-2) var(--space-3); font-size: var(--text-2xs); line-height: var(--text-2xs-leading); letter-spacing: var(--text-2xs-tracking); font-weight: var(--weight-semibold); color: var(--text-secondary); text-align: left; border-bottom: 1px solid var(--border-strong); white-space: nowrap; text-transform: uppercase; background: var(--bg-sunken); font-family: var(--font-jetbrains-mono), ui-monospace, monospace; }
 
-  .badge { display: inline-flex; align-items: center; border-radius: var(--radius-pill); padding: 3px var(--space-2); font-size: var(--text-2xs); line-height: var(--text-2xs-leading); font-weight: var(--weight-bold); letter-spacing: 0.02em; white-space: nowrap; border: 1px solid var(--border-subtle); }
+  /* `.data-table td` e não só `.data-td`: vinte e dois ecrãs passam as suas
+     PRÓPRIAS linhas à <DataTable> (ela desenha o cabeçalho, as linhas vêm de
+     fora), e quase nenhum punha a classe nas células. Essas tabelas nunca
+     tiveram espaçamento nenhum — ficavam com o do browser, que é zero.
+     Apanhá-las pelo contentor trata das vinte e duas de uma vez, e de qualquer
+     uma que venha a seguir. */
+  .data-td,
+  .data-table tbody td { padding: var(--space-2) var(--space-3); font-size: var(--text-sm); line-height: var(--text-sm-leading); color: var(--text-primary); border-bottom: 1px solid var(--border-subtle); }
+  tbody tr:nth-child(even) .data-td,
+  .data-table tbody tr:nth-child(even) td { background: var(--bg-zebra); }
+  tbody tr:hover .data-td,
+  .data-table tbody tr:hover td { background: var(--accent-bg); }
+
+  /* Vive só dentro da barra lateral (é o único sítio que usa .nav-item), e por
+     isso fala a cor dela: tokens --sidebar-*, não os da página. */
+  .nav-item { display: flex; align-items: center; gap: var(--space-2); padding: 6px var(--space-2); border-radius: var(--radius-control); font-size: var(--text-sm); font-weight: var(--weight-normal); color: var(--sidebar-item); transition: background 0.12s, color 0.12s; cursor: pointer; text-decoration: none; border: none; background: transparent; width: 100%; }
+  .nav-item:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-text); }
+  .nav-item-active { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-weight: var(--weight-semibold); }
+  .nav-item-active:hover { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); }
+
+  /* Monoespaçada e de canto mínimo: um código de estado é uma etiqueta de
+     máquina, e a largura fixa faz uma coluna delas alinhar sozinha. */
+  .badge { display: inline-flex; align-items: center; border-radius: var(--radius-chip); padding: 1px 6px; font-family: var(--font-jetbrains-mono), ui-monospace, monospace; font-size: var(--text-2xs); line-height: 1.6; font-weight: var(--weight-medium); letter-spacing: 0.04em; white-space: nowrap; border: 1px solid var(--border-strong); }
 
   /* ─── Os sete degraus, aplicáveis ────────────────────────────────────────
      Cada classe traz o tamanho COM a sua entrelinha e o seu tracking. É a
@@ -327,14 +419,29 @@
 
   /* O número grande de um cartão de métrica. Junta o degrau, o peso e os
      numerais tabulares — é sempre a mesma coisa, em vinte e três sítios. */
+  /* ─── E números que são mesmo números ────────────────────────────────────
+     Os numerais tabulares alinham as casas; a monoespaçada diz o que a coisa
+     é. Um saldo, um contador, uma hora, uma referência de fatura não são
+     prosa — são valores lidos em coluna, e a JetBrains Mono (que já estava
+     carregada em app/layout.tsx e não era usada em lado nenhum) separa-os do
+     texto à volta sem precisar de peso nem de cor.
+
+     A CÉLULA de tabela não entra: leva texto corrido — nomes de doentes,
+     descrições — e monoespaçar isso é ilegível. A célula fica com os numerais
+     tabulares e quem tem um número escreve `.tnum`. */
+  .tnum,
+  .metric-value { font-family: var(--font-jetbrains-mono), ui-monospace, monospace; }
+
   .metric-value {
     font-size: var(--text-2xl);
     line-height: var(--text-2xl-leading);
     letter-spacing: var(--text-2xl-tracking);
-    font-weight: var(--weight-bold);
+    font-weight: var(--weight-medium);
   }
 
-  .section-label { font-size: var(--text-2xs); line-height: var(--text-2xs-leading); font-weight: var(--weight-bold); color: var(--text-muted); letter-spacing: var(--text-2xs-tracking); text-transform: uppercase; margin-bottom: var(--space-2); }
+  .section-label { font-family: var(--font-jetbrains-mono), ui-monospace, monospace; font-size: var(--text-2xs); line-height: var(--text-2xs-leading); font-weight: var(--weight-medium); color: var(--text-muted); letter-spacing: var(--text-2xs-tracking); text-transform: uppercase; margin-bottom: var(--space-2); }
+  /* O mesmo rótulo, sobre a barra escura: só a cor muda. */
+  .app-sidebar .section-label { color: var(--sidebar-label); }
 }
 
 @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }

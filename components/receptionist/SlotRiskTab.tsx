@@ -99,7 +99,7 @@ export default function SlotRiskTab({ data, loading }: { data: SlotRiskReport | 
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 'var(--radius-card)',
                 background: 'var(--bg-surface)',
-                padding: '12px 14px',
+                padding: 12,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>

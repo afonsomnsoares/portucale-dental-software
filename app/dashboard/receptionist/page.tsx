@@ -249,7 +249,7 @@ export default function ReceptionDashboard() {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '7px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
         />
       </PageHeader>
 
@@ -273,7 +273,7 @@ export default function ReceptionDashboard() {
             background: 'var(--urgency-critical-bg)',
             border: '1px solid var(--urgency-critical-border)',
             borderRadius: 'var(--radius-control)',
-            padding: '12px 18px',
+            padding: '12px 16px',
             marginBottom: 16,
             display: 'flex',
             gap: 12,
@@ -294,9 +294,9 @@ export default function ReceptionDashboard() {
                 display: 'flex',
                 gap: 8,
                 alignItems: 'center',
-                background: 'white',
+                background: 'var(--bg-surface)',
                 borderRadius: 'var(--radius-control)',
-                padding: '5px 12px',
+                padding: '4px 12px',
                 fontSize: 'var(--text-xs)',
               }}
             >
@@ -314,7 +314,7 @@ export default function ReceptionDashboard() {
             background: 'var(--urgency-ok-bg)',
             border: '1px solid var(--urgency-ok-border)',
             borderRadius: 'var(--radius-control)',
-            padding: '12px 18px',
+            padding: '12px 16px',
             marginBottom: 16,
             display: 'flex',
             gap: 12,
@@ -335,9 +335,9 @@ export default function ReceptionDashboard() {
                   display: 'flex',
                   gap: 8,
                   alignItems: 'center',
-                  background: 'white',
+                  background: 'var(--bg-surface)',
                   borderRadius: 'var(--radius-control)',
-                  padding: '5px 12px',
+                  padding: '4px 12px',
                   fontSize: 'var(--text-xs)',
                 }}
               >
@@ -347,10 +347,10 @@ export default function ReceptionDashboard() {
                   onClick={() => handleStatusChange(a.id, 'departed')}
                   style={{
                     background: 'var(--urgency-ok)',
-                    color: 'white',
+                    color: 'var(--text-onAccent)',
                     border: 'none',
                     borderRadius: 'var(--radius-control)',
-                    padding: '3px 10px',
+                    padding: '2px 8px',
                     fontSize: 'var(--text-2xs)',
                     fontWeight: 'var(--weight-bold)',
                     cursor: 'pointer',
@@ -409,7 +409,7 @@ export default function ReceptionDashboard() {
             <span className="section-label">{mode === 'suggest' ? 'Horários sugeridos' : 'Marcação manual'}</span>
             <GhostBtn
               onClick={() => setMode((m) => (m === 'suggest' ? 'manual' : 'suggest'))}
-              style={{ padding: '4px 10px', fontSize: 'var(--text-2xs)' }}
+              style={{ padding: '4px 8px', fontSize: 'var(--text-2xs)' }}
             >
               {mode === 'suggest' ? 'Marcação manual (avançado)' : 'Voltar às sugestões'}
             </GhostBtn>
@@ -429,13 +429,13 @@ export default function ReceptionDashboard() {
               </FormField>
 
               {!form.patientId || !form.type ? (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '10px 0' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '8px 0' }}>
                   Escolha o paciente e o tipo de consulta para ver horários disponíveis.
                 </div>
               ) : slotsLoading ? (
                 <Spinner />
               ) : !slots.length ? (
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '10px 0' }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '8px 0' }}>
                   Sem horários disponíveis nos próximos dias.
                 </div>
               ) : (
@@ -456,10 +456,10 @@ export default function ReceptionDashboard() {
                           justifyContent: 'space-between',
                           alignItems: 'center',
                           textAlign: 'left',
-                          padding: '10px 14px',
+                          padding: '8px 12px',
                           borderRadius: 'var(--radius-control)',
                           border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border-subtle)'}`,
-                          background: isSelected ? 'var(--accent-bg)' : 'white',
+                          background: isSelected ? 'var(--accent-bg)' : 'var(--bg-surface)',
                           cursor: 'pointer',
                           fontFamily: 'inherit',
                         }}

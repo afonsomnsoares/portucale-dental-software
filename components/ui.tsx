@@ -250,11 +250,16 @@ export function TD({
     <td
       className="data-td"
       style={{
-        fontWeight: bold ? 600 : 400,
+        fontWeight: bold ? 'var(--weight-semibold)' : 'var(--weight-normal)',
         color: muted ? 'var(--text-secondary)' : color || 'var(--text-primary)',
-        fontFamily: mono ? '"JetBrains Mono",monospace' : 'inherit',
+        // Pela VARIÁVEL. Escrito '"JetBrains Mono",monospace' isto nunca foi
+        // JetBrains Mono nenhuma: o next/font regista a família com um nome
+        // gerado (__JetBrains_Mono_…), e o nome humano não corresponde a nada —
+        // as células caíam na monoespaçada por omissão do browser. Mesmo erro
+        // que o 'Newsreader' da página de entrada, e igualmente silencioso.
+        fontFamily: mono ? 'var(--font-jetbrains-mono), ui-monospace, monospace' : 'inherit',
         textAlign: right ? 'right' : 'left',
-        fontSize: mono ? 12 : 13,
+        fontSize: mono ? 'var(--text-xs)' : 'var(--text-sm)',
         whiteSpace: nowrap ? 'nowrap' : 'normal',
       }}
     >
@@ -264,8 +269,11 @@ export function TD({
 }
 export function DataTable({ cols = [], rows = [] }: { cols?: Array<string | number>; rows?: ReactNode[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+    // `data-table` faz o trabalho que as linhas de fora não fazem: quem chama
+    // este componente passa os seus próprios <tr>, e as células vinham quase
+    // sempre sem classe. A regra está em app/globals.css.
+    <div className="table-scroll">
+      <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             {cols.map((c) => (
@@ -458,7 +466,7 @@ export function Modal({
               color: 'var(--text-muted)',
               cursor: 'pointer',
               lineHeight: 'var(--leading-none)',
-              padding: '2px 6px',
+              padding: '2px 4px',
             }}
           >
             ×
@@ -697,7 +705,7 @@ export function Timeline({ events = [] }: { events?: TimelineEvent[] }) {
               </span>
               <span
                 className="badge"
-                style={{ background: tint(col, 8), color: col, fontSize: 'var(--text-2xs)', padding: '1px 6px' }}
+                style={{ background: tint(col, 8), color: col, fontSize: 'var(--text-2xs)', padding: '2px 4px' }}
               >
                 {e.event_type}
               </span>

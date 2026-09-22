@@ -23,7 +23,7 @@ export default function OperatoryPanel({
   onSetStatus: (apt: Appointment, nextStatus: string) => void;
 }) {
   return (
-    <div className="card" style={{ padding: '18px 18px 16px' }}>
+    <div className="card" style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
           <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--text-primary)' }}>
@@ -66,8 +66,8 @@ export default function OperatoryPanel({
               style={{
                 border: '1px solid var(--bg-sunken)',
                 borderRadius: 'var(--radius-card)',
-                padding: '14px 14px 12px',
-                background: 'white',
+                padding: '12px 12px 12px',
+                background: 'var(--bg-surface)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -153,10 +153,10 @@ export default function OperatoryPanel({
                           style={{
                             width: '100%',
                             background: next ? color : 'var(--bg-sunken)',
-                            color: next ? 'white' : 'var(--text-muted)',
+                            color: next ? 'var(--text-onAccent)' : 'var(--text-muted)',
                             border: 'none',
                             borderRadius: 'var(--radius-control)',
-                            padding: '9px 0',
+                            padding: '8px 0',
                             fontSize: 'var(--text-2xs)',
                             fontWeight: 'var(--weight-bold)',
                             cursor: !next || updatingId === current.id ? 'not-allowed' : 'pointer',
@@ -172,11 +172,11 @@ export default function OperatoryPanel({
                           onClick={() => canNoShow && onSetStatus(current, 'no-show')}
                           style={{
                             width: '100%',
-                            background: canNoShow ? 'var(--urgency-critical-bg)' : 'var(--bg-page)',
+                            background: canNoShow ? 'var(--urgency-critical-bg)' : 'var(--bg-sunken)',
                             color: canNoShow ? 'var(--urgency-critical)' : 'var(--text-muted)',
                             border: `1px solid ${canNoShow ? 'var(--urgency-critical-border)' : 'var(--bg-sunken)'}`,
                             borderRadius: 'var(--radius-control)',
-                            padding: '9px 0',
+                            padding: '8px 0',
                             fontSize: 'var(--text-2xs)',
                             fontWeight: 'var(--weight-bold)',
                             cursor: !canNoShow || updatingId === current.id ? 'not-allowed' : 'pointer',

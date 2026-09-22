@@ -173,13 +173,13 @@ export default function InvoicesPage() {
               key={s.value}
               onClick={() => setStatus(s.value)}
               style={{
-                padding: '6px 14px',
+                padding: '4px 12px',
                 fontSize: 'var(--text-xs)',
                 fontWeight: status === s.value ? 700 : 500,
                 border: '1px solid',
                 borderColor: status === s.value ? 'var(--accent)' : 'var(--border-subtle)',
                 borderRadius: 'var(--radius-control)',
-                background: status === s.value ? 'var(--accent-bg)' : 'white',
+                background: status === s.value ? 'var(--accent-bg)' : 'var(--bg-surface)',
                 color: status === s.value ? 'var(--accent)' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -189,7 +189,7 @@ export default function InvoicesPage() {
             </button>
           ))}
         </div>
-        <GhostBtn onClick={() => setModal(true)} style={{ padding: '8px 14px' }}>
+        <GhostBtn onClick={() => setModal(true)} style={{ padding: '8px 12px' }}>
           + Nova fatura
         </GhostBtn>
       </PageHeader>
@@ -229,7 +229,7 @@ export default function InvoicesPage() {
                 <tr
                   key={inv.id}
                   style={{ borderBottom: '1px solid var(--bg-sunken)', transition: 'background 0.1s' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-page)')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-sunken)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td className="data-td">

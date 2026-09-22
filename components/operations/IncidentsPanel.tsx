@@ -186,7 +186,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
                         value={i.assigned_to || ''}
                         onChange={(e) => assign(i, e.target.value)}
                         disabled={busyId === i.id}
-                        style={{ fontSize: 'var(--text-xs)', padding: '3px 6px' }}
+                        style={{ fontSize: 'var(--text-xs)', padding: '2px 4px' }}
                       >
                         <option value="">Ninguém</option>
                         {teamUsers.map((u) => (
@@ -209,7 +209,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
                           <GhostBtn
                             disabled={busyId === i.id}
                             onClick={() => setStatus(i, 'in_progress')}
-                            style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                            style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                           >
                             Em curso
                           </GhostBtn>
@@ -220,7 +220,7 @@ export default function IncidentsPanel({ api, canManage, tenantId, teamUsers = [
                             setResolveTarget(i);
                             setResolutionNotes('');
                           }}
-                          style={{ padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+                          style={{ padding: '4px 8px', fontSize: 'var(--text-xs)' }}
                         >
                           Resolver
                         </GhostBtn>

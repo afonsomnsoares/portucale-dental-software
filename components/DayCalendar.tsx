@@ -293,7 +293,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                 className="section-label"
                 style={{
                   width: colWidth,
-                  padding: '8px 10px',
+                  padding: 8,
                   margin: 0,
                   borderLeft: '1px solid var(--border-subtle)',
                   textAlign: 'center',
@@ -552,7 +552,7 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: 12,
-                padding: '7px 0',
+                padding: '8px 0',
                 borderBottom: '1px solid var(--border-subtle)',
               }}
             >

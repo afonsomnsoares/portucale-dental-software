@@ -33,7 +33,7 @@ export default function PendingOffersTable({
             </thead>
             <tbody>
               {offers.map((o) => (
-                <tr key={o.id} style={{ borderBottom: '1px solid var(--bg-page)' }}>
+                <tr key={o.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                   <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                     {o.patient_name || patientName(o.patient_id || '')}
                   </td>
@@ -47,14 +47,14 @@ export default function PendingOffersTable({
                       <PrimaryBtn
                         disabled={busyId === o.id}
                         onClick={() => onRespond(o, 'book')}
-                        style={{ padding: '5px 10px' }}
+                        style={{ padding: '4px 8px' }}
                       >
                         {busyId === o.id ? '…' : 'Confirmar marcação'}
                       </PrimaryBtn>
                       <GhostBtn
                         disabled={busyId === o.id}
                         onClick={() => onRespond(o, 'decline')}
-                        style={{ padding: '5px 10px' }}
+                        style={{ padding: '4px 8px' }}
                       >
                         Recusar
                       </GhostBtn>

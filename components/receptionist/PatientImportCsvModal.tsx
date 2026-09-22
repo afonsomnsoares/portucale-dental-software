@@ -110,7 +110,7 @@ export default function PatientImportCsvModal({
             border: '1px solid var(--urgency-critical-border)',
             color: 'var(--urgency-critical)',
             borderRadius: 'var(--radius-control)',
-            padding: '10px 12px',
+            padding: '8px 12px',
             fontSize: 'var(--text-xs)',
             marginBottom: 12,
             fontWeight: 'var(--weight-bold)',
@@ -179,7 +179,7 @@ export default function PatientImportCsvModal({
             border: '1px solid var(--urgency-ok-border)',
             color: 'var(--urgency-ok)',
             borderRadius: 'var(--radius-control)',
-            padding: '10px 12px',
+            padding: '8px 12px',
             fontSize: 'var(--text-xs)',
             fontWeight: 'var(--weight-bold)',
           }}
