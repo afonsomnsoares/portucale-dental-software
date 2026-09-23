@@ -1,5 +1,5 @@
-import Finance from '@/components/clinic/pages/Finance';
+import ReceitaCustos from '@/components/clinic/pages/ReceitaCustos';
 
 export default function Page() {
-  return <Finance />;
+  return <ReceitaCustos />;
 }

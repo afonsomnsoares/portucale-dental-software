@@ -1,5 +1,5 @@
-import Invoices from '@/components/clinic/pages/Invoices';
+import Faturacao from '@/components/clinic/pages/Faturacao';
 
 export default function Page() {
-  return <Invoices />;
+  return <Faturacao />;
 }

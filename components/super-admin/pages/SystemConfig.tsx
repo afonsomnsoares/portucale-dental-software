@@ -11,7 +11,7 @@
 // (lib/platformStats.ts) devolve booleanos, por isso a UI não tem sequer a
 // oportunidade de o revelar por acidente.
 import { AlertTriangle, Check, Database, GitCommit, Minus } from 'lucide-react';
-import { Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Empty, ErrorState, MetricCard, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { SystemConfigInfo } from '@/lib/types/platform';
 
@@ -46,8 +46,6 @@ export default function SystemConfig({ initialData }: { initialData?: SystemConf
 
   return (
     <div>
-      <PageHeader title="Configuração do Sistema" sub="O que este processo tem à frente agora" />
-
       <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="VERSÃO"

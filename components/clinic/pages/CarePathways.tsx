@@ -16,7 +16,7 @@
 // repetir essas regras aqui seria criar uma segunda verdade que mais tarde diverge.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, Inp, PageHeader, PrimaryBtn, Sel, Spinner } from '@/components/ui';
+import { Empty, Inp, PanelBar, PanelNote, PrimaryBtn, Sel, Spinner } from '@/components/ui';
 import { APPOINTMENT_TYPES } from '@/lib/constants';
 
 interface Step {
@@ -118,10 +118,7 @@ export default function CarePathways() {
 
   return (
     <div>
-      <PageHeader
-        title="Percursos de Consulta"
-        sub="O que tem de estar feito antes e depois de cada tipo de consulta. O motor corre sozinho — isto é onde se escreve o protocolo da clínica."
-      >
+      <PanelBar>
         <Inp
           type="date"
           value={dataSimulada}
@@ -129,7 +126,12 @@ export default function CarePathways() {
           style={{ width: 165 }}
           aria-label="Data de consulta a simular"
         />
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>
+        O que tem de estar feito antes e depois de cada tipo de consulta. O motor corre sozinho — isto é onde se escreve
+        o protocolo da clínica.
+      </PanelNote>
 
       {erro && (
         <div

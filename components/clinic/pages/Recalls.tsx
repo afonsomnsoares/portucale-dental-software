@@ -12,6 +12,7 @@ import { useAuth } from '@/app/providers';
 import {
   AlertBanner,
   ConfirmModal,
+  clinicaMono,
   DangerBtn,
   Empty,
   ErrorState,
@@ -19,7 +20,7 @@ import {
   GhostBtn,
   Inp,
   Modal,
-  PageHeader,
+  PageChrome,
   PrimaryBtn,
   Sel,
   Spinner,
@@ -39,7 +40,7 @@ interface NewRecallForm {
 }
 
 export default function Recalls() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const patientsQuery = useQuery<Patient[]>('/patients?q=');
   const patients = patientsQuery.data ?? [];
   const [erroEscrita, setErroEscrita] = useState('');
@@ -134,24 +135,25 @@ export default function Recalls() {
 
   return (
     <div>
-      <PageHeader title="Recalls de doentes" sub="Convocatórias periódicas de consulta e higiene">
-        <PrimaryBtn onClick={() => setModal(true)}>+ Novo recall</PrimaryBtn>
-      </PageHeader>
-      {erroEscrita ? <AlertBanner type="danger">{erroEscrita}</AlertBanner> : null}
-
-      <div className="card p-4 mb-5 flex items-center gap-4">
-        <span className="section-label">Prazo até</span>
-        <Sel value={dueFilter} onChange={(e) => setDueFilter(e.target.value)} style={{ width: 100 }}>
+      <PageChrome
+        title="Recalls"
+        context={[clinicaMono(user?.tenantName || user?.clinic), `prazo ${dueFilter}d`].filter(Boolean).join(' · ')}
+      >
+        <Sel
+          value={dueFilter}
+          onChange={(e) => setDueFilter(e.target.value)}
+          style={{ width: 96, padding: '5px 8px', fontSize: 'var(--text-xs)' }}
+          aria-label="Prazo até"
+        >
           <option value="7">7 dias</option>
           <option value="14">14 dias</option>
           <option value="30">30 dias</option>
           <option value="60">60 dias</option>
           <option value="90">90 dias</option>
         </Sel>
-        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {recalls.length} recall{recalls.length !== 1 ? 's' : ''} em atraso
-        </span>
-      </div>
+        <PrimaryBtn onClick={() => setModal(true)}>+ Novo recall</PrimaryBtn>
+      </PageChrome>
+      {erroEscrita ? <AlertBanner type="danger">{erroEscrita}</AlertBanner> : null}
 
       {recallsQuery.error ? (
         <ErrorState

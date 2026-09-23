@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Badge, Empty, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, PanelBar, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatDatePT, formatEUR } from '@/lib/constants';
 import type { Invoice } from '@/lib/types';
@@ -38,7 +38,7 @@ export default function ClinicInvoicesPage() {
 
   return (
     <div>
-      <PageHeader title="Faturas" sub="Faturação da clínica">
+      <PanelBar>
         <div className="flex gap-1">
           {STATUS_LABELS.map(([value, label]) => (
             <button
@@ -62,7 +62,7 @@ export default function ClinicInvoicesPage() {
             </button>
           ))}
         </div>
-      </PageHeader>
+      </PanelBar>
 
       <div className="card overflow-x-auto p-5">
         <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>

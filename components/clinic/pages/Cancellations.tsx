@@ -13,7 +13,7 @@
 // cemitério não é acionável.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, Inp, PageHeader, Spinner } from '@/components/ui';
+import { Empty, Inp, PanelBar, Spinner } from '@/components/ui';
 
 interface Cancelamento {
   id: string;
@@ -86,10 +86,7 @@ export default function Cancellations() {
 
   return (
     <div>
-      <PageHeader
-        title="Cancelamentos"
-        sub="Quem cancelou, com quanta antecedência, e se voltou a marcar. A antecedência é o que separa uma vaga preenchível de receita perdida."
-      >
+      <PanelBar>
         <Inp
           type="date"
           value={desde}
@@ -97,7 +94,7 @@ export default function Cancellations() {
           style={{ width: 165 }}
           aria-label="Desde"
         />
-      </PageHeader>
+      </PanelBar>
 
       {erro && (
         <div

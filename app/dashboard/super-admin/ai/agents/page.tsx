@@ -1,5 +1,5 @@
-import AiAgents from '@/components/super-admin/pages/AiAgents';
+import Agentes from '@/components/super-admin/pages/Agentes';
 
 export default function Page() {
-  return <AiAgents />;
+  return <Agentes />;
 }

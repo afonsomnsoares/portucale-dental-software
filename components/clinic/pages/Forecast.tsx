@@ -11,7 +11,7 @@
 // extenso, em vez de serem escondidas: uma clínica nova tem o direito de ver que o
 // sistema ainda não sabe o suficiente sobre ela.
 import { useState } from 'react';
-import { Empty, PageHeader, Sel, Spinner } from '@/components/ui';
+import { Empty, PanelBar, PanelNote, Sel, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 
@@ -127,17 +127,18 @@ export default function Forecast({
 
   return (
     <div>
-      <PageHeader
-        title="Previsão"
-        sub="Mediana por dia da semana, com tendência limitada. O que não tem histórico suficiente diz que não tem."
-      >
+      <PanelBar>
         <Sel value={dias} onChange={(e) => setDias(e.target.value)} style={{ width: 150 }}>
           <option value="7">Próximos 7 dias</option>
           <option value="14">Próximos 14 dias</option>
           <option value="30">Próximos 30 dias</option>
           <option value="60">Próximos 60 dias</option>
         </Sel>
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>
+        Mediana por dia da semana, com tendência limitada. O que não tem histórico suficiente diz que não tem.
+      </PanelNote>
 
       {erro && (
         <div

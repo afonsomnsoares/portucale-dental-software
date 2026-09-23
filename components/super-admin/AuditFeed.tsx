@@ -1,18 +1,21 @@
 'use client';
 import { useState } from 'react';
-import { Badge, DataTable, Empty, ErrorState, GhostBtn, Inp, PageHeader, Spinner } from '@/components/ui';
+import { Badge, DataTable, Empty, ErrorState, GhostBtn, Inp, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { AuditLogEntry } from '@/lib/types';
 
-// Três páginas do menu (Registos de Acesso, Eventos de Segurança, Eventos de Sistema)
-// leem a MESMA tabela — audit_log — com recortes diferentes. Escrever três componentes
-// quase iguais era garantir que divergiam à terceira alteração, por isso o recorte é um
-// parâmetro e o componente é um só.
+// Um recorte do audit_log por conjunto de ações. Era a base de três páginas do menu
+// (Registos de Acesso, Eventos de Segurança, Eventos de Sistema) e hoje é a de dois
+// separadores de Auditoria — ver components/super-admin/pages/Auditoria.tsx, que explica
+// porque é que quatro entradas sobre a mesma tabela eram três a mais.
+//
+// É um painel e não uma página: quem o mostra é que tem o cabeçalho e a nota de rodapé,
+// porque um separador dentro de um ecrã não pode trazer um <h1> atrás de si.
 //
 // O filtro é do lado do cliente porque /api/audit filtra por uma ação de cada vez e
 // estes recortes são conjuntos de ações; pedir uma vez e recortar aqui poupa três idas
 // ao servidor por página. O limite de 200 linhas da rota vale à mesma.
-export const ACTION_META: Record<string, { bg: string; color: string }> = {
+const ACTION_META: Record<string, { bg: string; color: string }> = {
   AUTH: { bg: 'var(--urgency-ok-bg)', color: 'var(--urgency-ok)' },
   AUTH_FAIL: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
   FORBIDDEN: { bg: 'var(--urgency-critical-bg)', color: 'var(--urgency-critical)' },
@@ -24,18 +27,12 @@ export const ACTION_META: Record<string, { bg: string; color: string }> = {
 };
 
 export default function AuditFeed({
-  title,
-  sub,
   actions,
   emptyMessage,
-  footnote,
 }: {
-  title: string;
-  sub?: string;
   /** Ações a mostrar. Vazio = todas. */
   actions?: string[];
   emptyMessage?: string;
-  footnote?: string;
 }) {
   const rowsQuery = useQuery<AuditLogEntry[]>('/audit');
   const rows = rowsQuery.data ?? null;
@@ -55,8 +52,6 @@ export default function AuditFeed({
 
   return (
     <div>
-      <PageHeader title={title} sub={sub} />
-
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <Inp
           placeholder="Filtrar por pessoa, recurso ou clínica…"
@@ -101,19 +96,6 @@ export default function AuditFeed({
             </tr>
           ))}
         />
-      )}
-
-      {footnote && (
-        <p
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-secondary)',
-            lineHeight: 'var(--text-xs-leading)',
-            marginTop: 16,
-          }}
-        >
-          {footnote}
-        </p>
       )}
     </div>
   );

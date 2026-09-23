@@ -1,20 +1,24 @@
 'use client';
-import { AlertTriangle, Check } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import DayCalendar from '@/components/DayCalendar';
 import DailyBriefingPanel from '@/components/patient/DailyBriefingPanel';
 import {
+  clinicaMono,
   ErrorState,
   FormField,
   GhostBtn,
-  MetricCard,
+  Kbd,
+  Metric,
+  MetricStrip,
   Modal,
-  PageHeader,
+  PageChrome,
   PrimaryBtn,
-  RiskBadge,
   Sel,
   Spinner,
+  Triage,
+  TriageRow,
+  WorkSection,
 } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { APPOINTMENT_TYPES, getDefaultDuration } from '@/lib/constants';
@@ -144,6 +148,18 @@ export default function ReceptionDashboard() {
     fetchSlots();
   }, [mode, fetchSlots]);
 
+  // Carregar num buraco da agenda abre a marcação JÁ naquela hora e em modo
+  // manual: quem carregou num vazio às 11h30 não quer que o motor lhe sugira
+  // outra coisa qualquer — escolheu a hora ao carregar nela.
+  function openBookAt(startTime: string) {
+    setForm({ ...EMPTY_BOOK_FORM, startTime });
+    setBookErr('');
+    setMode('manual');
+    setSlots([]);
+    setSelectedSlot(null);
+    setModal(true);
+  }
+
   function openBookModal() {
     setForm(EMPTY_BOOK_FORM);
     setBookErr('');
@@ -232,7 +248,7 @@ export default function ReceptionDashboard() {
 
   const waiting = appts.filter((a) => a.status === 'waiting').length;
   const inChair = appts.filter((a) => ['in-operatory', 'procedure-active'].includes(a.status)).length;
-  const ready = appts.filter((a) => a.status === 'ready-dismissal').length;
+  const prontos = appts.filter((a) => a.status === 'ready-dismissal');
   const highRisk = appts.filter((a) => (a.risk_score || 0) >= 60);
   const label = new Date(`${date}T12:00:00`).toLocaleDateString('pt-PT', {
     weekday: 'long',
@@ -240,145 +256,110 @@ export default function ReceptionDashboard() {
     month: 'long',
     day: 'numeric',
   });
+  const hhmm = (a: Appointment) => String(a.start_time || '').slice(0, 5);
 
   return (
     <div>
-      <PageHeader title="Receção" sub={label} action="+ Marcar consulta" onAction={openBookModal}>
+      {/* ─── A barra, e não um cabeçalho ──────────────────────────────────────
+          Eram 90 px de altura para dizer «Receção» e a data por extenso — num
+          ecrã em que a barra lateral já diz onde estamos. Ficaram 52, e o que
+          entrou no lugar é CONTEXTO de máquina: que clínica, que dia, quantas
+          marcações. Numa receção com mais do que uma unidade, a primeira parte
+          é o que evita marcar na clínica errada. */}
+      <PageChrome
+        title="Painel do Dia"
+        context={[clinicaMono(user?.tenantName || user?.clinic), date, `${appts.length} marcações`]
+          .filter(Boolean)
+          .join(' · ')}
+      >
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
           className="input"
-          style={{ width: 'auto', padding: '8px 12px', fontSize: 'var(--text-sm)' }}
+          style={{ width: 'auto', padding: '5px 10px', fontSize: 'var(--text-xs)' }}
+          aria-label="Dia a mostrar"
         />
-      </PageHeader>
+        <PrimaryBtn onClick={openBookModal}>
+          Marcar consulta <Kbd>N</Kbd>
+        </PrimaryBtn>
+      </PageChrome>
 
-      {/* KPIs */}
-      <div className="grid-cards" style={{ gap: 12, marginBottom: 20 }}>
-        <MetricCard label="MARCADAS PARA HOJE" value={appts.length} sub="consultas no total" color="var(--accent)" />
-        <MetricCard label="SALA DE ESPERA" value={waiting} sub="com entrada registada" color="var(--urgency-soon)" />
-        <MetricCard label="EM CADEIRA AGORA" value={inChair} sub="em gabinete" color="var(--urgency-ok)" />
-        <MetricCard
-          label="RISCO ELEVADO"
+      {/* ─── O dia abre pelo que está atrasado ────────────────────────────────
+          Antes, o risco de falta era uma faixa de fichas que embrulhava, com os
+          nomes soltos no meio, e para agir era preciso ir procurá-los à agenda
+          mais abaixo. Agora é uma FILA: contagem, ordem por hora, e cada linha
+          leva à consulta. Desaparece nos dias em que não há nada — que é a única
+          maneira de continuar a ver-se nos dias em que há. */}
+      <Triage>
+        {[...highRisk]
+          .sort((a, b) => hhmm(a).localeCompare(hhmm(b)))
+          .map((a) => (
+            <TriageRow key={a.id} when={hhmm(a)}>
+              {a.patient_name} — risco de falta {a.risk_score}%, confirmar por telefone
+            </TriageRow>
+          ))}
+      </Triage>
+
+      <Triage title="Prontos para alta" tone="ok">
+        {prontos.map((a) => (
+          <TriageRow
+            key={a.id}
+            when={hhmm(a)}
+            action={
+              <GhostBtn onClick={() => handleStatusChange(a.id, 'departed')} style={{ padding: '2px 10px' }}>
+                Dar alta
+              </GhostBtn>
+            }
+          >
+            {a.patient_name} — terminou e está à espera de sair
+          </TriageRow>
+        ))}
+      </Triage>
+
+      {/* ─── Mostradores do mesmo instrumento ─────────────────────────────────
+          Eram quatro cartões com contorno e 12 px de intervalo. Um contorno por
+          métrica pede ao olho que leia quatro coisas; o que ali está é uma
+          leitura do MESMO dia por quatro mostradores. Encostados e separados por
+          linha, lêem-se de uma vez — e só a célula que exige ação leva cor. */}
+      <MetricStrip>
+        <Metric label="marcadas_hoje" value={appts.length} sub="consultas no total" />
+        <Metric
+          label="sala_de_espera"
+          value={waiting}
+          sub="com entrada registada"
+          urgency={waiting > 0 ? 'soon' : undefined}
+        />
+        <Metric label="em_cadeira" value={inChair} sub="em gabinete agora" />
+        <Metric
+          label="risco_de_falta"
           value={highRisk.length}
           sub="a confirmar por telefone"
-          color="var(--urgency-critical)"
+          urgency={highRisk.length > 0 ? 'critical' : undefined}
         />
-      </div>
-
-      {/* Banners */}
-      {highRisk.length > 0 && (
-        <div
-          style={{
-            background: 'var(--urgency-critical-bg)',
-            border: '1px solid var(--urgency-critical-border)',
-            borderRadius: 'var(--radius-control)',
-            padding: '12px 16px',
-            marginBottom: 16,
-            display: 'flex',
-            gap: 12,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <AlertTriangle size={14} style={{ flexShrink: 0 }} />
-          <div
-            style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-critical)' }}
-          >
-            {highRisk.length} consulta{highRisk.length > 1 ? 's' : ''} com alto risco de falta hoje
-          </div>
-          {highRisk.map((a) => (
-            <div
-              key={a.id}
-              style={{
-                display: 'flex',
-                gap: 8,
-                alignItems: 'center',
-                background: 'var(--bg-surface)',
-                borderRadius: 'var(--radius-control)',
-                padding: '4px 12px',
-                fontSize: 'var(--text-xs)',
-              }}
-            >
-              <strong style={{ color: 'var(--text-primary)' }}>{a.patient_name}</strong>
-              <span style={{ color: 'var(--text-muted)' }}>{String(a.start_time || '').slice(0, 5)}</span>
-              <RiskBadge score={a.risk_score || 0} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {ready > 0 && (
-        <div
-          style={{
-            background: 'var(--urgency-ok-bg)',
-            border: '1px solid var(--urgency-ok-border)',
-            borderRadius: 'var(--radius-control)',
-            padding: '12px 16px',
-            marginBottom: 16,
-            display: 'flex',
-            gap: 12,
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <Check size={14} style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-bold)', color: 'var(--urgency-ok)' }}>
-            {ready} doente{ready > 1 ? 's' : ''} pronto{ready > 1 ? 's' : ''} para alta
-          </div>
-          {appts
-            .filter((a) => a.status === 'ready-dismissal')
-            .map((a) => (
-              <div
-                key={a.id}
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  alignItems: 'center',
-                  background: 'var(--bg-surface)',
-                  borderRadius: 'var(--radius-control)',
-                  padding: '4px 12px',
-                  fontSize: 'var(--text-xs)',
-                }}
-              >
-                <strong style={{ color: 'var(--text-primary)' }}>{a.patient_name}</strong>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange(a.id, 'departed')}
-                  style={{
-                    background: 'var(--urgency-ok)',
-                    color: 'var(--text-onAccent)',
-                    border: 'none',
-                    borderRadius: 'var(--radius-control)',
-                    padding: '2px 8px',
-                    fontSize: 'var(--text-2xs)',
-                    fontWeight: 'var(--weight-bold)',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  Dar alta
-                </button>
-              </div>
-            ))}
-        </div>
-      )}
+      </MetricStrip>
 
       {/* O que falta fazer, antes do calendário: a agenda diz quem vem, isto diz o que
           é preciso ter tratado antes de a pessoa chegar. */}
       {!briefingQuery.loading && briefing.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
+        <WorkSection title="Antes de chegarem" count={`${briefing.length} por tratar`}>
           <DailyBriefingPanel api={api} rows={briefing} />
-        </div>
+        </WorkSection>
       )}
 
-      {apptsQuery.error ? (
-        <ErrorState error={apptsQuery.error} onRetry={apptsQuery.refetch} message="Não foi possível ler a agenda." />
-      ) : apptsQuery.loading ? (
-        <Spinner />
-      ) : (
-        <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} />
-      )}
+      <WorkSection
+        title="Agenda do dia"
+        count={appts.length ? `${appts.length} marcações` : null}
+        tools={<span className="chrome-context">{label}</span>}
+      >
+        {apptsQuery.error ? (
+          <ErrorState error={apptsQuery.error} onRetry={apptsQuery.refetch} message="Não foi possível ler a agenda." />
+        ) : apptsQuery.loading ? (
+          <Spinner />
+        ) : (
+          <DayCalendar appointments={appts} date={date} onStatusChange={handleStatusChange} onBookAt={openBookAt} />
+        )}
+      </WorkSection>
 
       {/* Book modal */}
       {modal && (

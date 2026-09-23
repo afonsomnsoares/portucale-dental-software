@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import SchemaFieldFormModal, { type SchemaFieldForm } from '@/components/schema/SchemaFieldFormModal';
 import SchemaFieldsTable, { type SchemaFieldRow } from '@/components/schema/SchemaFieldsTable';
-import { AlertBanner, GhostBtn, PageHeader, Sel } from '@/components/ui';
+import { AlertBanner, GhostBtn, PanelBar, PrimaryBtn, Sel } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { PT_PATIENT_FIELDS } from '@/lib/presets/patientFields';
 import type { Tenant } from '@/lib/types';
@@ -160,12 +160,7 @@ export default function SchemaFields() {
 
   return (
     <div>
-      <PageHeader
-        title="Campos de Registo"
-        sub="Campos adicionais que aparecem no registo de doentes"
-        action={tenantId ? '+ Novo Campo' : null}
-        onAction={openAdd}
-      >
+      <PanelBar>
         {!user?.tenantId && (
           <Sel value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={{ width: 260 }}>
             <option value="">Escolher clínica…</option>
@@ -181,7 +176,8 @@ export default function SchemaFields() {
             {saving ? 'A adicionar…' : 'Adicionar Campos PT'}
           </GhostBtn>
         )}
-      </PageHeader>
+        {tenantId && <PrimaryBtn onClick={openAdd}>+ Novo Campo</PrimaryBtn>}
+      </PanelBar>
       {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}
       {fieldsQuery.error ? (
         <AlertBanner type="danger">Não foi possível ler os campos. {fieldsQuery.error.message}</AlertBanner>

@@ -24,11 +24,9 @@ export const FONTS = {
 // Fica indefinido de propósito nas páginas cuja lista principal só exige sessão válida
 // (Painel, Doentes, Leads, Equipa) — essas não têm ação que as possa esconder.
 export type Role = 'super_admin' | 'admin' | 'receptionist' | 'dentist';
-// `group` agrupa entradas sob um cabeçalho na sidebar. Os menus da clínica (admin,
-// receção, dentista) são listas planas e não o usam — cada entrada é uma área de
-// trabalho e cabe num ecrã. O do super_admin não cabe: são 41 entradas, e sem
-// cabeçalhos era uma lista impossível de varrer. Ver components/Sidebar.tsx, que
-// desenha o cabeçalho quando o grupo muda e desenha ícone só nas entradas sem grupo.
+// `group` agrupa entradas sob um cabeçalho na sidebar, e as quatro listas usam-no: o
+// teste em test/nav.test.ts recusa uma entrada sem grupo. Ver components/Sidebar.tsx,
+// que desenha o cabeçalho quando o grupo muda.
 export type NavItem = { label: string; href: string; requires?: string; group?: string };
 // ─── Navegação: um grupo por pergunta que o papel faz ───────────────────────
 // As quatro listas passaram a ter `group`. Antes só o super_admin agrupava, porque só a
@@ -44,6 +42,26 @@ export type NavItem = { label: string; href: string; requires?: string; group?: 
 // existe e não tinha consumidor nenhum. Não estão nesta lista enquanto a página não
 // existir: uma entrada de menu sem página é um link morto, e test/nav.test.ts recusa-o.
 
+// ─── A regra: uma entrada é uma FILA, não uma tabela ────────────────────────
+// O menu tinha 81 entradas somadas os quatro papéis, e a razão não era haver 81
+// assuntos: era o menu ter crescido como espelho da árvore de rotas. Três padrões
+// explicavam quase tudo o que sobrava.
+//
+//   O mesmo ecrã com um filtro diferente. Quatro entradas de plataforma liam o mesmo
+//   `audit_log` mudando um array de ações; duas liam o mesmo /platform/ai-usage; duas
+//   o mesmo /platform/usage. Um filtro não é um destino.
+//
+//   A mesma sala com várias portas. Seis entradas do dentista carregavam /patients,
+//   obrigavam a escolher um doente e só então pediam `?patientId=` — eram o Espaço do
+//   Doente com um separador aberto, alcançado por seis sítios.
+//
+//   A gaveta de configuração à mistura com o trabalho. Sete das 24 entradas do admin
+//   eram DEFINIÇÕES. Nenhuma se abre durante o dia.
+//
+// A regra que ficou: uma entrada de topo é uma FILA DE TRABALHO a que alguém vai por
+// iniciativa própria. Tudo o resto é separador dentro da coisa a que pertence. Nenhum
+// papel passa das doze entradas, e nenhum menu tem scroll a 900 px de altura.
+//
 // ─── admin: o dono da clínica ───────────────────────────────────────────────
 // «Estamos a ganhar dinheiro, e o que está a correr mal?»
 //
@@ -58,63 +76,38 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Agentes', href: '/dashboard/admin/agents', group: 'VISÃO GERAL', requires: 'agents:read' },
 
   // Sem lista de doentes: a pergunta do dono não é «quem são», é «o que está a acontecer
-  // à carteira». A Jornada responde a isso, e a Análise de Doentes (★ /api/patient-scoring)
-  // vem para aqui quando existir. Uma lista de fichas pertence a quem atende ao balcão e
-  // a quem trata — e esses já a têm.
-  { label: 'Jornada', href: '/dashboard/admin/lifecycle', group: 'DOENTES', requires: 'lifecycle:read' },
-  {
-    label: 'Análise de Doentes',
-    href: '/dashboard/admin/patient-scoring',
-    group: 'DOENTES',
-    requires: 'lifecycle:read',
-  },
+  // à carteira». Uma lista de fichas pertence a quem atende ao balcão e a quem trata — e
+  // esses já a têm. As duas leituras que respondem à pergunta dele — a Jornada e a
+  // Análise — são separadores de um ecrã só (ver pages/Doentes.tsx).
+  { label: 'Agenda', href: '/dashboard/admin/schedule-intel', group: 'AGENDA E DOENTES', requires: 'schedule:read' },
+  { label: 'Doentes', href: '/dashboard/admin/lifecycle', group: 'AGENDA E DOENTES', requires: 'lifecycle:read' },
+  { label: 'Recalls', href: '/dashboard/admin/recalls', group: 'AGENDA E DOENTES', requires: 'recalls:read' },
 
-  { label: 'Agenda Inteligente', href: '/dashboard/admin/schedule-intel', group: 'AGENDA', requires: 'schedule:read' },
-  { label: 'Previsão', href: '/dashboard/admin/forecast', group: 'AGENDA', requires: 'reports:read' },
+  // Cinco entradas em duas. «Faturas» e «Recuperação» são a mesma fatura antes e depois
+  // de não ter sido paga; «Finanças», «Custos e Margem» e «Relatórios» são a mesma
+  // receita vista de três ângulos, e estavam em dois grupos diferentes do menu.
+  { label: 'Faturação', href: '/dashboard/admin/invoices', group: 'DINHEIRO', requires: 'invoices:read' },
+  { label: 'Receita e Custos', href: '/dashboard/admin/finance', group: 'DINHEIRO', requires: 'finance:read' },
 
-  { label: 'Recuperação', href: '/dashboard/admin/recovery', group: 'RECEITA', requires: 'recovery:read' },
-  { label: 'Relatórios', href: '/dashboard/admin/reports', group: 'RECEITA', requires: 'reports:read' },
-  { label: 'Recalls', href: '/dashboard/admin/recalls', group: 'RECEITA', requires: 'recalls:read' },
-  { label: 'Faturas', href: '/dashboard/admin/invoices', group: 'RECEITA', requires: 'invoices:read' },
-
-  { label: 'Finanças', href: '/dashboard/admin/finance', group: 'FINANCEIRO', requires: 'finance:read' },
-  { label: 'Custos e Margem', href: '/dashboard/admin/costing', group: 'FINANCEIRO', requires: 'finance:read' },
-
-  { label: 'Equipa e Horários', href: '/dashboard/admin/team', group: 'EQUIPA', requires: 'staff-schedules:manage' },
-
+  { label: 'Equipa e Horários', href: '/dashboard/admin/team', group: 'OPERAÇÕES', requires: 'staff-schedules:manage' },
   {
     label: 'Stock e Encomendas',
     href: '/dashboard/admin/inventory',
-    group: 'INVENTÁRIO',
+    group: 'OPERAÇÕES',
     requires: 'inventory:manage',
   },
-
-  {
-    label: 'Checklists e Incidentes',
-    href: '/dashboard/admin/operations',
-    group: 'OPERAÇÕES',
-    requires: 'checklists:run',
-  },
-  {
-    label: 'Percursos de Consulta',
-    href: '/dashboard/admin/care-pathways',
-    group: 'OPERAÇÕES',
-    requires: 'care-pathways:manage',
-  },
+  // «Percursos de Consulta» entrou aqui como separador: é o protocolo que as checklists
+  // executam, e tinha entrada própria só porque tinha rota própria.
+  { label: 'Operações', href: '/dashboard/admin/operations', group: 'OPERAÇÕES', requires: 'checklists:run' },
   { label: 'Documentos', href: '/dashboard/admin/documents', group: 'OPERAÇÕES', requires: 'documents:read' },
 
-  { label: 'Utilizadores', href: '/dashboard/admin/users', group: 'DEFINIÇÕES', requires: 'users:manage' },
-  { label: 'Permissões', href: '/dashboard/admin/permissions', group: 'DEFINIÇÕES', requires: 'permissions:manage' },
-  { label: 'Campos Schema', href: '/dashboard/admin/schema', group: 'DEFINIÇÕES', requires: 'schema:manage' },
-  {
-    label: 'Fontes de Leads',
-    href: '/dashboard/admin/lead-sources',
-    group: 'DEFINIÇÕES',
-    requires: 'lead-sources:manage',
-  },
-  { label: 'Canais e Autonomia', href: '/dashboard/admin/comms', group: 'DEFINIÇÕES', requires: 'conversations:read' },
-  { label: 'Proteção de Dados', href: '/dashboard/admin/data-protection', group: 'DEFINIÇÕES', requires: 'gdpr:read' },
-  { label: 'Auditoria', href: '/dashboard/admin/audit', group: 'DEFINIÇÕES', requires: 'audit:read' },
+  // Sete entradas em uma. Nenhuma delas se abre durante o dia de trabalho, e juntas
+  // ocupavam quase um terço da barra lateral — ver pages/Definicoes.tsx.
+  //
+  // Sem `requires`: o ecrã existe para quem tiver PELO MENOS uma das sete permissões, e
+  // exigir uma delas em nome de todas escondia as outras seis a quem as tem. Cada
+  // separador continua atrás da sua rota, que é quem decide.
+  { label: 'Definições', href: '/dashboard/admin/settings', group: 'DEFINIÇÕES' },
 ];
 
 // ─── O que é separador e não entrada de menu ────────────────────────────────
@@ -141,6 +134,9 @@ const ADMIN_NAV: NavItem[] = [
 // HOJE em vez de uma raiz solta.
 const RECEPTIONIST_NAV: NavItem[] = [
   { label: 'Painel do Dia', href: '/dashboard/receptionist', group: 'HOJE' },
+  // Três entradas em uma: as consultas marcadas, os cancelamentos e a análise da agenda
+  // estavam em dois grupos diferentes, e ninguém abre os cancelamentos sem ser para
+  // voltar à agenda a seguir.
   { label: 'Agenda', href: '/dashboard/receptionist/appointments', group: 'HOJE', requires: 'appointments:update' },
   { label: 'Sala de Espera', href: '/dashboard/receptionist/floor', group: 'HOJE', requires: 'appointments:status' },
   { label: 'Tarefas', href: '/dashboard/receptionist/tasks', group: 'HOJE', requires: 'patient-tasks:read' },
@@ -160,49 +156,41 @@ const RECEPTIONIST_NAV: NavItem[] = [
 
   { label: 'Doentes', href: '/dashboard/receptionist/patients', group: 'DOENTES' },
   { label: 'Leads', href: '/dashboard/receptionist/leads', group: 'DOENTES' },
-
-  {
-    label: 'Cancelamentos',
-    href: '/dashboard/receptionist/cancellations',
-    group: 'MARCAÇÕES',
-    requires: 'schedule:read',
-  },
-  {
-    label: 'Agenda Inteligente',
-    href: '/dashboard/receptionist/schedule-intel',
-    group: 'MARCAÇÕES',
-    requires: 'schedule:read',
-  },
-
-  { label: 'Recalls', href: '/dashboard/receptionist/recalls', group: 'SEGUIMENTO', requires: 'recalls:read' },
+  { label: 'Recalls', href: '/dashboard/receptionist/recalls', group: 'DOENTES', requires: 'recalls:read' },
+  // A «Jornada do Doente» entrou aqui como separador: ao balcão a pergunta é sempre «e
+  // este, o que é que falta?», e a resposta estava metade em cada uma das duas entradas.
   {
     label: 'Tratamentos',
     href: '/dashboard/receptionist/treatments',
-    group: 'SEGUIMENTO',
+    group: 'DOENTES',
     requires: 'treatments:read',
   },
-  {
-    label: 'Jornada do Doente',
-    href: '/dashboard/receptionist/lifecycle',
-    group: 'SEGUIMENTO',
-    requires: 'lifecycle:read',
-  },
 
-  { label: 'Faturas', href: '/dashboard/receptionist/invoices', group: 'PAGAMENTOS', requires: 'invoices:read' },
-  { label: 'Recuperação', href: '/dashboard/receptionist/recovery', group: 'PAGAMENTOS', requires: 'recovery:read' },
-  { label: 'Finanças', href: '/dashboard/receptionist/finance', group: 'PAGAMENTOS', requires: 'finance:read' },
+  // «Finanças» saiu do menu do balcão — e a página foi apagada. As contas do negócio não
+  // são trabalho de receção: quem as quer ver é o dono, e para esse existem em Receita e
+  // Custos. Não é uma página estacionada à espera de dados; é âmbito a encolher, e a
+  // regra escrita em lib/constants.ts vale aqui: estacionar diz «ainda não», apagar diz
+  // «não».
+  { label: 'Faturação', href: '/dashboard/receptionist/invoices', group: 'PAGAMENTOS', requires: 'invoices:read' },
 
-  { label: 'Checklists', href: '/dashboard/receptionist/operations', group: 'OPERAÇÕES', requires: 'checklists:run' },
-  { label: 'Equipa', href: '/dashboard/receptionist/team', group: 'OPERAÇÕES' },
-  { label: 'Documentos', href: '/dashboard/receptionist/documents', group: 'OPERAÇÕES', requires: 'documents:read' },
+  // Checklists, Equipa e Documentos eram três entradas, e nenhuma é uma fila de
+  // trabalho: são onde se vai confirmar uma coisa quando ela é precisa.
+  { label: 'Clínica', href: '/dashboard/receptionist/operations', group: 'OPERAÇÕES', requires: 'checklists:run' },
 ];
 
 // ─── dentist: o gabinete ────────────────────────────────────────────────────
 // «Quem é este doente e o que falta fazer-lhe?»
 //
-// A lista era plana e obrigava a saltar entre dezasseis entradas para juntar a história
-// de uma pessoa. O grupo CLÍNICO junta o que se faz A um doente; o Espaço do Doente
-// (★, por construir) inverte a navegação — abre-se a pessoa e o resto são separadores.
+// Era a lista mais longa por unidade de trabalho: quinze entradas, e SEIS delas eram o
+// mesmo ecrã. «Planos de Tratamento», «Histórico Clínico», «Prescrições»,
+// «Consentimentos», «Encomendas de Lab» e «Recalls» carregavam todas /patients, punham a
+// mesma lista à esquerda, obrigavam a escolher uma pessoa e só então pediam
+// `?patientId=`. Eram o Espaço do Doente com um separador aberto — e mudar de assunto
+// sobre o MESMO doente obrigava a atravessar o menu e a escolhê-lo outra vez.
+//
+// Hoje são separadores lá dentro (ver app/dashboard/dentist/patients/page.tsx). Sobra
+// «Tratamentos», que é a única lista transversal a doentes que o gabinete tem — pede
+// /treatments sem filtro — e por isso a única que é mesmo uma fila.
 //
 // Fora desta lista por decisão de produto, não por esquecimento: odontograma e
 // imagiologia (fora de âmbito, ver PRODUCT.md — o odontograma chegou a existir e foi
@@ -211,46 +199,21 @@ const RECEPTIONIST_NAV: NavItem[] = [
 const DENTIST_NAV: NavItem[] = [
   { label: 'Hoje', href: '/dashboard/dentist', group: 'O MEU DIA' },
   { label: 'Marcações', href: '/dashboard/dentist/appointments', group: 'O MEU DIA', requires: 'appointments:status' },
+  {
+    label: 'Agenda Inteligente',
+    href: '/dashboard/dentist/schedule-intel',
+    group: 'O MEU DIA',
+    requires: 'schedule:read',
+  },
   { label: 'Tarefas', href: '/dashboard/dentist/tasks', group: 'O MEU DIA', requires: 'patient-tasks:read' },
 
   // Uma entrada só, e não «lista» + «espaço»: a página É o espaço, e entra-se nele pela
   // lista que tem à esquerda. Duas entradas para o mesmo ecrã seriam duas maneiras de
-  // dizer a mesma coisa.
+  // dizer a mesma coisa — que é exatamente o que as seis absorvidas eram.
   { label: 'Espaço do Doente', href: '/dashboard/dentist/patients', group: 'DOENTES' },
+  { label: 'Tratamentos', href: '/dashboard/dentist/treatments', group: 'DOENTES', requires: 'treatments:read' },
 
-  {
-    label: 'Planos de Tratamento',
-    href: '/dashboard/dentist/treatment-plans',
-    group: 'CLÍNICO',
-    requires: 'treatment-plans:read',
-  },
-  { label: 'Tratamentos', href: '/dashboard/dentist/treatments', group: 'CLÍNICO', requires: 'treatments:read' },
-  {
-    label: 'Histórico Clínico',
-    href: '/dashboard/dentist/medical-history',
-    group: 'CLÍNICO',
-    requires: 'medical-history:read',
-  },
-  { label: 'Prescrições', href: '/dashboard/dentist/prescriptions', group: 'CLÍNICO', requires: 'prescriptions:read' },
-  {
-    label: 'Consentimentos',
-    href: '/dashboard/dentist/consent-forms',
-    group: 'CLÍNICO',
-    requires: 'consent-forms:read',
-  },
-  { label: 'Encomendas de Lab', href: '/dashboard/dentist/lab-orders', group: 'CLÍNICO', requires: 'lab-orders:read' },
-  { label: 'Documentos', href: '/dashboard/dentist/documents', group: 'CLÍNICO', requires: 'documents:read' },
-
-  { label: 'Recalls', href: '/dashboard/dentist/recalls', group: 'SEGUIMENTO', requires: 'recalls:read' },
-  {
-    label: 'Agenda Inteligente',
-    href: '/dashboard/dentist/schedule-intel',
-    group: 'SEGUIMENTO',
-    requires: 'schedule:read',
-  },
-
-  { label: 'Equipa', href: '/dashboard/dentist/team', group: 'EQUIPA' },
-  { label: 'Operações', href: '/dashboard/dentist/operations', group: 'EQUIPA', requires: 'checklists:run' },
+  { label: 'Clínica', href: '/dashboard/dentist/operations', group: 'OPERAÇÕES', requires: 'checklists:run' },
 ];
 
 // ─── super_admin: a plataforma ──────────────────────────────────────────────
@@ -286,66 +249,33 @@ const DENTIST_NAV: NavItem[] = [
 // acima de `tenants`, a tabela é plana, e um dono com várias clínicas é uma migração de
 // modelo de dados e não uma entrada de menu.
 const SUPER_ADMIN_NAV: NavItem[] = [
-  { label: 'Painel da Plataforma', href: '/dashboard/super-admin', group: 'VISÃO GERAL' },
-  { label: 'Estado do Sistema', href: '/dashboard/super-admin/health', group: 'VISÃO GERAL' },
-  { label: 'Alertas', href: '/dashboard/super-admin/alerts', group: 'VISÃO GERAL', requires: 'agents:read' },
+  { label: 'Painel da Plataforma', href: '/dashboard/super-admin', group: 'PLATAFORMA' },
+  { label: 'Estado do Sistema', href: '/dashboard/super-admin/health', group: 'PLATAFORMA' },
+  { label: 'Incidentes', href: '/dashboard/super-admin/ops/incidents', group: 'PLATAFORMA' },
 
-  { label: 'Clínicas', href: '/dashboard/super-admin/tenants', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
-  { label: 'Onboarding', href: '/dashboard/super-admin/onboarding', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
+  // Clínicas absorveu Onboarding: uma clínica por arrancar é um ESTADO de uma clínica,
+  // e um estado não merece um destino próprio.
+  { label: 'Clínicas', href: '/dashboard/super-admin/tenants', group: 'CLÍNICAS', requires: 'tenants:manage' },
   // O nível de grupo: capacidade, equipa, equipamento, audiência de campanha e previsão
   // somados das unidades todas. Fica com 'tenants:manage' (ação de plataforma) porque
   // nenhuma clínica pode ler o que aqui está sobre as outras.
-  { label: 'Grupo', href: '/dashboard/super-admin/group', group: 'ORGANIZAÇÕES', requires: 'tenants:manage' },
+  { label: 'Grupo', href: '/dashboard/super-admin/group', group: 'CLÍNICAS', requires: 'tenants:manage' },
+  // Três entradas em uma: a comparação entre clínicas, o trabalho real e a retenção. As
+  // duas últimas liam a MESMA linha de /platform/usage — ver pages/Analise.tsx.
+  { label: 'Análise', href: '/dashboard/super-admin/reports', group: 'CLÍNICAS', requires: 'reports:read' },
 
-  {
-    label: 'Todos os Utilizadores',
-    href: '/dashboard/super-admin/users',
-    group: 'UTILIZADORES',
-    requires: 'users:manage',
-  },
-  { label: 'Papéis', href: '/dashboard/super-admin/roles', group: 'UTILIZADORES', requires: 'users:manage' },
-  {
-    label: 'Registos de Acesso',
-    href: '/dashboard/super-admin/access-logs',
-    group: 'UTILIZADORES',
-    requires: 'audit:read',
-  },
-
+  // Cinco entradas em uma. Agentes, Modelos, Execuções, Custos e Falhas eram dois
+  // endpoints — ver pages/Agentes.tsx, que diz quais e porquê.
   { label: 'Agentes', href: '/dashboard/super-admin/ai/agents', group: 'AGENTES', requires: 'agents:read' },
-  { label: 'Modelos', href: '/dashboard/super-admin/ai/models', group: 'AGENTES', requires: 'agents:read' },
-  { label: 'Execuções', href: '/dashboard/super-admin/ai/runs', group: 'AGENTES', requires: 'agents:read' },
-  { label: 'Custos de IA', href: '/dashboard/super-admin/ai/costs', group: 'AGENTES', requires: 'agents:read' },
-  { label: 'Falhas', href: '/dashboard/super-admin/ai/failures', group: 'AGENTES', requires: 'agents:read' },
+  { label: 'Alertas', href: '/dashboard/super-admin/alerts', group: 'AGENTES', requires: 'agents:read' },
 
-  { label: 'Incidentes', href: '/dashboard/super-admin/ops/incidents', group: 'OPERAÇÕES' },
-  {
-    label: 'Eventos de Sistema',
-    href: '/dashboard/super-admin/ops/events',
-    group: 'OPERAÇÕES',
-    requires: 'audit:read',
-  },
-
-  // 'Análise da Plataforma' é a comparação entre clínicas do grupo — a única página desta
-  // secção com dados reais desde sempre, e a superfície onde o agente Grupo escreve.
-  {
-    label: 'Análise da Plataforma',
-    href: '/dashboard/super-admin/reports',
-    group: 'ANÁLISE',
-    requires: 'reports:read',
-  },
-  { label: 'Utilização', href: '/dashboard/super-admin/analytics/usage', group: 'ANÁLISE', requires: 'reports:read' },
-  { label: 'Retenção', href: '/dashboard/super-admin/analytics/retention', group: 'ANÁLISE', requires: 'reports:read' },
-
-  { label: 'Registo de Auditoria', href: '/dashboard/super-admin/audit', group: 'SEGURANÇA', requires: 'audit:read' },
-  {
-    label: 'Eventos de Segurança',
-    href: '/dashboard/super-admin/security/events',
-    group: 'SEGURANÇA',
-    requires: 'audit:read',
-  },
+  { label: 'Utilizadores', href: '/dashboard/super-admin/users', group: 'SEGURANÇA', requires: 'users:manage' },
+  // Quatro entradas em uma. 'Registo de Auditoria', 'Registos de Acesso', 'Eventos de
+  // Sistema' e 'Eventos de Segurança' liam as quatro o mesmo audit_log com conjuntos de
+  // ações diferentes — ver pages/Auditoria.tsx.
+  { label: 'Auditoria', href: '/dashboard/super-admin/audit', group: 'SEGURANÇA', requires: 'audit:read' },
 
   { label: 'Configuração', href: '/dashboard/super-admin/settings/system', group: 'DEFINIÇÕES' },
-  { label: 'Campos Schema', href: '/dashboard/super-admin/schema', group: 'DEFINIÇÕES', requires: 'schema:manage' },
 ];
 
 export const NAV: Record<Role, NavItem[]> = {

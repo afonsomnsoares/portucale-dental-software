@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Badge, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { Badge, ErrorState, Spinner } from '@/components/ui';
 import { useDebouncedValue } from '@/hooks/useDebouncedEffect';
 import { useQuery } from '@/hooks/useQuery';
 import type { AuditLogEntry } from '@/lib/types';
@@ -28,6 +28,10 @@ const RM: Record<string, { bg: string; color: string }> = {
 // quando essa pessoa tem tenantId, e só um super-admin vê várias clínicas. Aqui
 // `scope` decide apenas o que faz sentido MOSTRAR — numa clínica só, a coluna da
 // clínica seria a mesma palavra repetida em todas as linhas.
+//
+// É um painel e não uma página: o cabeçalho é de quem o mostra. Na plataforma é o
+// separador «Tudo» de Auditoria (components/super-admin/pages/Auditoria.tsx); na clínica
+// é a página que o embrulha. Um separador não pode trazer um <h1> atrás de si.
 export type AuditScope = 'clinic' | 'platform';
 
 export default function AuditLog({ scope }: { scope: AuditScope }) {
@@ -45,14 +49,6 @@ export default function AuditLog({ scope }: { scope: AuditScope }) {
 
   return (
     <div>
-      <PageHeader
-        title="Auditoria"
-        sub={
-          scope === 'platform'
-            ? 'Registo de atividade de todas as clínicas — imutável, com hash SHA-256'
-            : 'Registo de atividade desta clínica — imutável, com hash SHA-256'
-        }
-      />
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <input
           className="input"

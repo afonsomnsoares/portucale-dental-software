@@ -8,7 +8,7 @@ import {
   GhostBtn,
   Inp,
   Modal,
-  PageHeader,
+  PanelBar,
   PrimaryBtn,
   Sel,
   Spinner,
@@ -177,12 +177,9 @@ export default function UsersAndAccess() {
 
   return (
     <div>
-      <PageHeader
-        title="Utilizadores"
-        sub="Equipa — contas, funções e acesso"
-        action="+ Novo Utilizador"
-        onAction={openCreate}
-      />
+      <PanelBar>
+        <PrimaryBtn onClick={openCreate}>+ Novo Utilizador</PrimaryBtn>
+      </PanelBar>
 
       <div style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
         <Inp

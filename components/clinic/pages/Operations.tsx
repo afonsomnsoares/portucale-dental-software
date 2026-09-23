@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useAuth } from '@/app/providers';
+import CarePathways from '@/components/clinic/pages/CarePathways';
 import ChecklistPanel from '@/components/operations/ChecklistPanel';
 import IncidentsPanel from '@/components/operations/IncidentsPanel';
 import TemplateManager from '@/components/operations/TemplateManager';
@@ -14,8 +15,17 @@ import type { DbUser } from '@/lib/types';
 // tenantId caem no tenant de quem chama, e /api/users já só devolve a equipa desta
 // clínica (ver o filtro por user.tenantId em app/api/users/route.ts).
 export default function ClinicOperationsPage() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [tab, setTab] = useState('checklists');
+  // «Percursos de Consulta» era uma entrada de menu à parte. É o protocolo que os
+  // checklists executam — o que tem de estar feito antes e depois de cada tipo de
+  // consulta — e separá-lo das checklists era arrumar por tabela em vez de por trabalho.
+  //
+  // O separador segue a permissão e não só o papel, pela mesma razão que o menu o faz:
+  // retirar 'care-pathways:manage' a um admin tem de o tirar daqui também, senão o
+  // separador levava a um 403. Enquanto as permissões não chegarem de /api/auth/me,
+  // mostra-se — esconder faria o separador piscar a cada carregamento.
+  const podePercursos = !user?.permissions || user.permissions.includes('care-pathways:manage');
   // A equipa serve para atribuir tarefas e turnos. Falhar em silêncio dava um
   // seletor vazio — e um seletor vazio lê-se como «não há ninguém na clínica».
   //
@@ -28,7 +38,7 @@ export default function ClinicOperationsPage() {
 
   return (
     <div>
-      <PageHeader title="Operações da Clínica" sub="Checklists de abertura/fecho e escalamento de incidentes" />
+      <PageHeader title="Operações" sub="Checklists de abertura e fecho, incidentes, e o protocolo de cada consulta" />
 
       <Tabs
         active={tab}
@@ -36,10 +46,11 @@ export default function ClinicOperationsPage() {
         tabs={[
           { key: 'checklists', label: 'Checklists' },
           { key: 'incidents', label: 'Incidentes' },
+          ...(podePercursos ? [{ key: 'pathways', label: 'Percursos de consulta' }] : []),
         ]}
       />
 
-      {tab === 'checklists' ? (
+      {tab === 'checklists' && (
         <div>
           <div className="card p-5 mb-5">
             <TemplateManager api={api} />
@@ -47,17 +58,22 @@ export default function ClinicOperationsPage() {
           <div className="section-label mb-3">CHECKLISTS DE HOJE</div>
           <ChecklistPanel api={api} />
         </div>
-      ) : teamQuery.error ? (
-        <ErrorState
-          error={teamQuery.error}
-          onRetry={teamQuery.refetch}
-          message="Não foi possível carregar a equipa da clínica."
-        />
-      ) : teamQuery.loading ? (
-        <Spinner />
-      ) : (
-        <IncidentsPanel api={api} canManage teamUsers={teamUsers} />
       )}
+
+      {tab === 'incidents' &&
+        (teamQuery.error ? (
+          <ErrorState
+            error={teamQuery.error}
+            onRetry={teamQuery.refetch}
+            message="Não foi possível carregar a equipa da clínica."
+          />
+        ) : teamQuery.loading ? (
+          <Spinner />
+        ) : (
+          <IncidentsPanel api={api} canManage teamUsers={teamUsers} />
+        ))}
+
+      {tab === 'pathways' && podePercursos && <CarePathways />}
     </div>
   );
 }

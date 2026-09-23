@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import EfficiencyTab from '@/components/receptionist/EfficiencyTab';
 import OptimizerTab from '@/components/receptionist/OptimizerTab';
 import SlotRiskTab, { type SlotRiskReport } from '@/components/receptionist/SlotRiskTab';
-import { Badge, Empty, ErrorState, GhostBtn, PageHeader, RiskBadge, Spinner, Tabs } from '@/components/ui';
+import { Badge, Empty, ErrorState, GhostBtn, PanelBar, RiskBadge, Spinner, Tabs } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatPhonePT } from '@/lib/constants';
 import type { AgendaEfficiency, RiskData, RiskHeatmapData, ScheduleOptimization, WaitlistData } from '@/lib/types';
@@ -95,11 +95,11 @@ export default function ClinicScheduleIntelPage() {
 
   return (
     <div>
-      <PageHeader title="Agenda Inteligente" sub="Previsão de faltas, eficiência da agenda e lista de espera">
+      <PanelBar>
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PanelBar>
 
       {queryDoSeparador?.error ? (
         <ErrorState

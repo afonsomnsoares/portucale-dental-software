@@ -1,5 +1,5 @@
-import Lifecycle from '@/components/clinic/pages/Lifecycle';
+import Doentes from '@/components/clinic/pages/Doentes';
 
 export default function Page() {
-  return <Lifecycle />;
+  return <Doentes />;
 }

@@ -1,5 +1,5 @@
-import ScheduleIntel from '@/components/clinic/pages/ScheduleIntel';
+import Agenda from '@/components/clinic/pages/Agenda';
 
 export default function Page() {
-  return <ScheduleIntel />;
+  return <Agenda />;
 }

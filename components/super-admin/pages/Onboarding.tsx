@@ -1,6 +1,6 @@
 'use client';
 import type { UsageRow } from '@/components/super-admin/usage';
-import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 // Onboarding medido pelo que a clínica JÁ FEZ, não por uma checklist que alguém marca
@@ -34,8 +34,6 @@ export default function Onboarding({ initialData }: { initialData?: UsageRow[] }
 
   return (
     <div>
-      <PageHeader title="Onboarding" sub={`${onboarding.length} clínicas por concluir · ${done} a trabalhar`} />
-
       <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="EM ONBOARDING"

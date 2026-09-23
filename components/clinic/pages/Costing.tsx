@@ -15,7 +15,7 @@
 // que alguém lesse a margem sem saber sobre que regra ela foi calculada.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { AlertBanner, Empty, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { AlertBanner, Empty, Inp, PanelBar, PanelNote, PrimaryBtn, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 
@@ -221,10 +221,7 @@ export default function Costing({
 
   return (
     <div>
-      <PageHeader
-        title="Custos e Margem"
-        sub="O que sobra depois do material, do trabalho e da parte dos custos fixos que cada consulta carrega."
-      >
+      <PanelBar>
         <div style={{ display: 'flex', gap: 8 }}>
           <Inp type="date" value={de} onChange={(e) => setDe(e.target.value)} style={{ width: 150 }} aria-label="De" />
           <Inp
@@ -235,7 +232,11 @@ export default function Costing({
             aria-label="Até"
           />
         </div>
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>
+        O que sobra depois do material, do trabalho e da parte dos custos fixos que cada consulta carrega.
+      </PanelNote>
 
       {avisoDefinicoes ? <AlertBanner type="warning">{avisoDefinicoes}</AlertBanner> : null}
       {erroGravar ? <AlertBanner type="danger">{erroGravar}</AlertBanner> : null}

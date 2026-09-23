@@ -565,10 +565,14 @@
   min-width: 0;
 }
 
+/* O respiro é token e não número porque há blocos que têm de o CANCELAR — ver
+   .bleed. Escrito duas vezes, o dia em que um mudasse deixava o outro a meio. */
 .app-main {
+  --app-px: 36px;
+  --app-py: 32px;
   flex: 1;
   overflow-y: auto;
-  padding: 32px 36px;
+  padding: var(--app-py) var(--app-px);
 }
 
 .app-sidebar-toggle,
@@ -613,6 +617,759 @@
   /* O respiro lateral generoso do desktop não cabe aqui, mas nunca abaixo de
      16 px: uma tabela colada à margem do ecrã lê-se pior do que uma estreita. */
   .app-main {
-    padding: 20px 16px;
+    --app-px: 16px;
+    --app-py: 20px;
   }
+}
+
+/* ─── O console ──────────────────────────────────────────────────────────────
+   A camada que faltava entre os tokens e as páginas.
+
+   Os tokens diziam com que cor e com que corpo se escreve; não diziam que FORMA
+   tem um ecrã de operação. Sem isso, doze páginas da receção saíram todas com o
+   mesmo molde — um cabeçalho alto, uma fila de cartões soltos, um cartão com uma
+   lista — que é o molde por omissão de qualquer painel administrativo feito
+   desde 2015. A paleta era nossa; o desenho não era de ninguém.
+
+   A regra deste bloco: NUMA FERRAMENTA DE OPERAÇÃO, A ESTRUTURA É A GRELHA.
+   Onde um produto de consumo poria um cartão a flutuar com margem à volta, aqui
+   põe-se uma célula encostada à seguinte, separada por uma linha. O ecrã passa a
+   ler-se como um instrumento — tudo alinhado ao mesmo eixo, nada a boiar — e
+   ganham-se as duas ou três linhas de lista que a margem estava a gastar.
+   ========================================================================== */
+
+/* Cancela o respiro lateral do .app-main. É para os blocos que têm de encostar
+   aos limites da coluna: a barra de página e a faixa de métricas. Uma barra que
+   não encosta não é uma barra — é um cartão sem contorno. */
+.bleed {
+  margin-left: calc(var(--app-px) * -1);
+  margin-right: calc(var(--app-px) * -1);
+}
+.bleed-top {
+  margin-top: calc(var(--app-py) * -1);
+}
+
+/* ─── A barra de página ─────────────────────────────────────────────────────
+   52 px, encostada ao topo e aos lados, com uma linha por baixo. Substitui o
+   cabeçalho de 22px + subtítulo + 24px de margem, que gastava 90 px de altura
+   para dizer em que página estamos — num ecrã que a barra lateral já responde.
+
+   O que ganha em troca é o CONTEXTO: que clínica, que dia, que hora. Numa
+   receção com várias unidades isso não é decoração, é o que evita marcar na
+   clínica errada. */
+.page-chrome {
+  box-sizing: border-box;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--app-px);
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  position: sticky;
+  top: calc(var(--app-py) * -1);
+  z-index: 20;
+}
+.page-chrome h1 {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--text-base-leading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+/* O contexto é de máquina — clínica, data, contagem — e por isso monoespaçado.
+   Encolhe antes do título quando o espaço aperta. */
+.page-chrome .chrome-context {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+/* Num ecrã estreito a barra não cabe inteira, e o que sai primeiro é o contexto:
+   é a informação mais dispensável das três, porque quem está no telemóvel está
+   numa clínica só e sabe em que dia está. O nome e a ação ficam sempre. */
+@media (max-width: 900px) {
+  .page-chrome { gap: var(--space-2); }
+  .page-chrome .chrome-context { display: none; }
+}
+
+.page-chrome .chrome-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* O atalho de teclado, dentro do botão que ele dispara. Diz que a ferramenta se
+   usa sem rato — e é a única maneira de o descobrir sem um manual. */
+.kbd {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: 1;
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-chip);
+  padding: 2px 5px;
+  border: 1px solid currentColor;
+  opacity: 0.55;
+}
+
+/* O ponto de «em direto». Numa sala em tempo real, a diferença entre uma clínica
+   parada e uma ligação em baixo não se vê nos dados — só aqui. */
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-leading);
+  letter-spacing: var(--text-2xs-tracking);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.live::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--urgency-ok);
+  animation: pulseDot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.live[data-on='false'] { color: var(--urgency-soon); }
+.live[data-on='false']::before { background: var(--urgency-soon); animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .live::before { animation: none; }
+}
+
+/* ─── A faixa de métricas ───────────────────────────────────────────────────
+   Células encostadas, separadas por linha, a sangrar para os dois lados. Era
+   uma fila de cartões com 16 px de intervalo — e um cartão de métrica com
+   contorno próprio pede ao olho que o leia como uma coisa, quando o que ali
+   está é uma leitura de vários mostradores do MESMO instrumento. */
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr));
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+}
+.metric-cell {
+  box-sizing: border-box;
+  padding: var(--space-4) var(--app-px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-right: 1px solid var(--border-subtle);
+  min-width: 0;
+}
+.metric-cell:last-child { border-right: none; }
+/* O rótulo é o nome do campo, não uma frase: monoespaçado e em minúsculas com
+   underscore. Distingue-se do texto à volta sem gastar peso nem cor, e diz que
+   aquilo é um valor lido de um sistema. */
+.metric-cell .metric-label {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-leading);
+  letter-spacing: var(--text-2xs-tracking);
+  font-weight: var(--weight-medium);
+  color: var(--text-muted);
+}
+.metric-cell .metric-sub {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs-leading);
+  color: var(--text-muted);
+}
+/* Uma célula que exige ação tinge-se e ganha um cutelo à esquerda. É a única
+   cor forte da faixa, e é por isso que se vê: se todas as células tivessem a
+   sua, nenhuma apontaria para nada. */
+.metric-cell[data-urgency='critical'] {
+  background: var(--urgency-critical-bg);
+  box-shadow: inset 2px 0 0 var(--urgency-critical);
+}
+.metric-cell[data-urgency='critical'] .metric-label,
+.metric-cell[data-urgency='critical'] .metric-value,
+.metric-cell[data-urgency='critical'] .metric-sub { color: var(--urgency-critical); }
+.metric-cell[data-urgency='soon'] {
+  background: var(--urgency-soon-bg);
+  box-shadow: inset 2px 0 0 var(--urgency-soon);
+}
+.metric-cell[data-urgency='soon'] .metric-label,
+.metric-cell[data-urgency='soon'] .metric-value,
+.metric-cell[data-urgency='soon'] .metric-sub { color: var(--urgency-soon); }
+
+/* ─── A faixa de triagem ────────────────────────────────────────────────────
+   O que muda mesmo o trabalho de quem está ao balcão: a página abre pelo que
+   está atrasado, em vez de abrir por uma lista neutra onde o atrasado tem de
+   ser procurado.
+
+   Não é um alerta. Um alerta diz «aconteceu uma coisa»; isto é uma FILA — tem
+   contagem, tem ordem, e cada linha é um sítio para onde ir. Desaparece quando
+   está vazia, que é a única maneira de continuar a significar alguma coisa nos
+   dias em que aparece. */
+/* Duas faixas, e não uma com tudo lá dentro. «Confirmar presença» e «dar alta»
+   são ambas trabalho para agora, mas uma é um risco e a outra é uma conclusão —
+   pintá-las da mesma cor ensinava que vermelho quer dizer «mexe-te», que é
+   precisamente o que ele NÃO pode passar a querer dizer. */
+.triage {
+  border-bottom: 1px solid var(--urgency-critical-border);
+  background: var(--urgency-critical-bg);
+  box-shadow: inset 3px 0 0 var(--urgency-critical);
+}
+.triage[data-tone='ok'] {
+  border-bottom-color: var(--urgency-ok-border);
+  background: var(--urgency-ok-bg);
+  box-shadow: inset 3px 0 0 var(--urgency-ok);
+}
+.triage[data-tone='ok'] .triage-head,
+.triage[data-tone='ok'] .triage-when,
+.triage[data-tone='ok'] .triage-go { color: var(--urgency-ok); }
+.triage[data-tone='ok'] .triage-row { border-top-color: var(--urgency-ok-border); }
+.triage[data-tone='ok'] .triage-row:hover { background: var(--green-50); }
+.triage-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--app-px);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-leading);
+  letter-spacing: var(--text-2xs-tracking);
+  font-weight: var(--weight-semibold);
+  color: var(--urgency-critical);
+  text-transform: uppercase;
+}
+.triage-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm-leading);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--urgency-critical-border);
+  padding: 7px var(--app-px);
+  cursor: pointer;
+}
+.triage-row:hover { background: var(--red-50); }
+/* Sem `cursor: pointer` nem hover quando a linha não é o botão — nesse caso quem
+   é clicável é a ação que ela traz ao fundo, e fingir o contrário é mentir ao rato. */
+.triage-row[data-static='true'] { cursor: default; }
+.triage-row[data-static='true']:hover { background: transparent; }
+.triage-row .triage-when {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  color: var(--urgency-critical);
+  font-weight: var(--weight-medium);
+  flex-shrink: 0;
+  min-width: 52px;
+}
+.triage-row .triage-go { margin-left: auto; color: var(--urgency-critical); flex-shrink: 0; }
+
+/* ─── A secção de trabalho ──────────────────────────────────────────────────
+   O que vem depois da faixa: um rótulo, uma contagem, e a lista. Sem cartão à
+   volta — o contorno do cartão e a borda da tabela eram duas linhas a 1 px de
+   distância a dizer a mesma coisa. */
+.work-section { padding-top: var(--space-5); }
+.work-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.work-head h2 {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs-leading);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.work-count {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.work-tools { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+/* Os controlos que vivem numa barra — a de página ou a de ferramentas de uma
+   secção — são mais pequenos do que os de um formulário. Um <select> de 40 px
+   de altura dentro de uma barra de 52 px não deixa barra nenhuma à volta dele,
+   e a barra deixa de se ler como uma linha para passar a ser um bloco.
+
+   Está aqui, e não em cada sítio, porque eram dezassete estilos inline com o
+   mesmo par de valores — e o décimo oitavo teria sido escrito à mão outra vez. */
+.page-chrome .input,
+.page-chrome .select,
+.work-tools .input,
+.work-tools .select {
+  width: auto;
+  padding: 5px 8px;
+  font-size: var(--text-xs);
+}
+.page-chrome .btn,
+.work-tools .btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* ─── A segunda barra ───────────────────────────────────────────────────────
+   Os controlos de um PAINEL — o que vive dentro de um separador e por isso não
+   alcança a barra de página. Era uma fila de botões a flutuar a 24 px do topo,
+   alinhada à direita e sem nada por baixo: lia-se como um botão esquecido, não
+   como uma barra.
+
+   Encostada e com linha por baixo, encaixa na de cima e o ecrã passa a ter duas
+   réguas em vez de uma régua e um botão perdido. */
+.panel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-height: 42px;
+  padding: var(--space-1) var(--app-px);
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.panel-bar .input,
+.panel-bar .select {
+  width: auto;
+  padding: 5px 8px;
+  font-size: var(--text-xs);
+}
+.panel-bar .btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+/* Um bloco de lista: contorno, cantos, e a tabela encostada por dentro. */
+.panel {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+/* ─── A agenda do dia ────────────────────────────────────────────────────────
+   O ecrã mais olhado da receção, e o que menos tinha mudado: continuava a ser
+   um calendário genérico — cartão com cabeçalho, blocos em tom pastel, painel de
+   detalhe a flutuar ao lado.
+
+   Três coisas estavam erradas, e nenhuma era a cor.
+
+   1. RESPONDIA À PERGUNTA ERRADA. Uma grelha de horas responde a «como é o dia».
+      Ao balcão a pergunta é «quem é o próximo» e «onde está toda a gente agora»,
+      e para essas era preciso varrer a grelha com os olhos e fazer a conta.
+
+   2. O AGORA ERA UMA LINHA FINA. Numa agenda aberta oito horas por dia, o
+      instante presente é o eixo de tudo — o que já passou não se toca, o que vem
+      a seguir é o trabalho. Uma régua de 2 px não divide um ecrã em dois.
+
+   3. CLICAR MOVIA O QUE SE CLICOU. O detalhe entrava num `flex` ao lado, a
+      grelha encolhia para lhe dar espaço, e o bloco saltava para debaixo do
+      cursor. A coluna passou a existir sempre — e quando não há nada escolhido
+      mostra as próximas marcações, que é a pergunta mais feita ao balcão.
+   ========================================================================== */
+.daygrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 272px;
+  gap: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+@media (max-width: 1100px) {
+  .daygrid { grid-template-columns: minmax(0, 1fr); }
+  .daygrid-rail { border-left: none; border-top: 1px solid var(--border-strong); }
+}
+
+/* A régua de comando da grelha: rótulos de cadeira à esquerda, densidade à
+   direita. Existe mesmo com uma cadeira só — é onde vive o zoom, que numa agenda
+   com doze horas é a diferença entre ver o dia e ver a manhã. */
+.dayhead {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--bg-sunken);
+}
+.dayhead-zoom {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 6px;
+}
+.dayhead-zoom button {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: var(--leading-none);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+}
+.dayhead-zoom button:hover:not(:disabled) { color: var(--text-primary); background: var(--bg-page); }
+.dayhead-zoom button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.daygrid-scroll {
+  overflow-y: auto;
+  max-height: max(320px, calc(100dvh - 330px));
+  position: relative;
+}
+
+/* A goteira das horas é uma régua, não uma coluna de texto solto: tem fundo
+   próprio e fica colada à esquerda enquanto se rola na horizontal. */
+.dayrail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 58px;
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border-strong);
+  pointer-events: none;
+  z-index: 1;
+}
+/* O rótulo assenta NO TOPO da sua faixa, não centrado na linha que a abre.
+   Centrado, o primeiro ficava meio fora do contentor e lia-se «08» cortado ao
+   meio — e nenhum dos outros dizia com clareza a que faixa pertencia. */
+.dayrail-h {
+  position: absolute;
+  right: 8px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-leading);
+  letter-spacing: var(--text-2xs-tracking);
+  color: var(--text-muted);
+  padding-top: 4px;
+}
+
+/* ─── O que já passou não compete com o que aí vem ─────────────────────────
+   Uma consulta das 9h às 16h30 ainda está no ecrã e já não é trabalho. Baixar
+   o contraste do passado é o que faz o presente saltar sem precisar de pintar
+   o presente de nenhuma cor nova. */
+.dayblock {
+  position: absolute;
+  font: inherit;
+  text-align: left;
+  border-radius: var(--radius-chip);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.12s, opacity 0.12s, border-color 0.12s;
+  z-index: 2;
+}
+/* 0.45 era demais: o nome do doente deixava de se ler, e o que já aconteceu
+   ainda é preciso para atender o telefone («a senhora das 8h30 esteve cá?»).
+   0.6 afasta o passado sem o apagar. */
+.dayblock[data-past='true'] { opacity: 0.6; }
+.dayblock[data-past='true']:hover { opacity: 1; }
+/* A que está a decorrer agora leva anel, e é a única que o leva. */
+.dayblock[data-current='true'] { z-index: 3; box-shadow: var(--ring-focus); }
+.dayblock[data-selected='true'] { z-index: 4; box-shadow: var(--elev-2); }
+
+/* ─── Os buracos ───────────────────────────────────────────────────────────
+   Tapar buracos É o trabalho da receção, e a agenda não os mostrava: um vazio de
+   hora e meia entre duas consultas lia-se como «fundo», igual ao intervalo de
+   dez minutos ao lado. Agora tem contorno tracejado, diz quanto tempo é, e
+   carrega para marcar lá dentro.
+
+   Só os do futuro, e só a partir de 20 minutos: um buraco que já passou não se
+   enche, e um de dez minutos não é um buraco — é o intervalo entre consultas. */
+.daygap {
+  position: absolute;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-chip);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  letter-spacing: var(--text-2xs-tracking);
+  cursor: pointer;
+  z-index: 1;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.daygap:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+  border-style: solid;
+}
+.daygap[data-static='true'] { cursor: default; }
+.daygap[data-static='true']:hover { background: transparent; color: var(--text-muted); border-color: var(--border-strong); border-style: dashed; }
+
+/* ─── O agora ──────────────────────────────────────────────────────────────
+   Régua a toda a largura com a hora numa etiqueta sólida sobre a goteira. A
+   etiqueta é o que a torna legível quando cai em cima de um bloco. */
+.daynow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.daynow-line {
+  margin-left: 58px;
+  height: 0;
+  border-top: 2px solid var(--urgency-critical);
+}
+.daynow-chip {
+  position: absolute;
+  left: 4px;
+  top: -8px;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: 1;
+  font-weight: var(--weight-bold);
+  color: var(--text-onAccent);
+  background: var(--urgency-critical);
+  border-radius: var(--radius-chip);
+  padding: 3px 4px;
+}
+
+/* ─── A coluna da direita ──────────────────────────────────────────────────
+   Nunca está vazia: ou é o detalhe do que se escolheu, ou é a lista do que vem
+   a seguir. Reservá-la custa 272 px e paga-os das duas maneiras — o ecrã deixa
+   de saltar ao clicar, e a pergunta «quem é o próximo» passa a ter resposta
+   permanente em vez de exigir uma leitura da grelha. */
+.daygrid-rail {
+  border-left: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-surface);
+}
+.daygrid-rail-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-leading);
+  letter-spacing: var(--text-2xs-tracking);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.daygrid-rail-body { overflow-y: auto; padding: var(--space-3); min-height: 0; }
+
+/* Uma linha da lista «a seguir»: hora, nome, e o que falta. */
+.daynext {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 7px 0;
+  cursor: pointer;
+}
+.daynext:last-child { border-bottom: none; }
+.daynext:hover { background: var(--accent-bg); }
+.daynext-when {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.daynext-who {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── O calendário do mês ────────────────────────────────────────────────────
+   A vista que faltava: a agenda tinha o DIA (a grelha de horas do painel) e tinha
+   a LISTA (marcadas, com intervalo de datas), e não tinha o meio-termo — o mês,
+   que é onde se vê a forma da semana antes de se olhar para uma hora.
+
+   A grelha é de bordas e não de cartões, como o resto do console: cada dia é uma
+   célula encostada à seguinte. O que flutua num calendário assim são os eventos,
+   e esses são a única coisa com fundo próprio.
+   ========================================================================== */
+.monthcal {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+/* A coluna da semana existe para se falar dela ao telefone («foi na 38») e para
+   dar ao olho um eixo vertical fixo. É estreita de propósito: é uma referência,
+   não uma coluna de dados. */
+.monthcal-grid {
+  display: grid;
+  grid-template-columns: 34px repeat(7, minmax(0, 1fr));
+}
+
+.monthcal-head {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-leading);
+  letter-spacing: var(--text-2xs-tracking);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: var(--bg-sunken);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-subtle);
+}
+.monthcal-head:last-child { border-right: none; }
+
+.monthcal-wk {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 6px 0 0;
+  text-align: center;
+}
+
+.monthcal-cell {
+  min-height: 104px;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 5px 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  background: var(--bg-surface);
+}
+.monthcal-cell:nth-child(8n + 1) { border-right: 1px solid var(--border-strong); }
+/* Dias de outro mês: presentes para a semana ficar completa, rebaixados para não
+   competirem. Apagá-los deixava buracos e dava a ideia de que a semana acabou. */
+.monthcal-cell[data-outside='true'] { background: var(--bg-sunken); }
+.monthcal-cell[data-outside='true'] .monthcal-day { color: var(--text-disabled); }
+
+.monthcal-daybar { display: flex; align-items: center; gap: 4px; margin-bottom: 2px; }
+.monthcal-day {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  line-height: 1;
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  padding: 3px 4px;
+  border-radius: var(--radius-chip);
+  cursor: pointer;
+}
+.monthcal-day:hover { background: var(--accent-bg); color: var(--accent); }
+/* Hoje é o único dia com fundo cheio. Um calendário em que várias coisas estão
+   marcadas a cheio deixa de ter um «hoje». */
+.monthcal-day[data-today='true'] {
+  background: var(--ink-950);
+  color: var(--text-onAccent);
+  font-weight: var(--weight-bold);
+}
+.monthcal-day[data-today='true']:hover { background: var(--ink-800); color: var(--text-onAccent); }
+
+/* O resumo do dia, encostado à direita do número: quantas, e quantas em risco.
+   Monoespaçado para as colunas de dias alinharem entre si sem esforço. */
+.monthcal-tally {
+  margin-left: auto;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.monthcal-tally b { color: var(--urgency-critical); font-weight: var(--weight-bold); }
+
+/* Um evento. Barra de estado à esquerda, hora monoespaçada, nome a seguir. */
+.mevent {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  border: none;
+  border-left: 3px solid var(--text-muted);
+  border-radius: 0 var(--radius-chip) var(--radius-chip) 0;
+  padding: 2px 5px;
+  cursor: pointer;
+  min-width: 0;
+  transition: filter 0.1s;
+}
+.mevent:hover { filter: brightness(0.96); }
+.mevent-t {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  flex-shrink: 0;
+}
+.mevent-n {
+  font-size: var(--text-2xs);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mevent[data-risky='true'] .mevent-n::after {
+  content: ' !';
+  color: var(--urgency-critical);
+  font-weight: var(--weight-bold);
+}
+
+/* «+3 mais» — o que a célula não coube. Sem isto, um dia cheio mentia por
+   omissão: mostrava quatro consultas e escondia as outras seis sem dizer nada. */
+.monthcal-more {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 1px 5px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-chip);
+}
+.monthcal-more:hover { background: var(--accent-bg); color: var(--accent); }
+
+@media (max-width: 760px) {
+  .monthcal-grid { grid-template-columns: 26px repeat(7, minmax(0, 1fr)); }
+  .monthcal-cell { min-height: 76px; padding: 3px; }
+  .monthcal-head { padding: 5px 3px; }
 }

@@ -3,7 +3,22 @@ import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'rea
 import { useAuth } from '@/app/providers';
 import OperatoryPanel from '@/components/receptionist/OperatoryPanel';
 import WaitingRoomPanel from '@/components/receptionist/WaitingRoomPanel';
-import { FormField, GhostBtn, Inp, Modal, PageHeader, PrimaryBtn, SecondaryBtn, Spinner } from '@/components/ui';
+import {
+  clinicaMono,
+  FormField,
+  GhostBtn,
+  Inp,
+  Metric,
+  MetricStrip,
+  Modal,
+  PageChrome,
+  PrimaryBtn,
+  SecondaryBtn,
+  Spinner,
+  Triage,
+  TriageRow,
+  WorkSection,
+} from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { useSSE } from '@/hooks/useSSE';
 import type { Appointment } from '@/lib/types';
@@ -110,32 +125,76 @@ export default function LiveFloorPage() {
     return Array.from({ length: n }, (_, i) => i + 1);
   }, [user?.operatories]);
 
+  // ─── O atraso é o que a receção precisa de ver primeiro ───────────────────
+  // Não há hora de chegada gravada em `appointments` — só a hora MARCADA. Dá na
+  // mesma para a pergunta que interessa ao balcão: quem já devia ter entrado e
+  // continua sentado. A partir de cinco minutos conta como atraso; abaixo disso
+  // é o normal de uma clínica a funcionar, e uma fila que acende por dois
+  // minutos deixa de se ler ao fim de um dia.
+  const atrasadas = waiting
+    .map((a) => ({ apt: a, atraso: nowMins - toMins(a.start_time) }))
+    .filter((x) => x.atraso >= 5)
+    .sort((a, b) => b.atraso - a.atraso);
+
+  const emCadeira = todays.filter((a) => ['in-operatory', 'procedure-active'].includes(a.status)).length;
+
   if (apptsQuery.loading) return <Spinner />;
 
   return (
     <div>
-      <PageHeader
-        title="Sala em tempo real"
-        sub={`${active.length} consulta${active.length !== 1 ? 's' : ''} ativa${active.length !== 1 ? 's' : ''} · ${new Date().toLocaleDateString('pt-PT', { weekday: 'long', month: 'short', day: 'numeric' })}${syncedLabel ? ` · sincronizado ${syncedLabel} (${liveLabel})` : ''}`}
+      <PageChrome
+        title="Sala de Espera"
+        context={[clinicaMono(user?.tenantName || user?.clinic), syncedLabel && `sync ${syncedLabel}`]
+          .filter(Boolean)
+          .join(' · ')}
       >
-        <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
+        <span className="live" data-on={isConnected ? 'true' : 'false'} title={liveLabel}>
+          {isConnected ? 'em direto' : 'sondagem 10s'}
+        </span>
+        <GhostBtn onClick={load} style={{ padding: '4px 10px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PageChrome>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, alignItems: 'start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <OperatoryPanel
-            chairs={chairs}
-            todays={todays}
-            nowMins={nowMins}
-            statusTransitions={STATUS_TRANSITIONS}
-            updatingId={updatingId}
-            onSetStatus={setStatus}
-          />
-          <WaitingRoomPanel waiting={waiting} />
-        </div>
-      </div>
+      <Triage title="À espera há mais tempo do que devia">
+        {atrasadas.map(({ apt, atraso }) => (
+          <TriageRow key={apt.id} when={`+${atraso}m`}>
+            {apt.patient_name} — marcada para as {String(apt.start_time).slice(0, 5)}, ainda não entrou
+          </TriageRow>
+        ))}
+      </Triage>
+
+      <MetricStrip>
+        <Metric
+          label="a_espera"
+          value={waiting.length}
+          sub="sentados na sala"
+          urgency={atrasadas.length > 0 ? 'soon' : undefined}
+        />
+        <Metric label="em_cadeira" value={emCadeira} sub={`de ${chairs.length} gabinetes`} />
+        <Metric
+          label="atrasadas"
+          value={atrasadas.length}
+          sub="passaram da hora marcada"
+          urgency={atrasadas.length > 0 ? 'critical' : undefined}
+        />
+        <Metric label="ativas_hoje" value={active.length} sub="ainda por concluir" />
+      </MetricStrip>
+
+      <WorkSection title="Gabinetes" count={`${emCadeira} de ${chairs.length} ocupados`}>
+        <OperatoryPanel
+          chairs={chairs}
+          todays={todays}
+          nowMins={nowMins}
+          statusTransitions={STATUS_TRANSITIONS}
+          updatingId={updatingId}
+          onSetStatus={setStatus}
+        />
+      </WorkSection>
+
+      <WorkSection title="Sala de espera" count={`${waiting.length} doentes`}>
+        <WaitingRoomPanel waiting={waiting} />
+      </WorkSection>
 
       {closing && (
         <Modal title={`Fim da consulta — ${closing.apt.patient_name || 'paciente'}`} onClose={() => setClosing(null)}>

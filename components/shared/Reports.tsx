@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { type ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Empty, GhostBtn, Inp, MetricCard, PageHeader, PrimaryBtn, Sel, Spinner } from '@/components/ui';
+import { Empty, GhostBtn, Inp, MetricCard, PanelBar, PrimaryBtn, Sel, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { ClinicComparison, ReportInsight, ReportSummary, Tenant } from '@/lib/types';
@@ -91,7 +91,10 @@ export default function Reports() {
 
   return (
     <div>
-      <PageHeader title="Relatórios" sub="Desempenho da clínica — receita, funil de conversão e eficiência">
+      {/* O cabeçalho saiu porque este ecrã passou a ser um separador — na clínica dentro
+          de «Receita e Custos», na plataforma dentro de «Análise». Os controlos ficaram:
+          são deste painel e não do ecrã que o mostra. */}
+      <PanelBar>
         {isGlobalAdmin &&
           (tenantsQuery.loading ? (
             <Spinner />
@@ -119,7 +122,7 @@ export default function Reports() {
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PanelBar>
 
       {err && (
         <div
@@ -197,10 +200,14 @@ export default function Reports() {
                 // não pode existir: a Recuperação é por clínica, e um super-admin sem
                 // clínica ativa não tem nenhuma para mostrar. Por isso o link só
                 // aparece quando tem mesmo para onde ir.
+                //
+                // A Recuperação deixou de ter rota própria — é um separador da Faturação
+                // — e a âncora é o que mantém este link a aterrar onde aterrava. Ver
+                // hooks/useTabHash.ts.
                 isGlobalAdmin ? (
                   <span style={{ color: 'var(--text-muted)' }}>Entre numa clínica para ver o detalhe</span>
                 ) : (
-                  <Link href="/dashboard/admin/recovery">Ver detalhe em Recuperação →</Link>
+                  <Link href="/dashboard/admin/invoices#recuperacao">Ver detalhe em Recuperação →</Link>
                 )
               }
               color="var(--urgency-critical)"

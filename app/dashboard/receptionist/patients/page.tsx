@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import CommPrefsCard from '@/components/patient/CommPrefsCard';
+import DataConsentsCard from '@/components/patient/DataConsentsCard';
 import NextActionBanner from '@/components/patient/NextActionBanner';
 import PatientDocumentsTab from '@/components/patient/PatientDocumentsTab';
 import PatientInteractionsTab from '@/components/patient/PatientInteractionsTab';
@@ -14,7 +15,7 @@ import PatientDetailHeader from '@/components/shared/PatientDetailHeader';
 import PatientOverviewTab from '@/components/shared/PatientOverviewTab';
 import PatientsSidebarList from '@/components/shared/PatientsSidebarList';
 import type { SchemaField } from '@/components/shared/SchemaFieldInput';
-import { Empty, GhostBtn, PageHeader, Spinner, Tabs, Timeline } from '@/components/ui';
+import { clinicaMono, Empty, GhostBtn, Kbd, PageChrome, PrimaryBtn, Spinner, Tabs, Timeline } from '@/components/ui';
 import { useDebouncedValue } from '@/hooks/useDebouncedEffect';
 import { useQuery } from '@/hooks/useQuery';
 import type { MissingField } from '@/lib/missingData';
@@ -183,17 +184,20 @@ export default function ReceptionPatientsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Registo de doentes"
-        sub="Registo global — procurar e gerir doentes de todas as clínicas"
-        action="+ Registar doente"
-        onAction={() => setModal(true)}
+      <PageChrome
+        title="Doentes"
+        context={[clinicaMono(user?.tenantName || user?.clinic), `${patients.length} no registo`]
+          .filter(Boolean)
+          .join(' · ')}
       >
-        <GhostBtn onClick={() => setImportOpen(true)} style={{ padding: '8px 12px' }}>
+        <GhostBtn onClick={() => setImportOpen(true)} style={{ padding: '4px 10px' }}>
           Importar CSV
         </GhostBtn>
-      </PageHeader>
-      <div className="grid-sidebar" style={{ gap: 16 }}>
+        <PrimaryBtn onClick={() => setModal(true)}>
+          Registar doente <Kbd>N</Kbd>
+        </PrimaryBtn>
+      </PageChrome>
+      <div className="grid-sidebar" style={{ gap: 16, paddingTop: 'var(--space-5)' }}>
         <PatientsSidebarList
           patients={patients}
           selectedId={selected?.id}
@@ -229,6 +233,7 @@ export default function ReceptionPatientsPage() {
                   onEditExtra={openEditExtra}
                 />
                 <CommPrefsCard api={api} patient={selected} onUpdated={setSelected} />
+                <DataConsentsCard api={api} patientId={String(selected.id)} />
                 <SchedulingPrefsCard api={api} patient={selected} />
               </div>
             )}

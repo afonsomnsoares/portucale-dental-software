@@ -1,9 +1,16 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
+import PatientConsentimentosTab from '@/components/dentist/PatientConsentimentosTab';
+import PatientHistoricoTab from '@/components/dentist/PatientHistoricoTab';
+import PatientLabOrdersTab from '@/components/dentist/PatientLabOrdersTab';
 import PatientNotesTab from '@/components/dentist/PatientNotesTab';
+import PatientPlanosTab from '@/components/dentist/PatientPlanosTab';
+import PatientPrescricoesTab from '@/components/dentist/PatientPrescricoesTab';
+import PatientRecallsTab from '@/components/dentist/PatientRecallsTab';
 import PatientTreatmentsTab from '@/components/dentist/PatientTreatmentsTab';
 import CommPrefsCard from '@/components/patient/CommPrefsCard';
+import DataConsentsCard from '@/components/patient/DataConsentsCard';
 import NextActionBanner from '@/components/patient/NextActionBanner';
 import PatientDocumentsTab from '@/components/patient/PatientDocumentsTab';
 import PatientInteractionsTab from '@/components/patient/PatientInteractionsTab';
@@ -166,11 +173,27 @@ export default function DentistPatientsPage() {
   const refreshTimeline = timelineQuery.refetch;
 
   const openTaskCount = tasks.filter((t) => t.status === 'pending').length;
+  // ─── Seis ecrãs do menu que já eram este ecrã ─────────────────────────────
+  // «Planos de Tratamento», «Histórico Clínico», «Prescrições», «Consentimentos»,
+  // «Encomendas de Lab» e «Recalls» eram seis entradas de menu do dentista. Cada uma
+  // carregava /patients, punha a MESMA lista à esquerda, obrigava a escolher uma pessoa
+  // e só então pedia `?patientId=`. Eram este ecrã com um separador aberto, alcançado
+  // por seis portas — e trocar de assunto sobre o mesmo doente obrigava a atravessar o
+  // menu e a escolhê-lo outra vez.
+  //
+  // A ordem é a da consulta, não a do alfabeto: lê-se o histórico e o plano antes,
+  // escreve-se a nota durante, e emite-se a receita, o pedido ao laboratório e o recall
+  // depois. Os pares que ficaram juntos ficaram-no por serem o mesmo gesto — propor e
+  // registar tratamento; emitir um papel para o doente assinar ou levar; deixar por
+  // fazer e marcar o retorno.
   const TABS = [
     { key: 'overview', label: 'Visão Geral' },
-    { key: 'treatments', label: `Tratamentos (${treatments.length})` },
+    { key: 'historico', label: 'Histórico' },
+    { key: 'treatments', label: `Plano e Tratamentos (${treatments.length})` },
     { key: 'notes', label: `Notas (${notes.length})` },
-    { key: 'tasks', label: `Tarefas (${openTaskCount})` },
+    { key: 'receituario', label: 'Prescrições e Consentimentos' },
+    { key: 'lab', label: 'Laboratório' },
+    { key: 'tasks', label: `Tarefas e Recalls (${openTaskCount})` },
     { key: 'interactions', label: `Interações (${interactions.length})` },
     { key: 'documents', label: `Documentos (${uploads.length})` },
     { key: 'timeline', label: 'Cronologia' },
@@ -226,11 +249,37 @@ export default function DentistPatientsPage() {
                   schemaFields={schemaFields}
                 />
                 <CommPrefsCard api={api} patient={selected} onUpdated={setSelected} />
+                <DataConsentsCard api={api} patientId={String(selected.id)} />
                 <SchedulingPrefsCard api={api} patient={selected} />
               </div>
             )}
 
-            {tab === 'treatments' && <PatientTreatmentsTab treatments={treatments} />}
+            {tab === 'historico' && <PatientHistoricoTab patient={selected} />}
+
+            {tab === 'treatments' && (
+              <div style={{ display: 'grid', gap: 20 }}>
+                <PatientPlanosTab patient={selected} />
+                <div>
+                  <div className="section-label mb-3">TRATAMENTOS REGISTADOS</div>
+                  <PatientTreatmentsTab treatments={treatments} />
+                </div>
+              </div>
+            )}
+
+            {tab === 'receituario' && (
+              <div style={{ display: 'grid', gap: 20 }}>
+                <div>
+                  <div className="section-label mb-3">PRESCRIÇÕES</div>
+                  <PatientPrescricoesTab patient={selected} />
+                </div>
+                <div>
+                  <div className="section-label mb-3">CONSENTIMENTOS</div>
+                  <PatientConsentimentosTab patient={selected} />
+                </div>
+              </div>
+            )}
+
+            {tab === 'lab' && <PatientLabOrdersTab patient={selected} />}
 
             {tab === 'timeline' && (
               <div className="card p-5">
@@ -253,13 +302,19 @@ export default function DentistPatientsPage() {
             )}
 
             {tab === 'tasks' && (
-              <PatientTasksTab
-                api={api}
-                user={user}
-                patientId={selected.id}
-                tasks={tasks}
-                onChanged={tasksQuery.refetch}
-              />
+              <div style={{ display: 'grid', gap: 20 }}>
+                <PatientTasksTab
+                  api={api}
+                  user={user}
+                  patientId={selected.id}
+                  tasks={tasks}
+                  onChanged={tasksQuery.refetch}
+                />
+                <div>
+                  <div className="section-label mb-3">RECALLS</div>
+                  <PatientRecallsTab patient={selected} />
+                </div>
+              </div>
             )}
 
             {tab === 'interactions' && (

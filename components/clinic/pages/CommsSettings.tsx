@@ -16,7 +16,7 @@
 // escala sempre. Não são definições — são a fronteira do produto.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { FormField, Inp, PageHeader, PrimaryBtn, Spinner, Textarea } from '@/components/ui';
+import { FormField, Inp, PanelNote, PrimaryBtn, Spinner, Textarea } from '@/components/ui';
 
 interface Nivel {
   value: string;
@@ -79,10 +79,10 @@ export default function CommsSettings() {
 
   return (
     <div style={{ maxWidth: '48rem' }}>
-      <PageHeader
-        title="Canais e Autonomia"
-        sub="Quanto é que o sistema pode responder sozinho a um doente. O valor de repouso é «desligada», e é uma decisão vossa, não nossa."
-      />
+      <PanelNote>
+        Quanto é que o sistema pode responder sozinho a um doente. O valor de repouso é «desligada», e é uma decisão
+        vossa, não nossa.
+      </PanelNote>
 
       {/* ── O que nunca muda ── */}
       <div

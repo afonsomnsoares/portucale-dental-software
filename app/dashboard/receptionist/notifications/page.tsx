@@ -1,7 +1,19 @@
 'use client';
 import type { ChangeEvent } from 'react';
 import { useMemo, useState } from 'react';
-import { Badge, Empty, ErrorState, Inp, PageHeader, Sel, Spinner } from '@/components/ui';
+import { useAuth } from '@/app/providers';
+import {
+  Badge,
+  clinicaMono,
+  Empty,
+  ErrorState,
+  Inp,
+  PageChrome,
+  Sel,
+  Spinner,
+  Triage,
+  TriageRow,
+} from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { Notification } from '@/lib/types';
 
@@ -44,6 +56,7 @@ function fmtDateTime(v: string | null) {
 }
 
 export default function ReceptionistNotificationsPage() {
+  const { user } = useAuth();
   const [statusFilter, setStatusFilter] = useState('');
   const [kindFilter, setKindFilter] = useState('');
   const [search, setSearch] = useState('');
@@ -63,10 +76,30 @@ export default function ReceptionistNotificationsPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageChrome
         title="Lembretes"
-        sub="Mensagens automáticas enviadas aos pacientes (lembretes, confirmações, reativação, lista de espera)"
+        context={[clinicaMono(user?.tenantName || user?.clinic), `${items.length} mensagens`]
+          .filter(Boolean)
+          .join(' · ')}
       />
+
+      {/* ─── A fila do que não saiu ───────────────────────────────────────────
+          Uma mensagem falhada é a única linha desta página que pede trabalho: as
+          enviadas leem-se, as pendentes esperam, e as falhadas significam um
+          doente que não foi avisado. Estavam misturadas nas outras centenas,
+          distinguidas por uma etiqueta de cor. */}
+      <Triage title="Mensagens que não chegaram ao doente">
+        {items
+          .filter((n) => n.status === 'failed')
+          .slice(0, 8)
+          .map((n) => (
+            <TriageRow key={n.id} when={String(n.created_at || '').slice(11, 16)}>
+              {n.patient_name || 'doente'} — {KIND_LABEL[n.payload?.kind || ''] || n.payload?.kind || 'mensagem'} por{' '}
+              {n.channel}
+              {n.last_error ? ` · ${n.last_error}` : ''}
+            </TriageRow>
+          ))}
+      </Triage>
 
       <div className="card p-4 mb-5 flex items-center gap-4 flex-wrap">
         <Sel value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: 160 }}>

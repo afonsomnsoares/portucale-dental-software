@@ -1,7 +1,7 @@
 'use client';
 import { AlertTriangle, CreditCard, DollarSign, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
-import { Badge, Empty, ErrorState, GhostBtn, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, GhostBtn, MetricCard, PanelBar, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { FinanceData } from '@/lib/types';
@@ -35,7 +35,7 @@ export default function ClinicFinanceDashboard() {
 
   return (
     <div>
-      <PageHeader title="Finanças" sub="Desempenho financeiro da clínica">
+      <PanelBar>
         <input
           type="date"
           value={from}
@@ -53,7 +53,7 @@ export default function ClinicFinanceDashboard() {
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PanelBar>
 
       {dataQuery.error ? (
         <ErrorState error={dataQuery.error} onRetry={dataQuery.refetch} message="Não foi possível ler as contas." />

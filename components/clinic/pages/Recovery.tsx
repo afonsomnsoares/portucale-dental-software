@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Empty, GhostBtn, MetricCard, Modal, PageHeader, Spinner } from '@/components/ui';
+import { Empty, GhostBtn, MetricCard, Modal, PanelBar, PanelNote, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import { formatEUR } from '@/lib/constants';
 import type { RecoveryCategory, RecoveryData } from '@/lib/types';
@@ -24,11 +24,13 @@ export default function ClinicRecoveryPage({ initialData }: { initialData?: Reco
 
   return (
     <div>
-      <PageHeader title="Recuperação de Receita" sub="Receita potencial identificada nos dados da clínica">
+      <PanelBar>
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>Receita potencial identificada nos dados da clínica.</PanelNote>
 
       {err && (
         <div

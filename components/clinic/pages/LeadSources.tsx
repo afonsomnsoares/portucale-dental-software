@@ -10,7 +10,8 @@ import {
   GhostBtn,
   Inp,
   Modal,
-  PageHeader,
+  PanelBar,
+  PanelNote,
   PrimaryBtn,
   Spinner,
   TD,
@@ -82,15 +83,18 @@ export default function ClinicLeadSourcesPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Fontes de Leads"
-        sub="Tokens para um site, formulário ou landing page criar leads automaticamente, sem sessão"
-        action="+ Nova Fonte"
-        onAction={() => {
-          setCreateOpen(true);
-          setError('');
-        }}
-      />
+      <PanelBar>
+        <PrimaryBtn
+          onClick={() => {
+            setCreateOpen(true);
+            setError('');
+          }}
+        >
+          + Nova Fonte
+        </PrimaryBtn>
+      </PanelBar>
+
+      <PanelNote>Tokens para um site, formulário ou landing page criar leads automaticamente, sem sessão.</PanelNote>
 
       {sourcesQuery.error ? (
         <ErrorState

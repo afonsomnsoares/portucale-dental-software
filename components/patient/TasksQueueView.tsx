@@ -8,7 +8,7 @@ import {
   DataTable,
   Empty,
   GhostBtn,
-  PageHeader,
+  PageChrome,
   Sel,
   Spinner,
   TD,
@@ -79,7 +79,7 @@ export default function TasksQueueView({ api, currentUserId }: TasksQueueViewPro
 
   return (
     <div>
-      <PageHeader title="Tarefas" sub="Fila de tarefas e lembretes ligados a pacientes" />
+      <PageChrome title="Tarefas" context={`${tasks.length} pendentes`} />
       {/* Concluir ou distribuir uma tarefa falhava sem dizer nada: a linha ficava
           onde estava, e quem carregou não sabia se tinha sido ignorado ou recusado. */}
       {erro ? <AlertBanner type="danger">{erro}</AlertBanner> : null}

@@ -15,7 +15,17 @@
 // de responder seria convidar a mexer nela a meio de uma conversa difícil.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, Empty, PageHeader, PrimaryBtn, Spinner, Textarea } from '@/components/ui';
+import {
+  Badge,
+  clinicaMono,
+  Empty,
+  PageChrome,
+  PrimaryBtn,
+  Spinner,
+  Textarea,
+  Triage,
+  TriageRow,
+} from '@/components/ui';
 import {
   CHANNEL_LABELS,
   CONVERSATION_STATE_LABELS,
@@ -69,7 +79,7 @@ function quemFala(m: Message) {
 }
 
 export default function Inbox() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [rows, setRows] = useState<ConversationRow[]>([]);
   const [aberta, setAberta] = useState<string | null>(null);
   const [mensagens, setMensagens] = useState<Message[]>([]);
@@ -146,10 +156,29 @@ export default function Inbox() {
 
   return (
     <div>
-      <PageHeader
+      <PageChrome
         title="Caixa de Entrada"
-        sub="Mensagens de doentes por SMS e chamadas transcritas. O que está escalado aparece primeiro."
+        context={[clinicaMono(user?.tenantName || user?.clinic), `${rows.length} conversas`]
+          .filter(Boolean)
+          .join(' · ')}
       />
+
+      {/* ─── O que o agente já não consegue responder ─────────────────────────
+          Uma conversa escalada é a única que EXIGE uma pessoa — as outras estão a
+          ser tratadas ou estão à espera do doente. Estavam ordenadas à frente na
+          lista, o que é melhor do que nada, mas continuavam a ser uma linha igual
+          às outras com uma etiqueta vermelha. */}
+      <Triage title="Escaladas para uma pessoa">
+        {rows
+          .filter((c) => c.state === 'escalated')
+          .slice(0, 8)
+          .map((c) => (
+            <TriageRow key={c.id} when={quando(c.last_message_at)} onClick={() => setAberta(c.id)}>
+              {c.patient_name || c.from_addr || 'desconhecido'}
+              {c.last_intent ? ` — ${INTENT_LABELS[c.last_intent as keyof typeof INTENT_LABELS] || c.last_intent}` : ''}
+            </TriageRow>
+          ))}
+      </Triage>
 
       {erro && (
         <div

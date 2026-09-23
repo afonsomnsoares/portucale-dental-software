@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
 import JourneyBoard from '@/components/patient/JourneyBoard';
-import { Empty, FormField, GhostBtn, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { Empty, FormField, GhostBtn, Inp, PanelBar, PanelNote, PrimaryBtn, Spinner } from '@/components/ui';
 import type { LifecycleData } from '@/lib/types';
 
 // ─── Quando é que um doente conta como desaparecido ─────────────────────────
@@ -103,14 +103,15 @@ export default function ClinicLifecyclePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Jornada do Paciente"
-        sub="Lead → Marcação → Consulta → Plano → Tratamento → Conclusão → Recall — o que deve acontecer agora, por paciente"
-      >
+      <PanelBar>
         <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>
+        Lead → Marcação → Consulta → Plano → Tratamento → Conclusão → Recall — o que deve acontecer agora, por paciente.
+      </PanelNote>
 
       {err && (
         <div

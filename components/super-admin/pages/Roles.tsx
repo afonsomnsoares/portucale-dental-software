@@ -1,5 +1,5 @@
 'use client';
-import { Badge, Empty, ErrorState, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 interface RoleRow {
@@ -22,10 +22,9 @@ export default function Roles() {
 
   return (
     <div>
-      <PageHeader
-        title="Papéis"
-        sub={`${data.roles.length} papéis · ${data.totalActions} ações declaradas no sistema`}
-      />
+      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: '0 0 16px' }}>
+        {data.roles.length} papéis · {data.totalActions} ações declaradas no sistema
+      </p>
 
       {data.roles.map((r) => {
         // Só os desvios interessam: uma clínica que gravou uma linha igual à omissão

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { AlertBanner, Badge, Empty, ErrorState, GhostBtn, PageHeader, Spinner } from '@/components/ui';
+import { AlertBanner, Badge, Empty, ErrorState, GhostBtn, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 interface Run {
@@ -93,7 +93,9 @@ export default function AiRuns() {
 
   return (
     <div>
-      <PageHeader title="Execuções" sub={`${data.runs.length} passagens de agentes em toda a rede`} />
+      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: '0 0 16px' }}>
+        {data.runs.length} passagens de agentes em toda a rede
+      </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <GhostBtn

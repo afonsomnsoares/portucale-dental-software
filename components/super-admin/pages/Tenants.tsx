@@ -10,7 +10,7 @@ import {
   GhostBtn,
   Inp,
   Modal,
-  PageHeader,
+  PanelBar,
   PrimaryBtn,
   Sel,
   Spinner,
@@ -81,12 +81,9 @@ export default function TenantsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Clínicas"
-        sub="Criar clínicas e entrar em cada uma para ver o que lá se passa"
-        action="+ Nova clínica"
-        onAction={() => setModal(true)}
-      />
+      <PanelBar>
+        <PrimaryBtn onClick={() => setModal(true)}>+ Nova clínica</PrimaryBtn>
+      </PanelBar>
       <div style={{ marginBottom: 16 }}>
         <input
           className="input"

@@ -1,6 +1,6 @@
 'use client';
 import { daysSinceActivity, retentionBand, type UsageRow } from '@/components/super-admin/usage';
-import { Badge, DataTable, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, DataTable, Empty, ErrorState, MetricCard, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 const BANDS = [
@@ -28,8 +28,6 @@ export default function AnalyticsRetention({ initialData }: { initialData?: Usag
 
   return (
     <div>
-      <PageHeader title="Retenção" sub="Medida por atividade real, não por contrato" />
-
       <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         {BANDS.map((b) => (
           <MetricCard key={b.key} label={b.label} value={count(b.key)} sub={b.sub} color={b.color} />

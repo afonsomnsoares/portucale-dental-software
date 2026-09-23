@@ -2,6 +2,7 @@
 import { AlertTriangle, Check, Inbox, Info } from 'lucide-react';
 import Image from 'next/image';
 import {
+  Children,
   type ComponentProps,
   type CSSProperties,
   type KeyboardEvent,
@@ -218,6 +219,259 @@ export function PageHeader({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── A barra de um painel ───────────────────────────────────────────────────
+// Um painel dentro de separadores não tem cabeçalho: o <h1> é do ecrã que o mostra, e
+// dois <h1> empilhados são um erro de estrutura antes de serem um erro de desenho.
+//
+// Mas continua a ter os seus controlos — o seletor de clínica, o intervalo de datas, o
+// botão de criar. Estavam no lado direito do PageHeader e não tinham para onde ir; agora
+// têm. Existe como componente e não como um <div> repetido em cada painel porque são
+// muitos painéis, e a distância entre a barra e o conteúdo tem de ser a mesma em todos.
+export function PanelBar({ children }: { children?: ReactNode }) {
+  if (!children) return null;
+  return <div className="panel-bar bleed">{children}</div>;
+}
+
+// A frase que explicava o painel, quando o subtítulo do cabeçalho a levava e o
+// cabeçalho deixou de existir. Nem todos os painéis precisam de uma: só aquelas em que
+// a frase dizia algo que o ecrã não mostra — «isto não é guardado», «o que não tem
+// histórico diz que não tem». As descritivas («Faturação da clínica») morreram com o
+// cabeçalho, e não fazem falta.
+export function PanelNote({ children }: { children?: ReactNode }) {
+  if (!children) return null;
+  return (
+    <p
+      style={{
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-secondary)',
+        lineHeight: 'var(--text-xs-leading)',
+        margin: '0 0 16px',
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
+// ─── O console ──────────────────────────────────────────────────────────────
+// As peças que faltavam entre os tokens e as páginas. Os tokens diziam com que
+// cor e com que corpo se escreve; não diziam que FORMA tem um ecrã de operação —
+// e sem isso as doze páginas da receção saíram todas com o mesmo molde genérico.
+// A folha de estilo (app/globals.css, bloco «O console») explica a regra; aqui
+// estão as peças.
+
+/** A barra de 52 px no topo da página: nome, contexto de máquina, ações. */
+export function PageChrome({
+  title,
+  context,
+  nav,
+  children,
+}: {
+  title: ReactNode;
+  /** Que clínica, que dia, que contagem — monoespaçado, porque é lido e não narrado. */
+  context?: ReactNode;
+  /** Os separadores do ecrã, dentro da barra. Uma fila de separadores por baixo
+      de um cabeçalho gasta 40 px a dizer o que cabe ao lado do nome da página. */
+  nav?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="page-chrome bleed bleed-top">
+      <h1>{title}</h1>
+      {nav}
+      {context ? <span className="chrome-context">{context}</span> : null}
+      {children ? <div className="chrome-actions">{children}</div> : null}
+    </div>
+  );
+}
+
+/** O atalho, dentro do botão que ele dispara. É como se descobre que há atalhos. */
+export function Kbd({ children }: { children?: ReactNode }) {
+  return <span className="kbd">{children}</span>;
+}
+
+/** A fila de mostradores do mesmo instrumento: células encostadas, não cartões. */
+export function MetricStrip({ children }: { children?: ReactNode }) {
+  return <div className="metric-strip bleed">{children}</div>;
+}
+
+export function Metric({
+  label,
+  value,
+  sub,
+  urgency,
+}: {
+  /** Nome do campo em minúsculas com underscore: `sala_de_espera`, não «Sala de espera». */
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  /** Só a célula que exige ação leva cor. Duas células tingidas já não apontam. */
+  urgency?: 'critical' | 'soon';
+}) {
+  return (
+    <div className="metric-cell" data-urgency={urgency}>
+      <span className="metric-label">{label}</span>
+      <span className="metric-value">{value}</span>
+      {sub ? <span className="metric-sub">{sub}</span> : null}
+    </div>
+  );
+}
+
+/**
+ * A fila do que está atrasado, no topo da página.
+ *
+ * Não desenha nada quando não tem linhas — e isso é o que a mantém a significar
+ * alguma coisa. Uma faixa vermelha permanentemente no ecrã deixa de se ver ao
+ * fim de dois dias.
+ */
+export function Triage({
+  title = 'A precisar de ti agora',
+  tone,
+  children,
+}: {
+  title?: string;
+  /** 'ok' para o que está concluído à espera de um gesto — uma alta, uma confirmação. */
+  tone?: 'ok';
+  children?: ReactNode;
+}) {
+  const linhas = Children.toArray(children).filter(Boolean);
+  if (!linhas.length) return null;
+  // ─── A fila tem teto ──────────────────────────────────────────────────────
+  // Sem isto, um dia mau empurrava a lista de trabalho para fora do ecrã: vinte
+  // consultas em risco são vinte linhas antes de se ver a agenda, e uma fila que
+  // ocupa a página inteira deixa de ser uma fila para passar a ser a página.
+  //
+  // Seis é o que cabe sem esconder a faixa de métricas a 900 px de altura. O
+  // resto conta-se — porque saber que há mais catorze é a informação, e vê-las
+  // todas não é.
+  const MAX = 6;
+  const mostradas = linhas.slice(0, MAX);
+  const escondidas = linhas.length - mostradas.length;
+  return (
+    <section className="triage bleed" data-tone={tone} aria-label={title}>
+      <div className="triage-head">
+        <span>{title}</span>
+        <span style={{ marginLeft: 'auto' }}>{linhas.length}</span>
+      </div>
+      {mostradas}
+      {escondidas > 0 ? (
+        <div className="triage-row" data-static="true">
+          <span className="triage-when">+{escondidas}</span>
+          <span>mais {escondidas === 1 ? 'uma' : escondidas} na lista abaixo</span>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * Uma linha da fila. Três formas, e nunca duas ao mesmo tempo:
+ *
+ *   com `action`  → a linha é uma <div> e quem é clicável é a ação que ela traz
+ *                   («Dar alta»);
+ *   com `onClick` → a linha inteira é o botão, e leva o chevron ao fundo;
+ *   sem nenhum    → a linha é só informação, e NÃO leva chevron.
+ *
+ * O terceiro modo existe porque há filas sem ação possível hoje — o risco de
+ * falta é uma delas: confirmar uma consulta é uma transição de estado que a
+ * tabela `statuses` pode não permitir a partir do estado atual, e um botão que
+ * dá 400 é pior do que não haver botão. Um chevron promete um sítio para onde
+ * ir; quando não há, não se desenha.
+ *
+ * Um botão dentro de um botão não é HTML válido e o Tab não chega ao de dentro —
+ * é por isso que estes são modos e não um com tudo.
+ */
+export function TriageRow({
+  when,
+  children,
+  onClick,
+  action,
+}: {
+  when?: ReactNode;
+  children?: ReactNode;
+  onClick?: () => void;
+  action?: ReactNode;
+}) {
+  const corpo = (
+    <>
+      {when ? <span className="triage-when">{when}</span> : null}
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {children}
+      </span>
+    </>
+  );
+  if (action || !onClick) {
+    return (
+      <div className="triage-row" data-static="true">
+        {corpo}
+        {action ? (
+          <span className="triage-go" style={{ display: 'inline-flex', alignItems: 'center' }}>
+            {action}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <button type="button" className="triage-row" onClick={onClick}>
+      {corpo}
+      <span className="triage-go" aria-hidden="true">
+        &rsaquo;
+      </span>
+    </button>
+  );
+}
+
+/**
+ * O nome da clínica como identificador de máquina: «Vila Nova» → `vila_nova`.
+ *
+ * É o registo da barra de contexto — o mesmo que os rótulos das métricas usam.
+ * Num produto com várias unidades, saber em qual se está não é decoração: é o
+ * que evita marcar a consulta na clínica errada.
+ */
+export function clinicaMono(nome?: string | null): string {
+  if (!nome) return '';
+  return nome
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
+/** Um rótulo, uma contagem, as ferramentas da lista, e a lista. Sem cartão. */
+export function WorkSection({
+  title,
+  count,
+  tools,
+  children,
+}: {
+  title: ReactNode;
+  count?: ReactNode;
+  tools?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <section className="work-section">
+      <div className="work-head">
+        <h2>{title}</h2>
+        {count != null ? <span className="work-count">{count}</span> : null}
+        {tools ? <div className="work-tools">{tools}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/** O contorno de um bloco de lista, com o conteúdo encostado por dentro. */
+export function Panel({ children, style }: { children?: ReactNode; style?: CSSProperties }) {
+  return (
+    <div className="panel" style={style}>
+      {children}
     </div>
   );
 }
@@ -755,7 +1009,18 @@ interface TabItem {
   count?: number | null;
 }
 
-export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: string; onChange: (key: string) => void }) {
+export function Tabs({
+  tabs,
+  active,
+  onChange,
+  compact,
+}: {
+  tabs: TabItem[];
+  active: string;
+  onChange: (key: string) => void;
+  /** Dentro da barra de página: sem a margem de baixo, que ali seria um buraco. */
+  compact?: boolean;
+}) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -771,8 +1036,15 @@ export function Tabs({ tabs, active, onChange }: { tabs: TabItem[]; active: stri
   return (
     <div
       role="tablist"
-      className="flex gap-1 mb-5 p-1"
-      style={{ background: 'var(--bg-sunken)', display: 'inline-flex', borderRadius: 'var(--radius-card)' }}
+      className={`flex gap-1 p-1 ${compact ? '' : 'mb-5'}`}
+      // `flexWrap` porque «Definições» tem sete separadores: em ecrã estreito, sem
+      // quebra, a fila empurrava a página para fora e dava scroll horizontal.
+      style={{
+        background: 'var(--bg-sunken)',
+        display: 'inline-flex',
+        flexWrap: 'wrap',
+        borderRadius: 'var(--radius-card)',
+      }}
       onKeyDown={handleKeyDown}
     >
       {tabs.map((t) => (

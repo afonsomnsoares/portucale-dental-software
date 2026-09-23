@@ -1,7 +1,7 @@
 'use client';
 import { type ChangeEvent, type FormEvent, Fragment, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { Badge, Empty, ErrorState, GhostBtn, Inp, PageHeader, PrimaryBtn, Spinner } from '@/components/ui';
+import { Badge, clinicaMono, Empty, ErrorState, GhostBtn, Inp, PageChrome, PrimaryBtn, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 import type { Lead } from '@/lib/types';
 
@@ -22,7 +22,7 @@ interface LeadForm {
 const emptyForm: LeadForm = { name: '', phone: '', email: '', source: '', notes: '' };
 
 export default function ReceptionLeadsPage() {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [form, setForm] = useState<LeadForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -77,13 +77,18 @@ export default function ReceptionLeadsPage() {
 
   return (
     <div>
-      <PageHeader title="Leads" sub="Contactos que ainda não marcaram uma primeira consulta">
-        <GhostBtn onClick={load} style={{ padding: '8px 12px' }}>
+      <PageChrome
+        title="Leads"
+        context={[clinicaMono(user?.tenantName || user?.clinic), `${leads.length} por converter`]
+          .filter(Boolean)
+          .join(' · ')}
+      >
+        <GhostBtn onClick={load} style={{ padding: '4px 10px' }}>
           Atualizar
         </GhostBtn>
-      </PageHeader>
+      </PageChrome>
 
-      <form className="card p-5 mb-4" onSubmit={createLead}>
+      <form className="card p-5 mb-4 mt-5" onSubmit={createLead}>
         <div className="section-label mb-3">Registar lead</div>
         <div className="grid-cards" style={{ gap: 12 }}>
           <Inp

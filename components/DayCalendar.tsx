@@ -21,7 +21,7 @@ type CalendarAppointment = Appointment & { time?: string; patient?: string };
 
 const MIN_PX_PER_HOUR = 56;
 const MAX_PX_PER_HOUR = 132;
-const GUTTER = 60;
+const GUTTER = 58; // tem de casar com .dayrail em app/globals.css
 const DEFAULT_OPEN = 8;
 const DEFAULT_CLOSE = 20;
 
@@ -87,9 +87,15 @@ interface DayCalendarProps {
   appointments?: CalendarAppointment[];
   date?: string;
   onStatusChange?: (id: string, nextStatus: string) => Promise<void> | void;
+  /**
+   * Chamado ao carregar num buraco da agenda, com a hora em que ele começa
+   * («09:45»). Sem isto os buracos continuam a desenhar-se — saber que existem
+   * já vale — mas não são clicáveis.
+   */
+  onBookAt?: (startTime: string) => void;
 }
 
-export default function DayCalendar({ appointments = [], date, onStatusChange }: DayCalendarProps) {
+export default function DayCalendar({ appointments = [], date, onStatusChange, onBookAt }: DayCalendarProps) {
   const { settings } = useAuth();
   const [selected, setSelected] = useState<CalendarAppointment | null>(null);
   const [loading, setLoading] = useState(false);
@@ -219,110 +225,92 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
 
   const colWidth = `calc((100% - ${GUTTER}px) / ${chairs.length})`;
 
+  // ─── Os buracos da agenda ─────────────────────────────────────────────────
+  // Entre o fim de uma consulta e o início da seguinte. Calculados sobre a união
+  // dos intervalos ocupados (e não sobre a lista ordenada), senão duas consultas
+  // sobrepostas inventavam um buraco onde não há nenhum.
+  const buracos = useMemo(() => {
+    if (chairs.length > 1) return []; // com várias cadeiras, «livre» é por cadeira — outra conta
+    const ocupados = [...appointments].map((a) => [startOf(a), endOf(a)] as const).sort((x, y) => x[0] - y[0]);
+    const uniao: Array<[number, number]> = [];
+    for (const [ini, fim] of ocupados) {
+      const ultimo = uniao[uniao.length - 1];
+      if (ultimo && ini <= ultimo[1]) ultimo[1] = Math.max(ultimo[1], fim);
+      else uniao.push([ini, fim]);
+    }
+    const out: Array<{ ini: number; fim: number }> = [];
+    for (let i = 0; i < uniao.length - 1; i++) {
+      const ini = uniao[i][1];
+      const fim = uniao[i + 1][0];
+      if (fim - ini >= 20 && (!isToday || fim > nowMins)) out.push({ ini, fim });
+    }
+    return out;
+  }, [appointments, chairs.length, isToday, nowMins]);
+
+  // ─── O que vem a seguir ───────────────────────────────────────────────────
+  // A pergunta mais feita ao balcão, e a que a grelha obrigava a responder a
+  // olho: varrer as horas à procura do primeiro bloco depois do agora. Aqui é
+  // uma lista, e ocupa a coluna da direita sempre que não há nada escolhido.
+  const proximas = useMemo(() => {
+    if (!isToday) return [...appointments].sort((a, b) => startOf(a) - startOf(b)).slice(0, 8);
+    return [...appointments]
+      .filter((a) => endOf(a) > nowMins && !['departed', 'no-show', 'cancelled'].includes(a.status))
+      .sort((a, b) => startOf(a) - startOf(b))
+      .slice(0, 8);
+  }, [appointments, isToday, nowMins]);
+
   return (
-    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <div className="card" style={{ flex: '1 1 520px', minWidth: 0, overflow: 'hidden' }}>
-        {/* ─── Cabeçalho: data, contagem e densidade ─────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '12px 16px',
-            borderBottom: '1px solid var(--border-subtle)',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div>
-            <div className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-              {date
-                ? new Date(`${date}T00:00:00`).toLocaleDateString('pt-PT', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  })
-                : 'Hoje'}
-            </div>
-            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              {appointments.length === 0
-                ? 'Sem marcações'
-                : `${appointments.length} marcaç${appointments.length === 1 ? 'ão' : 'ões'}${multiChair ? ` · ${chairs.length} cadeiras` : ''}`}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+    <div className="daygrid">
+      <div style={{ minWidth: 0 }}>
+        {/* A régua de comando. Os rótulos de cadeira só aparecem quando há mais
+            do que uma — rotular a coluna única com «cadeira_1» é gastar uma faixa
+            para não dizer nada — mas a régua existe sempre, porque é onde vive a
+            densidade. */}
+        <div className="dayhead">
+          {multiChair ? (
+            <>
+              <div style={{ width: GUTTER, flexShrink: 0 }} />
+              {chairs.map((c) => (
+                <div
+                  key={c}
+                  className="section-label"
+                  style={{ width: colWidth, padding: 4, margin: 0, textAlign: 'center' }}
+                >
+                  cadeira_{c}
+                </div>
+              ))}
+            </>
+          ) : null}
+          <div className="dayhead-zoom">
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
               onClick={() => setZoom((z) => Math.max(MIN_PX_PER_HOUR, z - 20))}
               disabled={pxPerHour <= MIN_PX_PER_HOUR}
-              aria-label="Reduzir a altura das horas"
+              aria-label="Comprimir as horas"
             >
               −
             </button>
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
               onClick={() => setZoom((z) => Math.min(MAX_PX_PER_HOUR, z + 20))}
               disabled={pxPerHour >= MAX_PX_PER_HOUR}
-              aria-label="Aumentar a altura das horas"
+              aria-label="Esticar as horas"
             >
               +
             </button>
           </div>
         </div>
 
-        {/* ─── Cabeçalho das cadeiras, fixo ao rolar ──────────────────────── */}
-        {/* Só quando há mais do que uma: rotular a única coluna com «Cadeira 1»
-            é ocupar uma faixa inteira para não dizer nada. */}
-        {multiChair && (
-          <div
-            style={{
-              display: 'flex',
-              position: 'sticky',
-              top: 0,
-              zIndex: 4,
-              background: 'var(--bg-surface)',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ width: GUTTER, flexShrink: 0 }} />
-            {chairs.map((c) => (
-              <div
-                key={c}
-                className="section-label"
-                style={{
-                  width: colWidth,
-                  padding: 8,
-                  margin: 0,
-                  borderLeft: '1px solid var(--border-subtle)',
-                  textAlign: 'center',
-                }}
-              >
-                Cadeira {c}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Qualquer altura fixa aqui adivinha o que está por cima em vez de o
-            medir. `dvh` acompanha a barra do browser no telemóvel, e o mínimo em
-            px impede que num ecrã baixo a grelha fique com duas horas visíveis. */}
-        <div
-          ref={scrollRef}
-          style={{ overflowY: 'auto', maxHeight: 'max(320px, calc(100dvh - 300px))', position: 'relative' }}
-        >
+        <div ref={scrollRef} className="daygrid-scroll">
           <div style={{ position: 'relative', height: totalHeight }}>
-            {/* Faixas horárias alternadas — substituem as linhas tracejadas de
-                meia hora, que só acrescentavam ruído a uma grelha que já tinha
-                uma linha por hora. */}
+            {/* Faixas horárias alternadas, por baixo de tudo. */}
             {hours.map((h, i) => (
               <div
                 key={h}
                 style={{
                   position: 'absolute',
                   top: i * pxPerHour,
-                  left: 0,
+                  left: GUTTER,
                   right: 0,
                   height: pxPerHour,
                   background: i % 2 ? 'var(--bg-sunken)' : 'transparent',
@@ -332,42 +320,61 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
               />
             ))}
 
-            {/* Goteira das horas */}
-            {hours.map((h, i) => (
-              <div
-                key={`g${h}`}
-                className="text-xs font-mono"
-                style={{
-                  position: 'absolute',
-                  top: i * pxPerHour + 4,
-                  left: 0,
-                  width: GUTTER,
-                  paddingRight: 8,
-                  textAlign: 'right',
-                  color: 'var(--text-muted)',
-                  pointerEvents: 'none',
-                }}
-              >
-                {String(h).padStart(2, '0')}:00
-              </div>
-            ))}
+            {/* A régua das horas: uma coluna com fundo, não números a flutuar. */}
+            <div className="dayrail">
+              {hours.map((h, i) => (
+                <span key={`g${h}`} className="dayrail-h" style={{ top: i * pxPerHour }}>
+                  {String(h).padStart(2, '0')}
+                </span>
+              ))}
+            </div>
 
-            {/* Separadores verticais entre cadeiras — nenhum a dividir uma coluna só */}
-            {(multiChair ? chairs : []).map((c, i) => (
+            {(multiChair ? chairs : []).slice(1).map((c, i) => (
               <div
                 key={`v${c}`}
                 style={{
                   position: 'absolute',
                   top: 0,
                   bottom: 0,
-                  left: `calc(${GUTTER}px + ${i} * ${colWidth})`,
+                  left: `calc(${GUTTER}px + ${i + 1} * ${colWidth})`,
                   borderLeft: '1px solid var(--border-subtle)',
                   pointerEvents: 'none',
                 }}
               />
             ))}
 
-            {/* ─── Marcações ───────────────────────────────────────────── */}
+            {buracos.map(({ ini, fim }) => {
+              const altura = (fim - ini) * (pxPerHour / 60) - 6;
+              if (altura < 14) return null;
+              const mins = fim - ini;
+              const rotulo =
+                mins >= 60
+                  ? `${Math.floor(mins / 60)}h${mins % 60 ? String(mins % 60).padStart(2, '0') : ''}`
+                  : `${mins}min`;
+              return (
+                <button
+                  type="button"
+                  key={`buraco-${ini}`}
+                  className="daygap"
+                  data-static={onBookAt ? undefined : 'true'}
+                  onClick={onBookAt ? () => onBookAt(hhmm(ini)) : undefined}
+                  aria-label={
+                    onBookAt
+                      ? `Marcar consulta às ${hhmm(ini)} — ${rotulo} livre`
+                      : `${rotulo} livre a partir das ${hhmm(ini)}`
+                  }
+                  style={{
+                    top: topFor(ini) + 3,
+                    left: GUTTER + 3,
+                    right: 3,
+                    height: altura,
+                  }}
+                >
+                  {rotulo} livre{onBookAt ? ' · marcar' : ''}
+                </button>
+              );
+            })}
+
             {chairs.map((chair, ci) =>
               (byChair.get(chair) || []).map((apt) => {
                 const s = startOf(apt);
@@ -375,44 +382,35 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                 const { lane = 0, of = 1 } = lanes.get(apt.id) || {};
                 const color = statusColor(apt.status);
                 const isSel = selected?.id === apt.id;
-                // Sem teto, `Math.max(..., 26)` fazia uma consulta de 15 min ocupar
-                // 26px onde só lhe cabiam 14 na densidade mínima — e transbordar
-                // por cima da seguinte. O mínimo continua a existir (um bloco de
-                // 4px não se lê), mas nunca ultrapassa o espaço real da marcação.
                 const exact = (e - s) * (pxPerHour / 60);
-                const height = Math.max(Math.min(26, exact), exact - 3);
+                const height = Math.max(Math.min(24, exact), exact - 3);
                 const risky = (apt.risk_score || 0) >= 60;
+                const passou = isToday && e <= nowMins;
+                const agora = isToday && s <= nowMins && e > nowMins;
 
                 return (
                   <button
                     type="button"
                     key={apt.id}
+                    className="dayblock"
+                    data-past={passou ? 'true' : undefined}
+                    data-current={agora ? 'true' : undefined}
+                    data-selected={isSel ? 'true' : undefined}
                     onClick={() => setSelected(isSel ? null : apt)}
                     aria-pressed={isSel}
-                    aria-label={`${hhmm(s)} às ${hhmm(e)}${multiChair ? `, cadeira ${chair}` : ''}, ${apt.patient_name || apt.patient || 'sem nome'}, ${apt.type}, ${statusLabel(apt.status)}${risky ? ', risco elevado de falta' : ''}`}
+                    aria-label={`${hhmm(s)} às ${hhmm(e)}${multiChair ? `, cadeira ${chair}` : ''}, ${apt.patient_name || apt.patient || 'sem nome'}, ${apt.type}, ${statusLabel(apt.status)}${risky ? ', risco elevado de falta' : ''}${passou ? ', já terminou' : ''}${agora ? ', a decorrer agora' : ''}`}
                     style={{
-                      position: 'absolute',
-                      top: topFor(s) + 2,
-                      left: `calc(${GUTTER}px + ${ci} * ${colWidth} + ${lane} * (${colWidth} / ${of}) + 3px)`,
-                      width: `calc((${colWidth} / ${of}) - 6px)`,
+                      top: topFor(s) + 1,
+                      left: `calc(${GUTTER}px + ${ci} * ${colWidth} + ${lane} * (${colWidth} / ${of}) + 2px)`,
+                      width: `calc((${colWidth} / ${of}) - 4px)`,
                       height,
-                      font: 'inherit',
-                      textAlign: 'left',
-                      // Fundo sólido sobre a superfície, não um alfa de 6% que
-                      // deixava os blocos quase brancos e ilegíveis.
-                      background: over(color, isSel ? 22 : 12),
-                      border: `1px solid ${tint(color, isSel ? 90 : 35)}`,
+                      background: over(color, isSel ? 24 : 14),
+                      border: `1px solid ${tint(color, isSel ? 90 : 42)}`,
                       borderLeft: `3px solid ${color}`,
-                      borderRadius: 'var(--radius-control)',
-                      padding: height > 40 ? '5px 8px' : '2px 8px',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      transition: 'background 0.12s, border-color 0.12s, box-shadow 0.12s',
-                      boxShadow: isSel ? 'var(--elev-2)' : 'var(--elev-0)',
-                      zIndex: isSel ? 3 : 2,
+                      padding: height > 36 ? '4px 7px' : '1px 7px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0 }}>
                       <span
                         className="text-2xs font-mono"
                         style={{ color, flexShrink: 0, fontWeight: 'var(--weight-bold)' }}
@@ -429,26 +427,27 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
                         <span
                           aria-hidden="true"
                           title="Risco elevado de falta"
+                          className="text-2xs font-mono"
                           style={{
                             marginLeft: 'auto',
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            background: 'var(--urgency-critical)',
                             flexShrink: 0,
+                            color: 'var(--urgency-critical)',
+                            fontWeight: 'var(--weight-bold)',
                           }}
-                        />
+                        >
+                          !
+                        </span>
                       )}
                     </div>
-                    {height > 40 && (
-                      <div className="text-2xs truncate" style={{ color: 'var(--text-secondary)', marginTop: 2 }}>
+                    {height > 36 && (
+                      <div className="text-2xs truncate" style={{ color: 'var(--text-secondary)', marginTop: 1 }}>
                         {apt.type}
                       </div>
                     )}
-                    {height > 62 && (
+                    {height > 56 && (
                       <div
                         className="text-2xs truncate"
-                        style={{ color, marginTop: 3, fontWeight: 'var(--weight-semibold)' }}
+                        style={{ color, marginTop: 2, fontWeight: 'var(--weight-semibold)' }}
                       >
                         {statusLabel(apt.status)}
                       </div>
@@ -458,33 +457,10 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
               }),
             )}
 
-            {/* ─── Linha do agora ──────────────────────────────────────── */}
             {showNow && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  top: topFor(nowMins),
-                  zIndex: 5,
-                  pointerEvents: 'none',
-                }}
-              >
-                <div
-                  className="text-2xs font-mono"
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: -8,
-                    width: GUTTER - 6,
-                    textAlign: 'right',
-                    color: 'var(--urgency-critical)',
-                    fontWeight: 'var(--weight-bold)',
-                  }}
-                >
-                  {hhmm(nowMins)}
-                </div>
-                <div style={{ marginLeft: GUTTER, height: 2, background: 'var(--urgency-critical)' }} />
+              <div className="daynow" style={{ top: topFor(nowMins) }}>
+                <span className="daynow-chip">{hhmm(nowMins)}</span>
+                <div className="daynow-line" />
               </div>
             )}
 
@@ -508,97 +484,141 @@ export default function DayCalendar({ appointments = [], date, onStatusChange }:
         </div>
       </div>
 
-      {/* ─── Painel de detalhe ─────────────────────────────────────────── */}
-      {selected && (
-        <aside
-          className="card"
-          aria-label="Detalhe da marcação"
-          style={{
-            flex: '0 1 280px',
-            minWidth: 240,
-            padding: 20,
-            alignSelf: 'flex-start',
-            borderTop: `3px solid ${statusColor(selected.status)}`,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-              {selected.patient_name || selected.patient || 'Marcação'}
+      {/* ─── A coluna que nunca está vazia ───────────────────────────────── */}
+      <aside className="daygrid-rail" aria-label={selected ? 'Detalhe da marcação' : 'Próximas marcações'}>
+        {selected ? (
+          <>
+            <div className="daygrid-rail-head">
+              <span>marcação</span>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                aria-label="Fechar detalhe"
+                style={{
+                  marginLeft: 'auto',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  font: 'inherit',
+                  lineHeight: 'var(--leading-none)',
+                }}
+              >
+                ✕
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              aria-label="Fechar detalhe"
-              className="btn btn-icon btn-secondary"
-            >
-              ×
-            </button>
-          </div>
+            <div className="daygrid-rail-body">
+              <div
+                className="text-base font-bold"
+                style={{ color: 'var(--text-primary)', marginBottom: 4, overflowWrap: 'anywhere' }}
+              >
+                {selected.patient_name || selected.patient || 'Marcação'}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                <Badge s={selected.status} />
+                {(selected.risk_score || 0) > 0 && <RiskBadge score={selected.risk_score || 0} />}
+              </div>
 
-          {(
-            [
-              ['Horário', `${hhmm(startOf(selected))} – ${hhmm(endOf(selected))}`],
-              ['Duração', `${selected.duration || 30} min`],
-              // A cadeira só entra quando distingue: com uma só, «Cadeira 1» é
-              // uma linha que diz sempre o mesmo a toda a gente.
-              ...(multiChair ? ([['Cadeira', String(selected.chair || 1)]] as const) : []),
-              ['Dentista', selected.dentist_name || '—'],
-              ['Tipo', selected.type],
-            ] as const
-          ).map(([k, v]) => (
-            <div
-              key={k}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 12,
-                padding: '8px 0',
-                borderBottom: '1px solid var(--border-subtle)',
-              }}
-            >
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {k}
-              </span>
-              <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)', textAlign: 'right' }}>
-                {v}
-              </span>
+              {(
+                [
+                  ['horário', `${hhmm(startOf(selected))}–${hhmm(endOf(selected))}`],
+                  ['duração', `${selected.duration || 30} min`],
+                  ...(multiChair ? ([['cadeira', String(selected.chair || 1)]] as const) : []),
+                  ['dentista', selected.dentist_name || '—'],
+                  ['tipo', selected.type],
+                ] as const
+              ).map(([k, v]) => (
+                <div
+                  key={k}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    padding: '6px 0',
+                    borderBottom: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <span
+                    className="text-2xs font-mono"
+                    style={{ color: 'var(--text-muted)', letterSpacing: 'var(--text-2xs-tracking)' }}
+                  >
+                    {k}
+                  </span>
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: 'var(--text-primary)', textAlign: 'right', minWidth: 0 }}
+                  >
+                    {v}
+                  </span>
+                </div>
+              ))}
+
+              {(selected.risk_score || 0) >= 60 && (
+                <div
+                  className="text-xs"
+                  style={{
+                    marginTop: 12,
+                    padding: 10,
+                    borderRadius: 'var(--radius-control)',
+                    background: 'var(--urgency-critical-bg)',
+                    color: 'var(--urgency-critical)',
+                    border: '1px solid var(--urgency-critical-border)',
+                    lineHeight: 'var(--leading-prose)',
+                  }}
+                >
+                  <strong>Ligar antes da hora.</strong> Risco elevado de falta.
+                </div>
+              )}
+
+              {nextStatus[selected.status] && onStatusChange && (
+                <button
+                  type="button"
+                  onClick={() => advance(selected)}
+                  disabled={loading}
+                  className="btn btn-primary"
+                  style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
+                >
+                  {loading ? 'A atualizar…' : `Passar a ${statusLabel(nextStatus[selected.status]).toLowerCase()}`}
+                </button>
+              )}
             </div>
-          ))}
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-            <Badge s={selected.status} />
-            {(selected.risk_score || 0) > 0 && <RiskBadge score={selected.risk_score || 0} />}
-          </div>
-
-          {(selected.risk_score || 0) >= 60 && (
-            <div
-              className="text-xs"
-              style={{
-                marginTop: 12,
-                padding: 12,
-                borderRadius: 'var(--radius-control)',
-                background: 'var(--urgency-critical-bg)',
-                color: 'var(--urgency-critical)',
-                border: '1px solid var(--urgency-critical-border)',
-              }}
-            >
-              <strong>Ação necessária:</strong> risco elevado de falta. Ligar ao doente para confirmar.
+          </>
+        ) : (
+          <>
+            <div className="daygrid-rail-head">
+              <span>{isToday ? 'a seguir' : 'o dia'}</span>
+              <span style={{ marginLeft: 'auto' }}>{proximas.length}</span>
             </div>
-          )}
-
-          {nextStatus[selected.status] && onStatusChange && (
-            <button
-              type="button"
-              onClick={() => advance(selected)}
-              disabled={loading}
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', marginTop: 12 }}
-            >
-              {loading ? 'A atualizar…' : `Passar a ${statusLabel(nextStatus[selected.status]).toLowerCase()}`}
-            </button>
-          )}
-        </aside>
-      )}
+            <div className="daygrid-rail-body">
+              {proximas.length === 0 ? (
+                <div className="text-xs" style={{ color: 'var(--text-muted)', lineHeight: 'var(--leading-prose)' }}>
+                  {appointments.length ? 'Já não falta ninguém hoje.' : 'Nada marcado para este dia.'}
+                </div>
+              ) : (
+                proximas.map((a) => (
+                  <button type="button" key={a.id} className="daynext" onClick={() => setSelected(a)}>
+                    <span className="daynext-when">{hhmm(startOf(a))}</span>
+                    <span className="daynext-who">{a.patient_name || a.patient || '—'}</span>
+                    {(a.risk_score || 0) >= 60 && (
+                      <span
+                        className="text-2xs font-mono"
+                        title="Risco elevado de falta"
+                        style={{
+                          marginLeft: 'auto',
+                          color: 'var(--urgency-critical)',
+                          fontWeight: 'var(--weight-bold)',
+                        }}
+                      >
+                        !
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </aside>
     </div>
   );
 }

@@ -13,7 +13,7 @@
 // risco × probabilidade de marcação, ou seja a ordem por que vale a pena telefonar. Não
 // é ordenar por risco — o doente com 95 de risco e 5 de probabilidade é tempo perdido.
 import { useState } from 'react';
-import { Empty, PageHeader, Sel, Spinner } from '@/components/ui';
+import { Empty, PanelBar, PanelNote, Sel, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 type Band = 'baixo' | 'medio' | 'alto';
@@ -98,17 +98,19 @@ export default function PatientScoring({ initialData }: { initialData?: { patien
 
   return (
     <div>
-      <PageHeader
-        title="Análise de Doentes"
-        sub="Três leituras da mesma carteira, sempre com os fatores que as explicam. Nada disto é guardado — é recalculado a cada visita."
-      >
+      <PanelBar>
         <Sel value={ordem} onChange={(e) => setOrdem(e.target.value as typeof ordem)} style={{ width: 210 }}>
           <option value="priority">Por quem telefonar primeiro</option>
           <option value="churnRisk">Por risco de abandono</option>
           <option value="engagement">Por envolvimento</option>
           <option value="bookingPropensity">Por probabilidade de marcar</option>
         </Sel>
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>
+        Três leituras da mesma carteira, sempre com os fatores que as explicam. Nada disto é guardado — é recalculado a
+        cada visita.
+      </PanelNote>
 
       {erro && (
         <div

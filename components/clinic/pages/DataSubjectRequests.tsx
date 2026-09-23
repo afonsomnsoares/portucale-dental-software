@@ -13,7 +13,7 @@
 //    'erasure' é irreversível e não há como o desfazer — um clique não chega.
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/app/providers';
-import { ConfirmModal, Empty, PageHeader, Sel, Spinner } from '@/components/ui';
+import { ConfirmModal, Empty, PanelBar, PanelNote, Sel, Spinner } from '@/components/ui';
 
 const TIPO_LABEL: Record<string, string> = {
   access: 'Acesso aos dados',
@@ -107,10 +107,7 @@ export default function DataSubjectRequests() {
 
   return (
     <div>
-      <PageHeader
-        title="Proteção de Dados"
-        sub="Pedidos do titular dos dados. Ordenados por prazo: os pendentes mais antigos primeiro."
-      >
+      <PanelBar>
         <Sel value={filtro} onChange={(e) => setFiltro(e.target.value)} style={{ width: 160 }}>
           <option value="">Todos</option>
           <option value="pending">Pendentes</option>
@@ -118,7 +115,9 @@ export default function DataSubjectRequests() {
           <option value="completed">Concluídos</option>
           <option value="rejected">Recusados</option>
         </Sel>
-      </PageHeader>
+      </PanelBar>
+
+      <PanelNote>Pedidos do titular dos dados. Ordenados por prazo: os pendentes mais antigos primeiro.</PanelNote>
 
       {erro && (
         <div

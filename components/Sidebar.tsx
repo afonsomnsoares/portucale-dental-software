@@ -379,9 +379,13 @@ export default function Sidebar({ open = false, onNavigate }: { open?: boolean; 
                 className={`nav-item mb-0.5 ${active ? 'nav-item-active' : ''}`}
                 aria-current={active ? 'page' : undefined}
               >
-                {/* Com cabeçalho de grupo, o ícone por entrada deixa de informar: são 41
-                    entradas e nenhuma tem ícone próprio no Icon() acima, pelo que todas
-                    cairiam no mesmo "+" genérico. O grupo carrega o significado. */}
+                {/* Sem ícone quando há cabeçalho de grupo. A razão escrita aqui era «são 41
+                    entradas e nenhuma tem ícone próprio»; hoje são 42 SOMADOS os quatro
+                    papéis — 7 a 12 cada — e a razão mudou de sítio: o Icon() acima não
+                    conhece os rótulos novos (Faturação, Receita e Custos, Definições,
+                    Clínica, Análise), e todos cairiam no mesmo "+" genérico, que informa
+                    menos do que nada. Com listas deste tamanho um ícone por entrada volta
+                    a valer a pena — falta desenhá-los, e é aí que este `!item.group` cai. */}
                 {!item.group && (
                   <span
                     style={{

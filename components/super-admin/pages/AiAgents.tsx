@@ -1,5 +1,5 @@
 'use client';
-import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 interface Summary {
@@ -29,6 +29,10 @@ const AI_META: Record<string, { label: string; bg: string; color: string }> = {
 
 // O catálogo de agentes ao nível da rede: o que cada um é, se usa mesmo um modelo, e
 // o que fez em todas as clínicas. A versão por clínica é /dashboard/admin/agents.
+//
+// É um painel: o cabeçalho é do ecrã que o mostra (pages/Agentes.tsx). O subtítulo que
+// aqui estava — quantos agentes, quantos com modelo ligado — está nas duas primeiras
+// fichas de métrica, que é onde já estava a ser lido.
 export default function AiAgents() {
   // Dois pedidos independentes, e não um Promise.all: o consumo falhar não pode
   // apagar a lista de agentes, que é o assunto da página.
@@ -52,8 +56,6 @@ export default function AiAgents() {
 
   return (
     <div>
-      <PageHeader title="Agentes" sub={`${runs.length} agentes no catálogo · ${wired} com modelo ligado`} />
-
       <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard label="AGENTES" value={runs.length} sub="no registo" color="var(--accent)" />
         <MetricCard label="COM IA" value={wired} sub="os restantes correm por regra" color="var(--cat-purple)" />

@@ -1,5 +1,5 @@
 'use client';
-import { Badge, Empty, ErrorState, MetricCard, PageHeader, Spinner } from '@/components/ui';
+import { Badge, Empty, ErrorState, MetricCard, Spinner } from '@/components/ui';
 import { useQuery } from '@/hooks/useQuery';
 
 interface Run {
@@ -48,8 +48,6 @@ export default function AiFailures() {
 
   return (
     <div>
-      <PageHeader title="Falhas" sub="Passagens rebentadas e chamadas ao modelo falhadas" />
-
       <div className="grid-cards" style={{ gap: 16, marginBottom: 24 }}>
         <MetricCard
           label="PASSAGENS FALHADAS"
