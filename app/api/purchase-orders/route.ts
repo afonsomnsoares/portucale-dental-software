@@ -2,6 +2,7 @@ import { appendAudit } from '@/lib/audit';
 import { query, queryOne } from '@/lib/db';
 import { badRequest, created } from '@/lib/http';
 import { withRoute } from '@/lib/route';
+import { allItemsVisible } from '@/lib/tenantGuard';
 import { asDate, asInt, sanitizeString } from '@/lib/validate';
 
 export const GET = withRoute({ permission: 'inventory:manage', tenant: 'resolved' }, async ({ request, tenantId }) => {
@@ -52,6 +53,14 @@ export const POST = withRoute(
       if (!asInt(it.itemId, { min: 1 }) || !asInt(it.quantity, { min: 1 })) {
         return badRequest('each item needs a valid itemId and a positive integer quantity');
       }
+    }
+    if (
+      !(await allItemsVisible(
+        items.map((it: { itemId: unknown }) => Number(it.itemId)),
+        tenantId,
+      ))
+    ) {
+      return badRequest('Há artigos que não existem no catálogo desta clínica');
     }
 
     // Fornecedor opcional mas validado (migração 044): sem ele a encomenda é uma lista de

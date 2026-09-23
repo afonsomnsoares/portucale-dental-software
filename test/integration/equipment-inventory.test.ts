@@ -11,7 +11,14 @@ import { POST as postSupplier } from '../../app/api/suppliers/route.ts';
 import { computeEquipmentOverview } from '../../lib/equipment.ts';
 import { query } from '../../lib/db.ts';
 import { authedRequest } from '../helpers/authedRequest.ts';
-import { closeTestDb, ensureSeeded, getSeededUser, getTenantAId, getTenantBId } from '../helpers/testDb.ts';
+import {
+  closeTestDb,
+  ensureSeeded,
+  getOrCreateTenantAdmin,
+  getSeededUser,
+  getTenantAId,
+  getTenantBId,
+} from '../helpers/testDb.ts';
 import type { TestUser } from '../helpers/authedRequest.ts';
 
 let superAdmin: TestUser;
@@ -278,6 +285,91 @@ test('renomear um item do catálogo a partir de uma clínica é recusado', async
 
   const [depois] = await query(`SELECT item FROM inventory_items WHERE id=$1`, [item.id]);
   assert.equal(depois.item, item.item, 'o nome do catálogo foi alterado a partir de uma clínica');
+
+  await query(`DELETE FROM inventory_items WHERE id=$1`, [item.id]);
+});
+
+// ─── Artigos próprios de uma clínica (migração 066) ─────────────────────────
+// O POST /api/inventory/items não tinha tenant_id e escrevia no catálogo de todas as
+// clínicas com uma permissão que qualquer admin de clínica tem. Agora o artigo fica da
+// clínica que o criou. Estes testes ligam-se como superuser, ou seja FORA da RLS — que
+// é exatamente como o serviço de jobs corre a previsão e as encomendas automáticas. O
+// que provam é que os filtros explícitos seguram sozinhos; a política de RLS em si é
+// coberta pelo test/integration/rls-enforcement.test.ts.
+async function createOwnItem(owner: TestUser, name: string) {
+  const res = await postItem(
+    authedRequest(owner, { method: 'POST', url: '/api/inventory/items', body: { item: name, unit: 'un', reorderAt: 5 } }),
+    { params: Promise.resolve({}) },
+  );
+  assert.equal(res.status, 201);
+  return res.json();
+}
+
+test('um artigo criado por uma clínica fica dela, e não entra no catálogo das outras', async () => {
+  const { GET: getItems } = await import('../../app/api/inventory/items/route.ts');
+  const { computeInventoryOverview } = await import('../../lib/inventory.ts');
+  const adminA = await getOrCreateTenantAdmin(tenantAId, 'Clínica Portucale');
+
+  const item = await createOwnItem(adminB, `Próprio B ${uniq()}`);
+  assert.equal(item.tenant_id, tenantBId, 'o artigo não ficou marcado como da clínica B');
+
+  const listaA = await (
+    await getItems(authedRequest(adminA, { method: 'GET', url: '/api/inventory/items' }), {
+      params: Promise.resolve({}),
+    })
+  ).json();
+  assert.ok(!listaA.some((i: { id: number }) => i.id === item.id), 'a clínica A vê o artigo da clínica B');
+
+  const listaB = await (
+    await getItems(authedRequest(adminB, { method: 'GET', url: '/api/inventory/items' }), {
+      params: Promise.resolve({}),
+    })
+  ).json();
+  assert.ok(listaB.some((i: { id: number }) => i.id === item.id), 'a clínica B deixou de ver o próprio artigo');
+
+  // O caminho dos jobs: sem este filtro, a clínica A recebia uma encomenda automática
+  // de um produto que nunca teve.
+  const overviewA = await computeInventoryOverview(tenantAId);
+  assert.ok(!overviewA.some((r) => r.item.id === item.id), 'a previsão da clínica A inclui o artigo da clínica B');
+
+  await query(`DELETE FROM inventory_items WHERE id=$1`, [item.id]);
+});
+
+test('a clínica edita por inteiro o que é seu; o de outra clínica nem o encontra', async () => {
+  const { PUT: putItem } = await import('../../app/api/inventory/items/[id]/route.ts');
+  const adminA = await getOrCreateTenantAdmin(tenantAId, 'Clínica Portucale');
+  const item = await createOwnItem(adminB, `Renomeável ${uniq()}`);
+
+  const renomeado = await putItem(
+    authedRequest(adminB, { method: 'PUT', url: `/api/inventory/items/${item.id}`, body: { item: 'Nome novo B' } }),
+    { params: Promise.resolve({ id: String(item.id) }) },
+  );
+  assert.equal(renomeado.status, 200, 'a clínica não conseguiu renomear o próprio artigo');
+  assert.equal((await renomeado.json()).item, 'Nome novo B');
+
+  const alheio = await putItem(
+    authedRequest(adminA, { method: 'PUT', url: `/api/inventory/items/${item.id}`, body: { reorderAt: 1 } }),
+    { params: Promise.resolve({ id: String(item.id) }) },
+  );
+  assert.equal(alheio.status, 404, 'a clínica A mexeu num artigo da clínica B');
+
+  await query(`DELETE FROM inventory_items WHERE id=$1`, [item.id]);
+});
+
+test('não se encomenda o artigo próprio de outra clínica pelo id', async () => {
+  const { POST: postOrder } = await import('../../app/api/purchase-orders/route.ts');
+  const adminA = await getOrCreateTenantAdmin(tenantAId, 'Clínica Portucale');
+  const item = await createOwnItem(adminB, `Encomendável só por B ${uniq()}`);
+
+  const res = await postOrder(
+    authedRequest(adminA, {
+      method: 'POST',
+      url: '/api/purchase-orders',
+      body: { items: [{ itemId: item.id, quantity: 3 }] },
+    }),
+    { params: Promise.resolve({}) },
+  );
+  assert.equal(res.status, 400, 'a encomenda aceitou um artigo que a clínica A não vê');
 
   await query(`DELETE FROM inventory_items WHERE id=$1`, [item.id]);
 });

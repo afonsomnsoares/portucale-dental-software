@@ -3,6 +3,7 @@ import { query, queryOne } from '@/lib/db';
 import { badRequest, notFound } from '@/lib/http';
 import { receivePurchaseOrder } from '@/lib/inventory';
 import { withRoute } from '@/lib/route';
+import { allItemsVisible } from '@/lib/tenantGuard';
 import { asDate, asEnum, asInt } from '@/lib/validate';
 
 const TRANSITIONABLE_STATUSES = ['ordered', 'cancelled', 'received'] as const;
@@ -65,6 +66,14 @@ export const PUT = withRoute<{ id: string }>(
         if (!asInt(it.itemId, { min: 1 }) || !asInt(it.quantity, { min: 1 })) {
           return badRequest('each item needs a valid itemId and a positive integer quantity');
         }
+      }
+      if (
+        !(await allItemsVisible(
+          items.map((it: { itemId: unknown }) => Number(it.itemId)),
+          prev.tenant_id,
+        ))
+      ) {
+        return badRequest('Há artigos que não existem no catálogo desta clínica');
       }
       await query(`DELETE FROM purchase_order_items WHERE purchase_order_id=$1`, [id]);
       for (const it of items) {

@@ -633,8 +633,11 @@ DECLARE
   --
   -- Excluídas as que precisam de uma política diferente e a têm logo a seguir:
   -- os catálogos com linha global partilhada (tenant_id NULL visível a todos) e
-  -- `tenants`, que se chaveia em `id` e não em `tenant_id`.
-  excluded text[] := ARRAY['schema_fields','treatment_codes','statuses','tenants'];
+  -- `tenants`, que se chaveia em `id` e não em `tenant_id`. `inventory_items` só
+  -- ganha tenant_id na migração 066, que lhe põe a política de catálogo; está aqui
+  -- para uma reaplicação deste ficheiro sobre uma base migrada não a tratar como
+  -- tabela de clínica e esconder o catálogo global.
+  excluded text[] := ARRAY['schema_fields','treatment_codes','statuses','tenants','inventory_items'];
 BEGIN
   FOR tbl IN
     SELECT c.relname

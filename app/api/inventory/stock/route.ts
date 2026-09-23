@@ -26,7 +26,13 @@ export const GET = withRoute({ permission: 'inventory:manage', tenant: 'optional
   const scope = tenantId || null;
 
   const [items, stock] = await Promise.all([
-    query(`SELECT id, item, unit, reorder_at, created_at, updated_at FROM inventory_items ORDER BY item`),
+    // Global + os artigos próprios desta clínica (migração 066). Sem clínica, todos.
+    query(
+      `SELECT id, item, unit, reorder_at, created_at, updated_at, tenant_id FROM inventory_items
+        WHERE ($1::uuid IS NULL OR tenant_id IS NULL OR tenant_id = $1::uuid)
+        ORDER BY item`,
+      [scope],
+    ),
     // `reorder_at` aqui é o efetivo desta clínica para este item. Só é preciso onde há
     // linha de stock: um par (item, clínica) sem linha é quantidade 0, e 0 é "esgotado"
     // independentemente do ponto de reposição.

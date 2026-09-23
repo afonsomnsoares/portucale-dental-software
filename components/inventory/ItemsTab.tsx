@@ -155,7 +155,17 @@ export default function ItemsTab({ api, tenantId, onChanged }: ItemsTabProps) {
             cols={['Artigo', 'Unidade', 'Ponto de reposição', '']}
             rows={items.map((it) => (
               <tr key={it.id}>
-                <TD bold>{it.item}</TD>
+                <TD bold>
+                  {it.item}
+                  {/* Os globais só mudam de limiar a partir daqui; os próprios editam-se por inteiro. */}
+                  {it.tenant_id && (
+                    <span
+                      style={{ marginLeft: 6, fontWeight: 400, color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}
+                    >
+                      · da clínica
+                    </span>
+                  )}
+                </TD>
                 <TD muted>{it.unit}</TD>
                 <TD>{it.reorder_at}</TD>
                 <TD right>

@@ -16,6 +16,10 @@ import { asInt, sanitizeString } from '@/lib/validate';
 //
 // Agora: quem tem clínica escreve na sua própria política; só a plataforma (um
 // super-admin, sem tenantId) mexe no catálogo que todos veem.
+//
+// Desde a migração 066 há também artigos próprios de uma clínica (tenant_id preenchido).
+// Esses são dela por inteiro — nome, unidade e limiar editam-se na própria linha, como a
+// plataforma faz com os globais, porque não há mais ninguém a quem a alteração chegue.
 export const PUT = withRoute<{ id: string }>(
   { permission: 'inventory:manage', tenant: 'optional' },
   async ({ request, user, params, tenantId }) => {
@@ -23,7 +27,12 @@ export const PUT = withRoute<{ id: string }>(
     const itemId = Number(id);
     if (!Number.isInteger(itemId)) return badRequest('Item inválido');
 
-    const prev = await queryOne(`SELECT * FROM inventory_items WHERE id=$1`, [itemId]);
+    // O filtro de clínica repete a RLS para o super-admin dentro de uma clínica, que
+    // passa ao lado dela: sem isto editava o artigo próprio de outra clínica pelo id.
+    const prev = await queryOne(
+      `SELECT * FROM inventory_items WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id IS NULL OR tenant_id=$2::uuid)`,
+      [itemId, tenantId || null],
+    );
     if (!prev) return notFound('Inventory item not found');
 
     const body = await request.json();
@@ -31,8 +40,8 @@ export const PUT = withRoute<{ id: string }>(
       (body.item !== undefined && sanitizeString(body.item, 200) !== prev.item) ||
       (body.unit !== undefined && (sanitizeString(body.unit, 50) || prev.unit) !== prev.unit);
 
-    // ─── Caminho da clínica ────────────────────────────────────────────────
-    if (tenantId) {
+    // ─── Caminho da clínica, sobre um artigo do catálogo global ────────────
+    if (tenantId && !prev.tenant_id) {
       if (querIdentidade) {
         // O nome e a unidade são o catálogo. Renomear daqui mudava a lista de toda
         // a gente, e o registo ficava a dizer que tinha sido esta clínica.
@@ -74,7 +83,7 @@ export const PUT = withRoute<{ id: string }>(
       });
     }
 
-    // ─── Caminho da plataforma: o catálogo que todos veem ──────────────────
+    // ─── A própria linha: o catálogo global (plataforma) ou um artigo da clínica ─
     const item = body.item !== undefined ? sanitizeString(body.item, 200) || prev.item : prev.item;
     const unit = body.unit !== undefined ? sanitizeString(body.unit, 50) || prev.unit : prev.unit;
     const reorderAt =

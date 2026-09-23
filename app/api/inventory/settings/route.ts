@@ -28,6 +28,7 @@ export const GET = withRoute({ permission: 'inventory:manage' }, async ({ tenant
             COALESCE(s.active, TRUE) AS active
        FROM inventory_items i
        LEFT JOIN inventory_item_settings s ON s.item_id = i.id AND s.tenant_id = $1
+      WHERE i.tenant_id IS NULL OR i.tenant_id = $1
       ORDER BY i.item`,
     [tenantId],
   );
@@ -39,7 +40,10 @@ export const PUT = withRoute({ permission: 'inventory:manage' }, async ({ reques
   const itemId = Number(body.itemId);
   if (!Number.isInteger(itemId)) return badRequest('itemId inválido');
 
-  const item = await query(`SELECT id, item FROM inventory_items WHERE id=$1`, [itemId]);
+  const item = await query(
+    `SELECT id, item FROM inventory_items WHERE id=$1 AND (tenant_id IS NULL OR tenant_id=$2::uuid)`,
+    [itemId, tenantId],
+  );
   if (!item.length) return badRequest('Item não existe no catálogo');
 
   // reorder_at a null = volta a seguir o catálogo global; não é o mesmo que zero.

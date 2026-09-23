@@ -48,7 +48,10 @@ export const POST = withRoute(
     if (reason !== 'received' && delta > 0) return badRequest(`delta must be negative for reason "${reason}"`);
     if (reason === 'received' && delta < 0) return badRequest('delta must be positive for reason "received"');
 
-    const item = await queryOne(`SELECT id, item FROM inventory_items WHERE id=$1`, [itemId]);
+    const item = await queryOne(
+      `SELECT id, item FROM inventory_items WHERE id=$1 AND (tenant_id IS NULL OR tenant_id=$2::uuid)`,
+      [itemId, tenantId],
+    );
     if (!item) return Response.json({ error: 'Inventory item not found' }, { status: 404 });
 
     const expiryDate = body.expiryDate !== undefined ? asDate(body.expiryDate) : null;

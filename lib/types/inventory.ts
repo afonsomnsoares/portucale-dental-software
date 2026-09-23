@@ -5,6 +5,8 @@ export interface InventoryItem {
   reorder_at: number;
   created_at: string;
   updated_at: string;
+  // NULL = catálogo global; preenchido = artigo próprio dessa clínica (migração 066).
+  tenant_id?: string | null;
 }
 
 export interface InventoryStock {

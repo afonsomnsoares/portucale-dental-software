@@ -43,3 +43,19 @@ export async function getOwnedUser(
   if (activeOnly) conds.push('active=TRUE');
   return queryOne(`SELECT id, name, role, tenant_id FROM users WHERE ${conds.join(' AND ')}`, vals);
 }
+
+// Same idea for inventory item ids on a purchase order. Since migration 066 a
+// clinic can own catalogue rows (inventory_items.tenant_id), and the foreign key
+// from purchase_order_items — like every FK check — bypasses RLS, so without this
+// a clinic could order another clinic's private item by guessing its integer id.
+// Visible means global (tenant_id NULL) or this clinic's own.
+export async function allItemsVisible(itemIds: number[], tenantId: string) {
+  const ids = [...new Set(itemIds)];
+  if (!ids.length) return true;
+  const row = await queryOne(
+    `SELECT count(*)::int AS n FROM inventory_items
+      WHERE id = ANY($1::int[]) AND (tenant_id IS NULL OR tenant_id = $2::uuid)`,
+    [ids, tenantId],
+  );
+  return Number(row?.n) === ids.length;
+}

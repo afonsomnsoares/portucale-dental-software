@@ -90,6 +90,9 @@ async function unitCostsByItem(tenantId: string): Promise<Map<number, number | n
      FROM inventory_items i
      LEFT JOIN inventory_item_settings s ON s.item_id = i.id AND s.tenant_id = $1
      LEFT JOIN inventory_batches b ON b.item_id = i.id AND b.tenant_id = $1
+     -- Os artigos próprios de outra clínica (migração 066) não são desta; explícito
+     -- porque os jobs correm isto fora da RLS.
+     WHERE i.tenant_id IS NULL OR i.tenant_id = $1
      GROUP BY i.id, s.unit_cost, i.unit_cost`,
     [tenantId],
   );

@@ -29,7 +29,10 @@ export const POST = withRoute(
     const qty = asFee(body.qtyPerProcedure);
     if (qty === null || qty <= 0) return badRequest('qtyPerProcedure must be a positive number');
 
-    const item = await query(`SELECT id FROM inventory_items WHERE id=$1`, [itemId]);
+    const item = await query(
+      `SELECT id FROM inventory_items WHERE id=$1 AND (tenant_id IS NULL OR tenant_id=$2::uuid)`,
+      [itemId, tenantId],
+    );
     if (!item.length) return badRequest('Invalid itemId');
 
     const [row] = await query(

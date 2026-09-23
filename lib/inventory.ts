@@ -146,6 +146,10 @@ export async function computeInventoryOverview(tenantId: string): Promise<Invent
        FROM inventory_items i
        LEFT JOIN inventory_item_settings s ON s.item_id = i.id AND s.tenant_id = $1
       WHERE COALESCE(s.active, TRUE) = TRUE
+        -- Explícito e não só RLS: o serviço de jobs corre isto com a ligação admin, que
+        -- passa ao lado da política. Sem este filtro, o artigo próprio de uma clínica
+        -- (migração 066) entrava na previsão e nas encomendas automáticas das outras.
+        AND (i.tenant_id IS NULL OR i.tenant_id = $1)
       ORDER BY i.item`,
     [tenantId],
   );
@@ -250,7 +254,11 @@ export async function computeProcedureDemandForecast(
 
   const itemIds = demand.map((d) => d.itemId);
   const [items, stockRows] = await Promise.all([
-    query(`SELECT id, item, unit FROM inventory_items WHERE id = ANY($1::int[])`, [itemIds]),
+    query(
+      `SELECT id, item, unit FROM inventory_items
+        WHERE id = ANY($1::int[]) AND (tenant_id IS NULL OR tenant_id = $2::uuid)`,
+      [itemIds, tenantId],
+    ),
     query(`SELECT item_id, quantity FROM inventory_stock WHERE tenant_id=$1 AND item_id = ANY($2::int[])`, [
       tenantId,
       itemIds,
@@ -389,7 +397,9 @@ export async function computeStagnantInventory(tenantId: string): Promise<Stagna
      LEFT JOIN inventory_item_settings s ON s.item_id = i.id AND s.tenant_id = $1
      -- Um item que a clínica desativou (migração 044) não é stock parado dela — saiu
      -- das listas dela por decisão, não por esquecimento.
-     WHERE COALESCE(s.active, TRUE)`,
+     WHERE COALESCE(s.active, TRUE)
+       -- Ver computeInventoryOverview: corre também fora da RLS, no serviço de jobs.
+       AND (i.tenant_id IS NULL OR i.tenant_id = $1)`,
     [tenantId, STAGNANT_WINDOW_DAYS],
   );
 
