@@ -185,3 +185,87 @@ test('o GET devolve o valor em vigor e os limites', async () => {
   assert.equal(body.max, 60);
   assert.equal(body.defaultMonths, 6);
 });
+
+// ─── Os substitutos de uma consulta de risco ────────────────────────────────
+// O pedido de confirmação a uma consulta de risco guarda quem, da lista de espera, pode
+// ficar com o lugar. A procura recebia a data já no formato do SMS («25/09/2026»), e o
+// matcher compara-a como texto com a data de hoje em ISO — perdia sempre. A lista vinha
+// vazia em todas as consultas, sem erro nenhum.
+test('substitutos de uma consulta de risco: encontra quem está na lista de espera', async () => {
+  const { findStandbyCandidates } = await import('../../lib/jobsRunner.ts');
+  const substituto = await doente();
+  const [entrada] = await query(
+    `INSERT INTO waitlist_entries (tenant_id, patient_id, treatment_type, min_duration, status)
+     VALUES ($1,$2,'Destartarização',30,'active') RETURNING id`,
+    [tenantAId, substituto],
+  );
+
+  // A data tal como o Postgres a devolve (lib/db.ts deixa DATE como string ISO), a dois
+  // dias de hoje — dentro da janela do pedido de confirmação.
+  const [{ d }] = await query(`SELECT (CURRENT_DATE + 2)::date AS d`);
+  const encontrados = await findStandbyCandidates(tenantAId, {
+    appt_date: d,
+    start_time: '10:00:00',
+    type: 'Destartarização',
+    duration: 45,
+    dentist_id: null,
+    chair: 1,
+  });
+
+  assert.ok(
+    encontrados.some((c) => c.patientId === substituto),
+    'a lista de substitutos veio vazia — a data chegou ao matcher noutro formato?',
+  );
+  await query(`DELETE FROM waitlist_entries WHERE id=$1`, [entrada.id]);
+});
+
+// ─── O consentimento de reativação tem onde ser registado ───────────────────
+// A reativação só contacta quem tem `marketing_outreach` em patient_data_consents — e
+// nenhum código escrevia nessa tabela. A lista de candidatos vinha vazia em todas as
+// clínicas, para sempre, e parecia só que não havia ninguém inativo.
+test('registar o consentimento põe o doente inativo na reativação, e retirá-lo tira-o', async () => {
+  const { PUT: putConsent, GET: getConsents } = await import('../../app/api/patients/[id]/data-consents/route.ts');
+  const p = await doente({ lastVisit: '2020-01-01', visitCount: 3 });
+  const url = `/api/patients/${p}/data-consents`;
+  const ctx = { params: Promise.resolve({ id: p }) };
+  const candidato = async () =>
+    (await computeLifecycleTransitions(tenantAId)).outreachCandidates.some((c) => c.patientId === p);
+
+  assert.equal(await candidato(), false, 'sem consentimento não pode ser candidato');
+
+  const sim = await putConsent(
+    authedRequest(admin, { method: 'PUT', url, body: { type: 'marketing_outreach', given: true } }),
+    ctx,
+  );
+  assert.equal(sim.status, 200);
+  assert.equal(await candidato(), true, 'com o consentimento registado devia entrar na reativação');
+
+  const lista = await (await getConsents(authedRequest(admin, { method: 'GET', url }), ctx)).json();
+  assert.equal(lista.find((c: { type: string }) => c.type === 'marketing_outreach')?.given, true);
+
+  const nao = await putConsent(
+    authedRequest(admin, { method: 'PUT', url, body: { type: 'marketing_outreach', given: false } }),
+    ctx,
+  );
+  assert.equal(nao.status, 200);
+  assert.equal(await candidato(), false, 'retirado o consentimento, não pode continuar candidato');
+
+  // Retirar não apaga: a linha fica, com a data, como prova de base legal.
+  const linhas = await query(`SELECT revoked_at FROM patient_data_consents WHERE patient_id=$1`, [p]);
+  assert.equal(linhas.length, 1);
+  assert.ok(linhas[0].revoked_at);
+});
+
+test('um tipo de consentimento que nada consulta é recusado', async () => {
+  const { PUT: putConsent } = await import('../../app/api/patients/[id]/data-consents/route.ts');
+  const p = await doente();
+  const res = await putConsent(
+    authedRequest(admin, {
+      method: 'PUT',
+      url: `/api/patients/${p}/data-consents`,
+      body: { type: 'marketing', given: true },
+    }),
+    { params: Promise.resolve({ id: p }) },
+  );
+  assert.equal(res.status, 400);
+});

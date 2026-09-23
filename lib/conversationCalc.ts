@@ -460,6 +460,10 @@ export function routeInbound(
   // Só o degrau 'agenda' olha para isto. Vem de quem chama porque é uma leitura à base
   // de dados e este módulo é puro — ver o cabeçalho do ficheiro.
   schedule?: ScheduleActionContext & { hasPendingOffer?: boolean },
+  // Ofertas da lista de espera à espera de resposta deste doente. Ao contrário do
+  // `schedule`, vem em todos os degraus: um SIM a uma delas nunca é a confirmação de uma
+  // consulta, e responder «fica confirmada» sem nada marcado era o que acontecia.
+  pendingWaitlistOffers = 0,
 ): RoutingDecision {
   const { intent, confidence, matched } = classifyIntent(text);
 
@@ -521,6 +525,19 @@ export function routeInbound(
       };
     }
 
+    // O mesmo SIM a uma oferta da lista de espera. Só com UMA pendente: com duas, o doente
+    // não disse a qual, e escolher por ele é o erro que canActOnSchedule existe para evitar.
+    if (intent === 'confirm' && pendingWaitlistOffers === 1 && confidence === 'high') {
+      return {
+        action: 'accept_offer',
+        intent,
+        confidence,
+        nextState: 'resolved',
+        reason: 'Aceitou o lugar da lista de espera que lhe foi oferecido — a consulta fica marcada.',
+        urgent: false,
+      };
+    }
+
     if (intent === 'cancel') {
       const pode = canActOnSchedule(schedule);
       if (pode.ok) {
@@ -568,6 +585,25 @@ export function routeInbound(
         urgent: false,
       };
     }
+  }
+
+  // ─── Um SIM a uma oferta que este degrau não pode aceitar ─────────────────
+  // Antes da resposta automática: a de 'confirm' diz «a sua consulta fica confirmada», e
+  // aqui não há consulta nenhuma — há um lugar oferecido que alguém tem de marcar. O
+  // doente recebe o aviso de receção e a receção fica com o trabalho.
+  if (intent === 'confirm' && pendingWaitlistOffers > 0) {
+    const reason =
+      pendingWaitlistOffers > 1
+        ? `Respondeu SIM com ${pendingWaitlistOffers} ofertas da lista de espera pendentes — não se sabe qual aceitou.`
+        : 'Respondeu SIM a uma oferta da lista de espera — a marcação tem de ser feita por uma pessoa neste nível de autonomia.';
+    return {
+      action: autonomy === 'off' ? 'human_task' : 'auto_acknowledge',
+      intent,
+      confidence,
+      nextState: 'awaiting_staff',
+      reason,
+      urgent: false,
+    };
   }
 
   if (scope.has(intent) && confidence === 'high') {

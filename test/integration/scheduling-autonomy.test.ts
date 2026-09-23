@@ -261,3 +261,116 @@ test('um SIM sobre um lugar já ocupado não duplica a consulta', async () => {
   const oferta = await queryOne(`SELECT status FROM slot_offers WHERE patient_id=$1`, [p.id]);
   assert.equal(String(oferta?.status), 'expired');
 });
+
+// ─── Remarcar é mover, não acrescentar ──────────────────────────────────────
+// A oferta de remarcação não sabia que consulta substituía, e o SIM fazia um INSERT como
+// qualquer outra aceitação: o doente ficava com a consulta nova E a antiga. E o lugar
+// proposto era de uma «Consulta de Avaliação» genérica, não do tratamento que ele tinha.
+test('remarcar por SMS move a consulta que existia, em vez de criar uma segunda', async () => {
+  const p = await doente();
+  const original = await marcar(p.id, 9);
+
+  const pedido = await handleInbound(tenantAId, {
+    channel: 'sms',
+    toAddress: CLINICA,
+    fromAddress: p.phone,
+    body: 'preciso de remarcar a minha consulta',
+    providerId: `auto-resched-${RUN}`,
+  });
+  assert.equal(pedido.action, 'offer_slot');
+
+  const oferta = await queryOne(`SELECT * FROM slot_offers WHERE patient_id=$1 AND status='sent'`, [p.id]);
+  assert.ok(oferta, 'devia haver uma oferta pendente');
+  assert.equal(String(oferta.replaces_appointment_id), original, 'a oferta não sabe que consulta substitui');
+  assert.equal(String(oferta.offered_type), 'Destartarização', 'ofereceu outro tratamento');
+  assert.equal(Number(oferta.offered_duration), 45, 'ofereceu outra duração');
+
+  const sim = await handleInbound(tenantAId, {
+    channel: 'sms',
+    toAddress: CLINICA,
+    fromAddress: p.phone,
+    body: 'sim',
+    providerId: `auto-resched-yes-${RUN}`,
+  });
+  assert.equal(sim.action, 'accept_offer');
+
+  const minhas = await query(
+    `SELECT id, appt_date::text AS d, start_time::text AS t, rescheduled_at FROM appointments WHERE patient_id=$1`,
+    [p.id],
+  );
+  assert.equal(minhas.length, 1, 'o doente ficou com duas consultas');
+  assert.equal(String(minhas[0].id), original, 'devia ter movido a original, não criado outra');
+  assert.equal(String(minhas[0].d), String(oferta.offered_date).slice(0, 10));
+  assert.equal(String(minhas[0].t).slice(0, 5), String(oferta.offered_start_time).slice(0, 5));
+  // É o rescheduled_at que faz a tarefa 'confirmations' confirmar a data nova.
+  assert.ok(minhas[0].rescheduled_at, 'sem rescheduled_at o doente não recebe a confirmação da data nova');
+
+  const linha = await queryOne(
+    `SELECT event, user_name FROM patient_timeline WHERE patient_id=$1 ORDER BY created_at DESC LIMIT 1`,
+    [p.id],
+  );
+  assert.match(String(linha?.event), /remarcada automaticamente/);
+  assert.match(String(linha?.user_name), /automático/);
+});
+
+// ─── SIM a uma oferta da lista de espera ────────────────────────────────────
+// A oferta da lista de espera era invisível ao SIM (pendingOfferFor excluía-a), que caía na
+// resposta de confirmação: «a sua consulta fica confirmada», sem nada marcado.
+async function ofertaDaLista(patientId: string) {
+  const { addToWaitlist } = await import('../../lib/waitlist.ts');
+  const entrada = await addToWaitlist(tenantAId, null, { patientId, treatmentType: 'Destartarização' });
+  const slot = await findOfferableSlot(tenantAId, patientId, 'Destartarização');
+  assert.ok(slot, 'devia haver um lugar livre para o teste');
+  const [o] = await query(
+    `INSERT INTO slot_offers (tenant_id, waitlist_entry_id, patient_id, offered_date, offered_start_time,
+                              offered_duration, offered_chair, offered_dentist_id, origin, offered_type)
+     VALUES ($1,$2,$3,$4::date,$5::time,$6,$7,$8,'waitlist','Destartarização') RETURNING id`,
+    [tenantAId, entrada.id, patientId, slot.date, slot.startTime, slot.duration, slot.chair, slot.dentistId],
+  );
+  await query(`UPDATE waitlist_entries SET status='offered' WHERE id=$1`, [entrada.id]);
+  return { offerId: String(o.id), entryId: String(entrada.id) };
+}
+
+test('SIM a uma oferta da lista de espera marca a consulta no degrau agenda', async () => {
+  const p = await doente();
+  const { offerId, entryId } = await ofertaDaLista(p.id);
+
+  const sim = await handleInbound(tenantAId, {
+    channel: 'sms',
+    toAddress: CLINICA,
+    fromAddress: p.phone,
+    body: 'sim',
+    providerId: `wl-yes-${RUN}`,
+  });
+  assert.equal(sim.action, 'accept_offer');
+  assert.equal((await query(`SELECT id FROM appointments WHERE patient_id=$1`, [p.id])).length, 1);
+  assert.equal(String((await queryOne(`SELECT status FROM slot_offers WHERE id=$1`, [offerId]))?.status), 'accepted');
+  assert.equal(String((await queryOne(`SELECT status FROM waitlist_entries WHERE id=$1`, [entryId]))?.status), 'fulfilled');
+  await query(`DELETE FROM waitlist_entries WHERE id=$1`, [entryId]);
+});
+
+test('abaixo do degrau agenda, o SIM à lista de espera não finge que marcou', async () => {
+  await setAutonomy('transactional');
+  const p = await doente();
+  const { offerId, entryId } = await ofertaDaLista(p.id);
+
+  const sim = await handleInbound(tenantAId, {
+    channel: 'sms',
+    toAddress: CLINICA,
+    fromAddress: p.phone,
+    body: 'sim',
+    providerId: `wl-yes-low-${RUN}`,
+  });
+  assert.equal(sim.action, 'auto_acknowledge');
+  assert.equal((await query(`SELECT id FROM appointments WHERE patient_id=$1`, [p.id])).length, 0);
+  assert.equal(String((await queryOne(`SELECT status FROM slot_offers WHERE id=$1`, [offerId]))?.status), 'sent');
+
+  const enviada = await queryOne(
+    `SELECT m.body FROM conversation_messages m JOIN conversations c ON c.id = m.conversation_id
+      WHERE c.patient_id=$1 AND m.direction='outbound' ORDER BY m.created_at DESC LIMIT 1`,
+    [p.id],
+  );
+  assert.doesNotMatch(String(enviada?.body ?? ''), /fica confirmada/, 'disse ao doente que estava marcado');
+  await query(`DELETE FROM slot_offers WHERE id=$1`, [offerId]);
+  await query(`DELETE FROM waitlist_entries WHERE id=$1`, [entryId]);
+});

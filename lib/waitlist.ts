@@ -302,6 +302,8 @@ export async function declineOffer(tenantId: string, offerId: string) {
 export interface BookOfferResult {
   offer: Record<string, unknown>;
   appointment: Record<string, unknown>;
+  // Preenchido quando a oferta moveu uma consulta existente em vez de criar uma nova.
+  rescheduledFrom: { date: string; startTime: string } | null;
 }
 
 // Receptionist confirms the patient accepted: creates the real appointment on the freed
@@ -338,9 +340,28 @@ export async function acceptOfferAndBook(tenantId: string, offerId: string): Pro
         ? 'Marcado a partir de um pedido do doente por SMS'
         : 'Marcado a partir da lista de espera';
 
+  // ─── Remarcar é mover, não acrescentar ────────────────────────────────────
+  // Uma oferta nascida de um pedido de remarcação (migração 067) substitui uma consulta.
+  // Inserir aqui deixava o doente com duas. Move-se a original, com o mesmo UPDATE da
+  // rota de reagendamento da receção — incluindo `rescheduled_at`, que é o que faz a
+  // tarefa 'confirmations' mandar a confirmação da data nova.
+  const replacesId = offer.replaces_appointment_id ? String(offer.replaces_appointment_id) : null;
+  let rescheduledFrom: { date: string; startTime: string } | null = null;
+
   let appointment: Record<string, unknown>;
   try {
     appointment = await withTransaction(async (client) => {
+      const original = replacesId
+        ? (
+            await client.query(
+              `SELECT id, appt_date::text AS appt_date, start_time::text AS start_time FROM appointments
+                WHERE id=$1 AND tenant_id=$2 AND patient_id=$3 AND status IN ('confirmed','waiting')
+                FOR UPDATE`,
+              [replacesId, tenantId, patient.id],
+            )
+          ).rows[0]
+        : null;
+
       await claimSlot(client, {
         tenantId,
         dentistId: (dentist?.id as string) || null,
@@ -348,7 +369,34 @@ export async function acceptOfferAndBook(tenantId: string, offerId: string): Pro
         startTime: String(offer.offered_start_time).slice(0, 5),
         duration: Number(offer.offered_duration) || 30,
         chair: Number(offer.offered_chair) || 1,
+        excludeAppointmentId: original?.id ?? null,
       });
+
+      // A original pode já não estar por realizar (cancelada, ou o doente faltou entretanto).
+      // Aí não há nada para mover, e o SIM vale como uma marcação simples.
+      if (original) {
+        rescheduledFrom = {
+          date: String(original.appt_date).slice(0, 10),
+          startTime: String(original.start_time).slice(0, 5),
+        };
+        const { rows } = await client.query(
+          `UPDATE appointments
+              SET appt_date=$1::date, start_time=$2::time, duration=$3, chair=$4,
+                  dentist_id=COALESCE($5, dentist_id), rescheduled_at=NOW()
+            WHERE id=$6 AND tenant_id=$7
+            RETURNING *`,
+          [
+            offer.offered_date,
+            offer.offered_start_time,
+            offer.offered_duration,
+            offer.offered_chair || 1,
+            dentist?.id || null,
+            original.id,
+            tenantId,
+          ],
+        );
+        return rows[0];
+      }
 
       const { rows } = await client.query(
         `INSERT INTO appointments
@@ -386,7 +434,7 @@ export async function acceptOfferAndBook(tenantId: string, offerId: string): Pro
   ]);
   await declineSiblingOffers(tenantId, offer.cancelled_appointment_id, offerId);
 
-  return { offer, appointment };
+  return { offer, appointment, rescheduledFrom };
 }
 
 // Marks unanswered offers older than OFFER_EXPIRY_HOURS as expired, reverts the entry to

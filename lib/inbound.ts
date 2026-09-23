@@ -4,6 +4,8 @@ import {
   hasPendingOffer,
   offerSlotToPatient,
   pendingOfferFor,
+  pendingWaitlistOfferCount,
+  recordOfferAccepted,
   upcomingAppointments,
 } from './agents/schedulingAutonomy';
 import { formatDatePT } from './constants';
@@ -257,7 +259,17 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
     agenda = { upcomingAppointmentCount: futuras.length, confidence: 'high', hasPendingOffer: pendente };
   }
 
-  const decision = routeInbound(msg.body, level, msg.channel, conversation.state as ConversationState, agenda);
+  // Em todos os degraus, e não só no que escreve: ver o parâmetro em routeInbound.
+  const ofertasDaLista = patient?.id ? await pendingWaitlistOfferCount(tenantId, String(patient.id)) : 0;
+
+  const decision = routeInbound(
+    msg.body,
+    level,
+    msg.channel,
+    conversation.state as ConversationState,
+    agenda,
+    ofertasDaLista,
+  );
 
   const [inbound] = await query(
     `INSERT INTO conversation_messages (tenant_id, conversation_id, direction, body, intent, routing, provider_id)
@@ -291,9 +303,24 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
       replyBody = 'Recebemos o seu pedido de cancelamento. Confirmamos consigo dentro de momentos.';
     }
   } else if (decision.action === 'offer_slot') {
+    // Remarcar: o lugar oferecido substitui a única consulta futura do doente (o
+    // decideInbound só chega aqui com exatamente uma — ver canActOnSchedule), com o tipo
+    // e a duração dela. Antes a oferta era de uma «Consulta de Avaliação» genérica, e o
+    // SIM criava uma segunda consulta ao lado da original.
+    const [aRemarcar] =
+      decision.intent === 'reschedule' ? await upcomingAppointments(tenantId, String(patient?.id)) : [];
     const oferta = await offerSlotToPatient(tenantId, String(patient?.id), {
       origin: 'inbound',
       conversationId: String(conversation.id),
+      type: aRemarcar ? String(aRemarcar.type) : null,
+      replacing: aRemarcar
+        ? {
+            id: String(aRemarcar.id),
+            date: String(aRemarcar.appt_date).slice(0, 10),
+            startTime: String(aRemarcar.start_time).slice(0, 5),
+            duration: Number(aRemarcar.duration) || 30,
+          }
+        : null,
     });
     if (oferta) {
       // O corpo da oferta é a própria resposta: a mensagem que o doente recebe É a
@@ -313,9 +340,12 @@ export async function handleInbound(tenantId: string, msg: InboundMessage): Prom
     const pendente = await pendingOfferFor(tenantId, String(patient?.id));
     const marcada = pendente ? await acceptOfferAndBook(tenantId, String(pendente.id)) : null;
     if (marcada) {
+      await recordOfferAccepted(tenantId, String(patient?.id), marcada.appointment, marcada.rescheduledFrom);
       const d = String(marcada.appointment.appt_date).slice(0, 10);
       const h = String(marcada.appointment.start_time).slice(0, 5);
-      replyBody = `Consulta marcada para ${formatDatePT(d)} às ${h}. Até lá!`;
+      replyBody = marcada.rescheduledFrom
+        ? `Consulta mudada de ${formatDatePT(marcada.rescheduledFrom.date)} às ${marcada.rescheduledFrom.startTime} para ${formatDatePT(d)} às ${h}. Até lá!`
+        : `Consulta marcada para ${formatDatePT(d)} às ${h}. Até lá!`;
     } else {
       // acceptOfferAndBook devolve null quando o lugar foi ocupado entretanto — ver o
       // claimSlot lá dentro. É o caso que torna esta mensagem necessária.

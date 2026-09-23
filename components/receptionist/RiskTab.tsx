@@ -24,6 +24,19 @@ export default function RiskTab({ appointments }: { appointments: RiskAppointmen
               <tr key={a.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                 <td className="data-td" style={{ fontWeight: 'var(--weight-semibold)' }}>
                   {a.patient_name}
+                  {!!a.standby?.length && (
+                    <div
+                      style={{ fontWeight: 400, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 2 }}
+                    >
+                      Substitutos:{' '}
+                      {a.standby.map((s, i) => (
+                        <span key={s.patientId}>
+                          {i > 0 && ', '}
+                          {s.phone ? <a href={`tel:${s.phone}`}>{s.name}</a> : s.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 <td className="data-td">{a.phone ? <a href={`tel:${a.phone}`}>{formatPhonePT(a.phone)}</a> : '—'}</td>
                 <td className="data-td" style={{ color: 'var(--text-secondary)' }}>

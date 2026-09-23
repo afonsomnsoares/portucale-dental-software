@@ -388,3 +388,28 @@ test('canActOnSchedule exige certeza e uma consulta só', () => {
   assert.equal(canActOnSchedule({ upcomingAppointmentCount: 0, confidence: 'high' }).ok, false);
   assert.equal(canActOnSchedule({ upcomingAppointmentCount: 3, confidence: 'high' }).ok, false);
 });
+
+// ─── Um SIM a uma oferta da lista de espera ─────────────────────────────────
+// Não é a confirmação de uma consulta: não há consulta nenhuma, há um lugar oferecido.
+// Antes, nos degraus 'transactional' e 'agenda', o doente recebia «a sua consulta fica
+// confirmada» e nada ficava marcado.
+test('lista de espera: no degrau agenda, um SIM com uma só oferta pendente aceita-a', () => {
+  const ctx = { upcomingAppointmentCount: 0, confidence: 'high' as const, hasPendingOffer: false };
+  assert.equal(routeInbound('sim', 'agenda', 'sms', 'awaiting_patient', ctx, 1).action, 'accept_offer');
+});
+
+test('lista de espera: com duas ofertas pendentes o SIM é ambíguo e vai para uma pessoa', () => {
+  const ctx = { upcomingAppointmentCount: 0, confidence: 'high' as const, hasPendingOffer: false };
+  const d = routeInbound('sim', 'agenda', 'sms', 'awaiting_patient', ctx, 2);
+  assert.equal(d.action, 'auto_acknowledge');
+  assert.match(d.reason, /não se sabe qual/);
+});
+
+test('lista de espera: abaixo do degrau agenda nunca responde «fica confirmada»', () => {
+  for (const nivel of ['informational', 'transactional'] as const) {
+    assert.equal(routeInbound('sim', nivel, 'sms', 'awaiting_patient', undefined, 1).action, 'auto_acknowledge', nivel);
+  }
+  assert.equal(routeInbound('sim', 'off', 'sms', 'awaiting_patient', undefined, 1).action, 'human_task');
+  // Sem oferta nenhuma, o SIM continua a ser a confirmação de sempre.
+  assert.equal(routeInbound('sim', 'transactional', 'sms', 'awaiting_patient', undefined, 0).action, 'auto_reply');
+});

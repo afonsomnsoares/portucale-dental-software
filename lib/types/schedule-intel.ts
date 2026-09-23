@@ -17,6 +17,9 @@ export interface RiskAppointment {
   type: string;
   score: number;
   factors: RiskFactors;
+  // Da lista de espera, quem pode ficar com o lugar se este doente faltar — escolhidos
+  // pela tarefa 'riskOutreach' quando pediu a confirmação. Vazio antes disso.
+  standby?: Array<{ patientId: string; name: string; phone: string | null }>;
 }
 
 export interface RiskData {

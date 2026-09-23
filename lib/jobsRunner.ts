@@ -333,6 +333,51 @@ async function queueAppointmentReminders(tenantId: string): Promise<{ requests: 
 // itself only ever fires for real once the slot is genuinely cancelled/no-shown (see
 // lib/waitlist.ts's notifyWaitlistOfFreedSlot), this is just so reception already knows
 // who to call the moment that happens.
+/**
+ * Da lista de espera, quem pode ficar com o lugar de uma consulta de risco se o doente
+ * faltar. Recebe a consulta tal como vem da base de dados.
+ *
+ * ─── A data vai em ISO, e só em ISO ─────────────────────────────────────────
+ * Esta procura vivia dentro de queueRiskOutreach e recebia a data já formatada para o SMS
+ * («25/09/2026»). O `slot.date < hoje` de matchesSlot (lib/waitlistMatch.ts) compara
+ * texto, e «25/09/2026» é sempre menor do que «2026-…» — a lista saía vazia, todas as
+ * vezes, sem erro nenhum.
+ */
+export async function findStandbyCandidates(
+  tenantId: string,
+  appt: {
+    appt_date: unknown;
+    start_time: unknown;
+    type: unknown;
+    duration: unknown;
+    dentist_id: unknown;
+    chair: unknown;
+  },
+): Promise<Array<{ patientId: string; name: string; phone: string | null }>> {
+  const ranked = await findCandidates(
+    tenantId,
+    {
+      date: requireIsoDate(appt.appt_date, 'appt_date'),
+      startTime: String(appt.start_time).slice(0, 5),
+      type: String(appt.type || ''),
+      duration: Number(appt.duration) || 30,
+      dentistId: (appt.dentist_id as string) || null,
+      chair: Number(appt.chair) || 1,
+    },
+    STANDBY_CANDIDATES_LIMIT,
+  );
+  if (!ranked.length) return [];
+  const standbyPatients = await query(`SELECT id, name, phone FROM patients WHERE id = ANY($1::uuid[])`, [
+    ranked.map((c) => c.patient_id),
+  ]);
+  const byId = new Map(standbyPatients.map((p) => [String(p.id), p]));
+  return ranked.map((c) => ({
+    patientId: c.patient_id,
+    name: String(byId.get(c.patient_id)?.name || ''),
+    phone: byId.get(c.patient_id)?.phone || null,
+  }));
+}
+
 async function queueRiskOutreach(tenantId: string): Promise<{ requests: PendingContact[]; scanned: number }> {
   const { scored } = await computeUpcomingRisk(tenantId, RISK_OUTREACH_LEAD_DAYS);
   const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
@@ -365,32 +410,16 @@ async function queueRiskOutreach(tenantId: string): Promise<{ requests: PendingC
     const body = `Olá ${a.patient_name}, confirma a sua consulta em ${tenant?.name || ''} no dia ${date} às ${time} (${a.type})? Responda SIM para confirmar ou contacte-nos para remarcar.`;
 
     const detail = apptById.get(String(a.id));
-    let standbyCandidates: Array<{ patientId: string; name: string; phone: string | null }> = [];
-    if (detail) {
-      const ranked = await findCandidates(
-        tenantId,
-        {
-          date,
-          startTime: time,
+    const standbyCandidates = detail
+      ? await findStandbyCandidates(tenantId, {
+          appt_date: a.appt_date,
+          start_time: a.start_time,
           type: a.type,
-          duration: Number(detail.duration) || 30,
-          dentistId: detail.dentist_id || null,
-          chair: Number(detail.chair) || 1,
-        },
-        STANDBY_CANDIDATES_LIMIT,
-      );
-      if (ranked.length) {
-        const standbyPatients = await query(`SELECT id, name, phone FROM patients WHERE id = ANY($1::uuid[])`, [
-          ranked.map((c) => c.patient_id),
-        ]);
-        const byId = new Map(standbyPatients.map((p) => [String(p.id), p]));
-        standbyCandidates = ranked.map((c) => ({
-          patientId: c.patient_id,
-          name: String(byId.get(c.patient_id)?.name || ''),
-          phone: byId.get(c.patient_id)?.phone || null,
-        }));
-      }
-    }
+          duration: detail.duration,
+          dentist_id: detail.dentist_id,
+          chair: detail.chair,
+        })
+      : [];
 
     requests.push({
       agentId: 'scheduling',

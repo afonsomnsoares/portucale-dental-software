@@ -192,6 +192,9 @@ export async function findOfferableSlot(
   tenantId: string,
   patientId: string,
   type?: string | null,
+  // Numa remarcação: a consulta que o lugar vai substituir. A duração é a dela (não a
+  // de omissão do tipo) e a mensagem diz que é uma mudança, não uma consulta a mais.
+  replacing?: { date: string; startTime: string; duration: number } | null,
 ): Promise<OfferableSlot | null> {
   const patient = await queryOne(`SELECT id, name, phone, comm_prefs FROM patients WHERE id=$1 AND tenant_id=$2`, [
     patientId,
@@ -205,7 +208,7 @@ export async function findOfferableSlot(
   if (await hasPendingOffer(tenantId, patientId)) return null;
 
   const tipo = String(type || '').trim() || 'Consulta de Avaliação';
-  const duration = getDefaultDuration(tipo);
+  const duration = replacing?.duration || getDefaultDuration(tipo);
   const { slots } = await suggestAppointmentSlots({ tenantId, type: tipo, duration, patientId, limit: 1, days: 21 });
   if (!slots.length) return null;
   const slot = slots[0];
@@ -218,7 +221,9 @@ export async function findOfferableSlot(
     dentistId: slot.dentistId,
     type: tipo,
     duration,
-    body: `Olá ${patient.name}, temos vaga em ${tenant?.name || ''} no dia ${formatDatePT(slot.date)} às ${slot.startTime} (${tipo}). Responda SIM para ficar com ela, ou contacte-nos para outro horário.`,
+    body: replacing
+      ? `Olá ${patient.name}, podemos mudar a sua consulta de ${formatDatePT(replacing.date)} às ${replacing.startTime} para o dia ${formatDatePT(slot.date)} às ${slot.startTime} (${tipo}). Responda SIM para mudar, ou contacte-nos para outro horário.`
+      : `Olá ${patient.name}, temos vaga em ${tenant?.name || ''} no dia ${formatDatePT(slot.date)} às ${slot.startTime} (${tipo}). Responda SIM para ficar com ela, ou contacte-nos para outro horário.`,
   };
 }
 
@@ -235,13 +240,15 @@ export async function persistOffer(
     conversationId?: string | null;
     recallId?: string | null;
     notificationId?: string | null;
+    replacesAppointmentId?: string | null;
   },
 ): Promise<string | null> {
   const [offer] = await query(
     `INSERT INTO slot_offers
        (tenant_id, patient_id, offered_date, offered_start_time, offered_duration, offered_chair,
-        offered_dentist_id, notification_id, origin, offered_type, conversation_id, recall_id)
-     VALUES ($1,$2,$3::date,$4::time,$5,$6,$7,$8,$9,$10,$11,$12)
+        offered_dentist_id, notification_id, origin, offered_type, conversation_id, recall_id,
+        replaces_appointment_id)
+     VALUES ($1,$2,$3::date,$4::time,$5,$6,$7,$8,$9,$10,$11,$12,$13)
      ON CONFLICT DO NOTHING
      RETURNING *`,
     [
@@ -257,6 +264,7 @@ export async function persistOffer(
       slot.type,
       opts.conversationId || null,
       opts.recallId || null,
+      opts.replacesAppointmentId || null,
     ],
   );
   // ON CONFLICT DO NOTHING cobre a corrida contra o índice único de uma oferta pendente
@@ -282,21 +290,81 @@ export async function offerSlotToPatient(
     origin: 'recall' | 'inbound';
     conversationId?: string | null;
     recallId?: string | null;
+    // A consulta a remarcar. Sem isto, aceitar a oferta criava uma segunda consulta e
+    // deixava a original marcada — ver a migração 067.
+    replacing?: { id: string; date: string; startTime: string; duration: number } | null;
   },
 ): Promise<OfferResult | null> {
-  const slot = await findOfferableSlot(tenantId, patientId, opts.type);
+  const slot = await findOfferableSlot(tenantId, patientId, opts.type, opts.replacing);
   if (!slot) return null;
-  const offerId = await persistOffer(tenantId, patientId, slot, opts);
+  const offerId = await persistOffer(tenantId, patientId, slot, {
+    ...opts,
+    replacesAppointmentId: opts.replacing?.id ?? null,
+  });
   if (!offerId) return null;
   return { offerId, date: slot.date, startTime: slot.startTime, body: slot.body };
 }
 
-/** A oferta pendente deste doente, para a aceitação saber sobre o que está a falar. */
+/**
+ * A oferta pendente deste doente, para a aceitação saber sobre o que está a falar. As do
+ * recall e da caixa de entrada primeiro (há no máximo uma, pelo índice da migração 062);
+ * senão a da lista de espera, mas só se for a única — com várias, o SIM é ambíguo e
+ * routeInbound já o mandou para uma pessoa.
+ */
 export async function pendingOfferFor(tenantId: string, patientId: string) {
-  return queryOne(
+  const propria = await queryOne(
     `SELECT * FROM slot_offers
       WHERE tenant_id=$1 AND patient_id=$2 AND status='sent' AND origin <> 'waitlist'
       ORDER BY created_at DESC LIMIT 1`,
     [tenantId, patientId],
+  );
+  if (propria) return propria;
+  const daLista = await query(
+    `SELECT * FROM slot_offers WHERE tenant_id=$1 AND patient_id=$2 AND status='sent' AND origin = 'waitlist' LIMIT 2`,
+    [tenantId, patientId],
+  );
+  return daLista.length === 1 ? daLista[0] : null;
+}
+
+export async function pendingWaitlistOfferCount(tenantId: string, patientId: string): Promise<number> {
+  const row = await queryOne(
+    `SELECT count(*)::int AS n FROM slot_offers
+      WHERE tenant_id=$1 AND patient_id=$2 AND status='sent' AND origin = 'waitlist'`,
+    [tenantId, patientId],
+  );
+  return Number(row?.n) || 0;
+}
+
+// ─── Registar o SIM ─────────────────────────────────────────────────────────
+// O cancelamento acima deixa rasto na auditoria e na timeline; a aceitação de uma oferta
+// por SMS não deixava nenhum. Uma consulta que aparece — ou muda de dia — sem se saber
+// porquê é o mesmo susto que uma que desaparece, e o cabeçalho deste ficheiro promete
+// que nada disto acontece às escondidas.
+export async function recordOfferAccepted(
+  tenantId: string,
+  patientId: string,
+  appointment: Record<string, unknown>,
+  rescheduledFrom: { date: string; startTime: string } | null,
+) {
+  const tenant = await queryOne(`SELECT name FROM tenants WHERE id=$1`, [tenantId]);
+  const quem = actor(String(tenant?.name || ''));
+  const depois = `${String(appointment.appt_date).slice(0, 10)} ${String(appointment.start_time).slice(0, 5)}`;
+  const antes = rescheduledFrom ? `${rescheduledFrom.date} ${rescheduledFrom.startTime}` : null;
+
+  await appendAudit(
+    quem,
+    rescheduledFrom ? 'UPDATE' : 'CREATE',
+    rescheduledFrom ? 'Consulta remarcada pelo doente por SMS' : 'Consulta marcada pelo doente por SMS',
+    antes,
+    depois,
+    quem.clinic,
+  );
+  await appendTimeline(
+    patientId,
+    quem,
+    'admin',
+    rescheduledFrom
+      ? `Consulta remarcada automaticamente a pedido do doente: ${antes} → ${depois}.`
+      : `Consulta marcada automaticamente: o doente aceitou por SMS o lugar de ${depois}.`,
   );
 }
